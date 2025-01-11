@@ -11,7 +11,6 @@
 
 #include <string>
 
-
 #ifndef _WIN32
 // SOCKET은 64bit 환경에서 64bit이다. 반면 linux에서는 여전히 32bit이다. 이 차이를 위함.
 typedef int SOCKET;

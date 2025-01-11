@@ -164,7 +164,10 @@ void ProcessPacket(shared_ptr<RemoteClient>& client, char* packet)
 		strcpy(s_packet.chat, r_packet->chat);
 		//client->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 		for (auto cl : RemoteClient::remoteClients) {
+			if (cl.second != client) cl.second->tcpConnection.m_isReadOverlapped = false;
+			cout << "Send: " << client->m_id << " to " << cl.second->m_id << endl;
 			cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+			if (cl.second != client) cl.second->tcpConnection.m_isReadOverlapped = true;
 		}
 		break;
 	}
