@@ -7,7 +7,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "JJ_server", "JJ_server\JJ_s
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dummyclient", "dummyclient\dummyclient.vcxproj", "{29E1DD01-18B3-410D-BFE7-5CC6EB7B4BA7}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ServerLib", "JJ_server\ServerLib\ImaysNet.vcxproj", "{491FAA36-D2DB-4772-AD85-7E0B0305F665}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "serverlib", "JJ_server\ServerLib\ImaysNet.vcxproj", "{491FAA36-D2DB-4772-AD85-7E0B0305F665}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Test", "Test\Test.vcxproj", "{86DCF15E-F6CB-4AB9-ABD2-87F567EFDE7A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,6 +43,14 @@ Global
 		{491FAA36-D2DB-4772-AD85-7E0B0305F665}.Release|x64.Build.0 = Release|x64
 		{491FAA36-D2DB-4772-AD85-7E0B0305F665}.Release|x86.ActiveCfg = Release|Win32
 		{491FAA36-D2DB-4772-AD85-7E0B0305F665}.Release|x86.Build.0 = Release|Win32
+		{86DCF15E-F6CB-4AB9-ABD2-87F567EFDE7A}.Debug|x64.ActiveCfg = Debug|x64
+		{86DCF15E-F6CB-4AB9-ABD2-87F567EFDE7A}.Debug|x64.Build.0 = Debug|x64
+		{86DCF15E-F6CB-4AB9-ABD2-87F567EFDE7A}.Debug|x86.ActiveCfg = Debug|Win32
+		{86DCF15E-F6CB-4AB9-ABD2-87F567EFDE7A}.Debug|x86.Build.0 = Debug|Win32
+		{86DCF15E-F6CB-4AB9-ABD2-87F567EFDE7A}.Release|x64.ActiveCfg = Release|x64
+		{86DCF15E-F6CB-4AB9-ABD2-87F567EFDE7A}.Release|x64.Build.0 = Release|x64
+		{86DCF15E-F6CB-4AB9-ABD2-87F567EFDE7A}.Release|x86.ActiveCfg = Release|Win32
+		{86DCF15E-F6CB-4AB9-ABD2-87F567EFDE7A}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -122,7 +122,6 @@ int main(int argc, char* argv[])
 		g_l_socket->Bind(Endpoint("0.0.0.0", PORT));
 		g_l_socket->Listen();
 
-		//g_c_socket = make_shared<Socket>(SocketType::Tcp);
 
 		iocp.Add(*g_l_socket, g_l_socket.get());
 
@@ -162,7 +161,6 @@ void ProcessPacket(shared_ptr<RemoteClient>& client, char* packet)
 		s_packet.size = sizeof(CHAT_PACKET);
 		s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_CHAT);
 		strcpy(s_packet.chat, r_packet->chat);
-		//client->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 		for (auto cl : RemoteClient::remoteClients) {
 			if (cl.second != client) cl.second->tcpConnection.m_isReadOverlapped = false;
 			cout << "Send: " << client->m_id << " to " << cl.second->m_id << endl;
