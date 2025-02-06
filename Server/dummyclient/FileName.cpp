@@ -6,32 +6,50 @@
 #include <conio.h> // for _kbhit() and _getch()
 #pragma comment (lib, "WS2_32.LIB")
 #include "../Global.h"
-#include "../JJ_server/ServerLib/ServerHeader.h"
+#include "../ServerLib/ServerHeader.h"
 #ifdef _DEBUG
 #pragma comment(lib,"../x64/Debug/serverlib.lib")
 #else
 #pragma comment(lib,"../x64/Release/serverlib.lib")
 #endif
 
-constexpr short PORT = 9000;
-constexpr char SERVER_ADDR[] = "127.0.0.1";
+short PORT = 8999;
+char SERVER_ADDR[] = "127.0.0.1";
 
 using namespace std;
 
 bool bshutdown = false;
 shared_ptr<Socket> server_s;
 
+enum class SERVER_TYPE
+{
+	E_LOBBY = 0,
+	E_GAME = 1
+};
+
+SERVER_TYPE s_type = SERVER_TYPE::E_LOBBY;
+
 void CALLBACK send_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
 void CALLBACK recv_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
+void ReconnectToNewServer(const char* n_addr, short n_port);
 
 void Process_Packet(char* packet)
 {
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
-	case E_PACKET::E_P_CHAT:
+	case E_PACKET::E_P_CHAT: {
 		CHAT_PACKET* recv_p = reinterpret_cast<CHAT_PACKET*>(packet);
 		cout << "Received: " << recv_p->chat << endl;
+	}
+		break;
+	case E_PACKET::E_P_CHANGEPORT: {
+		CHANGEPORT_PACKET* recv_p = reinterpret_cast<CHANGEPORT_PACKET*>(packet);
+		cout << "Changing server to " << recv_p->addr << ":" << recv_p->port << endl;
+		ReconnectToNewServer(recv_p->addr, recv_p->port);
+		if (recv_p->port = 9000) s_type = SERVER_TYPE::E_GAME;
+		else s_type = SERVER_TYPE::E_LOBBY;
+	}
 		break;
 	}
 }
@@ -45,13 +63,19 @@ void send_message()
 		bshutdown = true;
 		return;
 	}
-	CHAT_PACKET p;
-	strcpy(p.chat, str.c_str());
-	p.size = sizeof(CHAT_PACKET);
-	p.type = static_cast<char>(E_PACKET::E_P_CHAT);
-
-	OVER_EXP* send_over = new OVER_EXP(reinterpret_cast<char*>(&p), p.size);
-	WSASend(server_s->m_fd, &send_over->wsabuf, 1, nullptr, 0, &send_over->over, send_callback);
+	if (s_type == SERVER_TYPE::E_GAME) {
+		CHAT_PACKET p;
+		strcpy(p.chat, str.c_str());
+		p.size = sizeof(CHAT_PACKET);
+		p.type = static_cast<char>(E_PACKET::E_P_CHAT);
+		OVER_EXP* send_over = new OVER_EXP(reinterpret_cast<char*>(&p), p.size);
+		WSASend(server_s->m_fd, &send_over->wsabuf, 1, nullptr, 0, &send_over->over, send_callback);
+	}
+	else {
+		INGAME_PACKET p;
+		OVER_EXP* send_over = new OVER_EXP(reinterpret_cast<char*>(&p), p.size);
+		WSASend(server_s->m_fd, &send_over->wsabuf, 1, nullptr, 0, &send_over->over, send_callback);
+	}
 }
 
 void CALLBACK recv_callback(DWORD err, DWORD recv_size,
@@ -132,4 +156,24 @@ int main()
 
 	WSACleanup();
 	return 0;
+}
+
+void ReconnectToNewServer(const char* n_addr, short n_port)
+{
+	// 기존 소켓 종료
+	closesocket(server_s->m_fd);
+	Sleep(100);
+	// 새로운 소켓 생성 및 연결
+	char save_addr[20];
+	strncpy(save_addr, n_addr, sizeof(save_addr));
+	server_s = make_shared<Socket>(SocketType::Tcp);
+	server_s->Connect(Endpoint(save_addr, n_port));
+	cout << "Reconnected to " << save_addr << ":" << n_port << endl;
+
+	// 첫 번째 데이터 수신 시작
+	server_s->m_readFlags = 0;
+	server_s->m_recv_over.wsabuf.len = BUFSIZE;
+	server_s->m_recv_over.wsabuf.buf = server_s->m_recv_over.send_buf;
+	WSARecv(server_s->m_fd, &(server_s->m_recv_over.wsabuf), 1, nullptr,
+		&server_s->m_readFlags, &(server_s->m_recv_over.over), recv_callback);
 }
