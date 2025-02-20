@@ -1,0 +1,54 @@
+기본 베이스
+
+1. idle
+
+2. walk back
+3. walk forward
+4. walk left
+5. walk right
+
+6. run back
+7. run forward
+8. run left
+9. run right
+
+10. death
+
+소, 늑대
+1. idle
+
+2. walk back
+3. walk forward
+4. walk left
+5. walk right
+
+6. run forward
+7. run left
+8. run right
+
+9. death
+
+두꺼비(Toad)
+
+1. idle
+
+2. walk forward
+3. walk left
+4. walk right
+
+5. run forward
+6. run left
+7. run right
+
+8. death
+
+곤충 (Wasp)
+
+1. idle
+
+2. walk back
+3. walk forward
+4. walk left
+5. walk right
+
+6. death
