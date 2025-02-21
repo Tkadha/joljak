@@ -354,10 +354,10 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 
 	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList,
-		pd3dGraphicsRootSignature, "Model/SK_Pig.bin", NULL);
+		pd3dGraphicsRootSignature, "Model/SK_Hu_M_FullBody_B.bin", NULL);
 	SetChild(pAngrybotModel->m_pModelRootObject, true);
 
-	int nAnimation{5};
+	int nAnimation{2};
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimation, pAngrybotModel);
 	m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	for (int i = 1; i < nAnimation; ++i) {
