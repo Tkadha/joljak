@@ -100,17 +100,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_nHierarchicalGameObjects = 21;
 	m_ppHierarchicalGameObjects = new CGameObject*[m_nHierarchicalGameObjects];
 
-	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/SK_Hu_M_Hair_01.bin", "rb");
-	::rewind(pInFile);
-
-	CLoadedModelInfo* pLoadedModel = new CLoadedModelInfo();
-	pLoadedModel->m_pModelRootObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL, &pLoadedModel->m_nSkinnedMeshes);
-
-	CLoadedModelInfo* pHairModel = CGameObject::LoadGeometryFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Hu_M_Hair_01.bin", NULL);
-	m_ppHierarchicalGameObjects[0] = new CAngrybotObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHairModel, 1);
+	m_ppHierarchicalGameObjects[0] = new CHairObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 	m_ppHierarchicalGameObjects[0]->SetPosition(230.0f, m_pTerrain->GetHeight(230.0f, 700.0f), 700.0f);
-	if (pHairModel) delete pHairModel;
+	
 	
 
 	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Angrybot.bin", NULL);
