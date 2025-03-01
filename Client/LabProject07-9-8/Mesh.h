@@ -88,7 +88,7 @@ public:
 class CHeightMapImage
 {
 private:
-	BYTE							*m_pHeightMapPixels;
+	USHORT							*m_pHeightMapPixels;
 
 	int								m_nWidth;
 	int								m_nLength;
@@ -102,7 +102,7 @@ public:
 	XMFLOAT3 GetHeightMapNormal(int x, int z);
 	XMFLOAT3 GetScale() { return(m_xmf3Scale); }
 
-	BYTE *GetHeightMapPixels() { return(m_pHeightMapPixels); }
+	USHORT *GetHeightMapPixels() { return(m_pHeightMapPixels); }
 	int GetHeightMapWidth() { return(m_nWidth); }
 	int GetHeightMapLength() { return(m_nLength); }
 };
