@@ -101,7 +101,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects = new CGameObject*[m_nHierarchicalGameObjects];
 
 	m_ppHierarchicalGameObjects[0] = new CHairObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
-	m_ppHierarchicalGameObjects[0]->SetPosition(230.0f, m_pTerrain->GetHeight(230.0f, 700.0f), 700.0f);
+	m_ppHierarchicalGameObjects[0]->SetPosition(230.0f, m_pTerrain->GetHeight(230.0f, 700.0f)+20, 700.0f);
 	
 	
 
