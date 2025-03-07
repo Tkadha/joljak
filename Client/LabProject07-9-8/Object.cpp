@@ -1372,8 +1372,18 @@ CGameObject* CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, I
 	for (; ; )
 	{
 		nReads = (UINT)::fread(&nStrLength, sizeof(BYTE), 1, pInFile);
+		if (nReads != 1 || nStrLength >= sizeof(pstrToken))  // <-- 메모리 보호 추가
+		{
+			printf("Error: Invalid string length read (%d)\n", nStrLength);
+			return nullptr;
+		}
 		nReads = (UINT)::fread(pstrToken, sizeof(char), nStrLength, pInFile);
-		pstrToken[nStrLength] = '\0';
+		if (nReads != nStrLength)
+		{
+			printf("Error: Failed to read token string\n");
+			return nullptr;
+		}
+		pstrToken[nStrLength] = '\0';  // 버퍼 크기 초과 방지
 
 		if (!strcmp(pstrToken, "<Frame>:"))
 		{
@@ -1853,7 +1863,7 @@ CHairObject::CHairObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 {
 
 	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/Mi24.bin", "rb");
+	::fopen_s(&pInFile, "Model/Mi24_test.bin", "rb");
 	::rewind(pInFile);
 
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL);
