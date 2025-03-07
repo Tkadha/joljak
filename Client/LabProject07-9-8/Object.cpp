@@ -1853,10 +1853,12 @@ CHairObject::CHairObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 {
 
 	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/SK_Hu_M_Hair_01.bin", "rb");
+	::fopen_s(&pInFile, "Model/Mi24.bin", "rb");
 	::rewind(pInFile);
 
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL);
+	//CLoadedModelInfo* pGameObject = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/SK_Hu_M_Hair_01_skin.bin", NULL);
 
+	//SetChild(pGameObject->m_pModelRootObject, true);
 	SetChild(pGameObject);
 }

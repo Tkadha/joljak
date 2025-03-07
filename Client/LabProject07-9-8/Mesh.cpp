@@ -83,23 +83,32 @@ CHeightMapImage::CHeightMapImage(LPCTSTR pFileName, int nWidth, int nLength, XMF
 	m_nLength = nLength;
 	m_xmf3Scale = xmf3Scale;
 
-	BYTE *pHeightMapPixels = new BYTE[m_nWidth * m_nLength];
 
 	HANDLE hFile = ::CreateFile(pFileName, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_READONLY, NULL);
 	DWORD dwBytesRead;
-	::ReadFile(hFile, pHeightMapPixels, (m_nWidth * m_nLength), &dwBytesRead, NULL);
+
+	// 16비트 데이터 저장 (ushort)
+	USHORT* pHeightMapPixels = new USHORT[m_nWidth * m_nLength];
+	::ReadFile(hFile, pHeightMapPixels, (m_nWidth * m_nLength * 2), &dwBytesRead, NULL);
 	::CloseHandle(hFile);
 
-	m_pHeightMapPixels = new BYTE[m_nWidth * m_nLength];
+	m_pHeightMapPixels = new USHORT[m_nWidth * m_nLength];
+
 	for (int y = 0; y < m_nLength; y++)
 	{
 		for (int x = 0; x < m_nWidth; x++)
 		{
-			m_pHeightMapPixels[x + ((m_nLength - 1 - y)*m_nWidth)] = pHeightMapPixels[x + (y*m_nWidth)];
+			// Little-Endian → ushort 변환
+			int index = x + (y * m_nWidth);
+			USHORT heightValue = pHeightMapPixels[index];
+
+			// Unity는 Bottom-to-Top, DirectX는 Top-to-Bottom이므로 변환
+			m_pHeightMapPixels[x + ((m_nLength - 1 - y) * m_nWidth)] = heightValue;
 		}
 	}
-
 	if (pHeightMapPixels) delete[] pHeightMapPixels;
+
+
 }
 
 CHeightMapImage::~CHeightMapImage()
@@ -291,7 +300,7 @@ void CHeightMapGridMesh::ReleaseUploadBuffers()
 float CHeightMapGridMesh::OnGetHeight(int x, int z, void *pContext)
 {
 	CHeightMapImage *pHeightMapImage = (CHeightMapImage *)pContext;
-	BYTE *pHeightMapPixels = pHeightMapImage->GetHeightMapPixels();
+	USHORT *pHeightMapPixels = pHeightMapImage->GetHeightMapPixels();
 	XMFLOAT3 xmf3Scale = pHeightMapImage->GetScale();
 	int nWidth = pHeightMapImage->GetHeightMapWidth();
 	float fHeight = pHeightMapPixels[x + (z*nWidth)] * xmf3Scale.y;
