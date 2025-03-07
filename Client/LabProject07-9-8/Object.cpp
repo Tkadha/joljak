@@ -1808,7 +1808,7 @@ CZebraObject::CZebraObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *
 	if (!pZebraModel) pZebraModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Zebra.bin", NULL);
 
 	SetChild(pZebraModel->m_pModelRootObject, true);
-	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pZebraModel);
+	//m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pZebraModel);
 }
 
 CZebraObject::~CZebraObject()

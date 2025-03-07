@@ -93,9 +93,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
-	XMFLOAT3 xmf3Scale(8.0f, 2.0f, 8.0f);
+	XMFLOAT3 xmf3Scale(5.0f, 0.2f, 5.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain.raw"), 2048, 2048, xmf3Scale, xmf4Color);
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain.raw"), 4096, 4096, xmf3Scale, xmf4Color);
 
 	m_nHierarchicalGameObjects = 21;
 	m_ppHierarchicalGameObjects = new CGameObject*[m_nHierarchicalGameObjects];
@@ -160,11 +160,11 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[6]->Rotate(0.0f, -90.0f, 0.0f);
 	m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetTrackSpeed(0, 0.75f);
 
-	CLoadedModelInfo *pZebraModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Zebra.bin", NULL);
+	CLoadedModelInfo *pZebraModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Hu_M_Hair_01.bin", NULL);
 	m_ppHierarchicalGameObjects[7] = new CZebraObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pZebraModel, 1);
-	m_ppHierarchicalGameObjects[7]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[7]->SetPosition(280.0f, m_pTerrain->GetHeight(280.0f, 640.0f), 620.0f);
-	m_ppHierarchicalGameObjects[7]->SetScale(0.1f, 0.1f, 0.1f);
+	//m_ppHierarchicalGameObjects[7]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	m_ppHierarchicalGameObjects[7]->SetPosition(280.0f, m_pTerrain->GetHeight(280.0f, 640.0f)+50, 620.0f);
+	m_ppHierarchicalGameObjects[7]->SetScale(100.0f, 100.1f, 100.1f);
 	if (pZebraModel) delete pZebraModel;
 
 	CLoadedModelInfo *pLionModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Lion.bin", NULL);
