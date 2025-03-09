@@ -80,6 +80,7 @@ void CTexture::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 	}
 }
 
+
 void CTexture::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int nParameterIndex, int nTextureIndex)
 {
 	pd3dCommandList->SetGraphicsRootDescriptorTable(m_pnRootParameterIndices[nParameterIndex], m_pd3dSrvGpuDescriptorHandles[nTextureIndex]);
@@ -105,6 +106,12 @@ void CTexture::ReleaseUploadBuffers()
 //}
 
 void CTexture::LoadTextureFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, UINT nResourceType, UINT nIndex)
+{
+	m_pnResourceTypes[nIndex] = nResourceType;
+	m_ppd3dTextures[nIndex] = ::CreateTextureResourceFromDDSFile(pd3dDevice, pd3dCommandList, pszFileName, &m_ppd3dTextureUploadBuffers[nIndex], D3D12_RESOURCE_STATE_GENERIC_READ/*D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE*/);
+}
+
+void CTexture::LoadTextureFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const wchar_t* pszFileName, UINT nResourceType, UINT nIndex)
 {
 	m_pnResourceTypes[nIndex] = nResourceType;
 	m_ppd3dTextures[nIndex] = ::CreateTextureResourceFromDDSFile(pd3dDevice, pd3dCommandList, pszFileName, &m_ppd3dTextureUploadBuffers[nIndex], D3D12_RESOURCE_STATE_GENERIC_READ/*D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE*/);
@@ -182,7 +189,7 @@ CMaterial::CMaterial(int nTextures)
 
 	m_ppTextures = new CTexture*[m_nTextures];
 	m_ppstrTextureNames = new _TCHAR[m_nTextures][64];
-	for (int i = 0; i < m_nTextures; i++) m_ppTextures[i] = NULL;
+	for (int i = 0; i < m_nTextures; i++) m_ppTextures[i] = nullptr;
 	for (int i = 0; i < m_nTextures; i++) m_ppstrTextureNames[i][0] = '\0';
 }
 
@@ -207,7 +214,8 @@ void CMaterial::SetShader(CShader *pShader)
 }
 
 void CMaterial::SetTexture(CTexture *pTexture, UINT nTexture) 
-{ 
+{
+	if (nTexture < 0 || nTexture >= m_nTextures) return;
 	if (m_ppTextures[nTexture]) m_ppTextures[nTexture]->Release();
 	m_ppTextures[nTexture] = pTexture; 
 	if (m_ppTextures[nTexture]) m_ppTextures[nTexture]->AddRef();  
@@ -247,7 +255,7 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList)
 	for (int i = 0; i < m_nTextures; i++)
 	{
 		if (m_ppTextures[i]) m_ppTextures[i]->UpdateShaderVariables(pd3dCommandList);
-		//		if (m_ppTextures[i]) m_ppTextures[i]->UpdateShaderVariable(pd3dCommandList, 0, 0);
+		//if (m_ppTextures[i]) m_ppTextures[i]->UpdateShaderVariable(pd3dCommandList, 0, 0);
 	}
 }
 
@@ -687,7 +695,7 @@ CGameObject::CGameObject(int nMaterials) : CGameObject()
 	if (m_nMaterials > 0)
 	{
 		m_ppMaterials = new CMaterial*[m_nMaterials];
-		for(int i = 0; i < m_nMaterials; i++) m_ppMaterials[i] = NULL;
+		for(int i = 0; i < m_nMaterials; i++) m_ppMaterials[i] = nullptr;
 	}
 }
 
@@ -1515,6 +1523,52 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 	pTerrainMaterial->SetShader(pTerrainShader);
 
 	SetMaterial(0, pTerrainMaterial);
+}
+
+CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, int m, int k, const std::vector<std::pair<std::string, std::string>>& texturePairs):CGameObject(texturePairs.size())
+{
+	m_nWidth = nWidth;
+	m_nLength = nLength;
+	m_xmf3Scale = xmf3Scale;
+	m_pHeightMapImage = new CHeightMapImage(pFileName, nWidth, nLength, xmf3Scale);
+	CHeightMapGridMesh* pMesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, 0, 0, nWidth, nLength, xmf3Scale, XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f), m_pHeightMapImage);
+	SetMesh(pMesh);
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	int partIndex = 0;
+	for (int q = 0; q < k; q++) {
+		for (int p = 0; p < m; p++) {
+			std::string baseDDS = texturePairs[partIndex].first;
+            std::string detailDDS = texturePairs[partIndex].second;
+            std::wstring wideBaseDDS(baseDDS.begin(), baseDDS.end());
+            std::wstring wideDetailDDS(detailDDS.begin(), detailDDS.end());
+            CTexture* pBaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+            pBaseTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, wideBaseDDS.c_str(), RESOURCE_TEXTURE2D, 0);
+            CTexture* pDetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+			pDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, wideDetailDDS.c_str(), RESOURCE_TEXTURE2D, 0);
+
+            CTerrainShader* pTerrainShader = new CTerrainShader();
+            pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+            pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+			CScene::CreateShaderResourceViews(pd3dDevice, pBaseTexture, 0, 13 + partIndex * 2);
+            CScene::CreateShaderResourceViews(pd3dDevice, pDetailTexture, 0, 14 + partIndex * 2);
+
+			CMaterial* pMaterial = new CMaterial(2);
+            pMaterial->SetTexture(pBaseTexture, 0);
+            pMaterial->SetTexture(pDetailTexture, 1);
+            pMaterial->SetShader(pTerrainShader);
+            SetMaterial(partIndex, pMaterial);
+            partIndex++;
+		}
+	}
+	for (int q = 0; q < k; q++) {
+		for (int p = 0; p < m; p++) {
+			int xStart = p * (nWidth / m);
+			int zStart = q * (nLength / k);
+			int nWidth_part = nWidth / m;
+			int nLength_part = nLength / k;
+			pMesh->AddSubMesh(xStart, zStart, nWidth_part, nLength_part, pd3dDevice, pd3dCommandList);
+		}
+	}
 }
 
 CHeightMapTerrain::~CHeightMapTerrain(void)

@@ -97,6 +97,23 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color);
 
+	/*
+	// 지형을 나눌 부분의 수
+	int m = 2;  // 폭 방향으로 2개로 나눔
+	int k = 2;  // 길이 방향으로 2개로 나눔
+
+	// 각 부분에 사용할 텍스처 파일 경로 쌍
+	std::vector<std::pair<std::string, std::string>> texturePairs = {
+		{"Terrain/Base_Texture.dds", "Terrain/Detail_Texture_0.dds"},
+		{"Terrain/Base_Texture(Original).dds", "Terrain/Detail_Texture_1.dds"},
+		{"Terrain/TerrainGrass_basecolor.dds", "Terrain/Detail_Texture_2.dds"},
+		{"Terrain/Water_Base_Texture_0.dds", "Terrain/Water_Detail_Texture_0.dds"}
+	};
+
+	// 새로운 생성자 호출
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, m, k, texturePairs);
+	*/
+
 	m_nHierarchicalGameObjects = 21;
 	m_ppHierarchicalGameObjects = new CGameObject*[m_nHierarchicalGameObjects];
 
