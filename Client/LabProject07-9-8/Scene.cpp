@@ -93,27 +93,31 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
-	XMFLOAT3 xmf3Scale(8.0f, 2.0f, 8.0f);
+	XMFLOAT3 xmf3Scale(5.0f, 0.2f, 5.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/.raw"), 512, 512, xmf3Scale, xmf4Color);
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color);
+
+	/*
+	// 지형을 나눌 부분의 수
+	int m = 2;  // 폭 방향으로 2개로 나눔
+	int k = 2;  // 길이 방향으로 2개로 나눔
+
+	// 각 부분에 사용할 텍스처 파일 경로 쌍
+	std::vector<std::pair<std::string, std::string>> texturePairs = {
+		{"Terrain/Base_Texture.dds", "Terrain/Detail_Texture_0.dds"},
+		{"Terrain/Base_Texture(Original).dds", "Terrain/Detail_Texture_1.dds"},
+		{"Terrain/TerrainGrass_basecolor.dds", "Terrain/Detail_Texture_2.dds"},
+		{"Terrain/Water_Base_Texture_0.dds", "Terrain/Water_Detail_Texture_0.dds"}
+	};
+
+	// 새로운 생성자 호출
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, m, k, texturePairs);
+	*/
 
 	// 오브젝트 갯수
 	m_nHierarchicalGameObjects = 24;
 	m_ppHierarchicalGameObjects = new CGameObject*[m_nHierarchicalGameObjects];
 
-	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/SK_Hu_M_Hair_01.bin", "rb");
-	::rewind(pInFile);
-
-	CLoadedModelInfo* pLoadedModel = new CLoadedModelInfo();
-	pLoadedModel->m_pModelRootObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL, &pLoadedModel->m_nSkinnedMeshes);
-
-	CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Cow.bin", NULL);
-	m_ppHierarchicalGameObjects[0] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
-	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[0]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[0]->SetPosition(430.0f, m_pTerrain->GetHeight(430.0f, 700.0f), 700.0f);
-	m_ppHierarchicalGameObjects[0]->SetScale(8.0f, 8.0f, 8.0f);
 
 	m_ppHierarchicalGameObjects[1] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
