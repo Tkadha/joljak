@@ -212,9 +212,18 @@ float4 PSTerrain(PS_INPUT input) : SV_TARGET
     float4 grassColor = gtxtGrass.Sample(gSampler, input.TexCoord) * maskColor.g;
     float4 rockColor = gtxtRock.Sample(gSampler, input.TexCoord) * maskColor.r;
     float4 sandColor = gtxtSand.Sample(gSampler, input.TexCoord) * maskColor.b;
-    float4 finalColor = grassColor + rockColor + sandColor;
-    return finalColor;
-} 
+    
+    float4 finalColor = lerp(grassColor, rockColor, maskColor.r);
+    finalColor = lerp(finalColor, sandColor, maskColor.g);
+
+    // 디버깅: 텍스처가 샘플링되지 않으면 기본 색상 반환
+    if (finalColor.a == 0.0f)
+    {
+        return float4(1.0f, 0.0f, 0.0f, 1.0f); // 빨간색x`
+    }
+
+    return finalColor * input.Color;
+}
 /*
 Texture2D gtxtTerrainBaseTexture : register(t1);
 Texture2D gtxtTerrainDetailTexture : register(t2);

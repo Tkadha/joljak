@@ -71,6 +71,8 @@ public:
 
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader();
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader();
+
+	ID3D12RootSignature* CreateGraphicsRootSignature(ID3D12Device* pd3dDevice);
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

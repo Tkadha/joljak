@@ -461,6 +461,7 @@ private:
 
 	// 마스크 텍스쳐 추가
 	CTexture* m_pMaskTexture = nullptr;
+	ID3D12RootSignature* m_pHeightMapRootSignature = nullptr;
 public:
 	float GetHeight(float x, float z, bool bReverseQuad = false) { return(m_pHeightMapImage->GetHeight(x, z, bReverseQuad) * m_xmf3Scale.y); } //World
 	XMFLOAT3 GetNormal(float x, float z) { return(m_pHeightMapImage->GetHeightMapNormal(int(x / m_xmf3Scale.x), int(z / m_xmf3Scale.z))); }
@@ -471,6 +472,8 @@ public:
 	XMFLOAT3 GetScale() { return(m_xmf3Scale); }
 	float GetWidth() { return(m_nWidth * m_xmf3Scale.x); }
 	float GetLength() { return(m_nLength * m_xmf3Scale.z); }
+
+	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

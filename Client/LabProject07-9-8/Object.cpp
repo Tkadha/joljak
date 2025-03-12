@@ -1513,24 +1513,25 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 	CTexture* m_pSandTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 
 	m_pGrassTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_1.dds", RESOURCE_TEXTURE2D, 0);
-	//m_pRockTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_0.dds", RESOURCE_TEXTURE2D, 0);
-	//m_pSandTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 0);
+	m_pRockTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_0.dds", RESOURCE_TEXTURE2D, 0);
+	m_pSandTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 0);
 
 	CTerrainShader* pTerrainShader = new CTerrainShader();
-	pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	m_pHeightMapRootSignature = pTerrainShader->CreateGraphicsRootSignature(pd3dDevice);
+	pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, m_pHeightMapRootSignature);
 	pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	CScene::CreateShaderResourceViews(pd3dDevice, m_pMaskTexture, 0, 13);
 	CScene::CreateShaderResourceViews(pd3dDevice, m_pGrassTexture, 0, 14);
-	//CScene::CreateShaderResourceViews(pd3dDevice, m_pRockTexture, 0, 15);
-	//CScene::CreateShaderResourceViews(pd3dDevice, m_pSandTexture, 0, 16);
+	CScene::CreateShaderResourceViews(pd3dDevice, m_pRockTexture, 0, 15);
+	CScene::CreateShaderResourceViews(pd3dDevice, m_pSandTexture, 0, 16);
 
 	// 4개의 텍스처 (마스크 + grass + rock + sand)
 	CMaterial* pMaterial = new CMaterial(2);
 	pMaterial->SetTexture(m_pMaskTexture, 0);
 	pMaterial->SetTexture(m_pGrassTexture, 1);
-	//pMaterial->SetTexture(m_pRockTexture, 2);
-	//pMaterial->SetTexture(m_pSandTexture, 3);
+	pMaterial->SetTexture(m_pRockTexture, 2);
+	pMaterial->SetTexture(m_pSandTexture, 3);
 	pMaterial->SetShader(pTerrainShader);
 
 	SetMaterial(0, pMaterial);
@@ -1607,6 +1608,17 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 CHeightMapTerrain::~CHeightMapTerrain(void)
 {
 	if (m_pHeightMapImage) delete m_pHeightMapImage;
+}
+
+void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	// 루트 시그니처 설정
+	if (m_ppMaterials[0] && m_ppMaterials[0]->m_pShader)
+	{
+		pd3dCommandList->SetGraphicsRootSignature(m_pHeightMapRootSignature);
+	}
+
+	CGameObject::Render(pd3dCommandList, pCamera);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
