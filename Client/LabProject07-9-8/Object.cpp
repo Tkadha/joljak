@@ -246,8 +246,9 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList)
 
 	for (int i = 0; i < m_nTextures; i++)
 	{
-		if (m_ppTextures[i]) m_ppTextures[i]->UpdateShaderVariables(pd3dCommandList);
+		//if (m_ppTextures[i]) m_ppTextures[i]->UpdateShaderVariables(pd3dCommandList);
 		//		if (m_ppTextures[i]) m_ppTextures[i]->UpdateShaderVariable(pd3dCommandList, 0, 0);
+		if (m_ppTextures[i]) m_ppTextures[i]->UpdateShaderVariable(pd3dCommandList, 0, 0);
 	}
 }
 
@@ -1486,6 +1487,37 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
+	m_pMaskTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	m_pMaskTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/MaskTexture.dds", RESOURCE_TEXTURE2D, 0);
+
+	CTexture* m_pGrassTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	CTexture* m_pRockTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	CTexture* m_pSandTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+
+	m_pGrassTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_1.dds", RESOURCE_TEXTURE2D, 0);
+	//m_pRockTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_0.dds", RESOURCE_TEXTURE2D, 0);
+	//m_pSandTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 0);
+
+	CTerrainShader* pTerrainShader = new CTerrainShader();
+	pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	CScene::CreateShaderResourceViews(pd3dDevice, m_pMaskTexture, 0, 13);
+	CScene::CreateShaderResourceViews(pd3dDevice, m_pGrassTexture, 0, 14);
+	//CScene::CreateShaderResourceViews(pd3dDevice, m_pRockTexture, 0, 15);
+	//CScene::CreateShaderResourceViews(pd3dDevice, m_pSandTexture, 0, 16);
+
+	// 4개의 텍스처 (마스크 + grass + rock + sand)
+	CMaterial* pMaterial = new CMaterial(2);
+	pMaterial->SetTexture(m_pMaskTexture, 0);
+	pMaterial->SetTexture(m_pGrassTexture, 1);
+	//pMaterial->SetTexture(m_pRockTexture, 2);
+	//pMaterial->SetTexture(m_pSandTexture, 3);
+	pMaterial->SetShader(pTerrainShader);
+
+	SetMaterial(0, pMaterial);
+
+	/*
 	CTexture* pTerrainBaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 	pTerrainBaseTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Base_Texture.dds", RESOURCE_TEXTURE2D, 0);
 
@@ -1498,13 +1530,14 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 
 	CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, 13);
 	CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, 14);
-
+	
 	CMaterial *pTerrainMaterial = new CMaterial(2);
 	pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);
 	pTerrainMaterial->SetTexture(pTerrainDetailTexture, 1);
 	pTerrainMaterial->SetShader(pTerrainShader);
-
+	
 	SetMaterial(0, pTerrainMaterial);
+	*/
 }
 
 CHeightMapTerrain::~CHeightMapTerrain(void)

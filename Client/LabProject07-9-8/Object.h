@@ -456,6 +456,8 @@ private:
 
 	XMFLOAT3					m_xmf3Scale;
 
+	// 마스크 텍스쳐 추가
+	CTexture* m_pMaskTexture = nullptr;
 public:
 	float GetHeight(float x, float z, bool bReverseQuad = false) { return(m_pHeightMapImage->GetHeight(x, z, bReverseQuad) * m_xmf3Scale.y); } //World
 	XMFLOAT3 GetNormal(float x, float z) { return(m_pHeightMapImage->GetHeightMapNormal(int(x / m_xmf3Scale.x), int(z / m_xmf3Scale.z))); }
