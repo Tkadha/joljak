@@ -331,6 +331,42 @@ void CHeightMapGridMesh::OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList,
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, 4, pVertexBufferViews);
 }
 
+void CHeightMapGridMesh::AddSubMesh(int xStart, int zStart, int nWidth_part, int nLength_part, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {
+	int nIndices_part = (nWidth_part * 2) * (nLength_part - 1) + (nLength_part - 1) - 1;
+	UINT* pIndices = new UINT[nIndices_part];
+	int j = 0;
+	for (int z = 0; z < nLength_part - 1; z++) {
+		if (z % 2 == 0) {
+			for (int x = 0; x < nWidth_part; x++) {
+				int global_index = (zStart + z) * m_nWidth + xStart + x;
+				if ((x == 0) && (z > 0)) pIndices[j++] = global_index;
+				pIndices[j++] = global_index;
+				pIndices[j++] = global_index + m_nWidth;
+			}
+		}
+		else {
+			for (int x = nWidth_part - 1; x >= 0; x--) {
+				int global_index = (zStart + z) * m_nWidth + xStart + x;
+				if (x == nWidth_part - 1) pIndices[j++] = global_index;
+				pIndices[j++] = global_index;
+				pIndices[j++] = global_index + m_nWidth;
+			}
+		}
+	}
+	m_nSubMeshes++;
+	m_pnSubSetIndices = (int*)realloc(m_pnSubSetIndices, sizeof(int) * m_nSubMeshes);
+	m_pnSubSetIndices[m_nSubMeshes - 1] = nIndices_part;
+	m_ppnSubSetIndices = (UINT**)realloc(m_ppnSubSetIndices, sizeof(UINT*) * m_nSubMeshes);
+	m_ppnSubSetIndices[m_nSubMeshes - 1] = pIndices;
+	m_ppd3dSubSetIndexBuffers = (ID3D12Resource**)realloc(m_ppd3dSubSetIndexBuffers, sizeof(ID3D12Resource*) * m_nSubMeshes);
+	m_ppd3dSubSetIndexUploadBuffers = (ID3D12Resource**)realloc(m_ppd3dSubSetIndexUploadBuffers, sizeof(ID3D12Resource*) * m_nSubMeshes);
+	m_pd3dSubSetIndexBufferViews = (D3D12_INDEX_BUFFER_VIEW*)realloc(m_pd3dSubSetIndexBufferViews, sizeof(D3D12_INDEX_BUFFER_VIEW) * m_nSubMeshes);
+	m_ppd3dSubSetIndexBuffers[m_nSubMeshes - 1] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pIndices, sizeof(UINT) * nIndices_part, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[m_nSubMeshes - 1]);
+	m_pd3dSubSetIndexBufferViews[m_nSubMeshes - 1].BufferLocation = m_ppd3dSubSetIndexBuffers[m_nSubMeshes - 1]->GetGPUVirtualAddress();
+	m_pd3dSubSetIndexBufferViews[m_nSubMeshes - 1].Format = DXGI_FORMAT_R32_UINT;
+	m_pd3dSubSetIndexBufferViews[m_nSubMeshes - 1].SizeInBytes = sizeof(UINT) * nIndices_part;
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 CSkyBoxMesh::CSkyBoxMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, float fWidth, float fHeight, float fDepth) : CMesh(pd3dDevice, pd3dCommandList)
