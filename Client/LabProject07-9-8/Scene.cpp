@@ -118,35 +118,43 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_nHierarchicalGameObjects = 24;
 	m_ppHierarchicalGameObjects = new CGameObject*[m_nHierarchicalGameObjects];
 
+	CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_COw.bin", NULL);
+
+	m_ppHierarchicalGameObjects[0] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
+	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	m_ppHierarchicalGameObjects[0]->Rotate(0.f, 180.f, 0.f);
+	//m_ppHierarchicalGameObjects[0]->SetPosition(400.0f, m_pTerrain->GetHeight(400.0f, 720.0f), 700.0f);
+	m_ppHierarchicalGameObjects[0]->SetPosition(1000.f, m_pTerrain->GetHeight(400.0f, 720.0f) - 700, 1500.f);
+	m_ppHierarchicalGameObjects[0]->SetScale(8.0f, 8.0f, 8.0f);
 
 	m_ppHierarchicalGameObjects[1] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
-	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
+	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	m_ppHierarchicalGameObjects[1]->SetScale(1.0f, 1.0f, 1.0f);
 	m_ppHierarchicalGameObjects[1]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[1]->SetPosition(400.0f, m_pTerrain->GetHeight(400.0f, 720.0f), 700.0f);
-	m_ppHierarchicalGameObjects[1]->SetScale(8.0f, 8.0f, 8.0f);
+	m_ppHierarchicalGameObjects[1]->SetPosition(400.0f, m_pTerrain->GetHeight(400.0f, 720.0f) - 670, 700.0f);
 
 	m_ppHierarchicalGameObjects[2] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
-	m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
+	m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
+	m_ppHierarchicalGameObjects[2]->SetScale(1.0f, 1.0f, 1.0f);
 	m_ppHierarchicalGameObjects[2]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[2]->SetPosition(370.0f, m_pTerrain->GetHeight(380.0f, 750.0f), 700.0f);
-	m_ppHierarchicalGameObjects[2]->SetScale(8.0f, 8.0f, 8.0f);
+	m_ppHierarchicalGameObjects[2]->SetPosition(370.0f, m_pTerrain->GetHeight(380.0f, 750.0f) - 670, 700.0f);
 
 	m_ppHierarchicalGameObjects[3] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
-	m_ppHierarchicalGameObjects[3]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 3);
+	m_ppHierarchicalGameObjects[3]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
 	m_ppHierarchicalGameObjects[3]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[3]->SetPosition(340.0f, m_pTerrain->GetHeight(380.0f, 750.0f), 700.0f);
-	m_ppHierarchicalGameObjects[3]->SetScale(8.0f, 8.0f, 8.0f);
+	m_ppHierarchicalGameObjects[3]->SetPosition(340.0f, m_pTerrain->GetHeight(380.0f, 750.0f) - 670, 700.0f);
+	m_ppHierarchicalGameObjects[3]->SetScale(1.0f, 1.0f, 1.0f);
 
 	m_ppHierarchicalGameObjects[4] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
-	m_ppHierarchicalGameObjects[4]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 4);
+	m_ppHierarchicalGameObjects[4]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 3);
 	m_ppHierarchicalGameObjects[4]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[4]->SetPosition(310.0f, m_pTerrain->GetHeight(380.0f, 750.0f), 700.0f);
+	m_ppHierarchicalGameObjects[4]->SetPosition(310.0f, m_pTerrain->GetHeight(380.0f, 750.0f) - 650, 700.0f);
 	m_ppHierarchicalGameObjects[4]->SetScale(8.0f, 8.0f, 8.0f);
 
 	m_ppHierarchicalGameObjects[5] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
-	m_ppHierarchicalGameObjects[5]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 5);
+	m_ppHierarchicalGameObjects[5]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 4);
 	m_ppHierarchicalGameObjects[5]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[5]->SetPosition(280.0f, m_pTerrain->GetHeight(380.0f, 750.0f), 700.0f);
+	m_ppHierarchicalGameObjects[5]->SetPosition(280.0f, m_pTerrain->GetHeight(380.0f, 750.0f) - 650, 700.0f);
 	m_ppHierarchicalGameObjects[5]->SetScale(8.0f, 8.0f, 8.0f);
 	if (pCowModel) delete pCowModel;
 
@@ -189,37 +197,37 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	if (pSpiderModel) delete pSpiderModel;
 
 	CLoadedModelInfo *pSnakeModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Snake.bin", NULL);
-	m_ppHierarchicalGameObjects[12] = new CZebraObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pSnakeModel, 1);
+	m_ppHierarchicalGameObjects[12] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pSnakeModel, 1);
 	m_ppHierarchicalGameObjects[12]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[12]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[12]->SetPosition(430.0f, m_pTerrain->GetHeight(430.0f, 700.0f) + 10, 720.0f);
 	m_ppHierarchicalGameObjects[12]->SetScale(8.0f, 8.0f, 8.0f);
 
-	m_ppHierarchicalGameObjects[13] = new CZebraObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pSnakeModel, 1);
+	m_ppHierarchicalGameObjects[13] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pSnakeModel, 1);
 	m_ppHierarchicalGameObjects[13]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
 	m_ppHierarchicalGameObjects[13]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[13]->SetPosition(400.0f, m_pTerrain->GetHeight(400.0f, 720.0f) + 10, 720.0f);
 	m_ppHierarchicalGameObjects[13]->SetScale(8.0f, 8.0f, 8.0f);
 
-	m_ppHierarchicalGameObjects[14] = new CZebraObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pSnakeModel, 1);
+	m_ppHierarchicalGameObjects[14] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pSnakeModel, 1);
 	m_ppHierarchicalGameObjects[14]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
 	m_ppHierarchicalGameObjects[14]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[14]->SetPosition(370.0f, m_pTerrain->GetHeight(380.0f, 750.0f) + 10, 720.0f);
 	m_ppHierarchicalGameObjects[14]->SetScale(8.0f, 8.0f, 8.0f);
 
-	m_ppHierarchicalGameObjects[15] = new CZebraObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pSnakeModel, 1);
+	m_ppHierarchicalGameObjects[15] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pSnakeModel, 1);
 	m_ppHierarchicalGameObjects[15]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 3);
 	m_ppHierarchicalGameObjects[15]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[15]->SetPosition(340.0f, m_pTerrain->GetHeight(380.0f, 750.0f) + 10, 720.0f);
 	m_ppHierarchicalGameObjects[15]->SetScale(8.0f, 8.0f, 8.0f);
 
-	m_ppHierarchicalGameObjects[16] = new CZebraObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pSnakeModel, 1);
+	m_ppHierarchicalGameObjects[16] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pSnakeModel, 1);
 	m_ppHierarchicalGameObjects[16]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 4);
 	m_ppHierarchicalGameObjects[16]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[16]->SetPosition(310.0f, m_pTerrain->GetHeight(380.0f, 750.0f) + 10, 720.0f);
 	m_ppHierarchicalGameObjects[16]->SetScale(8.0f, 8.0f, 8.0f);
 
-	m_ppHierarchicalGameObjects[17] = new CZebraObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pSnakeModel, 1);
+	m_ppHierarchicalGameObjects[17] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pSnakeModel, 1);
 	m_ppHierarchicalGameObjects[17]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 5);
 	m_ppHierarchicalGameObjects[17]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[17]->SetPosition(280.0f, m_pTerrain->GetHeight(380.0f, 750.0f) + 10, 720.0f);
@@ -227,37 +235,37 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	if (pSnakeModel) delete pSnakeModel;
  
 	CLoadedModelInfo* pToadModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Toad.bin", NULL);
-	m_ppHierarchicalGameObjects[18] = new CZebraObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pToadModel, 1);
+	m_ppHierarchicalGameObjects[18] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pToadModel, 1);
 	m_ppHierarchicalGameObjects[18]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[18]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[18]->SetPosition(430.0f, m_pTerrain->GetHeight(430.0f, 700.0f) - 20, 660.0f);
 	m_ppHierarchicalGameObjects[18]->SetScale(8.0f, 8.0f, 8.0f);
 
-	m_ppHierarchicalGameObjects[19] = new CZebraObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pToadModel, 1);
+	m_ppHierarchicalGameObjects[19] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pToadModel, 1);
 	m_ppHierarchicalGameObjects[19]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
 	m_ppHierarchicalGameObjects[19]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[19]->SetPosition(400.0f, m_pTerrain->GetHeight(400.0f, 720.0f) - 20, 660.0f);
 	m_ppHierarchicalGameObjects[19]->SetScale(8.0f, 8.0f, 8.0f);
 
-	m_ppHierarchicalGameObjects[20] = new CZebraObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pToadModel, 1);
+	m_ppHierarchicalGameObjects[20] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pToadModel, 1);
 	m_ppHierarchicalGameObjects[20]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
 	m_ppHierarchicalGameObjects[20]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[20]->SetPosition(370.0f, m_pTerrain->GetHeight(380.0f, 750.0f) - 20, 660.0f);
 	m_ppHierarchicalGameObjects[20]->SetScale(8.0f, 8.0f, 8.0f);
 
-	m_ppHierarchicalGameObjects[21] = new CZebraObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pToadModel, 1);
+	m_ppHierarchicalGameObjects[21] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pToadModel, 1);
 	m_ppHierarchicalGameObjects[21]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 3);
 	m_ppHierarchicalGameObjects[21]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[21]->SetPosition(340.0f, m_pTerrain->GetHeight(380.0f, 750.0f) - 20, 660.0f);
 	m_ppHierarchicalGameObjects[21]->SetScale(8.0f, 8.0f, 8.0f);
 
-	m_ppHierarchicalGameObjects[22] = new CZebraObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pToadModel, 1);
+	m_ppHierarchicalGameObjects[22] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pToadModel, 1);
 	m_ppHierarchicalGameObjects[22]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 4);
 	m_ppHierarchicalGameObjects[22]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[22]->SetPosition(310.0f, m_pTerrain->GetHeight(380.0f, 750.0f) - 20, 660.0f);
 	m_ppHierarchicalGameObjects[22]->SetScale(8.0f, 8.0f, 8.0f);
 
-	m_ppHierarchicalGameObjects[23] = new CZebraObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pToadModel, 1);
+	m_ppHierarchicalGameObjects[23] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pToadModel, 1);
 	m_ppHierarchicalGameObjects[23]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 5);
 	m_ppHierarchicalGameObjects[23]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[23]->SetPosition(280.0f, m_pTerrain->GetHeight(380.0f, 750.0f) - 20, 660.0f);
