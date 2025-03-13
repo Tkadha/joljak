@@ -91,13 +91,13 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	BuildDefaultLightsAndMaterials();
 
-	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, this);
 
 	XMFLOAT3 xmf3Scale(5.0f, 0.2f, 5.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain.raw"), 2049, 2049, xmf3Scale, xmf4Color);
 
-	m_nHierarchicalGameObjects = 21;
+	/*	m_nHierarchicalGameObjects = 21;
 	m_ppHierarchicalGameObjects = new CGameObject*[m_nHierarchicalGameObjects];
 
 	m_ppHierarchicalGameObjects[0] = new CHairObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
@@ -154,7 +154,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	CRootMotionCallbackHandler* pRootMotionCallbackHandler = new CRootMotionCallbackHandler();
 	m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetAnimationCallbackHandler(1, pRootMotionCallbackHandler);
-//*/
+///
 	m_ppHierarchicalGameObjects[6]->SetRootMotion(true);
 	m_ppHierarchicalGameObjects[6]->SetPosition(350.0f, m_pTerrain->GetHeight(350.0f, 670.0f), 670.0f);
 	m_ppHierarchicalGameObjects[6]->Rotate(0.0f, -90.0f, 0.0f);
@@ -240,8 +240,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[20]->Rotate(0.0f, 180.0f, 0.0f);
 
 	if (pEagleModel) delete pEagleModel;
+	*/
 
-///*
+/*
 	m_nShaders = 1;
 	m_ppShaders = new CShader*[m_nShaders];
 
@@ -249,8 +250,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	pEthanObjectsShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEthanModel, m_pTerrain);
 
 	m_ppShaders[0] = pEthanObjectsShader;
-//*/
 	if (pEthanModel) delete pEthanModel;
+*/
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
@@ -614,8 +615,8 @@ void CScene::AnimateObjects(float fTimeElapsed)
 //	m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent._42 = m_xmf3RotatePosition.y + xmf3Position.y;
 //	m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent._43 = m_xmf3RotatePosition.z + xmf3Position.z;
 
-	m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent = Matrix4x4::AffineTransformation(XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, -fAngle, 0.0f), Vector3::Add(m_xmf3RotatePosition, xmf3Position));
-	m_ppHierarchicalGameObjects[11]->Rotate(0.0f, -1.5f, 0.0f);
+	//m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent = Matrix4x4::AffineTransformation(XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, -fAngle, 0.0f), Vector3::Add(m_xmf3RotatePosition, xmf3Position));
+	//m_ppHierarchicalGameObjects[11]->Rotate(0.0f, -1.5f, 0.0f);
 //**/
 }
 
@@ -633,6 +634,7 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 	pd3dCommandList->SetGraphicsRootConstantBufferView(2, d3dcbLightsGpuVirtualAddress); //Lights
 
 	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
+	//if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
 	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Render(pd3dCommandList, pCamera);
 	for (int i = 0; i < m_nShaders; i++) if (m_ppShaders[i]) m_ppShaders[i]->Render(pd3dCommandList, pCamera);
@@ -647,6 +649,5 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 		}
 	}
 
-	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 }
 

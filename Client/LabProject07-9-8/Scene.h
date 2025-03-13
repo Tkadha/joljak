@@ -119,4 +119,8 @@ public:
 
 	ID3D12Resource						*m_pd3dcbLights = NULL;
 	LIGHTS								*m_pcbMappedLights = NULL;
+
+
+	// 기존 셰이더들이 루트 시그니쳐를 얻기 위한 함수
+	ID3D12RootSignature* GetRootSignature() { return m_pd3dGraphicsRootSignature; };
 };

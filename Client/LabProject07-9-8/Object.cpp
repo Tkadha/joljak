@@ -836,12 +836,16 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pC
 		{
 			for (int i = 0; i < m_nMaterials; i++)
 			{
-				if (m_ppMaterials[i])
+				if (m_ppMaterials[i] && m_ppMaterials[i]->m_pShader)
 				{
-					if (m_ppMaterials[i]->m_pShader) m_ppMaterials[i]->m_pShader->Render(pd3dCommandList, pCamera);
+					// 셰이더의 루트 시그니처 설정
+					pd3dCommandList->SetGraphicsRootSignature(m_ppMaterials[i]->m_pShader->GetRootSignature());
+					// PSO 설정
+					pd3dCommandList->SetPipelineState(m_ppMaterials[i]->m_pShader->GetPipelineState());
+					// 셰이더 변수 업데이트
+					m_ppMaterials[i]->m_pShader->UpdateShaderVariables(pd3dCommandList);
 					m_ppMaterials[i]->UpdateShaderVariable(pd3dCommandList);
 				}
-
 				m_pMesh->Render(pd3dCommandList, i);
 			}
 		}
@@ -1506,7 +1510,7 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	m_pMaskTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
-	m_pMaskTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/MaskTexture.dds", RESOURCE_TEXTURE2D, 0);
+	m_pMaskTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_1.dds", RESOURCE_TEXTURE2D, 0);
 
 	CTexture* m_pGrassTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 	CTexture* m_pRockTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
@@ -1517,8 +1521,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 	m_pSandTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 0);
 
 	CTerrainShader* pTerrainShader = new CTerrainShader();
-	m_pHeightMapRootSignature = pTerrainShader->CreateGraphicsRootSignature(pd3dDevice);
-	pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, m_pHeightMapRootSignature);
+	pTerrainShader->CreateGraphicsRootSignature(pd3dDevice);
+	pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pTerrainShader->m_pd3dGraphicsRootSignature);
 	pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	CScene::CreateShaderResourceViews(pd3dDevice, m_pMaskTexture, 0, 13);
@@ -1527,7 +1531,7 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 	CScene::CreateShaderResourceViews(pd3dDevice, m_pSandTexture, 0, 16);
 
 	// 4개의 텍스처 (마스크 + grass + rock + sand)
-	CMaterial* pMaterial = new CMaterial(2);
+	CMaterial* pMaterial = new CMaterial(4);
 	pMaterial->SetTexture(m_pMaskTexture, 0);
 	pMaterial->SetTexture(m_pGrassTexture, 1);
 	pMaterial->SetTexture(m_pRockTexture, 2);
@@ -1610,20 +1614,9 @@ CHeightMapTerrain::~CHeightMapTerrain(void)
 	if (m_pHeightMapImage) delete m_pHeightMapImage;
 }
 
-void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
-{
-	// 루트 시그니처 설정
-	if (m_ppMaterials[0] && m_ppMaterials[0]->m_pShader)
-	{
-		pd3dCommandList->SetGraphicsRootSignature(m_pHeightMapRootSignature);
-	}
-
-	CGameObject::Render(pd3dCommandList, pCamera);
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
-CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature) : CGameObject(1)
+CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CScene* m_pScne) : CGameObject(1)
 {
 	CSkyBoxMesh *pSkyBoxMesh = new CSkyBoxMesh(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 2.0f);
 	SetMesh(pSkyBoxMesh);
@@ -1633,9 +1626,10 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	CTexture* pSkyBoxTexture = new CTexture(1, RESOURCE_TEXTURE_CUBE, 0, 1);
 	pSkyBoxTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"SkyBox/SkyBox_0.dds", RESOURCE_TEXTURE_CUBE, 0);
 
-	CSkyBoxShader *pSkyBoxShader = new CSkyBoxShader();
+	CSkyBoxShader *pSkyBoxShader = new CSkyBoxShader(m_pScne);
 	pSkyBoxShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	pSkyBoxShader->CreateGraphicsRootSignature(pd3dDevice);
 
 	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, 10);
 
@@ -1656,70 +1650,6 @@ void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 	SetPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
 
 	CGameObject::Render(pd3dCommandList, pCamera);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-CSuperCobraObject::CSuperCobraObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature)
-{
-}
-
-CSuperCobraObject::~CSuperCobraObject()
-{
-}
-
-void CSuperCobraObject::OnPrepareAnimate()
-{
-	m_pMainRotorFrame = FindFrame("MainRotor");
-	m_pTailRotorFrame = FindFrame("TailRotor");
-}
-
-void CSuperCobraObject::Animate(float fTimeElapsed)
-{
-	if (m_pMainRotorFrame)
-	{
-		XMMATRIX xmmtxRotate = XMMatrixRotationY(XMConvertToRadians(360.0f * 4.0f) * fTimeElapsed);
-		m_pMainRotorFrame->m_xmf4x4ToParent = Matrix4x4::Multiply(xmmtxRotate, m_pMainRotorFrame->m_xmf4x4ToParent);
-	}
-	if (m_pTailRotorFrame)
-	{
-		XMMATRIX xmmtxRotate = XMMatrixRotationX(XMConvertToRadians(360.0f * 4.0f) * fTimeElapsed);
-		m_pTailRotorFrame->m_xmf4x4ToParent = Matrix4x4::Multiply(xmmtxRotate, m_pTailRotorFrame->m_xmf4x4ToParent);
-	}
-
-	CGameObject::Animate(fTimeElapsed);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-CGunshipObject::CGunshipObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature)
-{
-}
-
-CGunshipObject::~CGunshipObject()
-{
-}
-
-void CGunshipObject::OnPrepareAnimate()
-{
-	m_pMainRotorFrame = FindFrame("Rotor");
-	m_pTailRotorFrame = FindFrame("Back_Rotor");
-}
-
-void CGunshipObject::Animate(float fTimeElapsed)
-{
-	if (m_pMainRotorFrame)
-	{
-		XMMATRIX xmmtxRotate = XMMatrixRotationY(XMConvertToRadians(360.0f * 2.0f) * fTimeElapsed);
-		m_pMainRotorFrame->m_xmf4x4ToParent = Matrix4x4::Multiply(xmmtxRotate, m_pMainRotorFrame->m_xmf4x4ToParent);
-	}
-	if (m_pTailRotorFrame)
-	{
-		XMMATRIX xmmtxRotate = XMMatrixRotationX(XMConvertToRadians(360.0f * 4.0f) * fTimeElapsed);
-		m_pTailRotorFrame->m_xmf4x4ToParent = Matrix4x4::Multiply(xmmtxRotate, m_pTailRotorFrame->m_xmf4x4ToParent);
-	}
-
-	CGameObject::Animate(fTimeElapsed);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
