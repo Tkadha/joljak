@@ -83,23 +83,32 @@ CHeightMapImage::CHeightMapImage(LPCTSTR pFileName, int nWidth, int nLength, XMF
 	m_nLength = nLength;
 	m_xmf3Scale = xmf3Scale;
 
-	BYTE *pHeightMapPixels = new BYTE[m_nWidth * m_nLength];
 
 	HANDLE hFile = ::CreateFile(pFileName, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_READONLY, NULL);
 	DWORD dwBytesRead;
-	::ReadFile(hFile, pHeightMapPixels, (m_nWidth * m_nLength), &dwBytesRead, NULL);
+
+	// 16비트 데이터 저장 (ushort)
+	USHORT* pHeightMapPixels = new USHORT[m_nWidth * m_nLength];
+	::ReadFile(hFile, pHeightMapPixels, (m_nWidth * m_nLength * 2), &dwBytesRead, NULL);
 	::CloseHandle(hFile);
 
-	m_pHeightMapPixels = new BYTE[m_nWidth * m_nLength];
+	m_pHeightMapPixels = new USHORT[m_nWidth * m_nLength];
+
 	for (int y = 0; y < m_nLength; y++)
 	{
 		for (int x = 0; x < m_nWidth; x++)
 		{
-			m_pHeightMapPixels[x + ((m_nLength - 1 - y)*m_nWidth)] = pHeightMapPixels[x + (y*m_nWidth)];
+			// Little-Endian → ushort 변환
+			int index = x + (y * m_nWidth);
+			USHORT heightValue = pHeightMapPixels[index];
+
+			// Unity는 Bottom-to-Top, DirectX는 Top-to-Bottom이므로 변환
+			m_pHeightMapPixels[x + ((m_nLength - 1 - y) * m_nWidth)] = heightValue;
 		}
 	}
-
 	if (pHeightMapPixels) delete[] pHeightMapPixels;
+
+
 }
 
 CHeightMapImage::~CHeightMapImage()
@@ -291,7 +300,7 @@ void CHeightMapGridMesh::ReleaseUploadBuffers()
 float CHeightMapGridMesh::OnGetHeight(int x, int z, void *pContext)
 {
 	CHeightMapImage *pHeightMapImage = (CHeightMapImage *)pContext;
-	BYTE *pHeightMapPixels = pHeightMapImage->GetHeightMapPixels();
+	USHORT *pHeightMapPixels = pHeightMapImage->GetHeightMapPixels();
 	XMFLOAT3 xmf3Scale = pHeightMapImage->GetScale();
 	int nWidth = pHeightMapImage->GetHeightMapWidth();
 	float fHeight = pHeightMapPixels[x + (z*nWidth)] * xmf3Scale.y;
@@ -320,6 +329,42 @@ void CHeightMapGridMesh::OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList,
 {
 	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[4] = { m_d3dPositionBufferView, m_d3dColorBufferView, m_d3dTextureCoord0BufferView, m_d3dTextureCoord1BufferView };
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, 4, pVertexBufferViews);
+}
+
+void CHeightMapGridMesh::AddSubMesh(int xStart, int zStart, int nWidth_part, int nLength_part, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {
+	int nIndices_part = (nWidth_part * 2) * (nLength_part - 1) + (nLength_part - 1) - 1;
+	UINT* pIndices = new UINT[nIndices_part];
+	int j = 0;
+	for (int z = 0; z < nLength_part - 1; z++) {
+		if (z % 2 == 0) {
+			for (int x = 0; x < nWidth_part; x++) {
+				int global_index = (zStart + z) * m_nWidth + xStart + x;
+				if ((x == 0) && (z > 0)) pIndices[j++] = global_index;
+				pIndices[j++] = global_index;
+				pIndices[j++] = global_index + m_nWidth;
+			}
+		}
+		else {
+			for (int x = nWidth_part - 1; x >= 0; x--) {
+				int global_index = (zStart + z) * m_nWidth + xStart + x;
+				if (x == nWidth_part - 1) pIndices[j++] = global_index;
+				pIndices[j++] = global_index;
+				pIndices[j++] = global_index + m_nWidth;
+			}
+		}
+	}
+	m_nSubMeshes++;
+	m_pnSubSetIndices = (int*)realloc(m_pnSubSetIndices, sizeof(int) * m_nSubMeshes);
+	m_pnSubSetIndices[m_nSubMeshes - 1] = nIndices_part;
+	m_ppnSubSetIndices = (UINT**)realloc(m_ppnSubSetIndices, sizeof(UINT*) * m_nSubMeshes);
+	m_ppnSubSetIndices[m_nSubMeshes - 1] = pIndices;
+	m_ppd3dSubSetIndexBuffers = (ID3D12Resource**)realloc(m_ppd3dSubSetIndexBuffers, sizeof(ID3D12Resource*) * m_nSubMeshes);
+	m_ppd3dSubSetIndexUploadBuffers = (ID3D12Resource**)realloc(m_ppd3dSubSetIndexUploadBuffers, sizeof(ID3D12Resource*) * m_nSubMeshes);
+	m_pd3dSubSetIndexBufferViews = (D3D12_INDEX_BUFFER_VIEW*)realloc(m_pd3dSubSetIndexBufferViews, sizeof(D3D12_INDEX_BUFFER_VIEW) * m_nSubMeshes);
+	m_ppd3dSubSetIndexBuffers[m_nSubMeshes - 1] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pIndices, sizeof(UINT) * nIndices_part, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[m_nSubMeshes - 1]);
+	m_pd3dSubSetIndexBufferViews[m_nSubMeshes - 1].BufferLocation = m_ppd3dSubSetIndexBuffers[m_nSubMeshes - 1]->GetGPUVirtualAddress();
+	m_pd3dSubSetIndexBufferViews[m_nSubMeshes - 1].Format = DXGI_FORMAT_R32_UINT;
+	m_pd3dSubSetIndexBufferViews[m_nSubMeshes - 1].SizeInBytes = sizeof(UINT) * nIndices_part;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

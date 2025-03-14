@@ -170,6 +170,61 @@ VS_STANDARD_OUTPUT VSSkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+struct VS_INPUT
+{
+    float3 Position : POSITION;
+    float4 Color : COLOR;
+    float2 TexCoord : TEXCOORD0;
+};
+
+struct VS_OUTPUT
+{
+    float4 Position : SV_POSITION;
+    float4 Color : COLOR;
+    float2 TexCoord : TEXCOORD0;
+};
+
+VS_OUTPUT VSTerrain(VS_INPUT input)
+{
+    VS_OUTPUT output;
+    output.Position = float4(input.Position, 1.0f); // 월드 변환은 외부에서 적용
+    output.Color = input.Color;
+    output.TexCoord = input.TexCoord;
+    return output;
+}
+
+Texture2D gtxtMask : register(t0);
+Texture2D gtxtGrass : register(t1);
+Texture2D gtxtRock : register(t2);
+Texture2D gtxtSand : register(t3);
+SamplerState gSampler : register(s0);
+
+struct PS_INPUT
+{
+    float4 Position : SV_POSITION;
+    float4 Color : COLOR;
+    float2 TexCoord : TEXCOORD0;
+};
+
+float4 PSTerrain(PS_INPUT input) : SV_TARGET
+{
+    float4 maskColor = gtxtMask.Sample(gSampler, input.TexCoord);
+    float4 grassColor = gtxtGrass.Sample(gSampler, input.TexCoord) * maskColor.g;
+    float4 rockColor = gtxtRock.Sample(gSampler, input.TexCoord) * maskColor.r;
+    float4 sandColor = gtxtSand.Sample(gSampler, input.TexCoord) * maskColor.b;
+    
+    float4 finalColor = lerp(grassColor, rockColor, maskColor.r);
+    finalColor = lerp(finalColor, sandColor, maskColor.g);
+
+    // 디버깅: 텍스처가 샘플링되지 않으면 기본 색상 반환
+    if (finalColor.a == 0.0f)
+    {
+        return float4(1.0f, 0.0f, 0.0f, 1.0f); // 빨간색x`
+    }
+
+    return finalColor * input.Color;
+}
+/*
 Texture2D gtxtTerrainBaseTexture : register(t1);
 Texture2D gtxtTerrainDetailTexture : register(t2);
 
@@ -201,8 +256,12 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 	return(output);
 }
 
+
+
 float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
 {
+	
+	/*
 	float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
 	float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);
 //	float4 cColor = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
@@ -210,6 +269,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
 
 	return(cColor);
 }
+*/
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
