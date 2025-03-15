@@ -830,25 +830,32 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pC
 
 	if (m_pMesh)
 	{
-		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+		if (m_nMaterials > 0) {
+            for (int i = 0; i < m_nMaterials; i++) {
+                if (m_ppMaterials[i] && m_ppMaterials[i]->m_pShader) {
+                    // 셰이더별 루트 시그니처와 PSO 설정
+                    CShader* pShader = m_ppMaterials[i]->m_pShader;
+                    if (pShader->GetRootSignature()) {
+                        pd3dCommandList->SetGraphicsRootSignature(pShader->GetRootSignature());
+                    } else {
+                        OutputDebugStringA("Error: Root Signature is null!\n");
+                        continue; // 루트 시그니처가 없으면 건너뜀
+                    }
 
-		if (m_nMaterials > 0)
-		{
-			for (int i = 0; i < m_nMaterials; i++)
-			{
-				if (m_ppMaterials[i] && m_ppMaterials[i]->m_pShader)
-				{
-					// 셰이더의 루트 시그니처 설정
-					pd3dCommandList->SetGraphicsRootSignature(m_ppMaterials[i]->m_pShader->GetRootSignature());
-					// PSO 설정
-					pd3dCommandList->SetPipelineState(m_ppMaterials[i]->m_pShader->GetPipelineState());
-					// 셰이더 변수 업데이트
-					m_ppMaterials[i]->m_pShader->UpdateShaderVariables(pd3dCommandList);
-					m_ppMaterials[i]->UpdateShaderVariable(pd3dCommandList);
-				}
-				m_pMesh->Render(pd3dCommandList, i);
-			}
-		}
+                    if (pShader->GetPipelineState()) {
+                        pd3dCommandList->SetPipelineState(pShader->GetPipelineState());
+                    } else {
+                        OutputDebugStringA("Error: Pipeline State is null!\n");
+                        continue; // PSO가 없으면 건너뜀
+                    }
+
+                    // 셰이더 변수 업데이트
+                    pShader->UpdateShaderVariables(pd3dCommandList);
+                    m_ppMaterials[i]->UpdateShaderVariable(pd3dCommandList);
+                }
+                m_pMesh->Render(pd3dCommandList, i);
+            }
+        }
 	}
 
 	if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
