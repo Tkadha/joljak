@@ -163,7 +163,9 @@ void CPlayer::Update(float fTimeElapsed)
 	DWORD nCurrentCameraMode = m_pCamera->GetMode();
 	if (nCurrentCameraMode == THIRD_PERSON_CAMERA) m_pCamera->Update(m_xmf3Position, fTimeElapsed);
 	if (m_pCameraUpdatedContext) OnCameraUpdateCallback(fTimeElapsed);
+	m_xmf3Position.y += 15.f;
 	if (nCurrentCameraMode == THIRD_PERSON_CAMERA) m_pCamera->SetLookAt(m_xmf3Position);
+	m_xmf3Position.y -= 15.f;
 	m_pCamera->RegenerateViewMatrix();
 
 	fLength = Vector3::Length(m_xmf3Velocity);
@@ -355,7 +357,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 
 
 	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList,
-		pd3dGraphicsRootSignature, "Model/SK_Pig_test.bin", NULL);
+		pd3dGraphicsRootSignature, "Model/SK_Hu_M_FullBody_c.bin", NULL);
 	SetChild(pAngrybotModel->m_pModelRootObject, true);
 
 	int nAnimation{10};
@@ -394,7 +396,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	SetPosition(XMFLOAT3(310.0f, pTerrain->GetHeight(310.0f, 590.0f), 590.0f));
 	SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
 
-	m_pCamera->Move(XMFLOAT3(310.0f, pTerrain->GetHeight(310.0f, 590.0f), 590.0f));
+	m_pCamera->Move(XMFLOAT3(310.0f, pTerrain->GetHeight(310.0f, 590.0f) + 20.0f, 590.0f));
 	if (pAngrybotModel) delete pAngrybotModel;
 }
 
@@ -439,7 +441,9 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 			SetMaxVelocityY(400.0f);
 			m_pCamera = OnChangeCamera(THIRD_PERSON_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.25f);
-			m_pCamera->SetOffset(XMFLOAT3(0.0f, 5000.0f, -10.0f));		// 카메라 위치 조정
+
+			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, -20.0f));// 카메라 위치 조정
+
 			m_pCamera->GenerateProjectionMatrix(1.01f, 20000.0f, ASPECT_RATIO, 60.0f);
 			m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
