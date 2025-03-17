@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="소스 파일\FSM">
+      <UniqueIdentifier>{06d19572-37e7-4ba2-b6cd-68738e177fa8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LabProject07-9-8.rc">
@@ -64,6 +67,15 @@
     <ClCompile Include="LabProject07-9-8.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="FSMManager.cpp">
+      <Filter>소스 파일\FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="FSMState.cpp">
+      <Filter>소스 파일\FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="PigState.cpp">
+      <Filter>소스 파일\FSM</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h">
@@ -104,6 +116,15 @@
     </ClInclude>
     <ClInclude Include="LabProject07-9-8.h">
       <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="FSMManager.h">
+      <Filter>소스 파일\FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="FSMState.h">
+      <Filter>소스 파일\FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="PigState.h">
+      <Filter>소스 파일\FSM</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

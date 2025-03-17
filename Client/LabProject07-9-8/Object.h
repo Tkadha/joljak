@@ -6,7 +6,7 @@
 
 #include "Mesh.h"
 #include "Camera.h"
-
+#include "FSMManager.h"
 #define DIR_FORWARD					0x01
 #define DIR_BACKWARD				0x02
 #define DIR_LEFT					0x04
@@ -347,8 +347,9 @@ public:
 public:
 	CGameObject();
 	CGameObject(int nMaterials);
-    virtual ~CGameObject();
-
+	virtual ~CGameObject();
+	CGameObject(const CGameObject&) = delete;
+	CGameObject& operator=(const CGameObject&) = delete;
 public:
 	char							m_pstrFrameName[64];
 
@@ -365,6 +366,10 @@ public:
 	CGameObject 					*m_pSibling = NULL;
 
 	CAnimationController*			m_pSkinnedAnimationController = NULL;
+
+	FSMManager<CGameObject>*		FSM_manager = NULL;
+
+	virtual void FSMUpdate() {}
 
 	void SetMesh(CMesh *pMesh);
 	void SetShader(CShader *pShader);
@@ -450,7 +455,6 @@ public:
 	CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
 	CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, int m, int k, const std::vector<std::pair<std::string, std::string>>& texturePairs);
 	virtual ~CHeightMapTerrain();
-
 private:
 	CHeightMapImage				*m_pHeightMapImage;
 
@@ -553,11 +557,23 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
 class CMonsterObject : public CGameObject
 {
+	
+
 public:
 	CMonsterObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CLoadedModelInfo *pModel, int nAnimationTracks);
 	virtual ~CMonsterObject();
+
+	virtual void FSMUpdate()
+	{
+		if (FSM_manager) FSM_manager->Update();
+	}
+	virtual void ChangeState(std::shared_ptr<FSMState<CGameObject>> newstate)
+	{
+		FSM_manager->ChangeState(newstate);
+	}
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
