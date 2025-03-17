@@ -197,7 +197,7 @@ Texture2D gtxtMask : register(t0);
 Texture2D gtxtGrass : register(t1);
 Texture2D gtxtRock : register(t2);
 Texture2D gtxtSand : register(t3);
-SamplerState gSampler : register(s0);
+SamplerState gSampler : register(s2);
 
 struct PS_INPUT
 {
