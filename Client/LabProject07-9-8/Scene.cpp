@@ -114,36 +114,50 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, m, k, texturePairs);
 	*/
 
-	m_nGameObjects = 5;
-	m_ppGameObjects= new CGameObject * [m_nGameObjects];
+	//m_nGameObjects = 5;
+	//m_ppGameObjects= new CGameObject * [m_nGameObjects];
+	//
+	//FILE* pInFile = NULL;
+	//::fopen_s(&pInFile, "Model/FAE_Pine_A_LOD2.bin", "rb");
+	//::rewind(pInFile);
 
-	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/FAE_Pine_A_LOD2.bin", "rb");
-	::rewind(pInFile);
+	
+	std::random_device rd;
+	std::mt19937 gen(rd());
 
-	m_ppGameObjects[0] = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL);
-	//m_ppGameObjects[0] = CGameObject::LoadGeometryFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Pine.bin", NULL);
-	m_ppGameObjects[0]->SetPosition(1000.f, m_pTerrain->GetHeight(1000.f, 1000.f), 1000.f);
-	m_ppGameObjects[0]->SetScale(2.0f, 2.0f, 2.0f);
+	int nPineObjects = 30;
+	for (int i = 0; i < nPineObjects; ++i) {
+		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		gameObj->SetScale(2.0f, 2.0f, 2.0f);
+		m_vGameObjects.emplace_back(gameObj);
 
+	}
 
-	::rewind(pInFile);
-	m_ppGameObjects[1] = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL);
-	m_ppGameObjects[1]->SetPosition(1025.f, m_pTerrain->GetHeight(1025.f, 1002.f), 1002.f);
-	m_ppGameObjects[1]->SetScale(2.0f, 2.0f, 2.0f);
-	::rewind(pInFile);
-	m_ppGameObjects[2] = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL);
-	m_ppGameObjects[2]->SetPosition(1030.f, m_pTerrain->GetHeight(1030.f, 1003.f), 1003.f);
-	m_ppGameObjects[2]->SetScale(2.0f, 2.0f, 2.0f);
-	::rewind(pInFile);
-	m_ppGameObjects[3] = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL);
-	m_ppGameObjects[3]->SetPosition(1050.f, m_pTerrain->GetHeight(1050.f, 990.f), 990.f);
-	m_ppGameObjects[3]->SetScale(2.0f, 2.0f, 2.0f);
-	::rewind(pInFile);
-	m_ppGameObjects[4] = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL);
-	m_ppGameObjects[4]->SetPosition(980.f, m_pTerrain->GetHeight(980.f, 1000.f), 1000.f);
-	m_ppGameObjects[4]->SetScale(2.0f, 2.0f, 2.0f);
-	::rewind(pInFile);
+	//m_ppGameObjects[0] = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL);
+	////m_ppGameObjects[0] = CGameObject::LoadGeometryFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Pine.bin", NULL);
+	//m_ppGameObjects[0]->SetPosition(1000.f, m_pTerrain->GetHeight(1000.f, 1000.f), 1000.f);
+	//m_ppGameObjects[0]->SetScale(2.0f, 2.0f, 2.0f);
+	//
+	//
+	//::rewind(pInFile);
+	//m_ppGameObjects[1] = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL);
+	//m_ppGameObjects[1]->SetPosition(1025.f, m_pTerrain->GetHeight(1025.f, 1002.f), 1002.f);
+	//m_ppGameObjects[1]->SetScale(2.0f, 2.0f, 2.0f);
+	//::rewind(pInFile);
+	//m_ppGameObjects[2] = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL);
+	//m_ppGameObjects[2]->SetPosition(1030.f, m_pTerrain->GetHeight(1030.f, 1003.f), 1003.f);
+	//m_ppGameObjects[2]->SetScale(2.0f, 2.0f, 2.0f);
+	//::rewind(pInFile);
+	//m_ppGameObjects[3] = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL);
+	//m_ppGameObjects[3]->SetPosition(1050.f, m_pTerrain->GetHeight(1050.f, 990.f), 990.f);
+	//m_ppGameObjects[3]->SetScale(2.0f, 2.0f, 2.0f);
+	//::rewind(pInFile);
+	//m_ppGameObjects[4] = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL);
+	//m_ppGameObjects[4]->SetPosition(980.f, m_pTerrain->GetHeight(980.f, 1000.f), 1000.f);
+	//m_ppGameObjects[4]->SetScale(2.0f, 2.0f, 2.0f);
+	//::rewind(pInFile);
 
 	// 오브젝트 갯수
 	m_nHierarchicalGameObjects = 24;
@@ -831,6 +845,7 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
 	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Render(pd3dCommandList, pCamera);
+	for (auto obj : m_vGameObjects) obj->Render(pd3dCommandList, pCamera);
 	for (int i = 0; i < m_nShaders; i++) if (m_ppShaders[i]) m_ppShaders[i]->Render(pd3dCommandList, pCamera);
 
 	for (int i = 0; i < m_nHierarchicalGameObjects; i++)

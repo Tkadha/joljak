@@ -1515,11 +1515,11 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 	pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, 13);
-	//CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, 14);
+	CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, 14);
 
-	CMaterial *pTerrainMaterial = new CMaterial(1);
+	CMaterial *pTerrainMaterial = new CMaterial(2);
 	pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);
-	//pTerrainMaterial->SetTexture(pTerrainDetailTexture, 1);
+	pTerrainMaterial->SetTexture(pTerrainDetailTexture, 1);
 	pTerrainMaterial->SetShader(pTerrainShader);
 
 	SetMaterial(0, pTerrainMaterial);
@@ -1924,5 +1924,16 @@ CHairObject::CHairObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	//CLoadedModelInfo* pGameObject = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/SK_Hu_M_Hair_01_skin.bin", NULL);
 
 	//SetChild(pGameObject->m_pModelRootObject, true);
+	SetChild(pGameObject);
+}
+
+
+CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, "Model/FAE_Pine_A_LOD2.bin", "rb");
+	::rewind(pInFile);
+
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL);
 	SetChild(pGameObject);
 }

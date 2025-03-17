@@ -100,6 +100,7 @@ public:
 
 	int									m_nGameObjects = 0;
 	CGameObject							**m_ppGameObjects = NULL;
+	vector<CGameObject*>					m_vGameObjects{};
 
 	int									m_nHierarchicalGameObjects = 0;
 	CGameObject							**m_ppHierarchicalGameObjects = NULL;

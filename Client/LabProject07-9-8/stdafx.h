@@ -35,6 +35,9 @@ using namespace std;
 
 #include <Mmsystem.h>
 
+//
+#include <random>
+
 #ifdef _DEBUG
 #include <dxgidebug.h>
 #endif
@@ -372,5 +375,30 @@ namespace Plane
 		XMFLOAT4 xmf4Result;
 		XMStoreFloat4(&xmf4Result, XMPlaneNormalize(XMLoadFloat4(&xmf4Plane)));
 		return(xmf4Result);
+	}
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+namespace genRandom
+{
+	template <typename T>
+	std::pair<T, T> generateRandomXZ(std::mt19937& gen, T xStart, T xEnd, T zStart, T zEnd) {
+		T x, z;
+
+		if constexpr (std::is_integral<T>::value) {
+			std::uniform_int_distribution<T> xDist(xStart, xEnd);
+			std::uniform_int_distribution<T> zDist(zStart, zEnd);
+			x = xDist(gen);
+			z = zDist(gen);
+		}
+		else {
+			std::uniform_real_distribution<T> xDist(xStart, xEnd);
+			std::uniform_real_distribution<T> zDist(zStart, zEnd);
+			x = xDist(gen);
+			z = zDist(gen);
+		}
+
+		return std::make_pair(x, z);
 	}
 }
