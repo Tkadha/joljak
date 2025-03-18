@@ -365,3 +365,31 @@ public:
 	CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 	virtual ~CPineObject() {}
 };
+
+class CRockClusterAObject : public CGameObject
+{
+public:
+	CRockClusterAObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual ~CRockClusterAObject() {}
+};
+
+class CRockClusterBObject : public CGameObject
+{
+public:
+	CRockClusterBObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual ~CRockClusterBObject() {}
+};
+
+class CRockClusterCObject : public CGameObject
+{
+public:
+	CRockClusterCObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual ~CRockClusterCObject() {}
+};
+
+class CCliffFObject : public CGameObject
+{
+public:
+	CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual ~CCliffFObject() {}
+};

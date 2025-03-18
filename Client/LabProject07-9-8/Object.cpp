@@ -1268,3 +1268,43 @@ CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL);
 	SetChild(pGameObject);
 }
+
+CRockClusterAObject::CRockClusterAObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, "Model/RockCluster_A_LOD0.bin", "rb");
+	::rewind(pInFile);
+
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL);
+	SetChild(pGameObject);
+}
+
+CRockClusterBObject::CRockClusterBObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, "Model/RockCluster_B_LOD0.bin", "rb");
+	::rewind(pInFile);
+
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL);
+	SetChild(pGameObject);
+}
+
+CRockClusterCObject::CRockClusterCObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, "Model/RockCluster_C_LOD0.bin", "rb");
+	::rewind(pInFile);
+
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL);
+	SetChild(pGameObject);
+}
+
+CCliffFObject::CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, "Model/Cliff_F_LOD0.bin", "rb");
+	::rewind(pInFile);
+
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL);
+	SetChild(pGameObject);
+}

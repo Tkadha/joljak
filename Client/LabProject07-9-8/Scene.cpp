@@ -110,7 +110,33 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
 	}
-	
+	int nRockClusterAObjects = 20;
+	for (int i = 0; i < nRockClusterAObjects; ++i) {
+		CGameObject* gameObj = new CRockClusterAObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, 10, 20, 20, 30);
+		gameObj->SetScale(w, h, w);
+		m_vGameObjects.emplace_back(gameObj);
+	}
+	int nRockClusterBObjects = 20;
+	for (int i = 0; i < nRockClusterBObjects; ++i) {
+		CGameObject* gameObj = new CRockClusterBObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, 10, 20, 20, 30);
+		gameObj->SetScale(w, h, w);
+		m_vGameObjects.emplace_back(gameObj);
+	}
+	int nRockClusterCObjects = 30;
+	for (int i = 0; i < nRockClusterCObjects; ++i) {
+		CGameObject* gameObj = new CRockClusterCObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, 10, 20, 20, 30);
+		gameObj->SetScale(w, h, w);
+		m_vGameObjects.emplace_back(gameObj);
+	}
 
 	// 오브젝트 갯수
 	m_nHierarchicalGameObjects = 6;
