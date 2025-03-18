@@ -13,6 +13,24 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="소스 파일\FSM">
+      <UniqueIdentifier>{06d19572-37e7-4ba2-b6cd-68738e177fa8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Object">
+      <UniqueIdentifier>{e3c0bad3-1031-4226-83bf-b57861da07fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Object\Player">
+      <UniqueIdentifier>{4d5c5ff8-1762-472a-a732-b31f93d01efa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Object\Base">
+      <UniqueIdentifier>{023b5c1c-ca2c-4564-8dcb-d0c832cc0dea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Object\Texture">
+      <UniqueIdentifier>{ea7a0c51-4de8-491c-8cf0-9e457b4902a5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Object\Animation">
+      <UniqueIdentifier>{f8e600d0-982f-4a8d-a956-55f9c1ac35d1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LabProject07-9-8.rc">
@@ -31,19 +49,7 @@
     <ClCompile Include="Camera.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="DDSTextureLoader12.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="GameFramework.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Mesh.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Object.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Player.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="Scene.cpp">
@@ -58,11 +64,41 @@
     <ClCompile Include="Timer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="WICTextureLoader12.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="LabProject07-9-8.cpp">
       <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="FSMManager.cpp">
+      <Filter>소스 파일\FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="FSMState.cpp">
+      <Filter>소스 파일\FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="PigState.cpp">
+      <Filter>소스 파일\FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="Player.cpp">
+      <Filter>소스 파일\Object\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="Object.cpp">
+      <Filter>소스 파일\Object\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="Mesh.cpp">
+      <Filter>소스 파일\Object\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="Material.cpp">
+      <Filter>소스 파일\Object\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="Texture.cpp">
+      <Filter>소스 파일\Object\Texture</Filter>
+    </ClCompile>
+    <ClCompile Include="DDSTextureLoader12.cpp">
+      <Filter>소스 파일\Object\Texture</Filter>
+    </ClCompile>
+    <ClCompile Include="WICTextureLoader12.cpp">
+      <Filter>소스 파일\Object\Texture</Filter>
+    </ClCompile>
+    <ClCompile Include="Animation.cpp">
+      <Filter>소스 파일\Object\Animation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -72,19 +108,7 @@
     <ClInclude Include="d3dx12.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="DDSTextureLoader12.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="GameFramework.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Mesh.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Object.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Player.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="Scene.h">
@@ -99,11 +123,41 @@
     <ClInclude Include="Timer.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="WICTextureLoader12.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="LabProject07-9-8.h">
       <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="FSMManager.h">
+      <Filter>소스 파일\FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="FSMState.h">
+      <Filter>소스 파일\FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="PigState.h">
+      <Filter>소스 파일\FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.h">
+      <Filter>소스 파일\Object\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="Object.h">
+      <Filter>소스 파일\Object\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Material.h">
+      <Filter>소스 파일\Object\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Mesh.h">
+      <Filter>소스 파일\Object\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Texture.h">
+      <Filter>소스 파일\Object\Texture</Filter>
+    </ClInclude>
+    <ClInclude Include="DDSTextureLoader12.h">
+      <Filter>소스 파일\Object\Texture</Filter>
+    </ClInclude>
+    <ClInclude Include="WICTextureLoader12.h">
+      <Filter>소스 파일\Object\Texture</Filter>
+    </ClInclude>
+    <ClInclude Include="Animation.h">
+      <Filter>소스 파일\Object\Animation</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
