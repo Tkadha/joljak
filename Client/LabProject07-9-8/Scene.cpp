@@ -93,16 +93,16 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
-	XMFLOAT3 xmf3Scale(5.0f, 0.2f, 5.0f);
+	XMFLOAT3 xmf3Scale(5.f, 0.2f, 5.f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color);
 
 	/*
-	// ÁöÇüÀ» ³ª´­ ºÎºÐÀÇ ¼ö
-	int m = 2;  // Æø ¹æÇâÀ¸·Î 2°³·Î ³ª´®
-	int k = 2;  // ±æÀÌ ¹æÇâÀ¸·Î 2°³·Î ³ª´®
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Îºï¿½ï¿½ï¿½ ï¿½ï¿½
+	int m = 2;  // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 2ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+	int k = 2;  // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 2ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 
-	// °¢ ºÎºÐ¿¡ »ç¿ëÇÒ ÅØ½ºÃ³ ÆÄÀÏ °æ·Î ½Ö
+	// ï¿½ï¿½ ï¿½ÎºÐ¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ø½ï¿½Ã³ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½
 	std::vector<std::pair<std::string, std::string>> texturePairs = {
 		{"Terrain/Base_Texture.dds", "Terrain/Detail_Texture_0.dds"},
 		{"Terrain/Base_Texture(Original).dds", "Terrain/Detail_Texture_1.dds"},
@@ -110,55 +110,58 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		{"Terrain/Water_Base_Texture_0.dds", "Terrain/Water_Detail_Texture_0.dds"}
 	};
 
-	// »õ·Î¿î »ý¼ºÀÚ È£Ãâ
+	// ï¿½ï¿½ï¿½Î¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ È£ï¿½ï¿½
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, m, k, texturePairs);
 	*/
 
-	// ¿ÀºêÁ§Æ® °¹¼ö
-	m_nHierarchicalGameObjects = 24;
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½
+	m_nHierarchicalGameObjects = 6;
 	m_ppHierarchicalGameObjects = new CGameObject*[m_nHierarchicalGameObjects];
 
-	CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_COw.bin", NULL);
+	CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Cow.bin", NULL);
 
 	m_ppHierarchicalGameObjects[0] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[0]->Rotate(0.f, 180.f, 0.f);
 	//m_ppHierarchicalGameObjects[0]->SetPosition(400.0f, m_pTerrain->GetHeight(400.0f, 720.0f), 700.0f);
+
 	m_ppHierarchicalGameObjects[0]->SetPosition(1000.f/2, m_pTerrain->GetHeight(1000.0f, 1500.0f)/2, 1500.f/2);
 	//m_ppHierarchicalGameObjects[0]->SetScale(8.0f, 8.0f, 8.0f);
 
 	m_ppHierarchicalGameObjects[1] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[1]->SetScale(1.0f, 1.0f, 1.0f);
+	m_ppHierarchicalGameObjects[1]->SetScale(1, 1, 1);
 	m_ppHierarchicalGameObjects[1]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[1]->SetPosition(400.0f, m_pTerrain->GetHeight(400.0f, 720.0f) - 670, 700.0f);
+	m_ppHierarchicalGameObjects[1]->SetPosition(800.0f / 2, m_pTerrain->GetHeight(800.0f, 1400.0f) / 2, 1400.0f / 2);
 
 	m_ppHierarchicalGameObjects[2] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-	m_ppHierarchicalGameObjects[2]->SetScale(1.0f, 1.0f, 1.0f);
-	m_ppHierarchicalGameObjects[2]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[2]->SetPosition(370.0f, m_pTerrain->GetHeight(380.0f, 750.0f) - 670, 700.0f);
+	//m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController = nullptr;
+	//m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController->m_pAnimationTracks = nullptr;
+	m_ppHierarchicalGameObjects[2]->SetScale(10.0f, 10.0f, 10.0f);
+	m_ppHierarchicalGameObjects[2]->Rotate(0.f, 0.f, 0.f);
+	m_ppHierarchicalGameObjects[2]->SetPosition(830.0f/2, m_pTerrain->GetHeight(830.0f, 1400.0f)/2, 1400.0f/2);
 
 	m_ppHierarchicalGameObjects[3] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[3]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
 	m_ppHierarchicalGameObjects[3]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[3]->SetPosition(340.0f, m_pTerrain->GetHeight(380.0f, 750.0f) - 670, 700.0f);
-	m_ppHierarchicalGameObjects[3]->SetScale(1.0f, 1.0f, 1.0f);
+	m_ppHierarchicalGameObjects[3]->SetPosition(860.0f / 2, m_pTerrain->GetHeight(860.0f, 1400.0f) / 2, 1400.0f / 2);
+	m_ppHierarchicalGameObjects[3]->SetScale(10.0f, 10.0f, 10.0f);
 
 	m_ppHierarchicalGameObjects[4] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[4]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 3);
 	m_ppHierarchicalGameObjects[4]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[4]->SetPosition(310.0f, m_pTerrain->GetHeight(380.0f, 750.0f) - 650, 700.0f);
+	m_ppHierarchicalGameObjects[4]->SetPosition(890.0f /2 , m_pTerrain->GetHeight(890.0f, 1400.0f)/2, 1400.0f / 2);
 	m_ppHierarchicalGameObjects[4]->SetScale(8.0f, 8.0f, 8.0f);
 
 	m_ppHierarchicalGameObjects[5] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[5]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 4);
 	m_ppHierarchicalGameObjects[5]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[5]->SetPosition(280.0f, m_pTerrain->GetHeight(380.0f, 750.0f) - 650, 700.0f);
+	m_ppHierarchicalGameObjects[5]->SetPosition(890.0f / 2, m_pTerrain->GetHeight(890.0f, 1400.0f) - 650, 1400.0f / 2);
 	m_ppHierarchicalGameObjects[5]->SetScale(8.0f, 8.0f, 8.0f);
 	if (pCowModel) delete pCowModel;
 
-	CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Spider.bin", NULL);
+	/*CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Spider.bin", NULL);
 	m_ppHierarchicalGameObjects[6] = new CHumanoidObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pSpiderModel, 1);
 	m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[6]->Rotate(0.f, 180.f, 0.f);
@@ -270,7 +273,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[23]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[23]->SetPosition(280.0f, m_pTerrain->GetHeight(380.0f, 750.0f) - 20, 660.0f);
 	m_ppHierarchicalGameObjects[23]->SetScale(8.0f, 8.0f, 8.0f);
-	if (pToadModel) delete pToadModel;
+	if (pToadModel) delete pToadModel;*/
 
 //	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Angrybot.bin", NULL);
 //	m_ppHierarchicalGameObjects[0] = new CAngrybotObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pLoadedModel, 1);
@@ -648,7 +651,7 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 
 void CScene::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256ÀÇ ¹è¼ö
+	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256ï¿½ï¿½ ï¿½ï¿½ï¿½
 	m_pd3dcbLights = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbLights->Map(0, NULL, (void **)&m_pcbMappedLights);
@@ -796,6 +799,14 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 	D3D12_GPU_VIRTUAL_ADDRESS d3dcbLightsGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(2, d3dcbLightsGpuVirtualAddress); //Lights
 
+	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
+	{
+		if (m_ppHierarchicalGameObjects[i])
+		{
+			if (m_ppHierarchicalGameObjects[i]->FSM_manager) m_ppHierarchicalGameObjects[i]->FSMUpdate();
+		}
+	}
+
 	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
@@ -812,4 +823,3 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 		}
 	}
 }
-

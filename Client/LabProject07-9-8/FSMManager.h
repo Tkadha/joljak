@@ -11,6 +11,9 @@ public:
 	FSMManager(entity_type* owner) : Owner(owner), Currentstate(NULL) {}
 	virtual ~FSMManager() {}
 
+	FSMManager(const FSMManager&) = delete;
+	FSMManager& operator=(const FSMManager&) = delete;
+
 	void SetCurrentState(std::shared_ptr<FSMState<entity_type>> s) { Currentstate = s; }
 
 	void Update()const
