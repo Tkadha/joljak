@@ -124,8 +124,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[0]->Rotate(0.f, 180.f, 0.f);
 	//m_ppHierarchicalGameObjects[0]->SetPosition(400.0f, m_pTerrain->GetHeight(400.0f, 720.0f), 700.0f);
-	m_ppHierarchicalGameObjects[0]->SetPosition(1000.f, m_pTerrain->GetHeight(400.0f, 720.0f) - 700, 1500.f);
-	m_ppHierarchicalGameObjects[0]->SetScale(8.0f, 8.0f, 8.0f);
+	m_ppHierarchicalGameObjects[0]->SetPosition(1000.f/2, m_pTerrain->GetHeight(1000.0f, 1500.0f)/2, 1500.f/2);
+	//m_ppHierarchicalGameObjects[0]->SetScale(8.0f, 8.0f, 8.0f);
 
 	m_ppHierarchicalGameObjects[1] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);

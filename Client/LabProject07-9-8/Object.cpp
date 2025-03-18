@@ -527,7 +527,7 @@ CAnimationController::CAnimationController(ID3D12Device *pd3dDevice, ID3D12Graph
 	m_ppd3dcbSkinningBoneTransforms = new ID3D12Resource*[m_nSkinnedMeshes];
 	m_ppcbxmf4x4MappedSkinningBoneTransforms = new XMFLOAT4X4*[m_nSkinnedMeshes];
 
-	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256ÀÇ ¹è¼ö
+	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256ï¿½ï¿½ ï¿½ï¿½ï¿½
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
 		m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
@@ -1365,7 +1365,7 @@ CLoadedModelInfo *CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device *pd
 	return(pLoadedModel);
 }
 
-// Á¤Àû ¿ÀºêÁ§Æ®¿ë
+// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½
 CGameObject* CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrToken[64] = { '\0' };
@@ -1380,7 +1380,7 @@ CGameObject* CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, I
 	for (; ; )
 	{
 		nReads = (UINT)::fread(&nStrLength, sizeof(BYTE), 1, pInFile);
-		if (nReads != 1 || nStrLength >= sizeof(pstrToken))  // <-- ¸Þ¸ð¸® º¸È£ Ãß°¡
+		if (nReads != 1 || nStrLength >= sizeof(pstrToken))  // <-- ï¿½Þ¸ï¿½ ï¿½ï¿½È£ ï¿½ß°ï¿½
 		{
 			printf("Error: Invalid string length read (%d)\n", nStrLength);
 			return nullptr;
@@ -1391,7 +1391,7 @@ CGameObject* CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, I
 			printf("Error: Failed to read token string\n");
 			return nullptr;
 		}
-		pstrToken[nStrLength] = '\0';  // ¹öÆÛ Å©±â ÃÊ°ú ¹æÁö
+		pstrToken[nStrLength] = '\0';  // ï¿½ï¿½ï¿½ï¿½ Å©ï¿½ï¿½ ï¿½Ê°ï¿½ ï¿½ï¿½ï¿½ï¿½
 
 		if (!strcmp(pstrToken, "<Frame>:"))
 		{
