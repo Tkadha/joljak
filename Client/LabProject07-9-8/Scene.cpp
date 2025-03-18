@@ -96,68 +96,21 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	XMFLOAT3 xmf3Scale(5.f, 0.2f, 5.f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color);
-
-	/*
-	// 지형을 나눌 부분의 수
-	int m = 2;  // 폭 방향으로 2개로 나눔
-	int k = 2;  // 길이 방향으로 2개로 나눔
-
-	// 각 부분에 사용할 텍스처 파일 경로 쌍
-	std::vector<std::pair<std::string, std::string>> texturePairs = {
-		{"Terrain/Base_Texture.dds", "Terrain/Detail_Texture_0.dds"},
-		{"Terrain/Base_Texture(Original).dds", "Terrain/Detail_Texture_1.dds"},
-		{"Terrain/TerrainGrass_basecolor.dds", "Terrain/Detail_Texture_2.dds"},
-		{"Terrain/Water_Base_Texture_0.dds", "Terrain/Water_Detail_Texture_0.dds"}
-	};
-
-	// 새로운 생성자 호출
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, m, k, texturePairs);
-	*/
-
-	//m_nGameObjects = 5;
-	//m_ppGameObjects= new CGameObject * [m_nGameObjects];
-	//
-	//FILE* pInFile = NULL;
-	//::fopen_s(&pInFile, "Model/FAE_Pine_A_LOD2.bin", "rb");
-	//::rewind(pInFile);
-
 	
+	// 랜덤 엔진
 	std::random_device rd;
 	std::mt19937 gen(rd());
 
-	int nPineObjects = 30;
+	int nPineObjects = 100;
 	for (int i = 0; i < nPineObjects; ++i) {
 		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		gameObj->SetScale(2.0f, 2.0f, 2.0f);
+		auto [w, h] = genRandom::generateRandomXZ(gen, 2, 6, 2, 10);
+		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
-
 	}
-
-	//m_ppGameObjects[0] = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL);
-	////m_ppGameObjects[0] = CGameObject::LoadGeometryFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Pine.bin", NULL);
-	//m_ppGameObjects[0]->SetPosition(1000.f, m_pTerrain->GetHeight(1000.f, 1000.f), 1000.f);
-	//m_ppGameObjects[0]->SetScale(2.0f, 2.0f, 2.0f);
-	//
-	//
-	//::rewind(pInFile);
-	//m_ppGameObjects[1] = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL);
-	//m_ppGameObjects[1]->SetPosition(1025.f, m_pTerrain->GetHeight(1025.f, 1002.f), 1002.f);
-	//m_ppGameObjects[1]->SetScale(2.0f, 2.0f, 2.0f);
-	//::rewind(pInFile);
-	//m_ppGameObjects[2] = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL);
-	//m_ppGameObjects[2]->SetPosition(1030.f, m_pTerrain->GetHeight(1030.f, 1003.f), 1003.f);
-	//m_ppGameObjects[2]->SetScale(2.0f, 2.0f, 2.0f);
-	//::rewind(pInFile);
-	//m_ppGameObjects[3] = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL);
-	//m_ppGameObjects[3]->SetPosition(1050.f, m_pTerrain->GetHeight(1050.f, 990.f), 990.f);
-	//m_ppGameObjects[3]->SetScale(2.0f, 2.0f, 2.0f);
-	//::rewind(pInFile);
-	//m_ppGameObjects[4] = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, pInFile, NULL);
-	//m_ppGameObjects[4]->SetPosition(980.f, m_pTerrain->GetHeight(980.f, 1000.f), 1000.f);
-	//m_ppGameObjects[4]->SetScale(2.0f, 2.0f, 2.0f);
-	//::rewind(pInFile);
+	
 
 	// 오브젝트 갯수
 	m_nHierarchicalGameObjects = 6;

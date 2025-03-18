@@ -1262,7 +1262,7 @@ CHairObject::CHairObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/FAE_Pine_A_LOD2.bin", "rb");
+	::fopen_s(&pInFile, "Model/FAE_Pine_A_LOD0.bin", "rb");
 	::rewind(pInFile);
 
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL);
