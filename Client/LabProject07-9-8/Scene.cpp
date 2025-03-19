@@ -94,7 +94,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
 	XMFLOAT3 xmf3Scale(5.f, 0.2f, 5.f);
-	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
+	XMFLOAT4 xmf4Color(0.0f, 0.0f, 0.0f, 0.0f);
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color);
 	
 	// 랜덤 엔진
@@ -137,6 +137,17 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
 	}
+
+	int nCliffFObjectCObjects = 5;
+	for (int i = 0; i < nRockClusterCObjects; ++i) {
+		CGameObject* gameObj = new CCliffFObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen,5, 10, 5, 10);
+		gameObj->SetScale(w, h, w);
+		m_vGameObjects.emplace_back(gameObj);
+	}
+
 
 	// 오브젝트 갯수
 	m_nHierarchicalGameObjects = 6;
