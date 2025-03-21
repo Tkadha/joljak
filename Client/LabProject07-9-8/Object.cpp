@@ -151,25 +151,38 @@ void CGameObject::Animate(float fTimeElapsed)
 	if (m_pChild) m_pChild->Animate(fTimeElapsed);
 }
 
-void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
 
 	if (m_pMesh)
 	{
-		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-
-		if (m_nMaterials > 0)
+		if (m_nInstances > 0)
 		{
-			for (int i = 0; i < m_nMaterials; i++)
+			// 인스턴싱 렌더링
+			if (m_nMaterials > 0 && m_ppMaterials[0] && m_ppMaterials[0]->m_pShader)
 			{
-				if (m_ppMaterials[i])
-				{
-					if (m_ppMaterials[i]->m_pShader) m_ppMaterials[i]->m_pShader->Render(pd3dCommandList, pCamera);
-					m_ppMaterials[i]->UpdateShaderVariable(pd3dCommandList);
-				}
+				m_ppMaterials[0]->m_pShader->Render(pd3dCommandList, pCamera);
+				m_ppMaterials[0]->UpdateShaderVariable(pd3dCommandList);
+			}
+			m_pMesh->Render(pd3dCommandList, 0, m_nInstances, this);
+		}
+		else
+		{
+			// 개별 객체 렌더링 (기존 방식)
+			UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
-				m_pMesh->Render(pd3dCommandList, i);
+			if (m_nMaterials > 0)
+			{
+				for (int i = 0; i < m_nMaterials; i++)
+				{
+					if (m_ppMaterials[i])
+					{
+						if (m_ppMaterials[i]->m_pShader) m_ppMaterials[i]->m_pShader->Render(pd3dCommandList, pCamera);
+						m_ppMaterials[i]->UpdateShaderVariable(pd3dCommandList);
+					}
+					m_pMesh->Render(pd3dCommandList, i);
+				}
 			}
 		}
 	}
@@ -813,6 +826,54 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
 #endif
 
 	return(pGameObject);
+}
+
+
+// 인스턴싱
+void CGameObject::SetInstanceData(ID3D12Device* pd3dDevice, const std::vector<XMFLOAT4X4>& instanceTransforms)
+{
+	m_nInstances = instanceTransforms.size();
+	if (m_nInstances == 0) return;
+
+	UINT bufferSize = sizeof(XMFLOAT4X4) * m_nInstances;
+
+	// 인스턴스 버퍼 생성 (Upload Heap 사용)
+	D3D12_RESOURCE_DESC bufferDesc = {};
+	bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	bufferDesc.Width = bufferSize;
+	bufferDesc.Height = 1;
+	bufferDesc.DepthOrArraySize = 1;
+	bufferDesc.MipLevels = 1;
+	bufferDesc.Format = DXGI_FORMAT_UNKNOWN;
+	bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	// D3D12_HEAP_PROPERTIES 구조체를 직접 초기화
+	D3D12_HEAP_PROPERTIES heapProps = {};
+	heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;            // 업로드 힙 타입 지정
+	heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	heapProps.CreationNodeMask = 1;                     // 단일 노드 환경 가정
+	heapProps.VisibleNodeMask = 1;                      // 단일 노드 환경 가정
+
+	pd3dDevice->CreateCommittedResource(
+		&heapProps,                                     // 초기화된 구조체 사용
+		D3D12_HEAP_FLAG_NONE,
+		&bufferDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&m_pInstanceBuffer)
+	);
+
+	// 데이터 업로드
+	XMFLOAT4X4* pMappedData;
+	m_pInstanceBuffer->Map(0, nullptr, reinterpret_cast<void**>(&pMappedData));
+	memcpy(pMappedData, instanceTransforms.data(), bufferSize);
+	m_pInstanceBuffer->Unmap(0, nullptr);
+
+	// 버퍼 뷰 설정
+	m_d3dInstanceBufferView.BufferLocation = m_pInstanceBuffer->GetGPUVirtualAddress();
+	m_d3dInstanceBufferView.SizeInBytes = bufferSize;
+	m_d3dInstanceBufferView.StrideInBytes = sizeof(XMFLOAT4X4);
 }
 
 

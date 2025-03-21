@@ -140,7 +140,17 @@ public:
 	static CGameObject* LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader);
 
 	static void PrintFrameInfo(CGameObject *pGameObject, CGameObject *pParent);
-};
+
+
+	// 인스턴싱
+	ID3D12Resource* m_pInstanceBuffer = nullptr;           // 인스턴스 데이터를 저장할 버퍼
+	D3D12_VERTEX_BUFFER_VIEW m_d3dInstanceBufferView;     // 인스턴스 버퍼 뷰
+	UINT m_nInstances = 0;                                // 인스턴스 수
+
+	// 인스턴스 데이터를 설정하는 함수
+	void SetInstanceData(ID3D12Device* pd3dDevice, const std::vector<XMFLOAT4X4>& instanceTransforms);
+
+};	
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

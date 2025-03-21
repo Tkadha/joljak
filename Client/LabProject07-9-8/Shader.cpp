@@ -661,3 +661,39 @@ void CEthanObjectsShader::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 
 	if (!pModel && pEthanModel) delete pEthanModel;
 }
+
+D3D12_INPUT_LAYOUT_DESC CInstancingShader::CreateInputLayout()
+{
+	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "BITANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 44, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		// 인스턴스 데이터 (4x4 행렬)
+		{ "INSTANCE_TRANSFORM", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+		{ "INSTANCE_TRANSFORM", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+		{ "INSTANCE_TRANSFORM", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+		{ "INSTANCE_TRANSFORM", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 48, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 }
+	};
+
+	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc = {};
+	d3dInputLayoutDesc.pInputElementDescs = inputElementDescs;
+	d3dInputLayoutDesc.NumElements = _countof(inputElementDescs);
+
+	return d3dInputLayoutDesc;
+}
+
+D3D12_SHADER_BYTECODE CInstancingShader::CreateVertexShader()
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSInstancing", "vs_5_1", &m_pd3dVertexShaderBlob));
+	// HLSL 파일에서 VSInstancing 컴파일 (구체적인 구현은 프로젝트에 맞게)
+//	return { /* 컴파일된 바이트코드 */ };
+}
+
+D3D12_SHADER_BYTECODE CInstancingShader::CreatePixelShader()
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSInstancing", "vs_5_1", &m_pd3dVertexShaderBlob));
+	// HLSL 파일에서 PSInstancing 컴파일
+//	return { /* 컴파일된 바이트코드 */ };
+}

@@ -120,4 +120,12 @@ public:
 
 	ID3D12Resource						*m_pd3dcbLights = NULL;
 	LIGHTS								*m_pcbMappedLights = NULL;
+
+	// 인스턴스
+	CGameObject* m_pModel = nullptr;
+	std::vector<XMFLOAT4X4> m_vInstanceData;
+	ID3D12Resource* m_pInstanceBuffer = nullptr;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dInstanceBufferView;
+
+	void LoadModel(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, const char* FileName);
 };

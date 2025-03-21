@@ -102,6 +102,22 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	std::mt19937 gen(rd());
 
 	int nPineObjects = 100;
+	m_vInstanceData.clear();
+
+	for (int i = 0; i < nPineObjects; ++i) {
+		XMFLOAT4X4 data;
+		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
+		float y = m_pTerrain->GetHeight(x, z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, 2, 6, 2, 10);
+
+		// 변환 행렬 생성
+		XMMATRIX mtxScale = XMMatrixScaling(w, h, w);
+		XMMATRIX mtxTranslate = XMMatrixTranslation(x, y, z);
+		XMStoreFloat4x4(&data, mtxScale * mtxTranslate);
+		m_vInstanceData.push_back(data);
+	}
+
+	/*int nPineObjects = 100;
 	for (int i = 0; i < nPineObjects; ++i) {
 		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
@@ -109,7 +125,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, 2, 6, 2, 10);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
-	}
+	}*/
 	int nRockClusterAObjects = 20;
 	for (int i = 0; i < nRockClusterAObjects; ++i) {
 		CGameObject* gameObj = new CRockClusterAObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
@@ -857,4 +873,16 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 			m_ppHierarchicalGameObjects[i]->Render(pd3dCommandList, pCamera);
 		}
 	}
+}
+
+
+// 인스턴스
+void CScene::LoadModel(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, const char* FileName)
+{
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, FileName, "rb");
+	::rewind(pInFile);
+
+	m_pModel = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL);
+	fclose(pInFile);
 }

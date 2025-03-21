@@ -71,6 +71,32 @@ void CMesh::Render(ID3D12GraphicsCommandList *pd3dCommandList, int nSubSet)
 	}
 }
 
+void CMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet, UINT nInstances, CGameObject* m_pContext)
+{
+	UpdateShaderVariables(pd3dCommandList);
+
+	OnPreRender(pd3dCommandList, nullptr);
+
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+
+	if (nInstances > 1) // 인스턴싱 사용 시
+	{
+		CGameObject* pGameObject = static_cast<CGameObject*>(m_pContext); // 컨텍스트에서 인스턴스 버퍼 가져오기 가정
+		if (pGameObject)
+			pd3dCommandList->IASetVertexBuffers(1, 1, &pGameObject->m_d3dInstanceBufferView);
+	}
+
+	if ((m_nSubMeshes > 0) && (nSubSet < m_nSubMeshes))
+	{
+		pd3dCommandList->IASetIndexBuffer(&(m_pd3dSubSetIndexBufferViews[nSubSet]));
+		pd3dCommandList->DrawIndexedInstanced(m_pnSubSetIndices[nSubSet], nInstances, 0, 0, 0);
+	}
+	else
+	{
+		pd3dCommandList->DrawInstanced(m_nVertices, nInstances, m_nOffset, 0);
+	}
+}
+
 void CMesh::OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext)
 {
 }
