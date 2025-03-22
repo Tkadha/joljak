@@ -104,6 +104,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	int nPineObjects = 100;
 	m_vInstanceData.clear();
 
+	LoadModel(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/FAE_Pine_A_LOD0.bin");
 	for (int i = 0; i < nPineObjects; ++i) {
 		XMFLOAT4X4 data;
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
@@ -116,6 +117,12 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		XMStoreFloat4x4(&data, mtxScale * mtxTranslate);
 		m_vInstanceData.push_back(data);
 	}
+
+	m_pModel->SetInstanceData(pd3dDevice, m_vInstanceData);
+	CInstancingShader* pInstancingShader = new CInstancingShader();
+	pInstancingShader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+
+	m_pModel->SetShader(pInstancingShader);
 
 	/*int nPineObjects = 100;
 	for (int i = 0; i < nPineObjects; ++i) {
