@@ -37,6 +37,11 @@ struct LIGHTS
 	int									m_nLights;
 };
 
+struct VS_VB_INSTANCE
+{
+	XMFLOAT4X4 m_xmf4x4Transform;
+};
+
 class CScene
 {
 public:
@@ -120,4 +125,10 @@ public:
 
 	ID3D12Resource						*m_pd3dcbLights = NULL;
 	LIGHTS								*m_pcbMappedLights = NULL;
+
+	// ¿ŒΩ∫≈œΩÃ
+	ID3D12Resource* m_pd3dcbGameObjects = NULL;
+	VS_VB_INSTANCE* m_pcbMappedGameObjects = NULL;
+
+	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView;
 };
