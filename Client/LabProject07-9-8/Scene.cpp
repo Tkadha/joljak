@@ -683,12 +683,27 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 	return(pd3dGraphicsRootSignature);
 }
 
-void CScene::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
+void CScene::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256의 배수
 	m_pd3dcbLights = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
-	m_pd3dcbLights->Map(0, NULL, (void **)&m_pcbMappedLights);
+	m_pd3dcbLights->Map(0, NULL, (void**)&m_pcbMappedLights);
+
+
+	// 인스턴싱
+	UINT m_nObjects = 100;
+	//인스턴스 정보를 저장할 정점 버퍼를 업로드 힙 유형으로 생성한다. 
+	m_pd3dcbGameObjects = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL,
+		sizeof(VS_VB_INSTANCE) * m_nObjects, D3D12_HEAP_TYPE_UPLOAD,
+		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	//정점 버퍼(업로드 힙)에 대한 포인터를 저장한다. 
+	m_pd3dcbGameObjects->Map(0, NULL, (void**)&m_pcbMappedGameObjects);
+	//정점 버퍼에 대한 뷰를 생성한다. 
+	m_d3dInstancingBufferView.BufferLocation =
+		m_pd3dcbGameObjects->GetGPUVirtualAddress();
+	m_d3dInstancingBufferView.StrideInBytes = sizeof(VS_VB_INSTANCE);
+	m_d3dInstancingBufferView.SizeInBytes = sizeof(VS_VB_INSTANCE) * m_nObjects;
 }
 
 void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
@@ -696,6 +711,12 @@ void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 	::memcpy(m_pcbMappedLights->m_pLights, m_pLights, sizeof(LIGHT) * m_nLights);
 	::memcpy(&m_pcbMappedLights->m_xmf4GlobalAmbient, &m_xmf4GlobalAmbient, sizeof(XMFLOAT4));
 	::memcpy(&m_pcbMappedLights->m_nLights, &m_nLights, sizeof(int));
+
+	for (int j = 0; j < 100; j++)
+	{
+		
+		XMStoreFloat4x4(&m_pcbMappedGameObjects[j].m_xmf4x4Transform, XMMatrixTranspose(XMLoadFloat4x4(&m_vGameObjects[j]->m_xmf4x4World)));
+	}
 }
 
 void CScene::ReleaseShaderVariables()
@@ -705,6 +726,9 @@ void CScene::ReleaseShaderVariables()
 		m_pd3dcbLights->Unmap(0, NULL);
 		m_pd3dcbLights->Release();
 	}
+
+	if (m_pd3dcbGameObjects) m_pd3dcbGameObjects->Unmap(0, NULL);
+	if (m_pd3dcbGameObjects) m_pd3dcbGameObjects->Release();
 }
 
 void CScene::ReleaseUploadBuffers()
