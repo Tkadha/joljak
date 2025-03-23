@@ -106,6 +106,55 @@ void CGameObject::SetMaterial(int nMaterial, CMaterial *pMaterial)
 	if (m_ppMaterials[nMaterial]) m_ppMaterials[nMaterial]->AddRef();
 }
 
+bool CGameObject::CheckCollisionOBB(CGameObject* other)
+{
+	return m_OBB.Intersects(other->m_OBB);
+}
+
+void CGameObject::SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation)
+{
+	m_xmf3Position = center;
+	m_xmf3Size = size;
+
+	XMStoreFloat3(&m_OBB.Center, XMLoadFloat3(&m_xmf3Position));
+	XMStoreFloat3(&m_OBB.Extents, XMLoadFloat3(&m_xmf3Size));
+	XMStoreFloat4(&m_OBB.Orientation, XMLoadFloat4(&orientation));
+}
+
+void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	XMFLOAT3 corners[8];
+	m_OBB.GetCorners(corners);
+
+	// OBB 선을 연결할 인덱스 설정
+	UINT indices[] =
+	{
+		0,1, 1,2, 2,3, 3,0, // 윗면
+		4,5, 5,6, 6,7, 7,4, // 아랫면
+		0,4, 1,5, 2,6, 3,7  // 위-아래 연결선
+	};
+
+	// 정점 버퍼 설정
+	D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+	vertexBufferView.BufferLocation = reinterpret_cast<D3D12_GPU_VIRTUAL_ADDRESS>(corners);
+	vertexBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	vertexBufferView.SizeInBytes = sizeof(corners);
+
+	// 인덱스 버퍼 설정
+	D3D12_INDEX_BUFFER_VIEW indexBufferView;
+	indexBufferView.BufferLocation = reinterpret_cast<D3D12_GPU_VIRTUAL_ADDRESS>(indices);
+	indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+	indexBufferView.SizeInBytes = sizeof(indices);
+
+	// OBB 선을 그리기 위한 설정
+	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+	pd3dCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+	pd3dCommandList->IASetIndexBuffer(&indexBufferView);
+
+	// 선(Line) OBB 그리기
+	pd3dCommandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0, 0);
+}
+
 void CGameObject::FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnSkinnedMesh)
 {
 	if (m_pMesh && (m_pMesh->GetType() & VERTEXT_BONE_INDEX_WEIGHT)) ppSkinnedMeshes[(*pnSkinnedMesh)++] = (CSkinnedMesh *)m_pMesh;

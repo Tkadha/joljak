@@ -30,6 +30,7 @@ CPlayer::CPlayer()
 
 	m_pPlayerUpdatedContext = NULL;
 	m_pCameraUpdatedContext = NULL;
+	SetOBB(m_xmf3Position, playerSize, playerRotation);
 }
 
 CPlayer::~CPlayer()
@@ -80,6 +81,15 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 		m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
 		m_pCamera->Move(xmf3Shift);
 	}
+	UpdateOBB(m_xmf3Position, playerSize, playerRotation);
+	/*
+	AllocConsole(); // 콘솔 생성
+	freopen("CONOUT$", "w", stdout); // 표준 출력 리다이렉트
+	SetConsoleTitle(L"Debug Console"); // 콘솔 제목 (선택사항)
+
+	printf("[OBB 확인] Center = (%.2f, %.2f, %.2f)\n",
+		playerObb.Center.x, playerObb.Center.y, playerObb.Center.z);
+		*/
 }
 
 void CPlayer::Rotate(float x, float y, float z)
@@ -232,6 +242,37 @@ void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 {
 	DWORD nCameraMode = (pCamera) ? pCamera->GetMode() : 0x00;
 	if (nCameraMode == THIRD_PERSON_CAMERA) CGameObject::Render(pd3dCommandList, pCamera);
+}
+
+bool CPlayer::CheckCollisionOBB(CGameObject* other)
+{
+	return playerObb.Intersects(other->m_OBB);
+}
+
+void CPlayer::SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation)
+{
+	m_xmf3Position = center;
+	m_xmf3Size = size;
+
+	XMStoreFloat3(&playerObb.Center, XMLoadFloat3(&m_xmf3Position));
+	XMStoreFloat3(&playerObb.Extents, XMLoadFloat3(&m_xmf3Size));
+	XMStoreFloat4(&playerObb.Orientation, XMLoadFloat4(&orientation));
+}
+
+void CPlayer::UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation)
+{
+	XMStoreFloat3(&playerObb.Center, XMLoadFloat3(&m_xmf3Position));
+	XMStoreFloat3(&playerObb.Extents, XMLoadFloat3(&m_xmf3Size));
+
+	XMVECTOR qRotation = XMQuaternionRotationMatrix(
+		XMMatrixSet(
+			m_xmf3Right.x, m_xmf3Up.x, m_xmf3Forward.x, 0.0f,
+			m_xmf3Right.y, m_xmf3Up.y, m_xmf3Forward.y, 0.0f,
+			m_xmf3Right.z, m_xmf3Up.z, m_xmf3Forward.z, 0.0f,
+			0.0f, 0.0f, 0.0f, 1.0f
+		)
+	);
+	XMStoreFloat4(&m_OBB.Orientation, qRotation);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -440,7 +481,7 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 			SetMaxVelocityY(400.0f);
 			m_pCamera = OnChangeCamera(THIRD_PERSON_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.25f);
-			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, -20.0f));		// ī�޶� ��ġ ����
+			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, -20.0f));		// ī�޶� ��ġ ����
 			m_pCamera->GenerateProjectionMatrix(1.01f, 20000.0f, ASPECT_RATIO, 60.0f);
 			m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);

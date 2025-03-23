@@ -123,10 +123,27 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[0] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[0]->Rotate(0.f, 180.f, 0.f);
-	//m_ppHierarchicalGameObjects[0]->SetPosition(400.0f, m_pTerrain->GetHeight(400.0f, 720.0f), 700.0f);
-
 	m_ppHierarchicalGameObjects[0]->SetPosition(1000.f/2, m_pTerrain->GetHeight(1000.0f, 1500.0f)/2, 1500.f/2);
-	//m_ppHierarchicalGameObjects[0]->SetScale(8.0f, 8.0f, 8.0f);
+	m_ppHierarchicalGameObjects[0]->SetScale(8.0f, 8.0f, 8.0f);
+
+	XMFLOAT3 cowCenter = XMFLOAT3(1000.0f, m_pTerrain->GetHeight(1000.0f, 1500.0f), 1500.0f);
+	XMFLOAT3 cowSize = XMFLOAT3(5.0f, 5.0f, 5.0f); // 실제 크기의 반
+	XMFLOAT4 cowRotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+
+	m_ppHierarchicalGameObjects[0]->SetOBB(cowCenter, cowSize, cowRotation);
+
+	/*
+	AllocConsole(); // 콘솔 생성
+	freopen("CONOUT$", "w", stdout); // 표준 출력 리다이렉트
+	SetConsoleTitle(L"Debug Console"); // 콘솔 제목 (선택사항)
+	printf("[OBB 확인] Center = (%.2f, %.2f, %.2f)\n",
+		m_ppHierarchicalGameObjects[0]->m_OBB.Center.x, m_ppHierarchicalGameObjects[0]->m_OBB.Center.y, m_ppHierarchicalGameObjects[0]->m_OBB.Center.z);
+		*/
+	//////////////////////////////////////////////////////////////////////////////////
+
+
+
+
 
 	m_ppHierarchicalGameObjects[1] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
@@ -783,7 +800,14 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 	//m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent = Matrix4x4::AffineTransformation(XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, -fAngle, 0.0f), Vector3::Add(m_xmf3RotatePosition, xmf3Position));
 	//m_ppHierarchicalGameObjects[11]->Rotate(0.0f, -1.5f, 0.0f);
+	
 //**/
+	AllocConsole(); // 콘솔 생성
+	freopen("CONOUT$", "w", stdout); // 표준 출력 리다이렉트
+	SetConsoleTitle(L"Debug Console"); // 콘솔 제목 (선택사항)
+	if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[0])) {
+		printf("[충돌 확인])\n");
+	}
 }
 
 void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
@@ -798,7 +822,7 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dcbLightsGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(2, d3dcbLightsGpuVirtualAddress); //Lights
-
+	/*
 	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
 	{
 		if (m_ppHierarchicalGameObjects[i])
@@ -806,12 +830,13 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 			if (m_ppHierarchicalGameObjects[i]->FSM_manager) m_ppHierarchicalGameObjects[i]->FSMUpdate();
 		}
 	}
-
+	*/
 	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
 	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Render(pd3dCommandList, pCamera);
 	for (int i = 0; i < m_nShaders; i++) if (m_ppShaders[i]) m_ppShaders[i]->Render(pd3dCommandList, pCamera);
+	//m_ppGameObjects[0]->RenderOBB(pd3dCommandList);
 
 	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
 	{
