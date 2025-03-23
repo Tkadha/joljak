@@ -58,7 +58,6 @@ public:
     }
     ~Octree();
 
-    // °´Ã¼ »ðÀÔ
     void insert(Object* obj);
     void remove(Object* obj);
     void update(Object* obj, const Vec3& newpos);
