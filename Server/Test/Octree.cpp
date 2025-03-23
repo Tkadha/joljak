@@ -21,18 +21,52 @@ void Octree::insert(Object* obj) {
 
     // 하위 노드에 객체 삽입 시도
     for (auto& child : children) {
-        child->insert(obj);
+        if (obj->position.isWithin(child->minBound, child->maxBound)) {
+            child->insert(obj);
+            return;  // 올바른 하위 노드에 삽입되면 종료
+        }
     }
 }
 
+void Octree::remove(Object* obj)
+{
+    auto it = std::find(objects.begin(), objects.end(), obj);
+    if (it != objects.end()) {
+        objects.erase(it);
+        return;
+    }
+
+    // 자식 노드에서 제거 시도
+    for (auto& child : children) {
+        if (child != nullptr && obj->position.isWithin(child->minBound, child->maxBound)) {
+            child->remove(obj);
+            return;
+        }
+    }
+}
+
+void Octree::update(Object* obj, const Vec3& newpos)
+{
+    if (obj->position.isWithin(minBound, maxBound)) {
+        obj->position = newpos;
+        return;
+    }
+
+    // 기존 노드에서 제거 후 새로운 위치로 다시 삽입
+    remove(obj);
+    obj->position = newpos;
+    insert(obj);
+}
+
 // 특정 범위 내 객체 검색
-void Octree::query(const Vec3& obj_pos, const Vec3& distance, std::vector<Object*>& results) {
+void Octree::query(const Object& object, const Vec3& distance, std::vector<Object*>& results) {
     // 현재 노드가 범위와 교차하지 않으면 종료
-    if (!intersects(obj_pos - distance, obj_pos + distance)) return;
+    if (!intersects(object.position - distance, object.position + distance)) return;
 
     // 현재 노드의 객체 추가
-    for (auto obj : objects) {
-        if (obj->position.isWithin(obj_pos - distance, obj_pos + distance)) {
+    for (auto& obj : objects) {
+        if (obj == &object) continue;
+        if (obj->position.isWithin(object.position - distance, object.position + distance)) {
             results.push_back(obj);
         }
     }
@@ -40,16 +74,15 @@ void Octree::query(const Vec3& obj_pos, const Vec3& distance, std::vector<Object
     // 하위 노드에 대해 검색
     for (auto& child : children) {
         if (child != nullptr) {
-            child->query(obj_pos - distance, obj_pos + distance, results);
+            child->query(object, distance, results);
         }
     }
 }
 
 void Octree::subdivide() {
-    Vec3 halfSize = { (maxBound.x - minBound.x) / 2,
-                     (maxBound.y - minBound.y) / 2,
-                     (maxBound.z - minBound.z) / 2 };
-    Vec3 center = { minBound.x + halfSize.x, minBound.y + halfSize.y, minBound.z + halfSize.z };
+    Vec3 center = { (minBound.x + maxBound.x) / 2,
+                (minBound.y + maxBound.y) / 2,
+                (minBound.z + maxBound.z) / 2 };
 
     children[0] = new Octree(minBound, center, depth + 1);
     children[1] = new Octree(Vec3(center.x, minBound.y, minBound.z), Vec3(maxBound.x, center.y, center.z), depth + 1);
