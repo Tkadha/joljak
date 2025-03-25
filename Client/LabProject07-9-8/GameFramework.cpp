@@ -320,6 +320,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				case VK_F1:
 				case VK_F2:
 				case VK_F3:
+				case VK_F4:
 					m_pCamera = m_pPlayer->ChangeCamera((DWORD)(wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
 					break;
 				case VK_F9:
@@ -452,16 +453,36 @@ void CGameFramework::ProcessInput()
 		}
 
 		DWORD dwDirection = 0;
-		if (pKeysBuffer[VK_UP] & 0xF0) dwDirection |= DIR_FORWARD;
-		if (pKeysBuffer[VK_DOWN] & 0xF0) dwDirection |= DIR_BACKWARD;
-		if (pKeysBuffer[VK_LEFT] & 0xF0) dwDirection |= DIR_LEFT;
-		if (pKeysBuffer[VK_RIGHT] & 0xF0) dwDirection |= DIR_RIGHT;
+		if (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0) dwDirection |= DIR_FORWARD;
+		if (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
+		if (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0) dwDirection |= DIR_LEFT;
+		if (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
 		if (pKeysBuffer[VK_PRIOR] & 0xF0) dwDirection |= DIR_UP;
 		if (pKeysBuffer[VK_NEXT] & 0xF0) dwDirection |= DIR_DOWN;
 		else m_pPlayer->keyInput(pKeysBuffer);
 
-		if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
+		// 카메라 모드에 따른 입력 처리
+		if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
 		{
+			// 탑뷰: 마우스 휠로 줌인/줌아웃
+			// 실제로는 마우스 휠 이벤트를 처리하려면 별도의 메시지 처리가 필요할 수 있음
+			// 여기서는 예시로 키 입력으로 대체 (Q: 줌인, E: 줌아웃)
+			if (pKeysBuffer['Q'] & 0xF0)
+			{
+				XMFLOAT3 offset = m_pCamera->GetOffset();
+				offset.y = max(20.0f, offset.y - 10.0f);  // 줌인, 최소 높이 20
+				m_pCamera->SetOffset(offset);
+			}
+			if (pKeysBuffer['E'] & 0xF0)
+			{
+				XMFLOAT3 offset = m_pCamera->GetOffset();
+				offset.y = min(200.0f, offset.y + 10.0f);  // 줌아웃, 최대 높이 200
+				m_pCamera->SetOffset(offset);
+			}
+		}
+		else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA)
+		{
+			// 자유 시점: 마우스로 회전
 			if (cxDelta || cyDelta)
 			{
 				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
@@ -469,8 +490,9 @@ void CGameFramework::ProcessInput()
 				else
 					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
-			if (dwDirection) m_pPlayer->Move(dwDirection, 12.25f, true);
 		}
+
+		if (dwDirection) m_pPlayer->Move(dwDirection, 12.25f, true);
 	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 }
