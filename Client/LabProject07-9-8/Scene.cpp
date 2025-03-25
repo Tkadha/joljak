@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "Scene.h"
 
+
 ID3D12DescriptorHeap *CScene::m_pd3dCbvSrvDescriptorHeap = NULL;
 
 D3D12_CPU_DESCRIPTOR_HANDLE	CScene::m_d3dCbvCPUDescriptorStartHandle;
@@ -131,7 +132,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	XMFLOAT4 cowRotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
 	m_ppHierarchicalGameObjects[0]->SetOBB(cowCenter, cowSize, cowRotation);
-
+	tree_objects.emplace_back(0, cowCenter);
+	octree.insert(&tree_objects[0]);
 	/*
 	AllocConsole(); // 콘솔 생성
 	freopen("CONOUT$", "w", stdout); // 표준 출력 리다이렉트
@@ -805,9 +807,19 @@ void CScene::AnimateObjects(float fTimeElapsed)
 	AllocConsole(); // 콘솔 생성
 	freopen("CONOUT$", "w", stdout); // 표준 출력 리다이렉트
 	SetConsoleTitle(L"Debug Console"); // 콘솔 제목 (선택사항)
-	if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[0])) {
-		printf("[충돌 확인])\n");
+
+	std::vector<tree_obj*> results;
+
+	tree_obj p(-1, m_pPlayer->GetPosition());
+	octree.query(p, XMFLOAT3(200, 200, 200), results);
+	for (auto& obj : results) {
+		if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[obj->u_id])) {
+			printf("contect!\n");
+		}
 	}
+	//if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[0])) {
+	//	printf("[충돌 확인])\n");
+	//}
 }
 
 void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)

@@ -147,6 +147,7 @@
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Object.cpp" />
+    <ClCompile Include="Octree.cpp" />
     <ClCompile Include="PigState.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Scene.cpp" />
@@ -168,6 +169,7 @@
     <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Object.h" />
+    <ClInclude Include="Octree.h" />
     <ClInclude Include="PigState.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Scene.h" />
