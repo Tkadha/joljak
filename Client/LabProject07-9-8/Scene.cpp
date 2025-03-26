@@ -98,7 +98,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color);
 	
 	// ·£´ý ¿£Áø
-	std::random_device rd;
+	/*std::random_device rd;
 	std::mt19937 gen(rd());
 
 	int nPineObjects = 100;
@@ -146,7 +146,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen,5, 10, 5, 10);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
-	}
+	}*/
 
 
 	// ¿ÀºêÁ§Æ® °¹¼ö
@@ -712,11 +712,11 @@ void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 	::memcpy(&m_pcbMappedLights->m_xmf4GlobalAmbient, &m_xmf4GlobalAmbient, sizeof(XMFLOAT4));
 	::memcpy(&m_pcbMappedLights->m_nLights, &m_nLights, sizeof(int));
 
-	for (int j = 0; j < 100; j++)
-	{
-		
-		XMStoreFloat4x4(&m_pcbMappedGameObjects[j].m_xmf4x4Transform, XMMatrixTranspose(XMLoadFloat4x4(&m_vGameObjects[j]->m_xmf4x4World)));
-	}
+	//for (int j = 0; j < 100; j++)
+	//{
+	//	
+	//	XMStoreFloat4x4(&m_pcbMappedGameObjects[j].m_xmf4x4Transform, XMMatrixTranspose(XMLoadFloat4x4(&m_vGameObjects[j]->m_xmf4x4World)));
+	//}
 }
 
 void CScene::ReleaseShaderVariables()

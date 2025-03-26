@@ -457,8 +457,8 @@ void CGameFramework::ProcessInput()
 		if (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
 		if (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0) dwDirection |= DIR_LEFT;
 		if (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
-		if (pKeysBuffer[VK_PRIOR] & 0xF0) dwDirection |= DIR_UP;
-		if (pKeysBuffer[VK_NEXT] & 0xF0) dwDirection |= DIR_DOWN;
+		if (pKeysBuffer[VK_SPACE] & 0xF0) dwDirection |= DIR_UP;
+		if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
 		else m_pPlayer->keyInput(pKeysBuffer);
 
 		// 카메라 모드에 따른 입력 처리
@@ -480,7 +480,7 @@ void CGameFramework::ProcessInput()
 				m_pCamera->SetOffset(offset);
 			}
 		}
-		else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA)
+		else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA || m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
 		{
 			// 자유 시점: 마우스로 회전
 			if (cxDelta || cyDelta)
