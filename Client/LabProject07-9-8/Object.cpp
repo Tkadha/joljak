@@ -108,7 +108,7 @@ void CGameObject::SetMaterial(int nMaterial, CMaterial *pMaterial)
 
 bool CGameObject::CheckCollisionOBB(CGameObject* other)
 {
-	return m_OBB.Intersects(other->m_OBB);
+	return m_localOBB.Intersects(other->m_localOBB);
 }
 
 void CGameObject::SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation)
@@ -116,15 +116,44 @@ void CGameObject::SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMF
 	m_xmf3Position = center;
 	m_xmf3Size = size;
 
-	XMStoreFloat3(&m_OBB.Center, XMLoadFloat3(&m_xmf3Position));
-	XMStoreFloat3(&m_OBB.Extents, XMLoadFloat3(&m_xmf3Size));
-	XMStoreFloat4(&m_OBB.Orientation, XMLoadFloat4(&orientation));
+	XMStoreFloat3(&m_localOBB.Center, XMLoadFloat3(&m_xmf3Position));
+	XMStoreFloat3(&m_localOBB.Extents, XMLoadFloat3(&m_xmf3Size));
+	XMStoreFloat4(&m_localOBB.Orientation, XMLoadFloat4(&orientation));
+}
+
+// 메쉬 데이터로 바운딩 박스 만들기
+void CGameObject::SetOBB()
+{
+	if (m_pMesh) {
+		// 메시 정점에서 로컬 OBB 계산
+		XMFLOAT3 minPos = m_pMesh->m_pxmf3Positions[0];
+		XMFLOAT3 maxPos = m_pMesh->m_pxmf3Positions[0];
+		for (int i = 1; i < m_pMesh->m_nPositions; ++i) {
+			minPos.x = min(minPos.x, m_pMesh->m_pxmf3Positions[i].x);
+			minPos.y = min(minPos.y, m_pMesh->m_pxmf3Positions[i].y);
+			minPos.z = min(minPos.z, m_pMesh->m_pxmf3Positions[i].z);
+			maxPos.x = max(maxPos.x, m_pMesh->m_pxmf3Positions[i].x);
+			maxPos.y = max(maxPos.y, m_pMesh->m_pxmf3Positions[i].y);
+			maxPos.z = max(maxPos.z, m_pMesh->m_pxmf3Positions[i].z);
+		}
+		m_localOBB.Center = XMFLOAT3(
+			(minPos.x + maxPos.x) * 0.5f,
+			(minPos.y + maxPos.y) * 0.5f,
+			(minPos.z + maxPos.z) * 0.5f
+		);
+		m_localOBB.Extents = XMFLOAT3(
+			(maxPos.x - minPos.x) * 0.5f,
+			(maxPos.y - minPos.y) * 0.5f,
+			(maxPos.z - minPos.z) * 0.5f
+		);
+		m_localOBB.Orientation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);  // 초기 회전 없음
+	}
 }
 
 void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	XMFLOAT3 corners[8];
-	m_OBB.GetCorners(corners);
+	m_worldOBB.GetCorners(corners);
 
 	// OBB 선을 연결할 인덱스 설정
 	UINT indices[] =
@@ -177,6 +206,29 @@ CGameObject *CGameObject::FindFrame(char *pstrFrameName)
 void CGameObject::UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent)
 {
 	m_xmf4x4World = (pxmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4ToParent, *pxmf4x4Parent) : m_xmf4x4ToParent;
+
+	// 월드 OBB 계산
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+
+	// 중심점 변환
+	XMVECTOR localCenter = XMLoadFloat3(&m_localOBB.Center);
+	XMVECTOR worldCenter = XMVector3TransformCoord(localCenter, worldMatrix);
+	XMStoreFloat3(&m_worldOBB.Center, worldCenter);
+
+	// 방향 변환 (회전)
+	XMMATRIX rotationMatrix = worldMatrix;
+	rotationMatrix.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);  // 이동 성분 제거
+	XMVECTOR orientation = XMQuaternionRotationMatrix(rotationMatrix);
+	XMStoreFloat4(&m_worldOBB.Orientation, orientation);
+
+	// 크기 변환 (스케일)
+	XMFLOAT3 scale;
+	scale.x = XMVectorGetX(XMVector3Length(worldMatrix.r[0]));
+	scale.y = XMVectorGetX(XMVector3Length(worldMatrix.r[1]));
+	scale.z = XMVectorGetX(XMVector3Length(worldMatrix.r[2]));
+	m_worldOBB.Extents.x = m_localOBB.Extents.x * scale.x;
+	m_worldOBB.Extents.y = m_localOBB.Extents.y * scale.y;
+	m_worldOBB.Extents.z = m_localOBB.Extents.z * scale.z;
 
 	if (m_pSibling) m_pSibling->UpdateTransform(pxmf4x4Parent);
 	if (m_pChild) m_pChild->UpdateTransform(&m_xmf4x4World);

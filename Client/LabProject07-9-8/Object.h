@@ -49,6 +49,7 @@ public:
 	char							m_pstrFrameName[64];
 
 	CMesh							*m_pMesh = NULL;
+	int m_nMeshes = 0;
 
 	int								m_nMaterials = 0;
 	CMaterial						**m_ppMaterials = NULL;
@@ -56,7 +57,7 @@ public:
 	XMFLOAT3 m_xmf3Position;
 	XMFLOAT3 m_xmf3Size;
 	XMFLOAT3 m_xmf3Right, m_xmf3Up, m_xmf3Forward;
-	BoundingOrientedBox m_OBB;
+	BoundingOrientedBox m_localOBB, m_worldOBB;
 
 	XMFLOAT4X4						m_xmf4x4ToParent;
 	XMFLOAT4X4						m_xmf4x4World;
@@ -127,6 +128,7 @@ public:
 
 	bool CheckCollisionOBB(CGameObject* other);
 	void SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
+	void SetOBB();
 	void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList);
 
 public:
