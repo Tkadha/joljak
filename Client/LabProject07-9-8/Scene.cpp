@@ -126,12 +126,17 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[0]->SetPosition(1000.f, m_pTerrain->GetHeight(1000.0f, 1500.0f), 1500.f);
 	m_ppHierarchicalGameObjects[0]->SetScale(8.0f, 8.0f, 8.0f);
 
-	XMFLOAT3 cowCenter = XMFLOAT3(1000.0f, m_pTerrain->GetHeight(1000.0f, 1500.0f), 1500.0f);
+	XMFLOAT3 cowCenter = XMFLOAT3(1000.0f, m_pTerrain->GetHeight(1000.0f, 1500.0f)+50, 1500.0f);
 	XMFLOAT3 cowSize = XMFLOAT3(5.0f, 5.0f, 5.0f); // 실제 크기의 반
 	XMFLOAT4 cowRotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
 	//m_ppHierarchicalGameObjects[0]->SetOBB(cowCenter, cowSize, cowRotation);
 	m_ppHierarchicalGameObjects[0]->SetOBB();
+	CShader* shader = new COBBShader();
+	//m_ppHierarchicalGameObjects[0]->m_OBBShader.CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+	m_ppHierarchicalGameObjects[0]->m_OBBMaterial->SetShader(shader);
+	m_ppHierarchicalGameObjects[0]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+
 
 	/*
 	AllocConsole(); // 콘솔 생성
@@ -178,6 +183,15 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[5]->SetPosition(890.0f / 2, m_pTerrain->GetHeight(890.0f, 1400.0f) - 650, 1400.0f / 2);
 	m_ppHierarchicalGameObjects[5]->SetScale(8.0f, 8.0f, 8.0f);
 	if (pCowModel) delete pCowModel;
+
+	for (int i = 1; i < m_nHierarchicalGameObjects; ++i) {
+		//m_ppHierarchicalGameObjects[0]->SetOBB(cowCenter, cowSize, cowRotation);
+		m_ppHierarchicalGameObjects[i]->SetOBB();
+		CShader* shader = new COBBShader();
+		//m_ppHierarchicalGameObjects[0]->m_OBBShader.CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+		m_ppHierarchicalGameObjects[i]->m_OBBMaterial->SetShader(shader);
+		m_ppHierarchicalGameObjects[i]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+	}
 
 	/*CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Spider.bin", NULL);
 	m_ppHierarchicalGameObjects[6] = new CHumanoidObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pSpiderModel, 1);
