@@ -34,7 +34,7 @@ protected:
 	LPVOID						m_pCameraUpdatedContext = NULL;
 
 	BoundingOrientedBox playerObb;
-	XMFLOAT3 playerSize = XMFLOAT3(5.0f, 5.0f, 5.0f); // 실제 크기의 반
+	XMFLOAT3 playerSize = XMFLOAT3(4.0f, 4.0f, 4.0f); // 실제 크기의 반
 	XMFLOAT4 playerRotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
 	CCamera						*m_pCamera = NULL;
@@ -42,6 +42,7 @@ protected:
 public:
 	CPlayer();
 	virtual ~CPlayer();
+	bool					    checkmove = false;
 
 	XMFLOAT3 GetPosition() { return(m_xmf3Position); }
 	XMFLOAT3 GetLookVector() { return(m_xmf3Look); }

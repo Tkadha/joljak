@@ -173,24 +173,21 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[0]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 
 
-	/*
-	AllocConsole(); // 콘솔 생성
-	freopen("CONOUT$", "w", stdout); // 표준 출력 리다이렉트
-	SetConsoleTitle(L"Debug Console"); // 콘솔 제목 (선택사항)
-	printf("[OBB 확인] Center = (%.2f, %.2f, %.2f)\n",
-		m_ppHierarchicalGameObjects[0]->m_OBB.Center.x, m_ppHierarchicalGameObjects[0]->m_OBB.Center.y, m_ppHierarchicalGameObjects[0]->m_OBB.Center.z);
-		*/
-	//////////////////////////////////////////////////////////////////////////////////
-
-
-
-
+	
 
 	m_ppHierarchicalGameObjects[1] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[1]->SetScale(1, 1, 1);
+	m_ppHierarchicalGameObjects[1]->SetScale(8.0f, 8.0f, 8.0f);
 	m_ppHierarchicalGameObjects[1]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[1]->SetPosition(800.0f / 2, m_pTerrain->GetHeight(800.0f, 1400.0f) / 2, 1400.0f / 2);
+
+	XMFLOAT3 cowCenter2 = XMFLOAT3(800.0f, m_pTerrain->GetHeight(800.0f, 1400.0f), 1400.0f);
+	XMFLOAT3 cowSize2 = XMFLOAT3(5.0f, 5.0f, 5.0f); // 실제 크기의 반
+	XMFLOAT4 cowRotation2 = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+
+	m_ppHierarchicalGameObjects[1]->SetOBB(cowCenter2, cowSize2, cowRotation2);
+
+
 
 	m_ppHierarchicalGameObjects[2] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
@@ -198,18 +195,18 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	//m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController->m_pAnimationTracks = nullptr;
 	m_ppHierarchicalGameObjects[2]->SetScale(10.0f, 10.0f, 10.0f);
 	m_ppHierarchicalGameObjects[2]->Rotate(0.f, 0.f, 0.f);
-	m_ppHierarchicalGameObjects[2]->SetPosition(830.0f/2, m_pTerrain->GetHeight(830.0f, 1400.0f)/2, 1400.0f/2);
+	m_ppHierarchicalGameObjects[2]->SetPosition(500.0f/2, m_pTerrain->GetHeight(500.0f, 800.0f)/2, 800.0f/2);
 
 	m_ppHierarchicalGameObjects[3] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[3]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
 	m_ppHierarchicalGameObjects[3]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[3]->SetPosition(860.0f / 2, m_pTerrain->GetHeight(860.0f, 1400.0f) / 2, 1400.0f / 2);
+	m_ppHierarchicalGameObjects[3]->SetPosition(100.0f / 2, m_pTerrain->GetHeight(100.0f, 1400.0f) / 2, 1400.0f / 2);
 	m_ppHierarchicalGameObjects[3]->SetScale(10.0f, 10.0f, 10.0f);
 
 	m_ppHierarchicalGameObjects[4] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[4]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 3);
 	m_ppHierarchicalGameObjects[4]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[4]->SetPosition(890.0f /2 , m_pTerrain->GetHeight(890.0f, 1400.0f)/2, 1400.0f / 2);
+	m_ppHierarchicalGameObjects[4]->SetPosition(200.0f /2 , m_pTerrain->GetHeight(200.0f, 500.0f)/2, 500.0f / 2);
 	m_ppHierarchicalGameObjects[4]->SetScale(8.0f, 8.0f, 8.0f);
 
 	m_ppHierarchicalGameObjects[5] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
@@ -218,6 +215,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[5]->SetPosition(890.0f / 2, m_pTerrain->GetHeight(890.0f, 1400.0f) - 650, 1400.0f / 2);
 	m_ppHierarchicalGameObjects[5]->SetScale(8.0f, 8.0f, 8.0f);
 	if (pCowModel) delete pCowModel;
+	
+
 
 	for (int i = 1; i < m_nHierarchicalGameObjects; ++i) {
 		//m_ppHierarchicalGameObjects[0]->SetOBB(cowCenter, cowSize, cowRotation);
@@ -896,6 +895,12 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 	if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[0])) {
 		printf("[충돌 확인])\n");
+		m_pPlayer->checkmove = true;
+		
+	}
+	if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[1])) {
+		
+		m_ppHierarchicalGameObjects[1]->isRender = false;
 	}
 }
 
@@ -926,11 +931,11 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Render(pd3dCommandList, pCamera);
 	for (auto obj : m_vGameObjects) obj->Render(pd3dCommandList, pCamera);
 	for (int i = 0; i < m_nShaders; i++) if (m_ppShaders[i]) m_ppShaders[i]->Render(pd3dCommandList, pCamera);
-	//m_ppGameObjects[0]->RenderOBB(pd3dCommandList);
+	//m_ppHierarchicalGameObjects[0]->RenderOBB(pd3dCommandList);
 
 	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
 	{
-		if (m_ppHierarchicalGameObjects[i])
+		if (m_ppHierarchicalGameObjects[i] && m_ppHierarchicalGameObjects[i]->isRender == true)
 		{
 			m_ppHierarchicalGameObjects[i]->Animate(m_fElapsedTime);
 			if (!m_ppHierarchicalGameObjects[i]->m_pSkinnedAnimationController) m_ppHierarchicalGameObjects[i]->UpdateTransform(NULL);

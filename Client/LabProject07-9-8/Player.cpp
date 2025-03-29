@@ -67,30 +67,29 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
 		if (dwDirection & DIR_UP) xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Up, fDistance);
 		if (dwDirection & DIR_DOWN) xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Up, -fDistance);
 
+		
 		Move(xmf3Shift, bUpdateVelocity);
+		if (checkmove == true) {
+			checkmove = false;
+		}
+		
 	}
 }
 
 void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 {
-	if (bUpdateVelocity)
-	{
-		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
-	}
-	else
-	{
-		m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
-		m_pCamera->Move(xmf3Shift);
+	if (checkmove == false) {
+		if (bUpdateVelocity)
+		{
+			m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
+		}
+		else
+		{
+			m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
+			m_pCamera->Move(xmf3Shift);
+		}
 	}
 	UpdateOBB(m_xmf3Position, playerSize, playerRotation);
-	/*
-	AllocConsole(); // 콘솔 생성
-	freopen("CONOUT$", "w", stdout); // 표준 출력 리다이렉트
-	SetConsoleTitle(L"Debug Console"); // 콘솔 제목 (선택사항)
-
-	printf("[OBB 확인] Center = (%.2f, %.2f, %.2f)\n",
-		playerObb.Center.x, playerObb.Center.y, playerObb.Center.z);
-		*/
 }
 
 void CPlayer::Rotate(float x, float y, float z)

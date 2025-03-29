@@ -53,6 +53,7 @@ public:
 	int m_nMeshes = 0;
 
 	int								m_nMaterials = 0;
+	bool							isRender = true;
 	CMaterial						**m_ppMaterials = NULL;
 
 	// OBB
