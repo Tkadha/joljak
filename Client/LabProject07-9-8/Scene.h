@@ -6,7 +6,7 @@
 
 #include "Shader.h"
 #include "Player.h"
-
+#include "Octree.h"
 #define MAX_LIGHTS						16 
 
 #define POINT_LIGHT						1
@@ -132,4 +132,8 @@ public:
 	VS_VB_INSTANCE* m_pcbMappedGameObjects = NULL;
 
 	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView;
+
+	std::vector<tree_obj>				tree_objects;
+	Octree								octree{ XMFLOAT3 {0,0,0}, XMFLOAT3{10200,4000,10200} };
+
 };

@@ -22,4 +22,3 @@ public:
 	RemoteClient(): thread(), tcpConnection(SocketType::Tcp), m_id() {}
 	RemoteClient(SocketType socketType) :tcpConnection(socketType) {}
 };
-

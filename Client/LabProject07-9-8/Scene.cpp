@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "Scene.h"
 
+
 ID3D12DescriptorHeap *CScene::m_pd3dCbvSrvDescriptorHeap = NULL;
 
 D3D12_CPU_DESCRIPTOR_HANDLE	CScene::m_d3dCbvCPUDescriptorStartHandle;
@@ -172,7 +173,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[0]->m_OBBMaterial->SetShader(shader);
 	m_ppHierarchicalGameObjects[0]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 
-
+	tree_objects.emplace_back(0, m_ppHierarchicalGameObjects[0]->m_worldOBB);
+	octree.insert(&tree_objects[0]);
 	
 
 	m_ppHierarchicalGameObjects[1] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
@@ -902,6 +904,15 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		
 		m_ppHierarchicalGameObjects[1]->isRender = false;
 	}
+
+	std::vector<tree_obj*> results;
+
+	tree_obj p(-1, m_pPlayer->GetPosition());
+	octree.query(p, XMFLOAT3(200, 200, 200), results);
+	for (auto& obj : results) {
+		if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[obj->u_id])) {
+			printf("contect!\n");
+		}
 }
 
 void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)

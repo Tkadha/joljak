@@ -31,3 +31,12 @@ void Iocp::Wait(IocpEvents &output, int timeoutMs)
 		 output.m_eventCount = 0;
 	 }
 }
+void Iocp::Wait(LobbyIocpEvents& output, int timeoutMs)
+{
+	BOOL r = GetQueuedCompletionStatusEx(m_hIocp, output.m_events, MaxLobbyEventCount, (ULONG*)&output.m_eventCount, timeoutMs, FALSE);
+	if (!r)
+	{
+		output.m_eventCount = 0;
+	}
+}
+
