@@ -51,6 +51,7 @@ public:
 	CMesh							*m_pMesh = NULL;
 
 	int								m_nMaterials = 0;
+	bool							isRender = true;
 	CMaterial						**m_ppMaterials = NULL;
 
 	XMFLOAT3 m_xmf3Position;
