@@ -98,7 +98,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color);
 	
 	// 랜덤 엔진
-	/*std::random_device rd;
+	std::random_device rd;
 	std::mt19937 gen(rd());
 
 	int nPineObjects = 100;
@@ -146,7 +146,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen,5, 10, 5, 10);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
-	}*/
+	}
 
 
 	// 오브젝트 갯수
