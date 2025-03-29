@@ -17,6 +17,7 @@
 
 class CShader;
 class CStandardShader;
+class COBBShader;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -49,9 +50,24 @@ public:
 	char							m_pstrFrameName[64];
 
 	CMesh							*m_pMesh = NULL;
+	int m_nMeshes = 0;
 
 	int								m_nMaterials = 0;
 	CMaterial						**m_ppMaterials = NULL;
+
+	// OBB
+	XMFLOAT3 m_xmf3Position;
+	XMFLOAT3 m_xmf3Size;
+	XMFLOAT3 m_xmf3Right, m_xmf3Up, m_xmf3Forward;
+	BoundingOrientedBox m_localOBB, m_worldOBB;
+
+	ID3D12Resource* m_pOBBVertexBuffer;
+	ID3D12Resource* m_pOBBIndexBuffer;
+	D3D12_VERTEX_BUFFER_VIEW m_OBBVertexBufferView;
+	D3D12_INDEX_BUFFER_VIEW m_OBBIndexBufferView;
+
+	CMaterial* m_OBBMaterial = NULL;
+	//COBBShader m_OBBShader;
 
 	XMFLOAT4X4						m_xmf4x4ToParent;
 	XMFLOAT4X4						m_xmf4x4World;
@@ -121,6 +137,12 @@ public:
 
 	UINT GetMeshType() { return((m_pMesh) ? m_pMesh->GetType() : 0x00); }
 
+	bool CheckCollisionOBB(CGameObject* other);
+	void SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
+	void SetOBB();
+	void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList);
+	void InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
 public:
 	void FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnSkinnedMesh);
 
@@ -136,7 +158,7 @@ public:
 
 	static CLoadedModelInfo *LoadGeometryAndAnimationFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, char *pstrFileName, CShader *pShader);
 
-	// Á¤Àû ¿ÀºêÁ§Æ® ·Îµå
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½Îµï¿½
 	static CGameObject* LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, FILE* pInFile, CShader* pShader);
 	static CGameObject* LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader);
 

@@ -97,7 +97,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	XMFLOAT4 xmf4Color(0.0f, 0.0f, 0.0f, 0.0f);
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color);
 	
-	// ·£´ý ¿£Áø
+	// ëžœë¤ ì—”ì§„
 	std::random_device rd;
 	std::mt19937 gen(rd());
 
@@ -149,7 +149,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	}
 
 
-	// ¿ÀºêÁ§Æ® °¹¼ö
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½
 	m_nHierarchicalGameObjects = 6;
 	m_ppHierarchicalGameObjects = new CGameObject*[m_nHierarchicalGameObjects];
 
@@ -158,9 +158,33 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[0] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[0]->Rotate(0.f, 180.f, 0.f);
-	//m_ppHierarchicalGameObjects[0]->SetPosition(400.0f, m_pTerrain->GetHeight(400.0f, 720.0f), 700.0f);
-	m_ppHierarchicalGameObjects[0]->SetPosition(0.f, m_pTerrain->GetHeight(400.0f, 720.0f) - 700, 0.f);
+	m_ppHierarchicalGameObjects[0]->SetPosition(1000.f, m_pTerrain->GetHeight(1000.0f, 1500.0f), 1500.f);
 	m_ppHierarchicalGameObjects[0]->SetScale(8.0f, 8.0f, 8.0f);
+
+	XMFLOAT3 cowCenter = XMFLOAT3(1000.0f, m_pTerrain->GetHeight(1000.0f, 1500.0f)+50, 1500.0f);
+	XMFLOAT3 cowSize = XMFLOAT3(5.0f, 5.0f, 5.0f); // ì‹¤ì œ í¬ê¸°ì˜ ë°˜
+	XMFLOAT4 cowRotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+
+	//m_ppHierarchicalGameObjects[0]->SetOBB(cowCenter, cowSize, cowRotation);
+	m_ppHierarchicalGameObjects[0]->SetOBB();
+	CShader* shader = new COBBShader();
+	//m_ppHierarchicalGameObjects[0]->m_OBBShader.CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+	m_ppHierarchicalGameObjects[0]->m_OBBMaterial->SetShader(shader);
+	m_ppHierarchicalGameObjects[0]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+
+
+	/*
+	AllocConsole(); // ì½˜ì†” ìƒì„±
+	freopen("CONOUT$", "w", stdout); // í‘œì¤€ ì¶œë ¥ ë¦¬ë‹¤ì´ë ‰íŠ¸
+	SetConsoleTitle(L"Debug Console"); // ì½˜ì†” ì œëª© (ì„ íƒì‚¬í•­)
+	printf("[OBB í™•ì¸] Center = (%.2f, %.2f, %.2f)\n",
+		m_ppHierarchicalGameObjects[0]->m_OBB.Center.x, m_ppHierarchicalGameObjects[0]->m_OBB.Center.y, m_ppHierarchicalGameObjects[0]->m_OBB.Center.z);
+		*/
+	//////////////////////////////////////////////////////////////////////////////////
+
+
+
+
 
 	m_ppHierarchicalGameObjects[1] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
@@ -194,6 +218,15 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[5]->SetPosition(890.0f / 2, m_pTerrain->GetHeight(890.0f, 1400.0f) - 650, 1400.0f / 2);
 	m_ppHierarchicalGameObjects[5]->SetScale(8.0f, 8.0f, 8.0f);
 	if (pCowModel) delete pCowModel;
+
+	for (int i = 1; i < m_nHierarchicalGameObjects; ++i) {
+		//m_ppHierarchicalGameObjects[0]->SetOBB(cowCenter, cowSize, cowRotation);
+		m_ppHierarchicalGameObjects[i]->SetOBB();
+		CShader* shader = new COBBShader();
+		//m_ppHierarchicalGameObjects[0]->m_OBBShader.CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+		m_ppHierarchicalGameObjects[i]->m_OBBMaterial->SetShader(shader);
+		m_ppHierarchicalGameObjects[i]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+	}
 
 	/*CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Spider.bin", NULL);
 	m_ppHierarchicalGameObjects[6] = new CHumanoidObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pSpiderModel, 1);
@@ -685,21 +718,21 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 
 void CScene::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256ÀÇ ¹è¼ö
+	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256ï¿½ï¿½ ï¿½ï¿½ï¿½
 	m_pd3dcbLights = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbLights->Map(0, NULL, (void**)&m_pcbMappedLights);
 
 
-	// ÀÎ½ºÅÏ½Ì
+	// ì¸ìŠ¤í„´ì‹±
 	UINT m_nObjects = 100;
-	//ÀÎ½ºÅÏ½º Á¤º¸¸¦ ÀúÀåÇÒ Á¤Á¡ ¹öÆÛ¸¦ ¾÷·Îµå Èü À¯ÇüÀ¸·Î »ý¼ºÇÑ´Ù. 
+	//ì¸ìŠ¤í„´ìŠ¤ ì •ë³´ë¥¼ ì €ìž¥í•  ì •ì  ë²„í¼ë¥¼ ì—…ë¡œë“œ íž™ ìœ í˜•ìœ¼ë¡œ ìƒì„±í•œë‹¤. 
 	m_pd3dcbGameObjects = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL,
 		sizeof(VS_VB_INSTANCE) * m_nObjects, D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-	//Á¤Á¡ ¹öÆÛ(¾÷·Îµå Èü)¿¡ ´ëÇÑ Æ÷ÀÎÅÍ¸¦ ÀúÀåÇÑ´Ù. 
+	//ì •ì  ë²„í¼(ì—…ë¡œë“œ íž™)ì— ëŒ€í•œ í¬ì¸í„°ë¥¼ ì €ìž¥í•œë‹¤. 
 	m_pd3dcbGameObjects->Map(0, NULL, (void**)&m_pcbMappedGameObjects);
-	//Á¤Á¡ ¹öÆÛ¿¡ ´ëÇÑ ºä¸¦ »ý¼ºÇÑ´Ù. 
+	//ì •ì  ë²„í¼ì— ëŒ€í•œ ë·°ë¥¼ ìƒì„±í•œë‹¤. 
 	m_d3dInstancingBufferView.BufferLocation =
 		m_pd3dcbGameObjects->GetGPUVirtualAddress();
 	m_d3dInstancingBufferView.StrideInBytes = sizeof(VS_VB_INSTANCE);
@@ -841,7 +874,29 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 	//m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent = Matrix4x4::AffineTransformation(XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, -fAngle, 0.0f), Vector3::Add(m_xmf3RotatePosition, xmf3Position));
 	//m_ppHierarchicalGameObjects[11]->Rotate(0.0f, -1.5f, 0.0f);
+	
 //**/
+	AllocConsole(); // ì½˜ì†” ìƒì„±
+	freopen("CONOUT$", "w", stdout); // í‘œì¤€ ì¶œë ¥ ë¦¬ë‹¤ì´ë ‰íŠ¸
+	SetConsoleTitle(L"Debug Console"); // ì½˜ì†” ì œëª© (ì„ íƒì‚¬í•­)
+
+#ifndef test
+#define test	
+	printf("Center{%f %f %f} ", m_pPlayer->m_worldOBB.Center.x, m_pPlayer->m_worldOBB.Center.y, m_pPlayer->m_worldOBB.Center.z);
+	printf("Extents{%f %f %f} ", m_pPlayer->m_worldOBB.Extents.x, m_pPlayer->m_worldOBB.Extents.y, m_pPlayer->m_worldOBB.Extents.z);
+	printf("Orientation{%f %f %f}\n", m_pPlayer->m_worldOBB.Orientation.x, m_pPlayer->m_worldOBB.Orientation.y, m_pPlayer->m_worldOBB.Orientation.z);
+	printf("Center{%f %f %f} ", m_ppHierarchicalGameObjects[0]->m_worldOBB.Center.x, m_ppHierarchicalGameObjects[0]->m_worldOBB.Center.y, m_ppHierarchicalGameObjects[0]->m_worldOBB.Center.z);
+	printf("Extents{%f %f %f} ", m_ppHierarchicalGameObjects[0]->m_worldOBB.Extents.x, m_ppHierarchicalGameObjects[0]->m_worldOBB.Extents.y, m_ppHierarchicalGameObjects[0]->m_worldOBB.Extents.z);
+	printf("Orientation{%f %f %f}\n", m_ppHierarchicalGameObjects[0]->m_worldOBB.Orientation.x, m_ppHierarchicalGameObjects[0]->m_worldOBB.Orientation.y, m_ppHierarchicalGameObjects[0]->m_worldOBB.Orientation.z);
+	//printf("%f %f %f\n", m_ppHierarchicalGameObjects[0]->m_localOBB.Center.x, m_ppHierarchicalGameObjects[0]->m_localOBB.Center.y, m_ppHierarchicalGameObjects[0]->m_localOBB.Center.z);
+	//printf("%f %f %f\n", m_ppHierarchicalGameObjects[0]->m_xmf4x4World._11, m_ppHierarchicalGameObjects[0]->m_xmf4x4World._12, m_ppHierarchicalGameObjects[0]->m_xmf4x4World._13);
+	//printf("%f %f %f\n", m_ppHierarchicalGameObjects[0]->m_xmf4x4World._41, m_ppHierarchicalGameObjects[0]->m_xmf4x4World._42, m_ppHierarchicalGameObjects[0]->m_xmf4x4World._43);
+	//printf("%f %f %f\n", m_ppHierarchicalGameObjects[0]->m_pChild->m_pChild->m_pChild->m_xmf4x4World._11, m_ppHierarchicalGameObjects[0]->m_pChild->m_pChild->m_pChild->m_xmf4x4World._12, m_ppHierarchicalGameObjects[0]->m_pChild->m_pChild->m_pChild->m_xmf4x4World._13);
+#endif // !1
+
+	if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[0])) {
+		printf("[ì¶©ëŒ í™•ì¸])\n");
+	}
 }
 
 void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
@@ -856,7 +911,7 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dcbLightsGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(2, d3dcbLightsGpuVirtualAddress); //Lights
-
+	/*
 	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
 	{
 		if (m_ppHierarchicalGameObjects[i])
@@ -864,13 +919,14 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 			if (m_ppHierarchicalGameObjects[i]->FSM_manager) m_ppHierarchicalGameObjects[i]->FSMUpdate();
 		}
 	}
-
+	*/
 	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
 	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Render(pd3dCommandList, pCamera);
 	for (auto obj : m_vGameObjects) obj->Render(pd3dCommandList, pCamera);
 	for (int i = 0; i < m_nShaders; i++) if (m_ppShaders[i]) m_ppShaders[i]->Render(pd3dCommandList, pCamera);
+	//m_ppGameObjects[0]->RenderOBB(pd3dCommandList);
 
 	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
 	{

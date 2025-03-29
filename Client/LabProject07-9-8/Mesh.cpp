@@ -115,7 +115,7 @@ CHeightMapImage::CHeightMapImage(LPCTSTR pFileName, int nWidth, int nLength, XMF
 	HANDLE hFile = ::CreateFile(pFileName, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_READONLY, NULL);
 	DWORD dwBytesRead;
 
-	// 16ºñÆ® µ¥ÀÌÅÍ ÀúÀå (ushort)
+	// 16ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (ushort)
 	USHORT* pHeightMapPixels = new USHORT[m_nWidth * m_nLength];
 	::ReadFile(hFile, pHeightMapPixels, (m_nWidth * m_nLength * 2), &dwBytesRead, NULL);
 	::CloseHandle(hFile);
@@ -126,11 +126,11 @@ CHeightMapImage::CHeightMapImage(LPCTSTR pFileName, int nWidth, int nLength, XMF
 	{
 		for (int x = 0; x < m_nWidth; x++)
 		{
-			// Little-Endian ¡æ ushort º¯È¯
+			// Little-Endian ï¿½ï¿½ ushort ï¿½ï¿½È¯
 			int index = x + (y * m_nWidth);
 			USHORT heightValue = pHeightMapPixels[index];
 
-			// Unity´Â Bottom-to-Top, DirectX´Â Top-to-BottomÀÌ¹Ç·Î º¯È¯
+			// Unityï¿½ï¿½ Bottom-to-Top, DirectXï¿½ï¿½ Top-to-Bottomï¿½Ì¹Ç·ï¿½ ï¿½ï¿½È¯
 			m_pHeightMapPixels[x + ((m_nLength - 1 - y) * m_nWidth)] = heightValue;
 		}
 	}
@@ -500,7 +500,7 @@ void CStandardMesh::ReleaseUploadBuffers()
 void CStandardMesh::LoadMeshFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, FILE *pInFile)
 {
 	char pstrToken[64] = { '\0' };
-	int nPositions = 0, nColors = 0, nNormals = 0, nTangents = 0, nBiTangents = 0, nTextureCoords = 0, nIndices = 0, nSubMeshes = 0, nSubIndices = 0;
+	int nColors = 0, nNormals = 0, nTangents = 0, nBiTangents = 0, nTextureCoords = 0, nIndices = 0, nSubMeshes = 0, nSubIndices = 0;
 
 	UINT nReads = (UINT)::fread(&m_nVertices, sizeof(int), 1, pInFile);
 
@@ -516,12 +516,12 @@ void CStandardMesh::LoadMeshFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 		}
 		else if (!strcmp(pstrToken, "<Positions>:"))
 		{
-			nReads = (UINT)::fread(&nPositions, sizeof(int), 1, pInFile);
-			if (nPositions > 0)
+			nReads = (UINT)::fread(&m_nPositions, sizeof(int), 1, pInFile);
+			if (m_nPositions > 0)
 			{
 				m_nType |= VERTEXT_POSITION;
-				m_pxmf3Positions = new XMFLOAT3[nPositions];
-				nReads = (UINT)::fread(m_pxmf3Positions, sizeof(XMFLOAT3), nPositions, pInFile);
+				m_pxmf3Positions = new XMFLOAT3[m_nPositions];
+				nReads = (UINT)::fread(m_pxmf3Positions, sizeof(XMFLOAT3), m_nPositions, pInFile);
 
 				m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
 
@@ -778,7 +778,7 @@ void CSkinnedMesh::LoadSkinInfoFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 				m_pxmf4x4BindPoseBoneOffsets = new XMFLOAT4X4[m_nSkinningBones];
 				nReads = (UINT)::fread(m_pxmf4x4BindPoseBoneOffsets, sizeof(XMFLOAT4X4), m_nSkinningBones, pInFile);
 
-				UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256ÀÇ ¹è¼ö
+				UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256ï¿½ï¿½ ï¿½ï¿½ï¿½
 				m_pd3dcbBindPoseBoneOffsets = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 				m_pd3dcbBindPoseBoneOffsets->Map(0, NULL, (void **)&m_pcbxmf4x4MappedBindPoseBoneOffsets);
 

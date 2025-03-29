@@ -33,6 +33,10 @@ protected:
 	LPVOID						m_pPlayerUpdatedContext = NULL;
 	LPVOID						m_pCameraUpdatedContext = NULL;
 
+	BoundingOrientedBox playerObb;
+	XMFLOAT3 playerSize = XMFLOAT3(5.0f, 5.0f, 5.0f); // 실제 크기의 반
+	XMFLOAT4 playerRotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+
 	CCamera						*m_pCamera = NULL;
 
 public:
@@ -85,6 +89,10 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 
 	virtual void keyInput(UCHAR* key) {};
+
+	bool CheckCollisionOBB(CGameObject* other);
+	//void SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
+	void UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
 };
 
 class CAirplanePlayer : public CPlayer

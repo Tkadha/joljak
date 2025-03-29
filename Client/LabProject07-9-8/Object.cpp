@@ -7,7 +7,9 @@
 #include "Shader.h"
 #include "Scene.h"
 
+
 #include "PigState.h"
+//>>>>>>> Bin_test
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -15,6 +17,8 @@ CGameObject::CGameObject()
 {
 	m_xmf4x4ToParent = Matrix4x4::Identity();
 	m_xmf4x4World = Matrix4x4::Identity();
+
+	m_OBBMaterial = new CMaterial(1);
 }
 
 CGameObject::CGameObject(int nMaterials) : CGameObject()
@@ -104,6 +108,108 @@ void CGameObject::SetMaterial(int nMaterial, CMaterial *pMaterial)
 	if (m_ppMaterials[nMaterial]) m_ppMaterials[nMaterial]->AddRef();
 }
 
+bool CGameObject::CheckCollisionOBB(CGameObject* other)
+{
+	return m_localOBB.Intersects(other->m_localOBB);
+}
+
+void CGameObject::SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation)
+{
+	m_xmf3Position = center;
+	m_xmf3Size = size;
+
+	XMStoreFloat3(&m_localOBB.Center, XMLoadFloat3(&m_xmf3Position));
+	XMStoreFloat3(&m_localOBB.Extents, XMLoadFloat3(&m_xmf3Size));
+	XMStoreFloat4(&m_localOBB.Orientation, XMLoadFloat4(&orientation));
+}
+
+// 메쉬 데이터로 바운딩 박스 만들기
+void CGameObject::SetOBB()
+{
+	if (m_pMesh) {
+		// 메시 데이터로 OBB 만들기
+		XMFLOAT3 minPos = m_pMesh->m_pxmf3Positions[0];
+		XMFLOAT3 maxPos = m_pMesh->m_pxmf3Positions[0];
+		for (int i = 1; i < m_pMesh->m_nPositions; ++i) {
+			minPos.x = min(minPos.x, m_pMesh->m_pxmf3Positions[i].x);
+			minPos.y = min(minPos.y, m_pMesh->m_pxmf3Positions[i].y);
+			minPos.z = min(minPos.z, m_pMesh->m_pxmf3Positions[i].z);
+			maxPos.x = max(maxPos.x, m_pMesh->m_pxmf3Positions[i].x);
+			maxPos.y = max(maxPos.y, m_pMesh->m_pxmf3Positions[i].y);
+			maxPos.z = max(maxPos.z, m_pMesh->m_pxmf3Positions[i].z);
+		}
+		m_localOBB.Center = XMFLOAT3(
+			(minPos.x + maxPos.x) * 0.5f,
+			(minPos.y + maxPos.y) * 0.5f,
+			(minPos.z + maxPos.z) * 0.5f
+		);
+		m_localOBB.Extents = XMFLOAT3(
+			(maxPos.x - minPos.x) * 0.5f,
+			(maxPos.y - minPos.y) * 0.5f,
+			(maxPos.z - minPos.z) * 0.5f
+		);
+		m_localOBB.Orientation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);  // 초기 회전 없음
+	}
+
+	if (m_pSibling) m_pSibling->SetOBB();
+	if (m_pChild) m_pChild->SetOBB();
+}
+
+void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	//m_OBBShader.Render(pd3dCommandList, NULL);
+	m_OBBMaterial->m_pShader->Render(pd3dCommandList, NULL);
+
+	// OBB 선을 그리기 위한 설정
+	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+	pd3dCommandList->IASetVertexBuffers(0, 1, &m_OBBVertexBufferView);
+	pd3dCommandList->IASetIndexBuffer(&m_OBBIndexBufferView);
+
+	// 선(Line) OBB 그리기
+	pd3dCommandList->DrawIndexedInstanced(24, 1, 0, 0, 0); // 12개 선 = 24개 인덱스
+}
+
+void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	// OBB 모서리 데이터
+	XMFLOAT3 corners[8];
+	m_worldOBB.GetCorners(corners);
+
+	// 버텍스 버퍼 생성
+	D3D12_HEAP_PROPERTIES heapProps = { D3D12_HEAP_TYPE_UPLOAD };
+	D3D12_RESOURCE_DESC bufferDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, sizeof(corners), 1, 1, 1, DXGI_FORMAT_UNKNOWN, 1, 0, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
+	pd3dDevice->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_pOBBVertexBuffer));
+
+	// 데이터 업로드
+	XMFLOAT3* pMappedData;
+	m_pOBBVertexBuffer->Map(0, nullptr, reinterpret_cast<void**>(&pMappedData));
+	memcpy(pMappedData, corners, sizeof(corners));
+	m_pOBBVertexBuffer->Unmap(0, nullptr);
+
+	// 버텍스 버퍼 뷰 설정
+	m_OBBVertexBufferView.BufferLocation = m_pOBBVertexBuffer->GetGPUVirtualAddress();
+	m_OBBVertexBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_OBBVertexBufferView.SizeInBytes = sizeof(corners);
+
+	// 인덱스 버퍼 생성
+	UINT indices[] = { 0,1, 1,2, 2,3, 3,0, 4,5, 5,6, 6,7, 7,4, 0,4, 1,5, 2,6, 3,7 };
+	bufferDesc.Width = sizeof(indices);
+	pd3dDevice->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_pOBBIndexBuffer));
+
+	// 데이터 업로드
+	UINT* pMappedIndexData;
+	m_pOBBIndexBuffer->Map(0, nullptr, reinterpret_cast<void**>(&pMappedIndexData));
+	memcpy(pMappedIndexData, indices, sizeof(indices));
+	m_pOBBIndexBuffer->Unmap(0, nullptr);
+
+	// 인덱스 버퍼 뷰 설정
+	m_OBBIndexBufferView.BufferLocation = m_pOBBIndexBuffer->GetGPUVirtualAddress();
+	m_OBBIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
+	m_OBBIndexBufferView.SizeInBytes = sizeof(indices);
+}
+
+
+
 void CGameObject::FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnSkinnedMesh)
 {
 	if (m_pMesh && (m_pMesh->GetType() & VERTEXT_BONE_INDEX_WEIGHT)) ppSkinnedMeshes[(*pnSkinnedMesh)++] = (CSkinnedMesh *)m_pMesh;
@@ -126,6 +232,29 @@ CGameObject *CGameObject::FindFrame(char *pstrFrameName)
 void CGameObject::UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent)
 {
 	m_xmf4x4World = (pxmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4ToParent, *pxmf4x4Parent) : m_xmf4x4ToParent;
+
+	// 월드 OBB 계산
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+
+	// 중심점 변환
+	XMVECTOR localCenter = XMLoadFloat3(&m_localOBB.Center);
+	XMVECTOR worldCenter = XMVector3TransformCoord(localCenter, worldMatrix);
+	XMStoreFloat3(&m_worldOBB.Center, worldCenter);
+
+	// 방향 변환 (회전)
+	XMMATRIX rotationMatrix = worldMatrix;
+	rotationMatrix.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);  // 이동 성분 제거
+	XMVECTOR orientation = XMQuaternionRotationMatrix(rotationMatrix);
+	XMStoreFloat4(&m_worldOBB.Orientation, orientation);
+
+	// 크기 변환 (스케일)
+	XMFLOAT3 scale;
+	scale.x = XMVectorGetX(XMVector3Length(worldMatrix.r[0]));
+	scale.y = XMVectorGetX(XMVector3Length(worldMatrix.r[1]));
+	scale.z = XMVectorGetX(XMVector3Length(worldMatrix.r[2]));
+	m_worldOBB.Extents.x = m_localOBB.Extents.x * scale.x;
+	m_worldOBB.Extents.y = m_localOBB.Extents.y * scale.y;
+	m_worldOBB.Extents.z = m_localOBB.Extents.z * scale.z;
 
 	if (m_pSibling) m_pSibling->UpdateTransform(pxmf4x4Parent);
 	if (m_pChild) m_pChild->UpdateTransform(&m_xmf4x4World);
@@ -170,9 +299,13 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pC
 				}
 
 				m_pMesh->Render(pd3dCommandList, i);
+				//pd3dCommandList->SetPipelineState(m_pOBBPipelineState); // m_pOBBPipelineState는 미리 생성된 PSO
+				//m_OBBShader.OnPrepareRender(pd3dCommandList);
 			}
 		}
 	}
+
+	if (m_OBBMaterial->m_pShader) RenderOBB(pd3dCommandList);
 
 	if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
 	if (m_pChild) m_pChild->Render(pd3dCommandList, pCamera);
@@ -700,7 +833,7 @@ CLoadedModelInfo *CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device *pd
 	return(pLoadedModel);
 }
 
-// ���� ������Ʈ��
+// ���� ������Ʈ��
 CGameObject* CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrToken[64] = { '\0' };
@@ -715,7 +848,7 @@ CGameObject* CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, I
 	for (; ; )
 	{
 		nReads = (UINT)::fread(&nStrLength, sizeof(BYTE), 1, pInFile);
-		if (nReads != 1 || nStrLength >= sizeof(pstrToken))  // <-- �޸� ��ȣ �߰�
+		if (nReads != 1 || nStrLength >= sizeof(pstrToken))  // <-- �޸� ��ȣ �߰�
 		{
 			printf("Error: Invalid string length read (%d)\n", nStrLength);
 			return nullptr;
@@ -726,7 +859,7 @@ CGameObject* CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, I
 			printf("Error: Failed to read token string\n");
 			return nullptr;
 		}
-		pstrToken[nStrLength] = '\0';  // ���� ũ�� �ʰ� ����
+		pstrToken[nStrLength] = '\0';  // ���� ũ�� �ʰ� ����
 
 		if (!strcmp(pstrToken, "<Frame>:"))
 		{
