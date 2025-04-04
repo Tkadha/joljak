@@ -134,7 +134,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[0]->SetOBB();
 	CShader* shader = new COBBShader();
 	//m_ppHierarchicalGameObjects[0]->m_OBBShader.CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
-	m_ppHierarchicalGameObjects[0]->m_OBBMaterial->SetShader(shader);
+	m_ppHierarchicalGameObjects[0]->SetOBBShader(shader);
 	m_ppHierarchicalGameObjects[0]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 
 
@@ -178,9 +178,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[4]->SetScale(8.0f, 8.0f, 8.0f);
 
 	m_ppHierarchicalGameObjects[5] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
-	m_ppHierarchicalGameObjects[5]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 4);
+	m_ppHierarchicalGameObjects[5]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[5]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[5]->SetPosition(890.0f / 2, m_pTerrain->GetHeight(890.0f, 1400.0f) - 650, 1400.0f / 2);
+	m_ppHierarchicalGameObjects[5]->SetPosition(1000.f / 2, m_pTerrain->GetHeight(1000.0f, 1500.0f) / 2, 1500.f / 2);
 	m_ppHierarchicalGameObjects[5]->SetScale(8.0f, 8.0f, 8.0f);
 	if (pCowModel) delete pCowModel;
 
@@ -189,7 +189,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		m_ppHierarchicalGameObjects[i]->SetOBB();
 		CShader* shader = new COBBShader();
 		//m_ppHierarchicalGameObjects[0]->m_OBBShader.CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
-		m_ppHierarchicalGameObjects[i]->m_OBBMaterial->SetShader(shader);
+		m_ppHierarchicalGameObjects[i]->SetOBBShader(shader);
 		m_ppHierarchicalGameObjects[i]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	}
 
