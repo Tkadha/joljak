@@ -241,7 +241,7 @@ void CPlayer::OnPrepareRender()
 void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 	DWORD nCameraMode = (pCamera) ? pCamera->GetMode() : 0x00;
-	if (nCameraMode == THIRD_PERSON_CAMERA) CGameObject::Render(pd3dCommandList, pCamera);
+	if (nCameraMode == THIRD_PERSON_CAMERA || nCameraMode == FIRST_PERSON_CAMERA) CGameObject::Render(pd3dCommandList, pCamera);
 }
 
 bool CPlayer::CheckCollisionOBB(CGameObject* other)
@@ -276,6 +276,25 @@ void CPlayer::UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFL
 	);
 	XMStoreFloat4(&m_localOBB.Orientation, qRotation);
 }
+
+
+// Àåºñ
+
+void CPlayer::AddWeapon(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname)
+{
+	if (m_pstrFrameName == framename) {
+		CGameObject* weapon = new CStaticObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, modelname);
+		weapon->SetPosition(GetPosition());
+		weapon->SetScale(20, 20, 20);
+
+		SetChild(weapon);
+		return;	
+	}
+
+	if (m_pSibling) static_cast<CPlayer*>(m_pSibling)->AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, framename, modelname);
+	if (m_pChild) static_cast<CPlayer*>(m_pChild)->AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, framename, modelname);
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
@@ -399,8 +418,10 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 
 	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList,
-		pd3dGraphicsRootSignature, "Model/SK_Pig.bin", NULL);
+		pd3dGraphicsRootSignature, "Model/SK_Hu_M_FullBody.bin", NULL);
 	SetChild(pAngrybotModel->m_pModelRootObject, true);
+
+	AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Weapon_R", "Sword_01.bin");
 
 	int nAnimation{10};
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimation, pAngrybotModel);

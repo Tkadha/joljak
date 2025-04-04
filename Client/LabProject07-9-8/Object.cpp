@@ -700,6 +700,14 @@ void CGameObject::PrintFrameInfo(CGameObject *pGameObject, CGameObject *pParent)
 
 	_stprintf_s(pstrDebug, 256, _T("(Frame: %p) (Parent: %p)\n"), pGameObject, pParent);
 	OutputDebugString(pstrDebug);
+	
+	ofstream fout("Player_full_Frame.txt", ios::app);
+	
+	if (pGameObject)
+		fout << pGameObject->m_pstrFrameName << " ";
+	if (pParent)
+		fout << pParent->m_pstrFrameName;
+	fout << std::endl;
 
 	if (pGameObject->m_pSibling) CGameObject::PrintFrameInfo(pGameObject->m_pSibling, pParent);
 	if (pGameObject->m_pChild) CGameObject::PrintFrameInfo(pGameObject->m_pChild, pGameObject);
@@ -1388,7 +1396,7 @@ CHairObject::CHairObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 {
 
 	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/Mi24.bin", "rb");
+	::fopen_s(&pInFile, "Model/SK_Hu_M_Hair_01.bin", "rb");
 	::rewind(pInFile);
 
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL);
@@ -1443,6 +1451,26 @@ CCliffFObject::CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, "Model/Cliff_F_LOD0.bin", "rb");
+	::rewind(pInFile);
+
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL);
+	SetChild(pGameObject);
+}
+
+CSwordObject::CSwordObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, "Model/Sword_01.bin", "rb");
+	::rewind(pInFile);
+
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL);
+	SetChild(pGameObject);
+}
+
+CStaticObject::CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* modelname)
+{
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, modelname, "rb");
 	::rewind(pInFile);
 
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL);

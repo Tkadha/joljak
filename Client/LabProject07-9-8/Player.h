@@ -94,6 +94,9 @@ public:
 	bool CheckCollisionOBB(CGameObject* other);
 	//void SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
 	void UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
+
+	// 장비
+	void AddWeapon(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname);
 };
 
 class CAirplanePlayer : public CPlayer
