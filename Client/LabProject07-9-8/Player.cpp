@@ -282,19 +282,31 @@ void CPlayer::UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFL
 
 void CPlayer::AddWeapon(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname)
 {
-	if (m_pstrFrameName == framename) {
-		CGameObject* weapon = new CStaticObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, modelname);
-		weapon->SetPosition(GetPosition());
-		weapon->SetScale(20, 20, 20);
+	CGameObject* handFrame = FindFrame(framename);
+	if (handFrame) {
+		CGameObject* weapon = new CSwordObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+		weapon->SetPosition(0, 0, 0); 
+		weapon->SetScale(1, 1, 1);
+		//weapon->Rotate(0.0f, 70.0f, 0.0f);
 
-		SetChild(weapon);
-		return;	
+		handFrame->SetChild(weapon);
+		UpdateTransform(nullptr); // 변환 행렬 즉시 갱신
 	}
-
-	if (m_pSibling) static_cast<CPlayer*>(m_pSibling)->AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, framename, modelname);
-	if (m_pChild) static_cast<CPlayer*>(m_pChild)->AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, framename, modelname);
 }
 
+CGameObject* CPlayer::FindFrame(char* framename)
+{
+	if (strcmp(m_pstrFrameName, framename) == 0) return this;
+	if (m_pChild) {
+		CGameObject* found = m_pChild->FindFrame(framename);
+		if (found) return found;
+	}
+	if (m_pSibling) {
+		CGameObject* found = m_pSibling->FindFrame(framename);
+		if (found) return found;
+	}
+	return nullptr;
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
@@ -421,7 +433,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 		pd3dGraphicsRootSignature, "Model/SK_Hu_M_FullBody.bin", NULL);
 	SetChild(pAngrybotModel->m_pModelRootObject, true);
 
-	AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Weapon_R", "Sword_01.bin");
+	AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Arrow", "Sword_01.bin");
 
 	int nAnimation{10};
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimation, pAngrybotModel);

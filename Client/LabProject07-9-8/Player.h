@@ -97,6 +97,8 @@ public:
 
 	// 장비
 	void AddWeapon(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname);
+	CGameObject* FindFrame(char* framename);
+
 };
 
 class CAirplanePlayer : public CPlayer

@@ -701,7 +701,7 @@ void CGameObject::PrintFrameInfo(CGameObject *pGameObject, CGameObject *pParent)
 	_stprintf_s(pstrDebug, 256, _T("(Frame: %p) (Parent: %p)\n"), pGameObject, pParent);
 	OutputDebugString(pstrDebug);
 	
-	ofstream fout("Player_full_Frame.txt", ios::app);
+	ofstream fout("Player_weapon_Frame.txt", ios::app);
 	
 	if (pGameObject)
 		fout << pGameObject->m_pstrFrameName << " ";
@@ -962,6 +962,9 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
 
 	return(pGameObject);
 }
+
+
+
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
