@@ -206,6 +206,17 @@ void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12Graphic
 	m_OBBIndexBufferView.BufferLocation = m_pOBBIndexBuffer->GetGPUVirtualAddress();
 	m_OBBIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
 	m_OBBIndexBufferView.SizeInBytes = sizeof(indices);
+
+	if (m_pSibling) m_pSibling->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+	if (m_pChild) m_pChild->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+}
+
+void CGameObject::SetOBBShader(CShader* shader)
+{
+	m_OBBMaterial->SetShader(shader);
+
+	if (m_pSibling) m_pSibling->SetOBBShader(shader);
+	if (m_pChild) m_pChild->SetOBBShader(shader);
 }
 
 
@@ -305,7 +316,8 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pC
 		}
 	}
 
-	if (m_OBBMaterial->m_pShader) RenderOBB(pd3dCommandList);
+	if (m_OBBMaterial->m_pShader)
+		RenderOBB(pd3dCommandList);
 
 	if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
 	if (m_pChild) m_pChild->Render(pd3dCommandList, pCamera);
