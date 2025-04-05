@@ -102,7 +102,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	std::random_device rd;
 	std::mt19937 gen(rd());
 
-	int nPineObjects = 100;
+	int nPineObjects = 5;
 	for (int i = 0; i < nPineObjects; ++i) {
 		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
@@ -111,7 +111,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
 	}
-	int nRockClusterAObjects = 20;
+	int nRockClusterAObjects = 5;
 	for (int i = 0; i < nRockClusterAObjects; ++i) {
 		CGameObject* gameObj = new CRockClusterAObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
@@ -120,7 +120,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
 	}
-	int nRockClusterBObjects = 20;
+	int nRockClusterBObjects = 5;
 	for (int i = 0; i < nRockClusterBObjects; ++i) {
 		CGameObject* gameObj = new CRockClusterBObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
@@ -129,7 +129,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
 	}
-	int nRockClusterCObjects = 30;
+	int nRockClusterCObjects = 5;
 	for (int i = 0; i < nRockClusterCObjects; ++i) {
 		CGameObject* gameObj = new CRockClusterCObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);

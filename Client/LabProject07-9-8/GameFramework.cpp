@@ -4,6 +4,9 @@
 
 #include "stdafx.h"
 #include "GameFramework.h"
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+#include "imgui_impl_dx12.h"
 
 CGameFramework::CGameFramework()
 {
@@ -52,6 +55,23 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	CoInitialize(NULL);
 
 	BuildObjects();
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGui::StyleColorsDark();
+
+	CreateCbvSrvDescriptorHeap();
+
+	ImGui_ImplWin32_Init(m_hWnd);
+	ImGui_ImplDX12_Init(
+		m_pd3dDevice,
+		m_nSwapChainBuffers,
+		DXGI_FORMAT_R8G8B8A8_UNORM,
+		m_pd3dSrvDescriptorHeapForImGui,
+		m_pd3dSrvDescriptorHeapForImGui->GetCPUDescriptorHandleForHeapStart(),
+		m_pd3dSrvDescriptorHeapForImGui->GetGPUDescriptorHandleForHeapStart()
+	);
 
 	return(true);
 }
@@ -337,6 +357,8 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 
 LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
+	if (ImGui_ImplWin32_WndProcHandler(hWnd, nMessageID, wParam, lParam))
+		return true;
 	switch (nMessageID)
 	{
 		case WM_ACTIVATE:
@@ -461,28 +483,26 @@ void CGameFramework::ProcessInput()
 		if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
 		else m_pPlayer->keyInput(pKeysBuffer);
 
-		// ƒ´∏ﬁ∂Û ∏µÂø° µ˚∏• ¿‘∑¬ √≥∏Æ
+		
 		if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
 		{
-			// ≈æ∫‰: ∏∂øÏΩ∫ »Ÿ∑Œ ¡‹¿Œ/¡‹æ∆øÙ
-			// Ω«¡¶∑Œ¥¬ ∏∂øÏΩ∫ »Ÿ ¿Ã∫•∆Æ∏¶ √≥∏Æ«œ∑¡∏È ∫∞µµ¿« ∏ﬁΩ√¡ˆ √≥∏Æ∞° « ø‰«“ ºˆ ¿÷¿Ω
-			// ø©±‚º≠¥¬ øπΩ√∑Œ ≈∞ ¿‘∑¬¿∏∑Œ ¥Î√º (Q: ¡‹¿Œ, E: ¡‹æ∆øÙ)
+			
 			if (pKeysBuffer['Q'] & 0xF0)
 			{
 				XMFLOAT3 offset = m_pCamera->GetOffset();
-				offset.y = max(20.0f, offset.y - 10.0f);  // ¡‹¿Œ, √÷º“ ≥Ù¿Ã 20
+				offset.y = max(20.0f, offset.y - 10.0f); 
 				m_pCamera->SetOffset(offset);
 			}
 			if (pKeysBuffer['E'] & 0xF0)
 			{
 				XMFLOAT3 offset = m_pCamera->GetOffset();
-				offset.y = min(200.0f, offset.y + 10.0f);  // ¡‹æ∆øÙ, √÷¥Î ≥Ù¿Ã 200
+				offset.y = min(200.0f, offset.y + 10.0f);  
 				m_pCamera->SetOffset(offset);
 			}
 		}
 		else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA || m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
 		{
-			// ¿⁄¿Ø Ω√¡°: ∏∂øÏΩ∫∑Œ »∏¿¸
+			
 			if (cxDelta || cyDelta)
 			{
 				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
@@ -573,6 +593,60 @@ void CGameFramework::FrameAdvance()
 #endif
 	if (m_pPlayer) m_pPlayer->Render(m_pd3dCommandList, m_pCamera);
 
+	ImGui_ImplDX12_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+	ImGui::Begin("Debug Info");
+	ImGui::Text("FPS: %.1f", 1.0f / m_GameTimer.GetTimeElapsed());
+	ImGui::End();
+
+	const int HotbarCount = 5;
+	const float SlotSize = 54.0f;
+	const float SlotSpacing = 6.0f;
+
+	const float ExtraPadding = 18.0f; // ‚≠ê Ï∂îÍ∞Ä Î≥¥Ï†ï Ìè¨Ïù∏Ìä∏ ‚≠ê
+
+	const float TotalWidth = (SlotSize * HotbarCount) + (SlotSpacing * (HotbarCount - 1));
+	const float WindowWidth = TotalWidth + ExtraPadding;
+
+	ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+	ImVec2 hotbarPos = ImVec2(displaySize.x * 0.5f - WindowWidth * 0.5f, displaySize.y - 80.0f);
+
+	ImGui::SetNextWindowPos(hotbarPos);
+	ImGui::SetNextWindowSize(ImVec2(WindowWidth, 65));
+	ImGui::Begin("Hotbar", nullptr,
+		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+		ImGuiWindowFlags_NoBackground);
+	ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+
+	for (int i = 0; i < HotbarCount; ++i)
+	{
+		if (i > 0) ImGui::SameLine();
+
+		if (i == m_nSelectedHotbarIndex)
+			ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(255, 255, 0, 255));
+
+		ImGui::PushID(i);
+		ImGui::Button(std::to_string(i + 1).c_str(), ImVec2(SlotSize, SlotSize));
+		ImGui::PopID();
+
+		if (i == m_nSelectedHotbarIndex)
+			ImGui::PopStyleColor();
+
+		if (ImGui::IsItemClicked())
+			m_nSelectedHotbarIndex = i;
+	}
+	ImGui::PopStyleVar();
+	ImGui::End();
+
+
+
+	ImGui::Render();
+	ID3D12DescriptorHeap* ppHeaps[] = { m_pd3dSrvDescriptorHeapForImGui };
+	m_pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_pd3dCommandList);
+
 	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -608,4 +682,14 @@ void CGameFramework::FrameAdvance()
 	_stprintf_s(m_pszFrameRate + nLength, 70 - nLength, _T("(%4f, %4f, %4f)"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
 	::SetWindowText(m_hWnd, m_pszFrameRate);
 }
+void CGameFramework::CreateCbvSrvDescriptorHeap()
+{
+	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+	srvHeapDesc.NumDescriptors = 1; // ImGuiÎßå Ïì∏ Í±∞Î©¥ 1Í∞úÎ©¥ Ï∂©Î∂Ñ
+	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
+	HRESULT hr = m_pd3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_pd3dSrvDescriptorHeapForImGui));
+	if (FAILED(hr))
+		::MessageBox(NULL, _T("Failed to create SRV Descriptor Heap for ImGui"), _T("Error"), MB_OK);
+}

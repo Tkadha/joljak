@@ -33,6 +33,7 @@ public:
     void ProcessInput();
     void AnimateObjects();
     void FrameAdvance();
+	void CreateCbvSrvDescriptorHeap();
 
 	void WaitForGpuComplete();
 	void MoveToNextFrame();
@@ -41,12 +42,14 @@ public:
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
+
 private:
 	HINSTANCE					m_hInstance;
 	HWND						m_hWnd; 
 
 	int							m_nWndClientWidth;
 	int							m_nWndClientHeight;
+	int                         m_nSelectedHotbarIndex = 0;
         
 	IDXGIFactory4				*m_pdxgiFactory = NULL;
 	IDXGISwapChain3				*m_pdxgiSwapChain = NULL;
@@ -71,6 +74,8 @@ private:
 	ID3D12Fence					*m_pd3dFence = NULL;
 	UINT64						m_nFenceValues[m_nSwapChainBuffers];
 	HANDLE						m_hFenceEvent;
+
+	ID3D12DescriptorHeap* m_pd3dSrvDescriptorHeapForImGui = nullptr;
 
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;

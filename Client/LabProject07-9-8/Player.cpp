@@ -452,14 +452,14 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 	if (nCurrentCameraMode == nNewCameraMode) return(m_pCamera);
 	switch (nNewCameraMode)
 	{
-		case FIRST_PERSON_CAMERA:  // ÀÚÀ¯ ½ÃÁ¡ Ä«¸Þ¶ó
+		case FIRST_PERSON_CAMERA:  // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Ä«ï¿½Þ¶ï¿½
 			SetFriction(250.0f);
 			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
 			SetMaxVelocityXZ(300.0f);
 			SetMaxVelocityY(400.0f);
 			m_pCamera = OnChangeCamera(FIRST_PERSON_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.0f);
-			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, 0.0f));  // ÇÃ·¹ÀÌ¾î ¸Ó¸® ³ôÀÌ
+			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, 0.0f));  // ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½Ó¸ï¿½ ï¿½ï¿½ï¿½ï¿½
 			m_pCamera->GenerateProjectionMatrix(1.01f, 5000.0f, ASPECT_RATIO, 60.0f);
 			m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
@@ -488,14 +488,14 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 			m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
 			break;
-		case TOP_VIEW_CAMERA:  // Å¾ºä Ä«¸Þ¶ó
+		case TOP_VIEW_CAMERA:  // Å¾ï¿½ï¿½ Ä«ï¿½Þ¶ï¿½
 			SetFriction(250.0f);
-			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));  // Áß·Â ¾øÀ½
+			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));  // ï¿½ß·ï¿½ ï¿½ï¿½ï¿½ï¿½
 			SetMaxVelocityXZ(300.0f);
 			SetMaxVelocityY(400.0f);
 			m_pCamera = OnChangeCamera(TOP_VIEW_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.0f);
-			m_pCamera->SetOffset(XMFLOAT3(0.0f, 100.0f, 0.0f));  // ÇÃ·¹ÀÌ¾î À§ 100 À¯´Ö
+			m_pCamera->SetOffset(XMFLOAT3(0.0f, 100.0f, 0.0f));  // ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½ 100 ï¿½ï¿½ï¿½ï¿½
 			m_pCamera->GenerateProjectionMatrix(1.01f, 5000.0f, ASPECT_RATIO, 60.0f);
 			m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);

@@ -145,6 +145,13 @@
     <ClCompile Include="FSMManager.cpp" />
     <ClCompile Include="FSMState.cpp" />
     <ClCompile Include="GameFramework.cpp" />
+    <ClCompile Include="imgui.cpp" />
+    <ClCompile Include="imgui_demo.cpp" />
+    <ClCompile Include="imgui_draw.cpp" />
+    <ClCompile Include="imgui_impl_dx12.cpp" />
+    <ClCompile Include="imgui_impl_win32.cpp" />
+    <ClCompile Include="imgui_tables.cpp" />
+    <ClCompile Include="imgui_widgets.cpp" />
     <ClCompile Include="LabProject07-9-8.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
@@ -167,6 +174,13 @@
     <ClInclude Include="FSMManager.h" />
     <ClInclude Include="FSMState.h" />
     <ClInclude Include="GameFramework.h" />
+    <ClInclude Include="imgui.h" />
+    <ClInclude Include="imgui_impl_dx12.h" />
+    <ClInclude Include="imgui_impl_win32.h" />
+    <ClInclude Include="imgui_internal.h" />
+    <ClInclude Include="imstb_rectpack.h" />
+    <ClInclude Include="imstb_textedit.h" />
+    <ClInclude Include="imstb_truetype.h" />
     <ClInclude Include="LabProject07-9-8.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />

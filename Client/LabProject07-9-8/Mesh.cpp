@@ -92,7 +92,7 @@ void CMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet, UINT
 
 void CMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, UINT nInstances, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView)
 {
-	//Á¤Á¡ ¹öÆÛ ºä¿Í ÀÎ½ºÅÏ½Ì ¹öÆÛ ºä¸¦ ÀÔ·Â-Á¶¸³ ´Ü°è¿¡ ¼³Á¤ÇÑ´Ù. 
+	//ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½Î½ï¿½ï¿½Ï½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ä¸¦ ï¿½Ô·ï¿½-ï¿½ï¿½ï¿½ï¿½ ï¿½Ü°è¿¡ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½. 
 	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[] = { m_d3dPositionBufferView, d3dInstancingBufferView};
 
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, _countof(pVertexBufferViews), pVertexBufferViews);
