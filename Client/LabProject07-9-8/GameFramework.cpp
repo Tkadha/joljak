@@ -604,13 +604,13 @@ void CGameFramework::FrameAdvance()
 	const float SlotSize = 54.0f;
 	const float SlotSpacing = 6.0f;
 
-	const float ExtraPadding = 18.0f; // ⭐ 추가 보정 포인트 ⭐
+	const float ExtraPadding = 18.0f; 
 
 	const float TotalWidth = (SlotSize * HotbarCount) + (SlotSpacing * (HotbarCount - 1));
 	const float WindowWidth = TotalWidth + ExtraPadding;
 
 	ImVec2 displaySize = ImGui::GetIO().DisplaySize;
-	ImVec2 hotbarPos = ImVec2(displaySize.x * 0.5f - WindowWidth * 0.5f, displaySize.y - 80.0f);
+	ImVec2 hotbarPos = ImVec2(30.0f, displaySize.y - 80.0f);
 
 	ImGui::SetNextWindowPos(hotbarPos);
 	ImGui::SetNextWindowSize(ImVec2(WindowWidth, 65));
@@ -640,6 +640,64 @@ void CGameFramework::FrameAdvance()
 	ImGui::PopStyleVar();
 	ImGui::End();
 
+
+	float hp = 1.0f;
+	float stamina = 1.0f;
+	float hunger = 1.0f;
+	float thirst = 1.0f;
+
+	const float hudWidth = 300.0f;
+	const float hudHeight = 100.0f;
+	const float barWidth = 100.0f;
+	const float barHeight = 15.0f;
+
+	ImVec2 hudPos = ImVec2(displaySize.x - hudWidth+10.0f, displaySize.y - hudHeight);
+
+	ImGui::SetNextWindowPos(hudPos);
+	ImGui::SetNextWindowSize(ImVec2(hudWidth, hudHeight));
+	ImGui::Begin("StatusBars", nullptr,
+		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+		ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoCollapse);
+
+	
+	ImGui::BeginGroup();
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("🟥"); // 체력 
+	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+	ImGui::ProgressBar(hp, ImVec2(barWidth, barHeight));
+	ImGui::PopStyleColor();
+	ImGui::EndGroup();
+
+	ImGui::SameLine(0.0f, 50.0f); 
+	ImGui::BeginGroup();
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("🟦"); // 스태미너
+	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.5f, 1.0f, 1.0f));
+	ImGui::ProgressBar(stamina, ImVec2(barWidth, barHeight));
+	ImGui::PopStyleColor();
+	ImGui::EndGroup();
+
+	
+	ImGui::BeginGroup();
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("🟨"); // 허기
+	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
+	ImGui::ProgressBar(hunger, ImVec2(barWidth, barHeight));
+	ImGui::PopStyleColor();
+	ImGui::EndGroup();
+
+	ImGui::SameLine(0.0f, 50.0f);
+
+	ImGui::BeginGroup();
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("🟪"); // 갈증
+	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 0.2f, 1.0f, 1.0f));
+	ImGui::ProgressBar(thirst, ImVec2(barWidth, barHeight));
+	ImGui::PopStyleColor();
+	ImGui::EndGroup();
+
+	ImGui::End();
 
 
 	ImGui::Render();
