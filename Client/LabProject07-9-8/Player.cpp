@@ -284,15 +284,29 @@ void CPlayer::AddWeapon(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 {
 	CGameObject* handFrame = FindFrame(framename);
 	if (handFrame) {
-		CGameObject* weapon = new CSwordObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+		CGameObject* weapon = new CStaticObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, modelname);
 		weapon->SetPosition(0, 0, 0); 
 		weapon->SetScale(1, 1, 1);
-		weapon->Rotate(0.0f, 70.0f, 0.0f);
+		weapon->Rotate(0.0f, 20.0f, 0.0f);
 
 		handFrame->SetChild(weapon);
 		UpdateTransform(nullptr); // º¯È¯ Çà·Ä Áï½Ã °»½Å
 	}
 }
+void CPlayer::AddWeapon(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname, XMFLOAT3 offset)
+{
+	CGameObject* handFrame = FindFrame(framename);
+	if (handFrame) {
+		CGameObject* weapon = new CStaticObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, modelname);
+		weapon->SetPosition(offset);
+		weapon->SetScale(1, 1, 1);
+		weapon->Rotate(0.0f, 20.0f, 0.0f);
+
+		handFrame->SetChild(weapon);
+		UpdateTransform(nullptr); // º¯È¯ Çà·Ä Áï½Ã °»½Å
+	}
+}
+
 
 CGameObject* CPlayer::FindFrame(char* framename)
 {
@@ -314,10 +328,15 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 
 	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList,
-		pd3dGraphicsRootSignature, "Model/SK_Hu_M_FullBody_c.bin", NULL);
+		pd3dGraphicsRootSignature, "Model/SK_Hu_M_FullBody.bin", NULL);
 	SetChild(pAngrybotModel->m_pModelRootObject, true);
 
-	AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Arrow", "Sword_01.bin");
+	AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "thumb_02_r", "Model/Sword_01.bin");
+	AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Helmet", "Model/Hair_01.bin", XMFLOAT3(0, 0.1, 0));
+	//AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Boots_Peasant_Armor", "Model/Boots_Peasant_Armor.bin");
+	AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_01", "Model/Torso_Peasant_01_Armor.bin");
+
+	
 
 	int nAnimation{10};
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimation, pAngrybotModel);
@@ -326,12 +345,6 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 		m_pSkinnedAnimationController->SetTrackEnable(i, false);
 	}
-	//m_pSkinnedAnimationController->SetTrackAnimationSet(1, 1);
-	//m_pSkinnedAnimationController->SetTrackAnimationSet(2, 2);
-	//m_pSkinnedAnimationController->SetTrackAnimationSet(3, 3);
-	//m_pSkinnedAnimationController->SetTrackAnimationSet(4, 4);
-	//m_pSkinnedAnimationController->SetTrackEnable(1, false);
-	//m_pSkinnedAnimationController->SetTrackEnable(2, false);
 
 	m_pSkinnedAnimationController->SetCallbackKeys(2, 2);
 #ifdef _WITH_SOUND_RESOURCE
@@ -400,7 +413,7 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 			SetMaxVelocityY(400.0f);
 			m_pCamera = OnChangeCamera(THIRD_PERSON_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.25f);
-			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, -20.0f));		// Ä«ï¿½Þ¶ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½
+			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, 30.0f));		// Ä«ï¿½Þ¶ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½
 			m_pCamera->GenerateProjectionMatrix(1.01f, 20000.0f, ASPECT_RATIO, 60.0f);
 			m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
