@@ -9,14 +9,16 @@
 #include "../Global.h"
 using namespace std;
 
-#define PORT 8999
+#define LOBBY_PORT 8999
+#define PORT 9000
+#define DB_PORT 9001
+//-----------------------------------------------
+// 
+//				game server
+// 
+//-----------------------------------------------
 
-char gameserver_addr[] = "127.0.0.1";
-//------------------------------------
-// 
-//			Lobby Server
-// 
-//------------------------------------
+
 #define IOCPCOUNT 1
 
 Iocp iocp(IOCPCOUNT); // 본 예제는 스레드를 딱 하나만 쓴다. 따라서 여기도 1이 들어간다.
@@ -42,7 +44,7 @@ void worker_thread()
 		while (1)
 		{
 			// I/O 완료 이벤트가 있을 때까지 기다립니다.
-			LobbyIocpEvents readEvents;
+			IocpEvents readEvents;
 			iocp.Wait(readEvents, 100);
 
 			// 받은 이벤트 각각을 처리합니다.
@@ -124,12 +126,13 @@ void worker_thread()
 
 int main(int argc, char* argv[])
 {
-	SetConsoleTitle(L"LobbyServer");
+	SetConsoleTitle(L"GameServer");
 	try
 	{
 		g_l_socket = make_shared<Socket>(SocketType::Tcp);
 		g_l_socket->Bind(Endpoint("0.0.0.0", PORT));
 		g_l_socket->Listen();
+
 
 		iocp.Add(*g_l_socket, g_l_socket.get());
 
@@ -147,6 +150,7 @@ int main(int argc, char* argv[])
 
 		for (auto& th : worker_threads) th->join();
 
+		g_l_socket->Close();
 	}
 	catch (Exception& e)
 	{
@@ -161,12 +165,14 @@ void ProcessPacket(shared_ptr<RemoteClient>& client, char* packet)
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
-	case E_PACKET::E_P_INGAME:
+	case E_PACKET::E_P_CHAT:
 	{
-		INGAME_PACKET* r_packet = reinterpret_cast<INGAME_PACKET*>(packet);
-		CHANGEPORT_PACKET s_packet;
-		s_packet.port = 9000;
-		strcpy(s_packet.addr, gameserver_addr);
+		CHAT_PACKET* r_packet = reinterpret_cast<CHAT_PACKET*>(packet);
+		cout << client->m_id << " " << r_packet->chat << endl;
+		CHAT_PACKET s_packet;
+		s_packet.size = sizeof(CHAT_PACKET);
+		s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_CHAT);
+		strcpy(s_packet.chat, r_packet->chat);
 		for (auto cl : RemoteClient::remoteClients) {
 			if (cl.second != client) cl.second->tcpConnection.m_isReadOverlapped = false;
 			cout << "Send: " << client->m_id << " to " << cl.second->m_id << endl;
