@@ -43,6 +43,10 @@ public:
 	CPlayer();
 	virtual ~CPlayer();
 	bool					    checkmove = false;
+	float PlayerHp = 1.0f;
+	float PlayerStamina = 1.0f;
+	float PlayerHunger = 1.0f;
+	float PlayerThirst = 1.0f;
 
 	XMFLOAT3 GetPosition() { return(m_xmf3Position); }
 	XMFLOAT3 GetLookVector() { return(m_xmf3Look); }

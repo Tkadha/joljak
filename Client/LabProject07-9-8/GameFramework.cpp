@@ -641,10 +641,7 @@ void CGameFramework::FrameAdvance()
 	ImGui::End();
 
 
-	float hp = 1.0f;
-	float stamina = 1.0f;
-	float hunger = 1.0f;
-	float thirst = 1.0f;
+	
 
 	const float hudWidth = 300.0f;
 	const float hudHeight = 100.0f;
@@ -665,7 +662,7 @@ void CGameFramework::FrameAdvance()
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("🟥"); // 체력 
 	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-	ImGui::ProgressBar(hp, ImVec2(barWidth, barHeight));
+	ImGui::ProgressBar(m_pPlayer->PlayerHp, ImVec2(barWidth, barHeight));
 	ImGui::PopStyleColor();
 	ImGui::EndGroup();
 
@@ -674,7 +671,7 @@ void CGameFramework::FrameAdvance()
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("🟦"); // 스태미너
 	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.5f, 1.0f, 1.0f));
-	ImGui::ProgressBar(stamina, ImVec2(barWidth, barHeight));
+	ImGui::ProgressBar(m_pPlayer->PlayerStamina, ImVec2(barWidth, barHeight));
 	ImGui::PopStyleColor();
 	ImGui::EndGroup();
 
@@ -683,7 +680,7 @@ void CGameFramework::FrameAdvance()
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("🟨"); // 허기
 	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
-	ImGui::ProgressBar(hunger, ImVec2(barWidth, barHeight));
+	ImGui::ProgressBar(m_pPlayer->PlayerHunger, ImVec2(barWidth, barHeight));
 	ImGui::PopStyleColor();
 	ImGui::EndGroup();
 
@@ -693,7 +690,7 @@ void CGameFramework::FrameAdvance()
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("🟪"); // 갈증
 	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 0.2f, 1.0f, 1.0f));
-	ImGui::ProgressBar(thirst, ImVec2(barWidth, barHeight));
+	ImGui::ProgressBar(m_pPlayer->PlayerThirst, ImVec2(barWidth, barHeight));
 	ImGui::PopStyleColor();
 	ImGui::EndGroup();
 
