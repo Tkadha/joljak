@@ -146,9 +146,9 @@ void CPlayer::Rotate(float x, float y, float z)
 		}
 	}
 
-	m_xmf3Look = Vector3::Normalize(m_xmf3Look);
-	m_xmf3Right = Vector3::CrossProduct(m_xmf3Up, m_xmf3Look, true);
-	m_xmf3Up = Vector3::CrossProduct(m_xmf3Look, m_xmf3Right, true);
+	//m_xmf3Look = Vector3::Normalize(m_xmf3Look);
+	//m_xmf3Right = Vector3::CrossProduct(m_xmf3Up, m_xmf3Look, true);
+	//m_xmf3Up = Vector3::CrossProduct(m_xmf3Look, m_xmf3Right, true);
 }
 
 void CPlayer::Update(float fTimeElapsed)
@@ -280,27 +280,27 @@ void CPlayer::UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFL
 
 // Àåºñ
 
-void CPlayer::AddWeapon(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname)
+void CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname)
 {
 	CGameObject* handFrame = FindFrame(framename);
 	if (handFrame) {
 		CGameObject* weapon = new CStaticObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, modelname);
 		weapon->SetPosition(0, 0, 0); 
 		weapon->SetScale(1, 1, 1);
-		weapon->Rotate(0.0f, 20.0f, 0.0f);
+		weapon->Rotate(0.0f, 0.0f, 0.0f);
 
 		handFrame->SetChild(weapon);
 		UpdateTransform(nullptr); // º¯È¯ Çà·Ä Áï½Ã °»½Å
 	}
 }
-void CPlayer::AddWeapon(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname, XMFLOAT3 offset)
+void CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname, XMFLOAT3 offset, XMFLOAT3 rotate = {0,0,0}, XMFLOAT3 scale = { 1,1,1 })
 {
 	CGameObject* handFrame = FindFrame(framename);
 	if (handFrame) {
 		CGameObject* weapon = new CStaticObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, modelname);
 		weapon->SetPosition(offset);
-		weapon->SetScale(1, 1, 1);
-		weapon->Rotate(0.0f, 20.0f, 0.0f);
+		weapon->SetScale(scale.x, scale.y, scale.z);
+		weapon->Rotate(rotate.x, rotate.y, rotate.z);
 
 		handFrame->SetChild(weapon);
 		UpdateTransform(nullptr); // º¯È¯ Çà·Ä Áï½Ã °»½Å
@@ -331,10 +331,11 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 		pd3dGraphicsRootSignature, "Model/SK_Hu_M_FullBody.bin", NULL);
 	SetChild(pAngrybotModel->m_pModelRootObject, true);
 
-	AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "thumb_02_r", "Model/Sword_01.bin");
-	AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Helmet", "Model/Hair_01.bin", XMFLOAT3(0, 0.1, 0));
+	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "thumb_02_r", "Model/Sword_01.bin", XMFLOAT3(0.05, 0.00, -0.05));
+	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Helmet", "Model/Hair_01.bin", XMFLOAT3(0, 0.1, 0));
 	//AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Boots_Peasant_Armor", "Model/Boots_Peasant_Armor.bin");
-	AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_01", "Model/Torso_Peasant_01_Armor.bin");
+	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_01", "Model/Torso_Peasant_03_Armor.bin", XMFLOAT3(-0.25, 0.1, 0), XMFLOAT3(90, 0, 90));
+	//AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_03", "Model/Torso_Peasant_03_Armor.bin", XMFLOAT3(0, 0, 0), XMFLOAT3(90, 0, 90));
 
 	
 
@@ -413,7 +414,7 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 			SetMaxVelocityY(400.0f);
 			m_pCamera = OnChangeCamera(THIRD_PERSON_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.25f);
-			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, 30.0f));		// Ä«ï¿½Þ¶ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½
+			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, -30.0f));		// Ä«ï¿½Þ¶ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½
 			m_pCamera->GenerateProjectionMatrix(1.01f, 20000.0f, ASPECT_RATIO, 60.0f);
 			m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);

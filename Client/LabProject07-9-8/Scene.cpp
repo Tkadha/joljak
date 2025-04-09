@@ -639,9 +639,9 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		//m_ppHierarchicalGameObjects[11]->Rotate(0.0f, -1.5f, 0.0f);
 
 	//**/
-	AllocConsole(); // 콘솔 생성
-	freopen("CONOUT$", "w", stdout); // 표준 출력 리다이렉트
-	SetConsoleTitle(L"Debug Console"); // 콘솔 제목 (선택사항)
+	//AllocConsole(); // 콘솔 생성
+	//freopen("CONOUT$", "w", stdout); // 표준 출력 리다이렉트
+	//SetConsoleTitle(L"Debug Console"); // 콘솔 제목 (선택사항)
 
 #ifndef test
 #define test
