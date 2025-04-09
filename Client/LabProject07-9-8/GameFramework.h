@@ -1,7 +1,7 @@
 #pragma once
 
-#define FRAME_BUFFER_WIDTH		640
-#define FRAME_BUFFER_HEIGHT		480
+#define FRAME_BUFFER_WIDTH		1000
+#define FRAME_BUFFER_HEIGHT		800
 
 #include "Timer.h"
 #include "Player.h"
@@ -61,10 +61,11 @@ private:
 	UINT						m_nSwapChainBufferIndex;
 
 	ID3D12Resource				*m_ppd3dSwapChainBackBuffers[m_nSwapChainBuffers];
-	ID3D12DescriptorHeap		*m_pd3dRtvDescriptorHeap = NULL;
-
 	ID3D12Resource				*m_pd3dDepthStencilBuffer = NULL;
-	ID3D12DescriptorHeap		*m_pd3dDsvDescriptorHeap = NULL;
+
+	
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mRtvHeap;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mDsvHeap;
 
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> mCommandListAllocator;
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> mCommandQueue;
