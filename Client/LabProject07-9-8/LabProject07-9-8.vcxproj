@@ -147,6 +147,7 @@
     <ClCompile Include="LabProject07-9-8.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="NetworkManager.cpp" />
     <ClCompile Include="Object.cpp" />
     <ClCompile Include="PigState.cpp" />
     <ClCompile Include="Player.cpp" />
@@ -168,6 +169,7 @@
     <ClInclude Include="LabProject07-9-8.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />
+    <ClInclude Include="NetworkManager.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="PigState.h" />
     <ClInclude Include="Player.h" />

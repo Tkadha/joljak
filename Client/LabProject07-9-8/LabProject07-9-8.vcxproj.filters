@@ -31,6 +31,9 @@
     <Filter Include="소스 파일\Object\Animation">
       <UniqueIdentifier>{f8e600d0-982f-4a8d-a956-55f9c1ac35d1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Network">
+      <UniqueIdentifier>{059782b4-6ff6-42cd-840c-e49c6e010703}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LabProject07-9-8.rc">
@@ -100,6 +103,9 @@
     <ClCompile Include="Animation.cpp">
       <Filter>소스 파일\Object\Animation</Filter>
     </ClCompile>
+    <ClCompile Include="NetworkManager.cpp">
+      <Filter>소스 파일\Network</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h">
@@ -158,6 +164,9 @@
     </ClInclude>
     <ClInclude Include="Animation.h">
       <Filter>소스 파일\Object\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkManager.h">
+      <Filter>소스 파일\Network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

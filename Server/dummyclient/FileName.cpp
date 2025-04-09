@@ -2,8 +2,8 @@
 
 #include <iostream>
 #include <string>
-#include <WS2tcpip.h>
 #include <conio.h> // for _kbhit() and _getch()
+#include <WS2tcpip.h>
 #pragma comment (lib, "WS2_32.LIB")
 #include "../Global.h"
 #include "../ServerLib/ServerHeader.h"

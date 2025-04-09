@@ -3,7 +3,11 @@
 //-----------------------------------------------------------------------------
 
 #include "stdafx.h"
+#include <thread>
 #include "GameFramework.h"
+#include "NetworkManager.h"
+
+void NerworkThread();
 
 CGameFramework::CGameFramework()
 {
@@ -30,7 +34,8 @@ CGameFramework::CGameFramework()
 
 	m_pScene = NULL;
 	m_pPlayer = NULL;
-
+	
+	
 	_tcscpy_s(m_pszFrameRate, _T("LabProject ("));
 }
 
@@ -53,6 +58,10 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	BuildObjects();
 
+	auto& nwManager = NetworkManager::GetInstance();
+	nwManager.Init();
+	std::thread t(NerworkThread);
+	t.detach();
 	return(true);
 }
 
@@ -587,3 +596,18 @@ void CGameFramework::FrameAdvance()
 	::SetWindowText(m_hWnd, m_pszFrameRate);
 }
 
+// 네트워크 수신 스레드
+void NerworkThread()
+{
+	auto& nwManager = NetworkManager::GetInstance();
+	nwManager.do_recv();
+	while (true)
+	{
+		CHAT_PACKET p;
+		strcpy(p.chat, "send message\n");
+		p.size = sizeof(CHAT_PACKET);
+		p.type = static_cast<char>(E_PACKET::E_P_CHAT);
+		nwManager.do_send(reinterpret_cast<char*>(&p), p.size);
+		SleepEx(100, TRUE);
+	}
+}

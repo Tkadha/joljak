@@ -7,9 +7,9 @@ enum class E_PACKET
 	E_P_INGAME = 2,
 	E_P_CHANGEPORT = 3,
 
-	E_DB_REGISTER = 4,
-	E_DB_LOGIN = 5,
-	E_DB_SUCCESS_FAIL = 6,
+	E_DB_REGISTER = 100,
+	E_DB_LOGIN = 101,
+	E_DB_SUCCESS_FAIL = 102,
 };
 
 class PACKET
@@ -50,6 +50,15 @@ public:
 	}
 };
 
+class INPUT_PACKET : public PACKET
+{
+public:
+	DWORD direction;	// 
+
+};
+
+
+
 class DB_REGISTER_PACKET : public PACKET
 {
 	public:
@@ -61,7 +70,6 @@ class DB_REGISTER_PACKET : public PACKET
 		type = static_cast<char>(E_PACKET::E_DB_REGISTER);
 	}
 };
-
 class DB_LOGIN_PACKET : public PACKET
 {
 public:
@@ -73,7 +81,6 @@ public:
 		type = static_cast<char>(E_PACKET::E_DB_LOGIN);
 	}
 };
-
 class DB_SUCCESS_FAIL_PACKET : public PACKET
 {
 	public:
