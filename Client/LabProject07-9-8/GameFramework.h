@@ -7,6 +7,8 @@
 #include "Player.h"
 #include "Scene.h"
 
+#include "d3dUtil.h"
+
 class CGameFramework
 {
 public:
@@ -64,9 +66,9 @@ private:
 	ID3D12Resource				*m_pd3dDepthStencilBuffer = NULL;
 	ID3D12DescriptorHeap		*m_pd3dDsvDescriptorHeap = NULL;
 
-	ID3D12CommandAllocator		*m_pd3dCommandAllocator = NULL;
-	ID3D12CommandQueue			*m_pd3dCommandQueue = NULL;
-	ID3D12GraphicsCommandList	*m_pd3dCommandList = NULL;
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> mCommandListAllocator;
+	Microsoft::WRL::ComPtr<ID3D12CommandQueue> mCommandQueue;
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> mCommandList;
 
 	ID3D12Fence					*m_pd3dFence = NULL;
 	UINT64						m_nFenceValues[m_nSwapChainBuffers];
