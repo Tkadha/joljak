@@ -110,7 +110,7 @@ void CGameObject::SetMaterial(int nMaterial, CMaterial *pMaterial)
 
 bool CGameObject::CheckCollisionOBB(CGameObject* other)
 {
-	return m_localOBB.Intersects(other->m_localOBB);
+	return m_worldOBB.Intersects(other->m_worldOBB);
 }
 
 void CGameObject::SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation)
@@ -160,6 +160,8 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)
 	//m_OBBShader.Render(pd3dCommandList, NULL);
 	m_OBBMaterial->m_pShader->Render(pd3dCommandList, NULL);
 
+	pd3dCommandList->SetGraphicsRootSignature(m_OBBMaterial->m_pShader->m_pd3dGraphicsRootSignature);
+
 	// OBB 선을 그리기 위한 설정
 	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
 	pd3dCommandList->IASetVertexBuffers(0, 1, &m_OBBVertexBufferView);
@@ -167,13 +169,16 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)
 
 	// 선(Line) OBB 그리기
 	pd3dCommandList->DrawIndexedInstanced(24, 1, 0, 0, 0); // 12개 선 = 24개 인덱스
+
+	if (m_pSibling) m_pSibling->RenderOBB(pd3dCommandList);
+	if (m_pChild) m_pChild->RenderOBB(pd3dCommandList);
 }
 
 void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	// OBB 모서리 데이터
 	XMFLOAT3 corners[8];
-	m_worldOBB.GetCorners(corners);
+	m_localOBB.GetCorners(corners);
 
 	// 버텍스 버퍼 생성
 	D3D12_HEAP_PROPERTIES heapProps = { D3D12_HEAP_TYPE_UPLOAD };
@@ -315,9 +320,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pC
 			}
 		}
 	}
-
-	if (m_OBBMaterial->m_pShader)
-		RenderOBB(pd3dCommandList);
 
 	if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
 	if (m_pChild) m_pChild->Render(pd3dCommandList, pCamera);

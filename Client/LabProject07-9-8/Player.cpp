@@ -89,7 +89,7 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 			m_pCamera->Move(xmf3Shift);
 		}
 	}
-	UpdateOBB(m_xmf3Position, playerSize, playerRotation);
+	//UpdateOBB(m_xmf3Position, playerSize, playerRotation);
 }
 
 void CPlayer::Rotate(float x, float y, float z)
@@ -182,6 +182,9 @@ void CPlayer::Update(float fTimeElapsed)
 	float fDeceleration = (m_fFriction * fTimeElapsed);
 	if (fDeceleration > fLength) fDeceleration = fLength;
 	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Velocity, -fDeceleration, true));
+
+
+	//UpdateTransform(NULL);
 }
 
 CCamera *CPlayer::OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode)
@@ -241,12 +244,12 @@ void CPlayer::OnPrepareRender()
 void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 	DWORD nCameraMode = (pCamera) ? pCamera->GetMode() : 0x00;
-	if (nCameraMode == THIRD_PERSON_CAMERA || nCameraMode == FIRST_PERSON_CAMERA) CGameObject::Render(pd3dCommandList, pCamera);
+	if (nCameraMode == THIRD_PERSON_CAMERA) CGameObject::Render(pd3dCommandList, pCamera);
 }
 
 bool CPlayer::CheckCollisionOBB(CGameObject* other)
 {
-	return m_worldOBB.Intersects(other->m_worldOBB);
+	return m_localOBB.Intersects(other->m_localOBB);
 }
 
 //void CPlayer::SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation)

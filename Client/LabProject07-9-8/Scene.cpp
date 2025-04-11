@@ -166,7 +166,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[0] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[0]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[0]->SetPosition(1000.f, m_pTerrain->GetHeight(1000.0f, 1500.0f), 1500.f);
+	m_ppHierarchicalGameObjects[0]->SetPosition(1000.f, m_pTerrain->GetHeight(1000.0f, 1500.0f)+50, 1500.f);
 	m_ppHierarchicalGameObjects[0]->SetScale(8.0f, 8.0f, 8.0f);
 
 	XMFLOAT3 cowCenter = XMFLOAT3(1000.0f, m_pTerrain->GetHeight(1000.0f, 1500.0f)+50, 1500.0f);
@@ -176,6 +176,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	//m_ppHierarchicalGameObjects[0]->SetOBB(cowCenter, cowSize, cowRotation);
 	m_ppHierarchicalGameObjects[0]->SetOBB();
 	CShader* shader = new COBBShader();
+	shader->CreateShader(pd3dDevice, pd3dCommandList, NULL);
 	//m_ppHierarchicalGameObjects[0]->m_OBBShader.CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 	m_ppHierarchicalGameObjects[0]->SetOBBShader(shader);
 	m_ppHierarchicalGameObjects[0]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
@@ -227,14 +228,14 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	
 
 
-	for (int i = 1; i < m_nHierarchicalGameObjects; ++i) {
-		//m_ppHierarchicalGameObjects[0]->SetOBB(cowCenter, cowSize, cowRotation);
-		m_ppHierarchicalGameObjects[i]->SetOBB();
-		CShader* shader = new COBBShader();
-		//m_ppHierarchicalGameObjects[0]->m_OBBShader.CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
-		m_ppHierarchicalGameObjects[i]->SetOBBShader(shader);
-		m_ppHierarchicalGameObjects[i]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
-	}
+	//for (int i = 1; i < m_nHierarchicalGameObjects; ++i) {
+	//	//m_ppHierarchicalGameObjects[0]->SetOBB(cowCenter, cowSize, cowRotation);
+	//	m_ppHierarchicalGameObjects[i]->SetOBB();
+	//	CShader* shader = new COBBShader();
+	//	//m_ppHierarchicalGameObjects[0]->m_OBBShader.CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+	//	m_ppHierarchicalGameObjects[i]->SetOBBShader(shader);
+	//	m_ppHierarchicalGameObjects[i]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+	//}
 
 
 
@@ -719,4 +720,10 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 			m_ppHierarchicalGameObjects[i]->Render(pd3dCommandList, pCamera);
 		}
 	}
+
+	//for (auto obj : m_vGameObjects) {
+	//	if (obj->m_OBBMaterial->m_pShader)
+	//		obj->RenderOBB(pd3dCommandList);
+	//}
+
 }
