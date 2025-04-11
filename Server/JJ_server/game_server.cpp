@@ -7,6 +7,9 @@
 #endif
 #include "../ServerLib/ServerHeader.h"
 #include "../Global.h"
+#include "Player.h"
+#include "Timer.h"
+
 using namespace std;
 
 #define LOBBY_PORT 8999
@@ -24,19 +27,21 @@ using namespace std;
 Iocp iocp(IOCPCOUNT); // 본 예제는 스레드를 딱 하나만 쓴다. 따라서 여기도 1이 들어간다.
 shared_ptr<Socket> g_l_socket; // listensocket
 shared_ptr<Socket> g_c_socket; // clientsocket
-shared_ptr<RemoteClient>remoteClientCandidate;
+shared_ptr<PlayerClient>remoteClientCandidate;
 vector<shared_ptr<thread>> worker_threads;
 
-void ProcessClientLeave(shared_ptr<RemoteClient> remoteClient)
+Timer g_timer;
+
+void ProcessClientLeave(shared_ptr<PlayerClient> remoteClient)
 {
 	// 에러 혹은 소켓 종료이다.
 	// 해당 소켓은 제거해버리자. 
 	remoteClient->tcpConnection.Close();
-	RemoteClient::remoteClients.erase(remoteClient.get());
+	PlayerClient::PlayerClients.erase(remoteClient.get());
 
-	cout << "Client left. There are " << RemoteClient::remoteClients.size() << " connections.\n";
+	cout << "Client left. There are " << PlayerClient::PlayerClients.size() << " connections.\n";
 }
-void ProcessPacket(shared_ptr<RemoteClient>& client, char* packet);
+void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet);
 void ProcessAccept();
 void worker_thread()
 {
@@ -68,8 +73,8 @@ void worker_thread()
 				{
 					cout << "Recv!" << endl;
 					// 처리할 클라이언트
-					shared_ptr<RemoteClient> remoteClient;
-					remoteClient = RemoteClient::remoteClients[(RemoteClient*)readEvent.lpCompletionKey];
+					shared_ptr<PlayerClient> remoteClient;
+					remoteClient = PlayerClient::PlayerClients[(PlayerClient*)readEvent.lpCompletionKey];
 					if (remoteClient)
 					{
 						// 이미 수신된 상태이다. 수신 완료된 것을 그냥 꺼내 쓰자.
@@ -122,7 +127,16 @@ void worker_thread()
 	}
 }
 
-
+void Logic_thread()
+{
+	g_timer.Start();
+	while (true) {
+		g_timer.Tick(240.f);
+		for(auto& cl: PlayerClient::PlayerClients) {
+			cl.second->Update(g_timer.GetTimeElapsed());
+		}
+	}
+}
 
 int main(int argc, char* argv[])
 {
@@ -136,7 +150,7 @@ int main(int argc, char* argv[])
 
 		iocp.Add(*g_l_socket, g_l_socket.get());
 
-		remoteClientCandidate = make_shared<RemoteClient>(SocketType::Tcp);
+		remoteClientCandidate = make_shared<PlayerClient>(SocketType::Tcp);
 
 		string errorText;
 		if (!g_l_socket->AcceptOverlapped(remoteClientCandidate->tcpConnection, errorText)
@@ -160,7 +174,7 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-void ProcessPacket(shared_ptr<RemoteClient>& client, char* packet)
+void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 {
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
@@ -181,6 +195,21 @@ void ProcessPacket(shared_ptr<RemoteClient>& client, char* packet)
 		//}
 		break;
 	}
+	case E_PACKET::E_P_ROTATE:
+	{
+		ROTATE_PACKET* r_packet = reinterpret_cast<ROTATE_PACKET*>(packet);
+		client->SetRight(XMFLOAT3{ r_packet->right.x,r_packet->right.y,r_packet->right.z });
+		client->SetUp(XMFLOAT3{ r_packet->up.x,r_packet->up.y,r_packet->up.z });
+		client->SetLook(XMFLOAT3{ r_packet->look.x,r_packet->look.y,r_packet->look.z });
+
+		ROTATE_PACKET s_packet;
+		s_packet.size = sizeof(ROTATE_PACKET);
+		s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_ROTATE);
+		s_packet.right = r_packet->right;
+		s_packet.up = r_packet->up;
+		s_packet.look = r_packet->look;
+	}
+		break;
 	default:
 		break;
 	}
@@ -197,7 +226,7 @@ void ProcessAccept()
 	}
 	else // 잘 처리함
 	{
-		shared_ptr<RemoteClient> remoteClient = remoteClientCandidate;
+		shared_ptr<PlayerClient> remoteClient = remoteClientCandidate;
 		cout << "accept - key: " << remoteClient.get() << endl;
 
 		// 새 TCP 소켓도 IOCP에 추가한다.
@@ -217,13 +246,13 @@ void ProcessAccept()
 
 			// 새 클라이언트를 목록에 추가.
 			remoteClient->m_id = reinterpret_cast<unsigned long long>(remoteClient.get());
-			RemoteClient::remoteClients.insert({ remoteClient.get(), remoteClient });
-			cout << "Client joined. There are " << RemoteClient::remoteClients.size() << " connections.\n";
+			PlayerClient::PlayerClients.insert({ remoteClient.get(), remoteClient });
+			cout << "Client joined. There are " << PlayerClient::PlayerClients.size() << " connections.\n";
 
 		}
 
 		// 계속해서 소켓 받기를 해야 하므로 리슨소켓도 overlapped I/O를 걸자.
-		remoteClientCandidate = make_shared<RemoteClient>(SocketType::Tcp);
+		remoteClientCandidate = make_shared<PlayerClient>(SocketType::Tcp);
 		string errorText;
 		if (!g_l_socket->AcceptOverlapped(remoteClientCandidate->tcpConnection, errorText)
 			&& WSAGetLastError() != ERROR_IO_PENDING)

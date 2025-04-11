@@ -58,10 +58,22 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	BuildObjects();
 
+	/*char nw_connect = 0;
+	std::cout << "Do you want to connect to the server? (y/n): ";
+	std::cin >> nw_connect;
+	if( nw_connect == 'y' || nw_connect == 'Y')
+	{
+		auto& nwManager = NetworkManager::GetInstance();
+		nwManager.Init();
+		std::thread t(NerworkThread);
+		t.detach();		
+	}*/
+
 	auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
 	std::thread t(NerworkThread);
 	t.detach();
+
 	return(true);
 }
 
@@ -471,12 +483,40 @@ void CGameFramework::ProcessInput()
 
 		if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
 		{
+			auto& nwManager = NetworkManager::GetInstance();
+
 			if (cxDelta || cyDelta)
 			{
 				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
 					m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
 				else
 					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+				{
+					ROTATE_PACKET p;
+					auto& lookv = m_pPlayer->GetLookVector();
+					p.look.x = lookv.x;
+					p.look.y = lookv.y;
+					p.look.z = lookv.z;
+					auto& rightv = m_pPlayer->GetRightVector();
+					p.right.x = rightv.x;
+					p.right.y = rightv.y;
+					p.right.z = rightv.z;
+					auto& upv = m_pPlayer->GetUpVector();
+					p.up.x = upv.x;
+					p.up.y = upv.y;
+					p.up.z = upv.z;
+					p.size = sizeof(ROTATE_PACKET);
+					p.type = static_cast<char>(E_PACKET::E_P_ROTATE);
+
+					//nwManager.do_send(reinterpret_cast<char*>(&p), p.size);
+
+					nwManager.PushQueue(p, p.size);
+
+					printf("ROTATE_PACKET: %f %f %f\n", p.right.x, p.right.y, p.right.z);
+					printf("ROTATE_PACKET: %f %f %f\n", p.look.x, p.look.y, p.look.z);
+					printf("ROTATE_PACKET: %f %f %f\n\n", p.up.x, p.up.y, p.up.z);
+				}
+				
 			}
 			if (dwDirection) m_pPlayer->Move(dwDirection, 12.25f, true);
 		}
@@ -523,7 +563,7 @@ void CGameFramework::MoveToNextFrame()
 
 void CGameFramework::FrameAdvance()
 {    
-	m_GameTimer.Tick(30.0f);
+	m_GameTimer.Tick(120.0f);
 	
 	ProcessInput();
 
@@ -603,11 +643,23 @@ void NerworkThread()
 	nwManager.do_recv();
 	while (true)
 	{
-		CHAT_PACKET p;
+		/*CHAT_PACKET p;
 		strcpy(p.chat, "send message\n");
 		p.size = sizeof(CHAT_PACKET);
 		p.type = static_cast<char>(E_PACKET::E_P_CHAT);
-		nwManager.do_send(reinterpret_cast<char*>(&p), p.size);
+		nwManager.PushQueue(reinterpret_cast<char*>(&p));*/
+
+
+		// 보낼 데이터가 있다면 보내기
+		while (!nwManager.send_queue.empty())
+		{
+			auto packet = nwManager.PopQueue();
+
+			nwManager.do_send(packet.first.get(), packet.second);
+			SleepEx(1, TRUE);
+		}
+
+
 		SleepEx(100, TRUE);
 	}
 }

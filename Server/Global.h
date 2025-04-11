@@ -6,10 +6,24 @@ enum class E_PACKET
 	E_P_CHAT = 1,
 	E_P_INGAME = 2,
 	E_P_CHANGEPORT = 3,
+	E_P_INPUT = 4,
+	E_P_ROTATE = 5,
 
 	E_DB_REGISTER = 100,
 	E_DB_LOGIN = 101,
 	E_DB_SUCCESS_FAIL = 102,
+};
+
+const int MAX_BUF_SIZE = 1024; // 버퍼 최대 크기
+
+
+#pragma pack(push, 1) // 1byte alignment
+
+class FLOAT3
+{
+public:
+	float x, y, z;
+	FLOAT3() = default;
 };
 
 class PACKET
@@ -54,10 +68,23 @@ class INPUT_PACKET : public PACKET
 {
 public:
 	DWORD direction;	// 
-
+	INPUT_PACKET() {
+		size = sizeof(INPUT_PACKET);
+		type = static_cast<char>(E_PACKET::E_P_INPUT);
+	}
 };
 
-
+class ROTATE_PACKET : public PACKET
+{	
+	public:
+		FLOAT3 right;
+		FLOAT3 up;
+		FLOAT3 look;
+	ROTATE_PACKET() {
+		size = sizeof(ROTATE_PACKET);
+		type = static_cast<char>(E_PACKET::E_P_ROTATE);
+	}
+};
 
 class DB_REGISTER_PACKET : public PACKET
 {
@@ -92,3 +119,6 @@ class DB_SUCCESS_FAIL_PACKET : public PACKET
 		type = static_cast<char>(E_PACKET::E_DB_SUCCESS_FAIL);
 	}
 };
+
+
+#pragma pack(pop)

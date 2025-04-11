@@ -94,9 +94,9 @@ void NetworkManager::do_recv()
 	WSARecv(server_s->m_fd, &(server_s->m_recv_over.wsabuf), 1, nullptr, &server_s->m_readFlags, &(server_s->m_recv_over.over), recv_callback);
 }
 
-void NetworkManager::do_send(const char* packet, short buf_size)
+void NetworkManager::do_send(const char* packet, short size)
 {
-	OVER_EXP* send_over = new OVER_EXP(packet, buf_size);
+	OVER_EXP* send_over = new OVER_EXP(packet, size);
 	WSASend(server_s->m_fd, &send_over->wsabuf, 1, nullptr, 0, &send_over->over, send_callback);
 }
 
