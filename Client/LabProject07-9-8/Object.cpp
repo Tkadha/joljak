@@ -173,7 +173,7 @@ void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12Graphic
 {
 	// OBB 모서리 데이터
 	XMFLOAT3 corners[8];
-	m_worldOBB.GetCorners(corners);
+	m_localOBB.GetCorners(corners);
 
 	// 버텍스 버퍼 생성
 	D3D12_HEAP_PROPERTIES heapProps = { D3D12_HEAP_TYPE_UPLOAD };
