@@ -176,6 +176,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	//m_ppHierarchicalGameObjects[0]->SetOBB(cowCenter, cowSize, cowRotation);
 	m_ppHierarchicalGameObjects[0]->SetOBB();
 	CShader* shader = new COBBShader();
+	shader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 	//m_ppHierarchicalGameObjects[0]->m_OBBShader.CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 	m_ppHierarchicalGameObjects[0]->SetOBBShader(shader);
 	m_ppHierarchicalGameObjects[0]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
@@ -231,9 +232,18 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		//m_ppHierarchicalGameObjects[0]->SetOBB(cowCenter, cowSize, cowRotation);
 		m_ppHierarchicalGameObjects[i]->SetOBB();
 		CShader* shader = new COBBShader();
+		shader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 		//m_ppHierarchicalGameObjects[0]->m_OBBShader.CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 		m_ppHierarchicalGameObjects[i]->SetOBBShader(shader);
 		m_ppHierarchicalGameObjects[i]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+	}
+
+	for (auto obj : m_vGameObjects) {
+		obj->SetOBB();
+		CShader* shader = new COBBShader();
+		shader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+		obj->SetOBBShader(shader);
+		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	}
 
 
