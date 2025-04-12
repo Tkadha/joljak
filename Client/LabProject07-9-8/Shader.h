@@ -48,7 +48,6 @@ public:
 	virtual void AnimateObjects(float fTimeElapsed) { }
 	virtual void ReleaseObjects() { }
 
-	ID3D12RootSignature* m_pd3dGraphicsRootSignature;
 protected:
 	ID3DBlob							*m_pd3dVertexShaderBlob = NULL;
 	ID3DBlob							*m_pd3dPixelShaderBlob = NULL;
@@ -205,6 +204,5 @@ public:
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
 	
-	void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	ID3D12RootSignature* CreateOBBRootSignature(ID3D12Device* pd3dDevice);
+	void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* m_pd3dGraphicsRootSignature);
 };

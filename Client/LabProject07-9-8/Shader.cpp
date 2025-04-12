@@ -695,19 +695,8 @@ D3D12_INPUT_LAYOUT_DESC COBBShader::CreateInputLayout()
 	return inputLayoutDesc;
 }
 
-void COBBShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void COBBShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* m_pd3dGraphicsRootSignature)
 {
-	// 루트 시그니처가 전달되지 않았다면 새로 생성
-	if (!m_pd3dGraphicsRootSignature)
-	{
-		m_pd3dGraphicsRootSignature = CreateOBBRootSignature(pd3dDevice);
-		if (!m_pd3dGraphicsRootSignature)
-		{
-			OutputDebugStringA("Failed to create root signature!\n");
-			return;
-		}
-	}
-
 	::ZeroMemory(&m_d3dPipelineStateDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
 	m_d3dPipelineStateDesc.pRootSignature = m_pd3dGraphicsRootSignature;
 	m_d3dPipelineStateDesc.VS = CreateVertexShader();
@@ -732,43 +721,3 @@ void COBBShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	if (m_d3dPipelineStateDesc.InputLayout.pInputElementDescs) delete[] m_d3dPipelineStateDesc.InputLayout.pInputElementDescs;
 }
 
-ID3D12RootSignature* COBBShader::CreateOBBRootSignature(ID3D12Device* pd3dDevice)
-{
-	// 루트 파라미터: 상수 버퍼 (b0)
-	D3D12_ROOT_PARAMETER rootParameters[1];
-	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV; // 상수 버퍼
-	rootParameters[0].Descriptor.ShaderRegister = 0; // register(b0)
-	rootParameters[0].Descriptor.RegisterSpace = 0;
-	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL; // 모든 셰이더 단계에서 사용 가능
-
-	// 루트 시그니처 설명자
-	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-	rootSignatureDesc.NumParameters = 1;
-	rootSignatureDesc.pParameters = rootParameters;
-	rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-
-	// 루트 시그니처 직렬화
-	ID3DBlob* signatureBlob = nullptr;
-	ID3DBlob* errorBlob = nullptr;
-	HRESULT hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
-	if (FAILED(hr))
-	{
-		if (errorBlob)
-		{
-			OutputDebugStringA((char*)errorBlob->GetBufferPointer());
-			errorBlob->Release();
-		}
-		return nullptr;
-	}
-
-	// 루트 시그니처 생성
-	ID3D12RootSignature* rootSignature = nullptr;
-	hr = pd3dDevice->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
-	signatureBlob->Release();
-	if (FAILED(hr))
-	{
-		return nullptr;
-	}
-
-	return rootSignature;
-}

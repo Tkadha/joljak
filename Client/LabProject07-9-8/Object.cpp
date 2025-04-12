@@ -160,8 +160,6 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)
 	//m_OBBShader.Render(pd3dCommandList, NULL);
 	m_OBBMaterial->m_pShader->Render(pd3dCommandList, NULL);
 
-	pd3dCommandList->SetGraphicsRootSignature(m_OBBMaterial->m_pShader->m_pd3dGraphicsRootSignature);
-
 	// OBB 선을 그리기 위한 설정
 	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
 	pd3dCommandList->IASetVertexBuffers(0, 1, &m_OBBVertexBufferView);
