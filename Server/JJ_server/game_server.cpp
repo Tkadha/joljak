@@ -29,6 +29,8 @@ shared_ptr<Socket> g_l_socket; // listensocket
 shared_ptr<Socket> g_c_socket; // clientsocket
 shared_ptr<PlayerClient>remoteClientCandidate;
 vector<shared_ptr<thread>> worker_threads;
+shared_ptr<thread> logic_thread;
+
 
 Timer g_timer;
 
@@ -131,48 +133,31 @@ void Logic_thread()
 {
 	g_timer.Start();
 	while (true) {
-		g_timer.Tick(240.f);
+		g_timer.Tick(60.f);
 		for(auto& cl: PlayerClient::PlayerClients) {
+			if (cl.second->GetDirection() != 0)
+			{
+				cl.second->Move(cl.second->GetDirection(), 12.25f, true);
+			}
+			auto& beforepos = cl.second->GetPosition();
 			cl.second->Update(g_timer.GetTimeElapsed());
+			auto& pos = cl.second->GetPosition();
+			if (beforepos.x != pos.x || beforepos.y != pos.y || beforepos.z != pos.z)
+			{
+				POSITION_PACKET s_packet;
+				s_packet.size = sizeof(POSITION_PACKET);
+				s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_POSITION);
+				s_packet.position.x = pos.x;
+				s_packet.position.y = pos.y;
+				s_packet.position.z = pos.z;
+				cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+			}
+			//cout<< cl.second->m_id << " " << pos.x << " " << pos.y << " " << pos.z << endl;
 		}
 	}
 }
 
-int main(int argc, char* argv[])
-{
-	SetConsoleTitle(L"GameServer");
-	try
-	{
-		g_l_socket = make_shared<Socket>(SocketType::Tcp);
-		g_l_socket->Bind(Endpoint("0.0.0.0", PORT));
-		g_l_socket->Listen();
 
-
-		iocp.Add(*g_l_socket, g_l_socket.get());
-
-		remoteClientCandidate = make_shared<PlayerClient>(SocketType::Tcp);
-
-		string errorText;
-		if (!g_l_socket->AcceptOverlapped(remoteClientCandidate->tcpConnection, errorText)
-			&& WSAGetLastError() != ERROR_IO_PENDING) {
-			throw Exception("Overlapped AcceptEx failed."s);
-		}
-		g_l_socket->m_isReadOverlapped = true;
-
-		for (int i{}; i < IOCPCOUNT; ++i)
-			worker_threads.emplace_back(make_shared<thread>(worker_thread));
-
-		for (auto& th : worker_threads) th->join();
-
-		g_l_socket->Close();
-	}
-	catch (Exception& e)
-	{
-		cout << "Exception! " << e.what() << endl;
-
-	}
-	return 0;
-}
 
 void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 {
@@ -210,6 +195,20 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		s_packet.look = r_packet->look;
 	}
 		break;
+	case E_PACKET::E_P_INPUT:
+	{
+		INPUT_PACKET* r_packet = reinterpret_cast<INPUT_PACKET*>(packet);
+		client->SetDirection(r_packet->direction);
+		cout<< client->m_id << " " << r_packet->direction << endl;
+		auto& pos = client->GetPosition();
+		cout << client->m_id << " " << pos.x << " " << pos.y << " " << pos.z << endl;
+		INPUT_PACKET s_packet;
+		s_packet.size = sizeof(INPUT_PACKET);
+		s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_INPUT);
+		s_packet.direction = r_packet->direction;
+
+	}
+	break;
 	default:
 		break;
 	}
@@ -266,5 +265,43 @@ void ProcessAccept()
 			g_l_socket->m_isReadOverlapped = true;
 		}
 	}
+}
+
+int main(int argc, char* argv[])
+{
+	SetConsoleTitle(L"GameServer");
+	try
+	{
+		g_l_socket = make_shared<Socket>(SocketType::Tcp);
+		g_l_socket->Bind(Endpoint("0.0.0.0", PORT));
+		g_l_socket->Listen();
+
+
+		iocp.Add(*g_l_socket, g_l_socket.get());
+
+		remoteClientCandidate = make_shared<PlayerClient>(SocketType::Tcp);
+
+		string errorText;
+		if (!g_l_socket->AcceptOverlapped(remoteClientCandidate->tcpConnection, errorText)
+			&& WSAGetLastError() != ERROR_IO_PENDING) {
+			throw Exception("Overlapped AcceptEx failed."s);
+		}
+		g_l_socket->m_isReadOverlapped = true;
+
+		for (int i{}; i < IOCPCOUNT; ++i)
+			worker_threads.emplace_back(make_shared<thread>(worker_thread));
+		logic_thread = make_shared<thread>(Logic_thread);
+
+		for (auto& th : worker_threads) th->join();
+		logic_thread->join();
+
+		g_l_socket->Close();
+	}
+	catch (Exception& e)
+	{
+		cout << "Exception! " << e.what() << endl;
+
+	}
+	return 0;
 }
 

@@ -18,7 +18,6 @@ std::shared_ptr<PigState> PigState::Instance()
 
 void PigState::Enter(std::shared_ptr<CGameObject> pig)
 {
-	auto obj = dynamic_cast<CMonsterObject*>(pig.get());
 	std::cout << "Enter PigState" << std::endl;
 }
 

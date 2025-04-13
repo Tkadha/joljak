@@ -7,8 +7,53 @@
 #include "GameFramework.h"
 #include "NetworkManager.h"
 
-void NerworkThread();
+// 네트워크 수신 스레드
+void CGameFramework::NerworkThread()
+{
+	auto& nwManager = NetworkManager::GetInstance();
+	nwManager.do_recv();
+	while (true)
+	{
+		/*CHAT_PACKET p;
+		strcpy(p.chat, "send message\n");
+		p.size = sizeof(CHAT_PACKET);
+		p.type = static_cast<char>(E_PACKET::E_P_CHAT);
+		nwManager.PushQueue(reinterpret_cast<char*>(&p));*/
 
+
+		// 보낼 데이터가 있다면
+		while (!nwManager.send_queue.empty())
+		{
+			auto packet = nwManager.PopSendQueue();
+
+			nwManager.do_send(packet.first.get(), packet.second);
+			SleepEx(1, TRUE);
+		}
+
+		// 꺼낼 데이터가 있다면	
+		while (!nwManager.recv_queue.empty())
+		{
+			auto packet = nwManager.PopRecvQueue();
+			ProcessPacket(packet.first.get());
+
+		}
+		SleepEx(100, TRUE);
+	}
+}
+void CGameFramework::ProcessPacket(char* packet)
+{
+	E_PACKET type = static_cast<E_PACKET>(packet[1]);
+	switch (type)
+	{
+	case E_PACKET::E_P_POSITION:
+	{
+		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
+		m_pPlayer->SetPosition(XMFLOAT3{recv_p->position.x, recv_p->position.y, recv_p->position.z});
+	}
+	default:
+		break;
+	}
+}
 CGameFramework::CGameFramework()
 {
 	m_pdxgiFactory = NULL;
@@ -71,7 +116,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
-	std::thread t(NerworkThread);
+	std::thread t(&CGameFramework::NerworkThread, this);
 	t.detach();
 
 	return(true);
@@ -481,6 +526,18 @@ void CGameFramework::ProcessInput()
 		if (pKeysBuffer[VK_NEXT] & 0xF0) dwDirection |= DIR_DOWN;
 		else m_pPlayer->keyInput(pKeysBuffer);
 
+		if (beforeDirection != dwDirection)
+		{
+			beforeDirection = dwDirection;
+			auto& nwManager = NetworkManager::GetInstance();
+			INPUT_PACKET p;
+			p.direction = dwDirection;
+			printf("Direction: %d\n", dwDirection);
+			p.size = sizeof(INPUT_PACKET);
+			p.type = static_cast<char>(E_PACKET::E_P_INPUT);
+			nwManager.PushSendQueue(p, p.size);
+		}
+
 		if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
 		{
 			auto& nwManager = NetworkManager::GetInstance();
@@ -508,17 +565,14 @@ void CGameFramework::ProcessInput()
 					p.size = sizeof(ROTATE_PACKET);
 					p.type = static_cast<char>(E_PACKET::E_P_ROTATE);
 
-					//nwManager.do_send(reinterpret_cast<char*>(&p), p.size);
-
-					nwManager.PushQueue(p, p.size);
-
-					printf("ROTATE_PACKET: %f %f %f\n", p.right.x, p.right.y, p.right.z);
-					printf("ROTATE_PACKET: %f %f %f\n", p.look.x, p.look.y, p.look.z);
-					printf("ROTATE_PACKET: %f %f %f\n\n", p.up.x, p.up.y, p.up.z);
+					nwManager.PushSendQueue(p, p.size);
 				}
 				
 			}
-			if (dwDirection) m_pPlayer->Move(dwDirection, 12.25f, true);
+			if (dwDirection)
+			{
+				m_pPlayer->Move(dwDirection, 12.25f, true);
+			}
 		}
 	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
@@ -563,7 +617,7 @@ void CGameFramework::MoveToNextFrame()
 
 void CGameFramework::FrameAdvance()
 {    
-	m_GameTimer.Tick(120.0f);
+	m_GameTimer.Tick(60.0f);
 	
 	ProcessInput();
 
@@ -636,30 +690,3 @@ void CGameFramework::FrameAdvance()
 	::SetWindowText(m_hWnd, m_pszFrameRate);
 }
 
-// 네트워크 수신 스레드
-void NerworkThread()
-{
-	auto& nwManager = NetworkManager::GetInstance();
-	nwManager.do_recv();
-	while (true)
-	{
-		/*CHAT_PACKET p;
-		strcpy(p.chat, "send message\n");
-		p.size = sizeof(CHAT_PACKET);
-		p.type = static_cast<char>(E_PACKET::E_P_CHAT);
-		nwManager.PushQueue(reinterpret_cast<char*>(&p));*/
-
-
-		// 보낼 데이터가 있다면 보내기
-		while (!nwManager.send_queue.empty())
-		{
-			auto packet = nwManager.PopQueue();
-
-			nwManager.do_send(packet.first.get(), packet.second);
-			SleepEx(1, TRUE);
-		}
-
-
-		SleepEx(100, TRUE);
-	}
-}

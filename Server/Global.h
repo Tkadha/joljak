@@ -8,6 +8,7 @@ enum class E_PACKET
 	E_P_CHANGEPORT = 3,
 	E_P_INPUT = 4,
 	E_P_ROTATE = 5,
+	E_P_POSITION = 6,
 
 	E_DB_REGISTER = 100,
 	E_DB_LOGIN = 101,
@@ -67,7 +68,7 @@ public:
 class INPUT_PACKET : public PACKET
 {
 public:
-	DWORD direction;	// 
+	DWORD direction;	
 	INPUT_PACKET() {
 		size = sizeof(INPUT_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_INPUT);
@@ -85,6 +86,16 @@ class ROTATE_PACKET : public PACKET
 		type = static_cast<char>(E_PACKET::E_P_ROTATE);
 	}
 };
+class POSITION_PACKET : public PACKET
+{
+	public:
+	FLOAT3 position;
+	POSITION_PACKET() {
+		size = sizeof(POSITION_PACKET);
+		type = static_cast<char>(E_PACKET::E_P_POSITION);
+	}
+};
+
 
 class DB_REGISTER_PACKET : public PACKET
 {

@@ -41,6 +41,9 @@ public:
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
+
+	void NerworkThread();
+	void ProcessPacket(char* packet);
 private:
 	HINSTANCE					m_hInstance;
 	HWND						m_hWnd; 
@@ -85,5 +88,7 @@ private:
 	POINT						m_ptOldCursorPos;
 
 	_TCHAR						m_pszFrameRate[70];
+
+	DWORD						beforeDirection = 0;
 };
 
