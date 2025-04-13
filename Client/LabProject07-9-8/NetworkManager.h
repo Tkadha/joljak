@@ -80,7 +80,7 @@ public:
 	{
 		lock_guard<mutex> lock(r_mu);
 		auto p = move(recv_queue.front());
-		recv_queue.pop();
+		recv_queue.pop_front();
 		return p;
 	}
 };
