@@ -118,7 +118,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		gameObj->SetScale(100,100,100);
 		m_vGameObjects.emplace_back(gameObj);
 	}
-	/*int nRockClusterAObjects = 20;
+	int nRockClusterAObjects = 10;
 	for (int i = 0; i < nRockClusterAObjects; ++i) {
 		CGameObject* gameObj = new CRockClusterAObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
@@ -127,6 +127,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
 	}
+	/*
 	int nRockClusterBObjects = 20;
 	for (int i = 0; i < nRockClusterBObjects; ++i) {
 		CGameObject* gameObj = new CRockClusterBObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
@@ -244,6 +245,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		shader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 		obj->SetOBBShader(shader);
 		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+		//obj->SetOBB(pd3dDevice, pd3dCommandList, shader);
 	}
 
 

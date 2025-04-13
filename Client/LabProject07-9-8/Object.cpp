@@ -155,6 +155,40 @@ void CGameObject::SetOBB()
 	if (m_pChild) m_pChild->SetOBB();
 }
 
+void CGameObject::SetOBB(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CShader* shader)
+{
+	if (m_pMesh) {
+		// 메시 데이터로 OBB 만들기
+		XMFLOAT3 minPos = m_pMesh->m_pxmf3Positions[0];
+		XMFLOAT3 maxPos = m_pMesh->m_pxmf3Positions[0];
+		for (int i = 1; i < m_pMesh->m_nPositions; ++i) {
+			minPos.x = min(minPos.x, m_pMesh->m_pxmf3Positions[i].x);
+			minPos.y = min(minPos.y, m_pMesh->m_pxmf3Positions[i].y);
+			minPos.z = min(minPos.z, m_pMesh->m_pxmf3Positions[i].z);
+			maxPos.x = max(maxPos.x, m_pMesh->m_pxmf3Positions[i].x);
+			maxPos.y = max(maxPos.y, m_pMesh->m_pxmf3Positions[i].y);
+			maxPos.z = max(maxPos.z, m_pMesh->m_pxmf3Positions[i].z);
+		}
+		m_localOBB.Center = XMFLOAT3(
+			(minPos.x + maxPos.x) * 0.5f,
+			(minPos.y + maxPos.y) * 0.5f,
+			(minPos.z + maxPos.z) * 0.5f
+		);
+		m_localOBB.Extents = XMFLOAT3(
+			(maxPos.x - minPos.x) * 0.5f,
+			(maxPos.y - minPos.y) * 0.5f,
+			(maxPos.z - minPos.z) * 0.5f
+		);
+		m_localOBB.Orientation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);  // 초기 회전 없음
+
+		SetOBBShader(shader);
+		InitializeOBBResources(pd3dDevice, pd3dCommandList);
+	}
+
+	if (m_pSibling) m_pSibling->SetOBB();
+	if (m_pChild) m_pChild->SetOBB();
+}
+
 void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	//m_OBBShader.Render(pd3dCommandList, NULL);
@@ -171,41 +205,44 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)
 
 void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// OBB 모서리 데이터
-	XMFLOAT3 corners[8];
-	m_localOBB.GetCorners(corners);
+	if(m_pMesh)
+	{
+		// OBB 모서리 데이터
+		XMFLOAT3 corners[8];
+		m_localOBB.GetCorners(corners);
 
-	// 버텍스 버퍼 생성
-	D3D12_HEAP_PROPERTIES heapProps = { D3D12_HEAP_TYPE_UPLOAD };
-	D3D12_RESOURCE_DESC bufferDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, sizeof(corners), 1, 1, 1, DXGI_FORMAT_UNKNOWN, 1, 0, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
-	pd3dDevice->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_pOBBVertexBuffer));
+		// 버텍스 버퍼 생성
+		D3D12_HEAP_PROPERTIES heapProps = { D3D12_HEAP_TYPE_UPLOAD };
+		D3D12_RESOURCE_DESC bufferDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, sizeof(corners), 1, 1, 1, DXGI_FORMAT_UNKNOWN, 1, 0, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
+		pd3dDevice->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_pOBBVertexBuffer));
 
-	// 데이터 업로드
-	XMFLOAT3* pMappedData;
-	m_pOBBVertexBuffer->Map(0, nullptr, reinterpret_cast<void**>(&pMappedData));
-	memcpy(pMappedData, corners, sizeof(corners));
-	m_pOBBVertexBuffer->Unmap(0, nullptr);
+		// 데이터 업로드
+		XMFLOAT3* pMappedData;
+		m_pOBBVertexBuffer->Map(0, nullptr, reinterpret_cast<void**>(&pMappedData));
+		memcpy(pMappedData, corners, sizeof(corners));
+		m_pOBBVertexBuffer->Unmap(0, nullptr);
 
-	// 버텍스 버퍼 뷰 설정
-	m_OBBVertexBufferView.BufferLocation = m_pOBBVertexBuffer->GetGPUVirtualAddress();
-	m_OBBVertexBufferView.StrideInBytes = sizeof(XMFLOAT3);
-	m_OBBVertexBufferView.SizeInBytes = sizeof(corners);
+		// 버텍스 버퍼 뷰 설정
+		m_OBBVertexBufferView.BufferLocation = m_pOBBVertexBuffer->GetGPUVirtualAddress();
+		m_OBBVertexBufferView.StrideInBytes = sizeof(XMFLOAT3);
+		m_OBBVertexBufferView.SizeInBytes = sizeof(corners);
 
-	// 인덱스 버퍼 생성
-	UINT indices[] = { 0,1, 1,2, 2,3, 3,0, 4,5, 5,6, 6,7, 7,4, 0,4, 1,5, 2,6, 3,7 };
-	bufferDesc.Width = sizeof(indices);
-	pd3dDevice->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_pOBBIndexBuffer));
+		// 인덱스 버퍼 생성
+		UINT indices[] = { 0,1, 1,2, 2,3, 3,0, 4,5, 5,6, 6,7, 7,4, 0,4, 1,5, 2,6, 3,7 };
+		bufferDesc.Width = sizeof(indices);
+		pd3dDevice->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_pOBBIndexBuffer));
 
-	// 데이터 업로드
-	UINT* pMappedIndexData;
-	m_pOBBIndexBuffer->Map(0, nullptr, reinterpret_cast<void**>(&pMappedIndexData));
-	memcpy(pMappedIndexData, indices, sizeof(indices));
-	m_pOBBIndexBuffer->Unmap(0, nullptr);
+		// 데이터 업로드
+		UINT* pMappedIndexData;
+		m_pOBBIndexBuffer->Map(0, nullptr, reinterpret_cast<void**>(&pMappedIndexData));
+		memcpy(pMappedIndexData, indices, sizeof(indices));
+		m_pOBBIndexBuffer->Unmap(0, nullptr);
 
-	// 인덱스 버퍼 뷰 설정
-	m_OBBIndexBufferView.BufferLocation = m_pOBBIndexBuffer->GetGPUVirtualAddress();
-	m_OBBIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
-	m_OBBIndexBufferView.SizeInBytes = sizeof(indices);
+		// 인덱스 버퍼 뷰 설정
+		m_OBBIndexBufferView.BufferLocation = m_pOBBIndexBuffer->GetGPUVirtualAddress();
+		m_OBBIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
+		m_OBBIndexBufferView.SizeInBytes = sizeof(indices);
+	}
 
 	if (m_pSibling) m_pSibling->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	if (m_pChild) m_pChild->InitializeOBBResources(pd3dDevice, pd3dCommandList);
@@ -213,7 +250,8 @@ void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12Graphic
 
 void CGameObject::SetOBBShader(CShader* shader)
 {
-	m_OBBMaterial->SetShader(shader);
+	if(m_pMesh)
+		m_OBBMaterial->SetShader(shader);
 
 	if (m_pSibling) m_pSibling->SetOBBShader(shader);
 	if (m_pChild) m_pChild->SetOBBShader(shader);
