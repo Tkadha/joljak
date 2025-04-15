@@ -163,6 +163,8 @@ void CGameFramework::CreateDirect3DDevice()
 
 	m_hFenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
 
+	m_nCbvSrvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
 	::gnCbvSrvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	::gnRtvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	::gnDsvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
@@ -568,6 +570,8 @@ void CGameFramework::FrameAdvance()
 
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
+
+
 	if (m_pScene) m_pScene->Render(m_pd3dCommandList, m_pCamera);
 
 #ifdef _WITH_PLAYER_TOP
@@ -611,3 +615,173 @@ void CGameFramework::FrameAdvance()
 	::SetWindowText(m_hWnd, m_pszFrameRate);
 }
 
+
+
+
+
+void CGameFramework::CreateCbvSrvDescriptorHeaps(int nConstantBufferViews, int nShaderResourceViews)
+{
+	// --- 1. 힙 생성 ---
+	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
+	d3dDescriptorHeapDesc.NumDescriptors = nConstantBufferViews + nShaderResourceViews; // CBVs + SRVs
+	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	d3dDescriptorHeapDesc.NodeMask = 0;
+
+	m_pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, IID_PPV_ARGS(&m_pd3dCbvSrvDescriptorHeap));
+
+	// ---  시작 핸들 저장 및 카운트 저장 ---
+	m_nTotalCbvDescriptors = nConstantBufferViews;
+	m_nTotalSrvDescriptors = nShaderResourceViews;
+
+	// 힙 전체의 시작 핸들을 얻어옵니다. 이것이 CBV 섹션의 시작 핸들이 됩니다.
+	m_d3dCbvCpuHandleStart = m_pd3dCbvSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	m_d3dCbvGpuHandleStart = m_pd3dCbvSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+
+	// SRV 섹션의 시작 핸들을 계산합니다. (CBV 섹션 바로 다음)
+	m_d3dSrvCpuHandleStart = m_d3dCbvCpuHandleStart; // 힙 시작에서
+	// CBV 개수 * 디스크립터 크기 만큼 오프셋을 더합니다.
+	m_d3dSrvCpuHandleStart.ptr += (UINT64)m_nTotalCbvDescriptors * m_nCbvSrvDescriptorIncrementSize;
+
+	m_d3dSrvGpuHandleStart = m_d3dCbvGpuHandleStart; // 힙 시작에서
+	// CBV 개수 * 디스크립터 크기 만큼 오프셋을 더합니다.
+	m_d3dSrvGpuHandleStart.ptr += (UINT64)m_nTotalCbvDescriptors * m_nCbvSrvDescriptorIncrementSize;
+
+	// --- 4. 오프셋 초기화 ---
+	// 각 섹션에서 할당을 시작할 위치(오프셋)를 0으로 설정합니다.
+	m_nNextCbvOffset = 0;
+	m_nNextSrvOffset = 0;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE CGameFramework::CreateConstantBufferViews(int nConstantBufferViews, ID3D12Resource* pd3dConstantBuffers, UINT nStride)
+{
+	if (nConstantBufferViews <= 0 || pd3dConstantBuffers == nullptr)
+	{
+		return { 0 }; // 유효하지 않은 입력
+	}
+
+
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuStartHandle = { 0 };
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuStartHandle = { 0 };
+	// --- 1. 프레임워크의 할당 함수를 호출하여 디스크립터 슬롯 확보 ---
+	if (!AllocateCbvDescriptors(nConstantBufferViews, cpuStartHandle, gpuStartHandle))
+	{
+		// 힙 공간 부족 등의 이유로 할당 실패
+		// 오류 처리 (로그 남기기, 예외 발생 등)
+		OutputDebugString(L"Failed to allocate CBV descriptors.\n");
+		return { 0 }; // 실패 시 유효하지 않은 핸들 반환
+	}
+
+	// 상수 버퍼 정보 설정
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = pd3dConstantBuffers->GetGPUVirtualAddress();
+	D3D12_CONSTANT_BUFFER_VIEW_DESC d3dCBVDesc;
+	d3dCBVDesc.SizeInBytes = nStride; // CBV에서 볼 버퍼의 크기
+
+	// 할당받은 시작 CPU 핸들부터 순차적으로 CBV 생성
+	D3D12_CPU_DESCRIPTOR_HANDLE currentCpuHandle = cpuStartHandle;
+	for (int j = 0; j < nConstantBufferViews; j++)
+	{
+		// 현재 CBV가 참조할 버퍼 위치 계산
+		d3dCBVDesc.BufferLocation = d3dGpuVirtualAddress + ((UINT64)nStride * j); // UINT64 사용 권장
+
+		// 현재 CPU 핸들 위치에 CBV 생성
+		// m_pd3dDevice는 CGameFramework의 멤버라고 가정
+		m_pd3dDevice->CreateConstantBufferView(&d3dCBVDesc, currentCpuHandle);
+
+		// 다음 디스크립터 슬롯으로 CPU 핸들 이동
+		currentCpuHandle.ptr += m_nCbvSrvDescriptorIncrementSize; // 멤버 변수 사용
+	}
+
+	// --- 2. 할당된 블록의 시작 GPU 핸들 반환 ---
+	// 이 핸들은 나중에 루트 시그니처에 바인딩할 때 사용될 수 있습니다. (예: 첫 번째 CBV 주소)
+	return gpuStartHandle;
+}
+
+void CGameFramework::CreateShaderResourceViews(CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex)
+{
+	if (!pTexture) return;
+
+	int nTextures = pTexture->GetTextures(); // 생성해야 할 SRV 개수
+	if (nTextures <= 0) return;
+
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuStartHandle = { 0 };
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuStartHandle = { 0 };
+
+	// --- 1. 프레임워크의 할당 함수를 호출하여 디스크립터 슬롯 확보 ---
+	if (!AllocateSrvDescriptors(nTextures, cpuStartHandle, gpuStartHandle))
+	{
+		// 힙 공간 부족 등의 이유로 할당 실패
+		OutputDebugString(L"Failed to allocate SRV descriptors.\n");
+		// 오류 처리
+		return;
+	}
+
+	// 할당받은 시작 핸들부터 순차적으로 SRV 생성
+	D3D12_CPU_DESCRIPTOR_HANDLE currentCpuHandle = cpuStartHandle;
+	D3D12_GPU_DESCRIPTOR_HANDLE currentGpuHandle = gpuStartHandle;
+
+	for (int i = 0; i < nTextures; i++)
+	{
+		ID3D12Resource* pShaderResource = pTexture->GetResource(i); // 텍스처 리소스 가져오기
+		D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceViewDesc = pTexture->GetShaderResourceViewDesc(i); // SRV 설정 가져오기
+
+		if (pShaderResource)
+		{
+			// 현재 CPU 핸들 위치에 SRV 생성
+			m_pd3dDevice->CreateShaderResourceView(pShaderResource, &d3dShaderResourceViewDesc, currentCpuHandle);
+		}
+		else
+		{
+			// 리소스가 없는 경우 (예: 텍스처 로딩 실패) 처리
+		}
+
+
+		// --- 2. 생성된 SRV의 GPU 핸들을 CTexture 객체에 저장 ---
+		pTexture->SetGpuDescriptorHandle(i, currentGpuHandle);
+
+		// 다음 디스크립터 슬롯으로 핸들 이동
+		currentCpuHandle.ptr += m_nCbvSrvDescriptorIncrementSize;
+		currentGpuHandle.ptr += m_nCbvSrvDescriptorIncrementSize;
+	}
+
+	// --- 3. 루트 파라미터 인덱스 설정 ---
+	int nRootParameters = pTexture->GetRootParameters();
+	for (int j = 0; j < nRootParameters; j++)
+	{
+		pTexture->SetRootParameterIndex(j, nRootParameterStartIndex + j);
+	}
+}
+
+bool CGameFramework::AllocateCbvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle) {
+	if (m_nNextCbvOffset + nDescriptors > m_nTotalCbvDescriptors) {
+		// 공간 부족!
+		return false;
+	}
+	// 시작 핸들 계산 (SRV 영역 시작 + 현재 오프셋)
+	outCpuStartHandle = m_d3dCbvCpuHandleStart;
+	outCpuStartHandle.ptr += (UINT64)m_nNextCbvOffset * m_nCbvSrvDescriptorIncrementSize;
+
+	outGpuStartHandle = m_d3dCbvGpuHandleStart;
+	outGpuStartHandle.ptr += (UINT64)m_nNextCbvOffset * m_nCbvSrvDescriptorIncrementSize;
+
+	// 다음 오프셋 업데이트
+	m_nNextSrvOffset += nDescriptors;
+	return true;
+}
+
+bool CGameFramework::AllocateSrvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle) {
+	if (m_nNextSrvOffset + nDescriptors > m_nTotalSrvDescriptors) {
+		// 공간 부족!
+		return false;
+	}
+	// 시작 핸들 계산 (SRV 영역 시작 + 현재 오프셋)
+	outCpuStartHandle = m_d3dSrvCpuHandleStart;
+	outCpuStartHandle.ptr += (UINT64)m_nNextSrvOffset * m_nCbvSrvDescriptorIncrementSize;
+
+	outGpuStartHandle = m_d3dSrvGpuHandleStart;
+	outGpuStartHandle.ptr += (UINT64)m_nNextSrvOffset * m_nCbvSrvDescriptorIncrementSize;
+
+	// 다음 오프셋 업데이트
+	m_nNextSrvOffset += nDescriptors;
+	return true;
+}
