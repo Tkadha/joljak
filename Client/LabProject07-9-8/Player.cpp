@@ -280,11 +280,11 @@ void CPlayer::UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFL
 
 // 장비
 
-void CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname)
+void CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname, ResourceManager* pResourceManager)
 {
 	CGameObject* handFrame = FindFrame(framename);
 	if (handFrame) {
-		CGameObject* weapon = new CStaticObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, modelname);
+		CGameObject* weapon = new CStaticObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, modelname, pResourceManager);
 		weapon->SetPosition(0, 0, 0); 
 		weapon->SetScale(1, 1, 1);
 		weapon->Rotate(0.0f, 0.0f, 0.0f);
@@ -293,11 +293,11 @@ void CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 		UpdateTransform(nullptr); // 변환 행렬 즉시 갱신
 	}
 }
-void CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname, XMFLOAT3 offset, XMFLOAT3 rotate = {0,0,0}, XMFLOAT3 scale = { 1,1,1 })
+void CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname,ResourceManager* pResourceManager, XMFLOAT3 offset, XMFLOAT3 rotate = {0,0,0}, XMFLOAT3 scale = { 1,1,1 })
 {
 	CGameObject* handFrame = FindFrame(framename);
 	if (handFrame) {
-		CGameObject* weapon = new CStaticObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, modelname);
+		CGameObject* weapon = new CStaticObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, modelname, pResourceManager);
 		weapon->SetPosition(offset);
 		weapon->SetScale(scale.x, scale.y, scale.z);
 		weapon->Rotate(rotate.x, rotate.y, rotate.z);
@@ -323,18 +323,18 @@ CGameObject* CPlayer::FindFrame(char* framename)
 }
 
 
-CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext)
+CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext, ResourceManager* pResourceManager)
 {
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 
 	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList,
-		pd3dGraphicsRootSignature, "Model/SK_Pig.bin", NULL);
+		pd3dGraphicsRootSignature, "Model/SK_Pig.bin", NULL, pResourceManager);
 	SetChild(pAngrybotModel->m_pModelRootObject, true);
 
-	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "thumb_02_r", "Model/Sword_01.bin", XMFLOAT3(0.05, 0.00, -0.05));
-	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Helmet", "Model/Hair_01.bin", XMFLOAT3(0, 0.1, 0));
+	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "thumb_02_r", "Model/Sword_01.bin", pResourceManager, XMFLOAT3(0.05, 0.00, -0.05));
+	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Helmet", "Model/Hair_01.bin", pResourceManager, XMFLOAT3(0, 0.1, 0));
 	//AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Boots_Peasant_Armor", "Model/Boots_Peasant_Armor.bin");
-	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_01", "Model/Torso_Peasant_03_Armor.bin", XMFLOAT3(-0.25, 0.1, 0), XMFLOAT3(90, 0, 90));
+	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pResourceManager, XMFLOAT3(-0.25, 0.1, 0), XMFLOAT3(90, 0, 90));
 	//AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_03", "Model/Torso_Peasant_03_Armor.bin", XMFLOAT3(0, 0, 0), XMFLOAT3(90, 0, 90));
 
 	
@@ -552,16 +552,16 @@ void CTerrainPlayer::keyInput(UCHAR* key)
 // 
 CAirplanePlayer::CAirplanePlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
 {
-	m_pCamera = ChangeCamera(/*SPACESHIP_CAMERA*/THIRD_PERSON_CAMERA, 0.0f);
+	//m_pCamera = ChangeCamera(/*SPACESHIP_CAMERA*/THIRD_PERSON_CAMERA, 0.0f);
 
-	CLoadedModelInfo* pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Mi24.bin", NULL);
-	SetChild(pModel->m_pModelRootObject, true);
+	////CLoadedModelInfo* pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Mi24.bin", NULL);
+	////SetChild(pModel->m_pModelRootObject, true);
 
-	OnPrepareAnimate();
+	//OnPrepareAnimate();
 
-	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	//CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	if (pModel) delete pModel;
+	//if (pModel) delete pModel;
 }
 
 CAirplanePlayer::~CAirplanePlayer()

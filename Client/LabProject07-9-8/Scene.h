@@ -7,11 +7,15 @@
 #include "Shader.h"
 #include "Player.h"
 #include "Octree.h"
+#include "ResourceManager.h"
+
 #define MAX_LIGHTS						16 
 
 #define POINT_LIGHT						1
 #define SPOT_LIGHT						2
 #define DIRECTIONAL_LIGHT				3
+
+class CGameFramework;
 
 struct LIGHT
 {
@@ -45,7 +49,7 @@ struct VS_VB_INSTANCE
 class CScene
 {
 public:
-    CScene();
+    CScene(CGameFramework*);
     ~CScene();
 
 	bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
@@ -109,4 +113,6 @@ public:
 	std::vector<tree_obj>				tree_objects;
 	Octree								octree{ XMFLOAT3 {0,0,0}, XMFLOAT3{10200,4000,10200} };
 
+
+	CGameFramework* m_pGameFramework;
 };

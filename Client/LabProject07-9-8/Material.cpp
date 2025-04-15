@@ -2,6 +2,7 @@
 #include "Shader.h"
 #include "Scene.h"
 #include "GameFramework.h"
+#include "ResourceManager.h"
 
 CMaterial::CMaterial(int nTextures)
 {
@@ -79,7 +80,7 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
 	}
 }
 
-void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, CGameObject* pParent, FILE* pInFile, CShader* pShader)
+void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, CGameObject* pParent, FILE* pInFile, CShader* pShader, ResourceManager* pResourceManager)
 {
 	char pstrTextureName[64] = { '\0' };
 
@@ -113,11 +114,19 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 #endif
 		if (!bDuplicated)
 		{
-			*ppTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
-			(*ppTexture)->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, pwstrTextureName, RESOURCE_TEXTURE2D, 0);
-			if (*ppTexture) (*ppTexture)->AddRef();
+			// --- 리소스 매니저 사용 ---
+			*ppTexture = pResourceManager->GetTexture(pwstrTextureName, pd3dCommandList);
+			if (*ppTexture)
+			{
+				(*ppTexture)->AddRef(); // 만약 CTexture가 참조 카운팅을 사용한다면
+			}
+			else
+			{
+				// 텍스처 로딩 실패 처리
+				OutputDebugStringW((L"Error: Texture load failed via ResourceManager for " + std::wstring(pwstrTextureName) + L"\n").c_str());
+			}
+			// -----------------------
 
-			CGameFramework::CreateShaderResourceViews(*ppTexture, 0, nRootParameter);
 		}
 		else
 		{

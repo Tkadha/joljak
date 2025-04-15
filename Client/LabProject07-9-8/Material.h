@@ -14,6 +14,7 @@
 class CShader;
 class CStandardShader;
 class CGameObject;
+class ResourceManager;
 
 class CMaterial
 {
@@ -58,7 +59,7 @@ public:
 	_TCHAR(*m_ppstrTextureNames)[64] = NULL;
 	CTexture** m_ppTextures = NULL; //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
 
-	void LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, CGameObject* pParent, FILE* pInFile, CShader* pShader);
+	void LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, CGameObject* pParent, FILE* pInFile, CShader* pShader, ResourceManager* pResourceManager);
 
 public:
 	static CShader* m_pStandardShader;

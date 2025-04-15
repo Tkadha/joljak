@@ -6,6 +6,7 @@
 #include "Timer.h"
 #include "Player.h"
 #include "Scene.h"
+#include "ResourceManager.h"
 
 class CGameFramework
 {
@@ -87,6 +88,9 @@ private:
 	UINT m_nTotalCbvDescriptors; // 생성 시 설정
 	UINT m_nTotalSrvDescriptors; // 생성 시 설정
 
+	// 리소스 매니저 추가
+	std::unique_ptr<ResourceManager> m_pResourceManager;
+
 public:
 	// CBV 슬롯 할당 요청 (nDescriptors개 할당 후 시작 핸들 반환)
 	bool AllocateCbvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle);
@@ -103,6 +107,7 @@ public:
 
 
 	ID3D12Device* GetDevice() { return m_pd3dDevice; }
+	ResourceManager* GetResourceManager() { return m_pResourceManager.get(); };
 
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;
