@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+ï»¿//-----------------------------------------------------------------------------
 // File: CPlayer.cpp
 //-----------------------------------------------------------------------------
 
@@ -278,7 +278,7 @@ void CPlayer::UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFL
 }
 
 
-// Àåºñ
+// ìž¥ë¹„
 
 void CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname)
 {
@@ -290,7 +290,7 @@ void CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 		weapon->Rotate(0.0f, 0.0f, 0.0f);
 
 		handFrame->SetChild(weapon);
-		UpdateTransform(nullptr); // º¯È¯ Çà·Ä Áï½Ã °»½Å
+		UpdateTransform(nullptr); // ë³€í™˜ í–‰ë ¬ ì¦‰ì‹œ ê°±ì‹ 
 	}
 }
 void CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname, XMFLOAT3 offset, XMFLOAT3 rotate = {0,0,0}, XMFLOAT3 scale = { 1,1,1 })
@@ -303,7 +303,7 @@ void CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 		weapon->Rotate(rotate.x, rotate.y, rotate.z);
 
 		handFrame->SetChild(weapon);
-		UpdateTransform(nullptr); // º¯È¯ Çà·Ä Áï½Ã °»½Å
+		UpdateTransform(nullptr); // ë³€í™˜ í–‰ë ¬ ì¦‰ì‹œ ê°±ì‹ 
 	}
 }
 
@@ -383,14 +383,14 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 	if (nCurrentCameraMode == nNewCameraMode) return(m_pCamera);
 	switch (nNewCameraMode)
 	{
-		case FIRST_PERSON_CAMERA:  // ÀÚÀ¯ ½ÃÁ¡ Ä«¸Þ¶ó
+		case FIRST_PERSON_CAMERA:  // ìžìœ  ì‹œì  ì¹´ë©”ë¼
 			SetFriction(250.0f);
 			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
 			SetMaxVelocityXZ(300.0f);
 			SetMaxVelocityY(400.0f);
 			m_pCamera = OnChangeCamera(FIRST_PERSON_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.0f);
-			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, 0.0f));  // ÇÃ·¹ÀÌ¾î ¸Ó¸® ³ôÀÌ
+			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, 0.0f));  // í”Œë ˆì´ì–´ ë¨¸ë¦¬ ë†’ì´
 			m_pCamera->GenerateProjectionMatrix(1.01f, 5000.0f, ASPECT_RATIO, 60.0f);
 			m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
@@ -414,19 +414,19 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 			SetMaxVelocityY(400.0f);
 			m_pCamera = OnChangeCamera(THIRD_PERSON_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.25f);
-			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, -30.0f));		// Ä«ï¿½Þ¶ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½
+			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, -30.0f));		// ì¹´å ìŒ¨ë°ì˜™ å ì™ì˜™ì¹˜ å ì™ì˜™å ì™ì˜™
 			m_pCamera->GenerateProjectionMatrix(1.01f, 20000.0f, ASPECT_RATIO, 60.0f);
 			m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
 			break;
-		case TOP_VIEW_CAMERA:  // Å¾ºä Ä«¸Þ¶ó
+		case TOP_VIEW_CAMERA:  // íƒ‘ë·° ì¹´ë©”ë¼
 			SetFriction(250.0f);
-			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));  // Áß·Â ¾øÀ½
+			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));  // ì¤‘ë ¥ ì—†ìŒ
 			SetMaxVelocityXZ(300.0f);
 			SetMaxVelocityY(400.0f);
 			m_pCamera = OnChangeCamera(TOP_VIEW_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.0f);
-			m_pCamera->SetOffset(XMFLOAT3(0.0f, 100.0f, 0.0f));  // ÇÃ·¹ÀÌ¾î À§ 100 À¯´Ö
+			m_pCamera->SetOffset(XMFLOAT3(0.0f, 100.0f, 0.0f));  // í”Œë ˆì´ì–´ ìœ„ 100 ìœ ë‹›
 			m_pCamera->GenerateProjectionMatrix(1.01f, 5000.0f, ASPECT_RATIO, 60.0f);
 			m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);

@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // File: CGameObject.cpp
 //-----------------------------------------------------------------------------
 
@@ -92,7 +92,7 @@ void CMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet, UINT
 
 void CMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, UINT nInstances, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView)
 {
-	//���� ���� ��� �ν��Ͻ� ���� �並 �Է�-���� �ܰ迡 �����Ѵ�. 
+	//정점 버퍼 뷰와 인스턴싱 버퍼 뷰를 입력-조립 단계에 설정한다. 
 	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[] = { m_d3dPositionBufferView, d3dInstancingBufferView};
 
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, _countof(pVertexBufferViews), pVertexBufferViews);
@@ -115,7 +115,7 @@ CHeightMapImage::CHeightMapImage(LPCTSTR pFileName, int nWidth, int nLength, XMF
 	HANDLE hFile = ::CreateFile(pFileName, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_READONLY, NULL);
 	DWORD dwBytesRead;
 
-	// 16��Ʈ ������ ���� (ushort)
+	// 16占쏙옙트 占쏙옙占쏙옙占쏙옙 占쏙옙占쏙옙 (ushort)
 	USHORT* pHeightMapPixels = new USHORT[m_nWidth * m_nLength];
 	::ReadFile(hFile, pHeightMapPixels, (m_nWidth * m_nLength * 2), &dwBytesRead, NULL);
 	::CloseHandle(hFile);
@@ -126,11 +126,11 @@ CHeightMapImage::CHeightMapImage(LPCTSTR pFileName, int nWidth, int nLength, XMF
 	{
 		for (int x = 0; x < m_nWidth; x++)
 		{
-			// Little-Endian �� ushort ��ȯ
+			// Little-Endian 占쏙옙 ushort 占쏙옙환
 			int index = x + (y * m_nWidth);
 			USHORT heightValue = pHeightMapPixels[index];
 
-			// Unity�� Bottom-to-Top, DirectX�� Top-to-Bottom�̹Ƿ� ��ȯ
+			// Unity占쏙옙 Bottom-to-Top, DirectX占쏙옙 Top-to-Bottom占싱므뤄옙 占쏙옙환
 			m_pHeightMapPixels[x + ((m_nLength - 1 - y) * m_nWidth)] = heightValue;
 		}
 	}
@@ -778,7 +778,7 @@ void CSkinnedMesh::LoadSkinInfoFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 				m_pxmf4x4BindPoseBoneOffsets = new XMFLOAT4X4[m_nSkinningBones];
 				nReads = (UINT)::fread(m_pxmf4x4BindPoseBoneOffsets, sizeof(XMFLOAT4X4), m_nSkinningBones, pInFile);
 
-				UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256�� ���?
+				UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256占쏙옙 占쏙옙占?
 				m_pd3dcbBindPoseBoneOffsets = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 				m_pd3dcbBindPoseBoneOffsets->Map(0, NULL, (void **)&m_pcbxmf4x4MappedBindPoseBoneOffsets);
 

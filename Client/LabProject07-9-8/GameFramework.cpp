@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // File: CGameFramework.cpp
 //-----------------------------------------------------------------------------
 
@@ -463,28 +463,28 @@ void CGameFramework::ProcessInput()
 		if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
 		else m_pPlayer->keyInput(pKeysBuffer);
 
-		// ī�޶� ��忡 ���� �Է� ó��
+		// 카메라 모드에 따른 입력 처리
 		if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
 		{
-			// ž��: ���콺 �ٷ� ����/�ܾƿ�
-			// �����δ� ���콺 �� �̺�Ʈ�� ó���Ϸ��� ������ �޽��� ó���� �ʿ��� �� ����
-			// ���⼭�� ���÷� Ű �Է����� ��ü (Q: ����, E: �ܾƿ�)
+			// 탑뷰: 마우스 휠로 줌인/줌아웃
+			// 실제로는 마우스 휠 이벤트를 처리하려면 별도의 메시지 처리가 필요할 수 있음
+			// 여기서는 예시로 키 입력으로 대체 (Q: 줌인, E: 줌아웃)
 			if (pKeysBuffer['Q'] & 0xF0)
 			{
 				XMFLOAT3 offset = m_pCamera->GetOffset();
-				offset.y = max(20.0f, offset.y - 10.0f);  // ����, �ּ� ���� 20
+				offset.y = max(20.0f, offset.y - 10.0f);  // 줌인, 최소 높이 20
 				m_pCamera->SetOffset(offset);
 			}
 			if (pKeysBuffer['E'] & 0xF0)
 			{
 				XMFLOAT3 offset = m_pCamera->GetOffset();
-				offset.y = min(200.0f, offset.y + 10.0f);  // �ܾƿ�, �ִ� ���� 200
+				offset.y = min(200.0f, offset.y + 10.0f);  // 줌아웃, 최대 높이 200
 				m_pCamera->SetOffset(offset);
 			}
 		}
 		else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA || m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
 		{
-			// ���� ����: ���콺�� ȸ��
+			// 자유 시점: 마우스로 회전
 			if (cxDelta || cyDelta)
 			{
 				if (pKeysBuffer[VK_RBUTTON] & 0xF0)

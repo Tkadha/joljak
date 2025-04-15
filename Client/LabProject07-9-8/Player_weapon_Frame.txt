@@ -860,3 +860,40 @@ upperarm_l clavicle_l
 lowerarm_l upperarm_l
 hand_l lowerarm_l
 fingers_l hand_l
+ 
+SK_Pig 
+root SK_Pig
+SK_Pig SK_Pig
+pelvis root
+spine_01 pelvis
+thigh_r pelvis
+thigh_l pelvis
+tail pelvis
+calf_l thigh_l
+foot_l calf_l
+ball_l foot_l
+calf_r thigh_r
+foot_r calf_r
+ball_r foot_r
+spine_02 spine_01
+ spine_01
+Torso_Peasant_03_Armor 
+spine_03 spine_02
+clavicle_l spine_03
+neck_01 spine_03
+clavicle_r spine_03
+upperarm_r clavicle_r
+lowerarm_r upperarm_r
+hand_r lowerarm_r
+fingers_r hand_r
+neck_02 neck_01
+head neck_02
+ear_01_l head
+jaw head
+ear_01_r head
+ear_02_r ear_01_r
+ear_02_l ear_01_l
+upperarm_l clavicle_l
+lowerarm_l upperarm_l
+hand_l lowerarm_l
+fingers_l hand_l

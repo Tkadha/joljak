@@ -1,4 +1,4 @@
-//------------------------------------------------------- ----------------------
+Ôªø//------------------------------------------------------- ----------------------
 // File: Mesh.h
 //-----------------------------------------------------------------------------
 
@@ -83,7 +83,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int nSubSet);
 	virtual void OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
 
-	// ¿ŒΩ∫≈œΩÃ
+	// Ïù∏Ïä§ÌÑ¥Ïã±
 	void Render(ID3D12GraphicsCommandList* pd3dCommandList, UINT nInstances, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView);	
 	void Render(ID3D12GraphicsCommandList * pd3dCommandList, int nSubSet, UINT nInstances);
 };
