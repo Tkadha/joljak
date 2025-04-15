@@ -72,6 +72,38 @@ private:
 	UINT64						m_nFenceValues[m_nSwapChainBuffers];
 	HANDLE						m_hFenceEvent;
 
+
+	// 상수 버퍼, 셰이더 리소스 디스크립터 힙 Scene에서 옮김
+private:
+	ComPtr<ID3D12DescriptorHeap>	m_pd3dCbvSrvDescriptorHeap;
+	UINT							m_nCbvSrvDescriptorIncrementSize;
+	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dCbvCpuHandleStart;
+	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dCbvGpuHandleStart;
+	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCpuHandleStart;
+	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dSrvGpuHandleStart;
+
+	UINT m_nNextCbvOffset = 0; // CBV 영역 내 다음 오프셋
+	UINT m_nNextSrvOffset = 0; // SRV 영역 내 다음 오프셋 (CBV 영역 이후 시작)
+	UINT m_nTotalCbvDescriptors; // 생성 시 설정
+	UINT m_nTotalSrvDescriptors; // 생성 시 설정
+
+public:
+	// CBV 슬롯 할당 요청 (nDescriptors개 할당 후 시작 핸들 반환)
+	bool AllocateCbvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle);
+	// SRV 슬롯 할당 요청
+	bool AllocateSrvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle);
+
+	// 힙의 시작 핸들 반환 함수 등...
+	ID3D12DescriptorHeap* GetCbvSrvHeap() { return m_pd3dCbvSrvDescriptorHeap.Get(); }
+	UINT GetCbvSrvDescriptorSize() { return m_nCbvSrvDescriptorIncrementSize; }
+
+	void CreateCbvSrvDescriptorHeaps(int nConstantBufferViews, int nShaderResourceViews);
+	D3D12_GPU_DESCRIPTOR_HANDLE CreateConstantBufferViews(int nConstantBufferViews, ID3D12Resource* pd3dConstantBuffers, UINT nStride);
+	void CreateShaderResourceViews(CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex);
+
+
+	ID3D12Device* GetDevice() { return m_pd3dDevice; }
+
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;
 #endif

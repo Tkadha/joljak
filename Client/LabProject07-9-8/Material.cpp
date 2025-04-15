@@ -1,6 +1,8 @@
 #include "Material.h"
 #include "Shader.h"
 #include "Scene.h"
+#include "GameFramework.h"
+
 CMaterial::CMaterial(int nTextures)
 {
 	m_nTextures = nTextures;
@@ -115,7 +117,7 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 			(*ppTexture)->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, pwstrTextureName, RESOURCE_TEXTURE2D, 0);
 			if (*ppTexture) (*ppTexture)->AddRef();
 
-			CScene::CreateShaderResourceViews(pd3dDevice, *ppTexture, 0, nRootParameter);
+			CGameFramework::CreateShaderResourceViews(*ppTexture, 0, nRootParameter);
 		}
 		else
 		{

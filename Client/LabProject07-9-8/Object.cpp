@@ -6,6 +6,7 @@
 #include "Object.h"
 #include "Shader.h"
 #include "Scene.h"
+#include "GameFramework.h"
 
 
 #include "PigState.h"
@@ -1043,8 +1044,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 	pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, 13);
-	CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, 14);
+	CGameFramework::CreateShaderResourceViews(pTerrainBaseTexture, 0, 13);
+	CGameFramework::CreateShaderResourceViews(pTerrainDetailTexture, 0, 14);
 
 	CMaterial *pTerrainMaterial = new CMaterial(2);
 	pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);
@@ -1078,8 +1079,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
             CTerrainShader* pTerrainShader = new CTerrainShader();
             pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
             pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-			CScene::CreateShaderResourceViews(pd3dDevice, pBaseTexture, 0, 13 + partIndex * 2);
-            CScene::CreateShaderResourceViews(pd3dDevice, pDetailTexture, 0, 14 + partIndex * 2);
+			CGameFramework::CreateShaderResourceViews(pBaseTexture, 0, 13 + partIndex * 2);
+			CGameFramework::CreateShaderResourceViews(pDetailTexture, 0, 14 + partIndex * 2);
 
 			CMaterial* pMaterial = new CMaterial(2);
             pMaterial->SetTexture(pBaseTexture, 0);
@@ -1121,7 +1122,7 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	pSkyBoxShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, 10);
+	CGameFramework::CreateShaderResourceViews(pSkyBoxTexture, 0, 10);
 
 	CMaterial *pSkyBoxMaterial = new CMaterial(1);
 	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);

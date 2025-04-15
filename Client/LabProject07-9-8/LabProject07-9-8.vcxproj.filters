@@ -45,6 +45,9 @@
     <Filter Include="소스 파일\Timer">
       <UniqueIdentifier>{cdde645c-aa52-4745-86ff-71fa21b3503c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\ResourceManager">
+      <UniqueIdentifier>{956b5884-de85-4aa8-8403-f845341d00bc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LabProject07-9-8.rc">
@@ -117,6 +120,9 @@
     <ClCompile Include="Timer.cpp">
       <Filter>소스 파일\Timer</Filter>
     </ClCompile>
+    <ClCompile Include="ResourceManager.cpp">
+      <Filter>소스 파일\ResourceManager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FSMManager.h">
@@ -178,6 +184,9 @@
     </ClInclude>
     <ClInclude Include="stdafx.h">
       <Filter>소스 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="ResourceManager.h">
+      <Filter>소스 파일\ResourceManager</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
