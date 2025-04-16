@@ -69,7 +69,7 @@ void CGameFramework::ProcessPacket(char* packet)
 		LOGIN_PACKET* recv_p = reinterpret_cast<LOGIN_PACKET*>(packet);
 		if (_MyID == -1) _MyID = recv_p->uid;
 		else if (PlayerList.find(recv_p->uid) == PlayerList.end()) {
-			PlayerList[recv_p->uid] = std::make_unique<CTerrainPlayer>(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), m_pScene->m_pTerrain);
+			PlayerList[recv_p->uid] = std::make_unique<CAngrybotObject>(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), nullptr, 1);
 			PlayerList[recv_p->uid]->ReleaseUploadBuffers();
 		}
 	}
@@ -525,10 +525,10 @@ void CGameFramework::BuildObjects()
 void CGameFramework::ReleaseObjects()
 {
 	if (m_pPlayer) m_pPlayer->Release();
-	for( auto& player : PlayerList)
-	{
-		player.second->Release();
-	}
+	//for( auto& player : PlayerList)
+	//{
+	//	player.second->Release();
+	//}
 	if (m_pScene) m_pScene->ReleaseObjects();
 	if (m_pScene) delete m_pScene;
 }

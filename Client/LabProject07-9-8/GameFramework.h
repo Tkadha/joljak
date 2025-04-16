@@ -91,7 +91,7 @@ private:
 
 	DWORD						beforeDirection = 0;
 
-	std::unordered_map<ULONGLONG, std::unique_ptr<CPlayer>> PlayerList;
+	std::unordered_map<ULONGLONG, std::unique_ptr<CAngrybotObject>> PlayerList;
 	ULONGLONG					_MyID = -1;
 };
 
