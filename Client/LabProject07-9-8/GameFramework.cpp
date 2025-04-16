@@ -422,7 +422,12 @@ void CGameFramework::BuildObjects()
 	m_pScene->m_pPlayer = m_pPlayer = pPlayer;
 	m_pCamera = m_pPlayer->GetCamera();
 
-	m_pPlayer->PrintFrameInfo(m_pPlayer, NULL);
+	pPlayer->SetOBB();
+	CShader* shader = new COBBShader();
+	//shader->CreateShader(m_pd3dDevice, m_pd3dCommandList, m_pd3dGraphicsRootSignature);
+	pPlayer->SetOBBShader(shader);
+	pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+
 
 	m_pd3dCommandList->Close();
 	ID3D12CommandList *ppd3dCommandLists[] = { m_pd3dCommandList };

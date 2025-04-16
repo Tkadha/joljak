@@ -22,8 +22,11 @@ private:
 	UINT							m_nTextureType;
 
 	int								m_nTextures = 0;
-	ID3D12Resource** m_ppd3dTextures = NULL;
-	ID3D12Resource** m_ppd3dTextureUploadBuffers;
+
+	// ID3D12Resource** m_ppd3dTextures; // 기존 방식 제거
+	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_vTextures; // ComPtr 벡터 사용
+	// ID3D12Resource** m_ppd3dTextureUploadBuffers; // 업로드 버퍼도 ComPtr 사용 고려
+	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_vTextureUploadBuffers;
 
 	UINT* m_pnResourceTypes = NULL;
 
@@ -60,7 +63,12 @@ public:
 
 	int GetRootParameters() { return(m_nRootParameters); }
 	int GetTextures() { return(m_nTextures); }
-	ID3D12Resource* GetResource(int nIndex) { return(m_ppd3dTextures[nIndex]); }
+	ID3D12Resource* GetResource(int nIndex) { 
+		if (nIndex >= 0 && nIndex < m_vTextures.size()) {
+			return m_vTextures[nIndex].Get(); // ComPtr에서 원시 포인터 얻기
+		}
+		return nullptr;
+	}
 
 	UINT GetTextureType() { return(m_nTextureType); }
 	UINT GetTextureType(int nIndex) { return(m_pnResourceTypes[nIndex]); }

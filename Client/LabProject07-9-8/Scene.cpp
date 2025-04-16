@@ -78,22 +78,23 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	BuildDefaultLightsAndMaterials();
 
-	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
-
-	XMFLOAT3 xmf3Scale(5.f, 0.2f, 5.f);
-	XMFLOAT4 xmf4Color(0.0f, 0.0f, 0.0f, 0.0f);
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color);
-	
-	// 랜덤 엔진
-	std::random_device rd;
-	std::mt19937 gen(rd());
-
 	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
 	if (!pResourceManager) {
 		// 리소스 매니저가 없다면 로딩 불가! 오류 처리
 		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
 		return;
 	}
+
+	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pResourceManager);
+
+	XMFLOAT3 xmf3Scale(5.f, 0.2f, 5.f);
+	XMFLOAT4 xmf4Color(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color, pResourceManager);
+	
+	// 랜덤 엔진
+	std::random_device rd;
+	std::mt19937 gen(rd());
+
 
 
 
@@ -169,14 +170,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	XMFLOAT3 cowSize = XMFLOAT3(5.0f, 5.0f, 5.0f); // 실제 크기의 반
 	XMFLOAT4 cowRotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
-	//m_ppHierarchicalGameObjects[0]->SetOBB(cowCenter, cowSize, cowRotation);
-	m_ppHierarchicalGameObjects[0]->SetOBB();
-	CShader* shader = new COBBShader();
-	shader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
-	//m_ppHierarchicalGameObjects[0]->m_OBBShader.CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
-	m_ppHierarchicalGameObjects[0]->SetOBBShader(shader);
-	m_ppHierarchicalGameObjects[0]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
-
+	
 	tree_objects.emplace_back(0, m_ppHierarchicalGameObjects[0]->m_worldOBB.Center);
 	octree.insert(&tree_objects[0]);
 	
@@ -224,11 +218,11 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	
 
 
-	for (int i = 1; i < m_nHierarchicalGameObjects; ++i) {
+	for (int i = 0; i < m_nHierarchicalGameObjects; ++i) {
 		//m_ppHierarchicalGameObjects[0]->SetOBB(cowCenter, cowSize, cowRotation);
 		m_ppHierarchicalGameObjects[i]->SetOBB();
 		CShader* shader = new COBBShader();
-		shader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+		//shader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 		//m_ppHierarchicalGameObjects[0]->m_OBBShader.CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 		m_ppHierarchicalGameObjects[i]->SetOBBShader(shader);
 		m_ppHierarchicalGameObjects[i]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
@@ -237,7 +231,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	for (auto obj : m_vGameObjects) {
 		obj->SetOBB();
 		CShader* shader = new COBBShader();
-		shader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+		//shader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 		obj->SetOBBShader(shader);
 		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 		//obj->SetOBB(pd3dDevice, pd3dCommandList, shader);
@@ -655,8 +649,9 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 		}
 	}
 	*/
-	//if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
-	//if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
+
+	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
+	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
 	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Render(pd3dCommandList, pCamera);
 	for (auto obj : m_vGameObjects) obj->Render(pd3dCommandList, pCamera);

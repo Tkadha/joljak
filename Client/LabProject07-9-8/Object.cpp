@@ -330,37 +330,37 @@ void CGameObject::Animate(float fTimeElapsed)
 	if (m_pChild) m_pChild->Animate(fTimeElapsed);
 }
 
-void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
-{
-	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
-
-	if (m_pMesh)
+	void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 	{
-		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+		if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
 
-		if (m_nMaterials > 0)
+		if (m_pMesh)
 		{
-			for (int i = 0; i < m_nMaterials; i++)
-			{
-				if (m_ppMaterials[i])
-				{
-					if (m_ppMaterials[i]->m_pShader) m_ppMaterials[i]->m_pShader->Render(pd3dCommandList, pCamera);
-					m_ppMaterials[i]->UpdateShaderVariable(pd3dCommandList);
-				}
+			UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
-				m_pMesh->Render(pd3dCommandList, i);
-				//pd3dCommandList->SetPipelineState(m_pOBBPipelineState); // m_pOBBPipelineState는 미리 생성된 PSO
-				//m_OBBShader.OnPrepareRender(pd3dCommandList);
+			if (m_nMaterials > 0)
+			{
+				for (int i = 0; i < m_nMaterials; i++)
+				{
+					if (m_ppMaterials[i])
+					{
+						if (m_ppMaterials[i]->m_pShader) m_ppMaterials[i]->m_pShader->Render(pd3dCommandList, pCamera);
+						m_ppMaterials[i]->UpdateShaderVariable(pd3dCommandList);
+					}
+
+					m_pMesh->Render(pd3dCommandList, i);
+					//pd3dCommandList->SetPipelineState(m_pOBBPipelineState); // m_pOBBPipelineState는 미리 생성된 PSO
+					//m_OBBShader.OnPrepareRender(pd3dCommandList);
+				}
 			}
 		}
+
+		if (m_OBBMaterial->m_pShader)
+			RenderOBB(pd3dCommandList);
+
+		if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
+		if (m_pChild) m_pChild->Render(pd3dCommandList, pCamera);
 	}
-
-	if (m_OBBMaterial->m_pShader)
-		RenderOBB(pd3dCommandList);
-
-	if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
-	if (m_pChild) m_pChild->Render(pd3dCommandList, pCamera);
-}
 
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, UINT nInstances, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView)
 {
@@ -789,7 +789,7 @@ void CGameObject::LoadAnimationFromFile(FILE *pInFile, CLoadedModelInfo *pLoaded
 				::ReadStringFromFile(pInFile, pstrToken);
 				pLoadedModel->m_pAnimationSets->m_ppBoneFrameCaches[j] = pLoadedModel->m_pModelRootObject->FindFrame(pstrToken);
 
-#define _WITH_DEBUG_SKINNING_BONE
+//#define _WITH_DEBUG_SKINNING_BONE
 #ifdef _WITH_DEBUG_SKINNING_BONE
 				TCHAR pstrDebug[256] = { 0 };
 				TCHAR pwstrAnimationBoneName[64] = { 0 };
@@ -1020,7 +1020,7 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color) : CGameObject(1)
+CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, ResourceManager* pResourceManager) : CGameObject(1)
 {
 	m_nWidth = nWidth;
 	m_nLength = nLength;
@@ -1034,11 +1034,24 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CTexture* pTerrainBaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
-	pTerrainBaseTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/DemoTerrain3.dds", RESOURCE_TEXTURE2D, 0);
+	CTexture* pTerrainBaseTexture = pResourceManager->GetTexture(L"Terrain/DemoTerrain3.dds", pd3dCommandList);
 
-	CTexture* pTerrainDetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
-	pTerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/TerrainGrass_basecolor.dds", RESOURCE_TEXTURE2D, 0);
+	CTexture* pTerrainDetailTexture = pResourceManager->GetTexture(L"Terrain/TerrainGrass_basecolor.dds", pd3dCommandList);
+	// 루트 파라미터 인덱스 설정 (SetTexture 내부 또는 여기서?)
+	if (pTerrainBaseTexture) {
+		UINT skyboxRootParamIndex = 13;
+		int nRootParams = pTerrainBaseTexture->GetRootParameters();
+		for (int j = 0; j < nRootParams; ++j) {
+			pTerrainBaseTexture->SetRootParameterIndex(j, skyboxRootParamIndex + j);
+		}
+	}
+	if (pTerrainDetailTexture) {
+		UINT skyboxRootParamIndex = 14;
+		int nRootParams = pTerrainDetailTexture->GetRootParameters();
+		for (int j = 0; j < nRootParams; ++j) {
+			pTerrainDetailTexture->SetRootParameterIndex(j, skyboxRootParamIndex + j);
+		}
+	}
 
 	CTerrainShader*pTerrainShader = new CTerrainShader();
 	pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
@@ -1050,6 +1063,7 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 	pTerrainMaterial->SetShader(pTerrainShader);
 
 	SetMaterial(0, pTerrainMaterial);
+
 }
 
 CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, int m, int k, const std::vector<std::pair<std::string, std::string>>& texturePairs): CGameObject(texturePairs.size())
@@ -1103,25 +1117,38 @@ CHeightMapTerrain::~CHeightMapTerrain(void)
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
-CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature) : CGameObject(1)
+CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, ResourceManager* pResourceManager) : CGameObject(1)
 {
 	CSkyBoxMesh *pSkyBoxMesh = new CSkyBoxMesh(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 2.0f);
 	SetMesh(pSkyBoxMesh);
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
-	CTexture* pSkyBoxTexture = new CTexture(1, RESOURCE_TEXTURE_CUBE, 0, 1);
-	pSkyBoxTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"SkyBox/SkyBox_0.dds", RESOURCE_TEXTURE_CUBE, 0);
+	
+	CTexture* pSkyBoxTexture = pResourceManager->GetTexture(L"SkyBox/SkyBox_1.dds", pd3dCommandList);
+	if (!pSkyBoxTexture) {
+		// 텍스처 로딩 실패 처리!
+		OutputDebugString(L"Error: Failed to load SkyBox texture using ResourceManager.\n");
+	}
 
 	CSkyBoxShader *pSkyBoxShader = new CSkyBoxShader();
 	pSkyBoxShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	// 루트 파라미터 인덱스 설정 (SetTexture 내부 또는 여기서?)
+	if (pSkyBoxTexture) {
+		UINT skyboxRootParamIndex = 10;
+		int nRootParams = pSkyBoxTexture->GetRootParameters();
+		for (int j = 0; j < nRootParams; ++j) {
+			pSkyBoxTexture->SetRootParameterIndex(j, skyboxRootParamIndex + j);
+		}
+	}
 
 	CMaterial *pSkyBoxMaterial = new CMaterial(1);
 	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);
 	pSkyBoxMaterial->SetShader(pSkyBoxShader);
 
 	SetMaterial(0, pSkyBoxMaterial);
+
 }
 
 CSkyBox::~CSkyBox()

@@ -119,6 +119,10 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 			if (*ppTexture)
 			{
 				(*ppTexture)->AddRef(); // 만약 CTexture가 참조 카운팅을 사용한다면
+				int nRootParamsInTexture = (*ppTexture)->GetRootParameters(); // CTexture가 자신이 바인딩될 파라미터 수를 안다면
+				for (int j = 0; j < nRootParamsInTexture; ++j) {
+					(*ppTexture)->SetRootParameterIndex(j, nRootParameter + j); // nRootParameter는 함수의 인자
+				}
 			}
 			else
 			{

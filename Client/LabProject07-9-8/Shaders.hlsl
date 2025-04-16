@@ -226,12 +226,24 @@ struct VS_SKYBOX_CUBEMAP_OUTPUT
 
 VS_SKYBOX_CUBEMAP_OUTPUT VSSkyBox(VS_SKYBOX_CUBEMAP_INPUT input)
 {
-	VS_SKYBOX_CUBEMAP_OUTPUT output;
+    VS_SKYBOX_CUBEMAP_OUTPUT output;
 
-	output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
-	output.positionL = input.position;
+    // 뷰 행렬에서 이동 성분 제거 (4행 1,2,3열을 0으로)
+    float4x4 matViewNoTranslation = gmtxView;
+    matViewNoTranslation._41_42_43 = float3(0.0f, 0.0f, 0.0f); // 또는 _m30 = _m31 = _m32 = 0.0f;
 
-	return(output);
+    // 스카이박스는 보통 월드 변환이 필요 없으므로 gmtxGameObject는 곱하지 않거나 항등 행렬 사용
+    // float4 worldPos = float4(input.position, 1.0f); // 월드 변환 필요 시
+    float4 viewPos = mul(float4(input.position, 1.0f), matViewNoTranslation);
+    output.position = mul(viewPos, gmtxProjection);
+
+    // Z 값을 W와 같게 만들어 깊이 버퍼의 최대 깊이(1.0)에 위치하도록 함
+    // 이렇게 하면 깊이 테스트 시 가장 뒤에 그려지게 할 수 있음
+    output.position.z = output.position.w;
+
+    output.positionL = input.position; // 샘플링 좌표는 로컬 위치 그대로 사용
+
+    return (output);
 }
 
 TextureCube gtxtSkyCubeTexture : register(t13);
@@ -242,7 +254,7 @@ float4 PSSkyBox(VS_SKYBOX_CUBEMAP_OUTPUT input) : SV_TARGET
 	float4 cColor = gtxtSkyCubeTexture.Sample(gssClamp, input.positionL);
 
 	return(cColor);
-}
+}	
 
 
 // 인스턴싱
