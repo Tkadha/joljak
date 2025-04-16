@@ -6,7 +6,7 @@
 #include "Timer.h"
 #include "Player.h"
 #include "Scene.h"
-
+#include <unordered_map>
 class CGameFramework
 {
 public:
@@ -90,5 +90,8 @@ private:
 	_TCHAR						m_pszFrameRate[70];
 
 	DWORD						beforeDirection = 0;
+
+	std::unordered_map<ULONGLONG, std::unique_ptr<CPlayer>> PlayerList;
+	ULONGLONG					_MyID = -1;
 };
 

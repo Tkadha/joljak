@@ -9,6 +9,8 @@ enum class E_PACKET
 	E_P_INPUT = 4,
 	E_P_ROTATE = 5,
 	E_P_POSITION = 6,
+	E_P_LOGIN = 7,
+	E_P_LOGOUT = 8,
 
 	E_DB_REGISTER = 100,
 	E_DB_LOGIN = 101,
@@ -81,7 +83,8 @@ class ROTATE_PACKET : public PACKET
 		FLOAT3 right;
 		FLOAT3 up;
 		FLOAT3 look;
-	ROTATE_PACKET() {
+		ULONGLONG uid;
+		ROTATE_PACKET() {
 		size = sizeof(ROTATE_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_ROTATE);
 	}
@@ -90,13 +93,31 @@ class POSITION_PACKET : public PACKET
 {
 	public:
 	FLOAT3 position;
+	ULONGLONG uid;
 	POSITION_PACKET() {
 		size = sizeof(POSITION_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_POSITION);
 	}
 };
 
-
+class LOGIN_PACKET : public PACKET
+{
+	public:
+	ULONGLONG uid;
+	LOGIN_PACKET() {
+		size = sizeof(LOGIN_PACKET);
+		type = static_cast<char>(E_PACKET::E_P_LOGIN);
+	}
+};
+class LOGOUT_PACKET : public PACKET
+{
+	public:
+	ULONGLONG uid;
+	LOGOUT_PACKET() {
+		size = sizeof(LOGOUT_PACKET);
+		type = static_cast<char>(E_PACKET::E_P_LOGOUT);
+	}
+};
 class DB_REGISTER_PACKET : public PACKET
 {
 	public:

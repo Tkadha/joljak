@@ -137,13 +137,12 @@ void NetworkManager::Process_Packet(char* packet)
 		}
 	}
 		break;
-	case E_PACKET::E_P_POSITION:
+	//case E_PACKET::E_P_POSITION:
+	default:
 	{
 		PushRecvQueue(packet, static_cast<short>(packet[0]));
 	}
 	break;
-	default:
-		break;
 	}
 }
 

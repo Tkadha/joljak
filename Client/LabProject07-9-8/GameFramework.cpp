@@ -48,8 +48,39 @@ void CGameFramework::ProcessPacket(char* packet)
 	case E_PACKET::E_P_POSITION:
 	{
 		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
-		m_pPlayer->SetPosition(XMFLOAT3{recv_p->position.x, recv_p->position.y, recv_p->position.z});
+		if (recv_p->uid == _MyID) {
+			m_pPlayer->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z });
+		}
+		else {
+			PlayerList[recv_p->uid]->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z });
+		}
 	}
+	break;
+	case E_PACKET::E_P_ROTATE:
+	{
+		ROTATE_PACKET* recv_p = reinterpret_cast<ROTATE_PACKET*>(packet);
+		if (recv_p->uid != _MyID) {
+			//회전 값 적용하기
+		}
+	}
+	break;
+	case E_PACKET::E_P_LOGIN:
+	{
+		LOGIN_PACKET* recv_p = reinterpret_cast<LOGIN_PACKET*>(packet);
+		if (_MyID == -1) _MyID = recv_p->uid;
+		else if (PlayerList.find(recv_p->uid) == PlayerList.end()) {
+			PlayerList[recv_p->uid] = std::make_unique<CTerrainPlayer>(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), m_pScene->m_pTerrain);
+			PlayerList[recv_p->uid]->ReleaseUploadBuffers();
+		}
+	}
+	break;
+
+	case E_PACKET::E_P_LOGOUT:
+	{
+		LOGOUT_PACKET* recv_p = reinterpret_cast<LOGOUT_PACKET*>(packet);
+		PlayerList.erase(recv_p->uid);
+	}
+	break;
 	default:
 		break;
 	}
@@ -79,7 +110,7 @@ CGameFramework::CGameFramework()
 
 	m_pScene = NULL;
 	m_pPlayer = NULL;
-	
+	_MyID = -1;
 	
 	_tcscpy_s(m_pszFrameRate, _T("LabProject ("));
 }
@@ -494,7 +525,10 @@ void CGameFramework::BuildObjects()
 void CGameFramework::ReleaseObjects()
 {
 	if (m_pPlayer) m_pPlayer->Release();
-
+	for( auto& player : PlayerList)
+	{
+		player.second->Release();
+	}
 	if (m_pScene) m_pScene->ReleaseObjects();
 	if (m_pScene) delete m_pScene;
 }
@@ -653,6 +687,12 @@ void CGameFramework::FrameAdvance()
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 #endif
 	if (m_pPlayer) m_pPlayer->Render(m_pd3dCommandList, m_pCamera);
+
+	// network another player
+	for (auto& p : PlayerList) {
+		p.second->Render(m_pd3dCommandList, m_pCamera);
+	}
+
 
 	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;

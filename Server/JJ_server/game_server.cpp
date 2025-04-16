@@ -38,6 +38,16 @@ void ProcessClientLeave(shared_ptr<PlayerClient> remoteClient)
 {
 	// 에러 혹은 소켓 종료이다.
 	// 해당 소켓은 제거해버리자. 
+
+	// 로그아웃 정보 보내기
+	for(auto& cl : PlayerClient::PlayerClients) {
+		LOGOUT_PACKET s_packet;
+		s_packet.size = sizeof(LOGOUT_PACKET);
+		s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_LOGOUT);
+		s_packet.uid = remoteClient->m_id;
+		cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+	}
+
 	remoteClient->tcpConnection.Close();
 	PlayerClient::PlayerClients.erase(remoteClient.get());
 
@@ -69,7 +79,7 @@ void worker_thread()
 
 				if (readEvent.lpCompletionKey == (ULONG_PTR)g_l_socket.get()) // 리슨소켓이면
 				{
-					ProcessAccept();
+					ProcessAccept();				
 				}
 				else  // TCP 연결 소켓이면
 				{
@@ -147,10 +157,14 @@ void Logic_thread()
 				POSITION_PACKET s_packet;
 				s_packet.size = sizeof(POSITION_PACKET);
 				s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_POSITION);
+				s_packet.uid = cl.second->m_id;
 				s_packet.position.x = pos.x;
 				s_packet.position.y = pos.y;
 				s_packet.position.z = pos.z;
-				cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+
+				for (auto& client : PlayerClient::PlayerClients) {
+					client.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+				}
 			}
 			//cout<< cl.second->m_id << " " << pos.x << " " << pos.y << " " << pos.z << endl;
 		}
@@ -193,6 +207,10 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		s_packet.right = r_packet->right;
 		s_packet.up = r_packet->up;
 		s_packet.look = r_packet->look;
+		s_packet.uid = client->m_id;
+		for(auto& cl : PlayerClient::PlayerClients) {
+			cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+		}
 	}
 		break;
 	case E_PACKET::E_P_INPUT:
@@ -206,7 +224,6 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		s_packet.size = sizeof(INPUT_PACKET);
 		s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_INPUT);
 		s_packet.direction = r_packet->direction;
-
 	}
 	break;
 	default:
@@ -247,6 +264,30 @@ void ProcessAccept()
 			remoteClient->m_id = reinterpret_cast<unsigned long long>(remoteClient.get());
 			PlayerClient::PlayerClients.insert({ remoteClient.get(), remoteClient });
 			cout << "Client joined. There are " << PlayerClient::PlayerClients.size() << " connections.\n";
+			cout <<" Client id: "<< remoteClient->m_id << endl;
+
+			LOGIN_PACKET s_packet;
+			s_packet.size = sizeof(LOGIN_PACKET);
+			s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_LOGIN);
+			s_packet.uid = remoteClient->m_id;
+			// 내 정보 보내기
+			remoteClient->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+
+			// 나에게 접속중인 플레이어 정보 보내기
+			for (auto& cl : PlayerClient::PlayerClients) {
+				if(cl.second.get() == remoteClient.get()) continue; // 나 자신은 제외한다.
+				LOGIN_PACKET s_a_packet;
+				s_a_packet.size = sizeof(LOGIN_PACKET);
+				s_a_packet.type = static_cast<unsigned char>(E_PACKET::E_P_LOGIN);
+				s_a_packet.uid = cl.second->m_id;
+				remoteClient->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_a_packet));
+			}
+
+			// 나의 정보 보내기
+			for (auto& cl : PlayerClient::PlayerClients) {
+				if (cl.second.get() == remoteClient.get()) continue; // 나 자신은 제외한다.
+				cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+			}
 
 		}
 
