@@ -132,5 +132,7 @@ public:
 	POINT						m_ptOldCursorPos;
 
 	_TCHAR						m_pszFrameRate[70];
+
+	BOOL obbRender = FALSE;
 };
 

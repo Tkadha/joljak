@@ -460,10 +460,15 @@ void CGameFramework::ReleaseObjects()
 	if (m_pScene) delete m_pScene;
 }
 
+#include <map>
+
 void CGameFramework::ProcessInput()
 {
 	static UCHAR pKeysBuffer[256];
+	static std::map<UCHAR, bool> keyPressed; // 키별로 눌림 상태를 저장하는 맵
+	static std::map<UCHAR, bool> toggleStates; // 키별로 토글 상태를 저장하는 맵
 	bool bProcessedByScene = false;
+
 	if (GetKeyboardState(pKeysBuffer) && m_pScene) bProcessedByScene = m_pScene->ProcessInput(pKeysBuffer);
 	if (!bProcessedByScene)
 	{
@@ -487,28 +492,48 @@ void CGameFramework::ProcessInput()
 		if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
 		else m_pPlayer->keyInput(pKeysBuffer);
 
-		// 카메라 모드에 따른 입력 처리
+		// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
+		UCHAR toggleKeys[] = { 'R' /*, 다른 키들 */ };
+		for (UCHAR key : toggleKeys)
+		{
+			if (pKeysBuffer[key] & 0xF0)
+			{
+				if (!keyPressed[key])
+				{
+					toggleStates[key] = !toggleStates[key];
+					keyPressed[key] = true;
+					// 토글된 상태에 따른 동작 수행
+					if (key == 'R')
+					{
+						obbRender = toggleStates[key];
+					}
+					// 다른 키에 대한 처리 추가
+				}
+			}
+			else
+			{
+				keyPressed[key] = false;
+			}
+		}
+
+		// 카메라 모드에 따른 입력 처리 (기존 코드와 동일)
 		if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
 		{
-			// 탑뷰: 마우스 휠로 줌인/줌아웃
-			// 실제로는 마우스 휠 이벤트를 처리하려면 별도의 메시지 처리가 필요할 수 있음
-			// 여기서는 예시로 키 입력으로 대체 (Q: 줌인, E: 줌아웃)
 			if (pKeysBuffer['Q'] & 0xF0)
 			{
 				XMFLOAT3 offset = m_pCamera->GetOffset();
-				offset.y = max(20.0f, offset.y - 10.0f);  // 줌인, 최소 높이 20
+				offset.y = max(20.0f, offset.y - 10.0f);
 				m_pCamera->SetOffset(offset);
 			}
 			if (pKeysBuffer['E'] & 0xF0)
 			{
 				XMFLOAT3 offset = m_pCamera->GetOffset();
-				offset.y = min(200.0f, offset.y + 10.0f);  // 줌아웃, 최대 높이 200
+				offset.y = min(200.0f, offset.y + 10.0f);
 				m_pCamera->SetOffset(offset);
 			}
 		}
 		else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA || m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
 		{
-			// 자유 시점: 마우스로 회전
 			if (cxDelta || cyDelta)
 			{
 				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
@@ -593,12 +618,12 @@ void CGameFramework::FrameAdvance()
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
 
-	if (m_pScene) m_pScene->Render(m_pd3dCommandList, m_pCamera);
+	if (m_pScene) m_pScene->Render(m_pd3dCommandList, obbRender, m_pCamera);
 
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 #endif
-	if (m_pPlayer) m_pPlayer->Render(m_pd3dCommandList, m_pCamera);
+	if (m_pPlayer) m_pPlayer->Render(m_pd3dCommandList, obbRender, m_pCamera);
 
 	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;

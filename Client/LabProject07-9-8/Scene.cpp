@@ -712,7 +712,6 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			}
 		}
 	}
-
 	// 5.5. OBB 렌더링 (선택적)
 	bool bRenderOBBs = true; // OBB 렌더링 여부 플래그 (예시)
 	if (bRenderOBBs) {
