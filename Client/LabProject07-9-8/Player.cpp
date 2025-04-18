@@ -30,7 +30,8 @@ CPlayer::CPlayer()
 
 	m_pPlayerUpdatedContext = NULL;
 	m_pCameraUpdatedContext = NULL;
-	SetOBB(m_xmf3Position, playerSize, playerRotation);
+	//SetOBB(m_xmf3Position, playerSize, playerRotation);
+	SetOBB();
 }
 
 CPlayer::~CPlayer()
@@ -245,18 +246,20 @@ void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 
 bool CPlayer::CheckCollisionOBB(CGameObject* other)
 {
-	return playerObb.Intersects(other->m_OBB);
+	return m_worldOBB.Intersects(other->m_worldOBB);
 }
 
-void CPlayer::SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation)
-{
-	m_xmf3Position = center;
-	m_xmf3Size = size;
+//void CPlayer::SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation)
+//{
+//	m_xmf3Position = center;
+//	m_xmf3Size = size;
+//
+//	XMStoreFloat3(&playerObb.Center, XMLoadFloat3(&m_xmf3Position));
+//	XMStoreFloat3(&playerObb.Extents, XMLoadFloat3(&m_xmf3Size));
+//	XMStoreFloat4(&playerObb.Orientation, XMLoadFloat4(&orientation));
+//}
 
-	XMStoreFloat3(&playerObb.Center, XMLoadFloat3(&m_xmf3Position));
-	XMStoreFloat3(&playerObb.Extents, XMLoadFloat3(&m_xmf3Size));
-	XMStoreFloat4(&playerObb.Orientation, XMLoadFloat4(&orientation));
-}
+
 
 void CPlayer::UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation)
 {
@@ -271,7 +274,7 @@ void CPlayer::UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFL
 			0.0f, 0.0f, 0.0f, 1.0f
 		)
 	);
-	XMStoreFloat4(&m_OBB.Orientation, qRotation);
+	XMStoreFloat4(&m_localOBB.Orientation, qRotation);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -396,7 +399,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 
 	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList,
-		pd3dGraphicsRootSignature, "Model/SK_Hu_M_FullBody_c.bin", NULL);
+		pd3dGraphicsRootSignature, "Model/SK_Pig.bin", NULL);
 	SetChild(pAngrybotModel->m_pModelRootObject, true);
 
 	int nAnimation{10};

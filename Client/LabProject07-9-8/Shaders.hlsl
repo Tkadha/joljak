@@ -243,3 +243,45 @@ float4 PSSkyBox(VS_SKYBOX_CUBEMAP_OUTPUT input) : SV_TARGET
 
 	return(cColor);
 }
+
+
+
+// ObbShader.hlsl
+
+// 상수 버퍼 (월드, 뷰, 투영 행렬)
+cbuffer cbTransform : register(b0)
+{
+    float4x4 gWorld;
+    float4x4 gView;
+    float4x4 gProjection;
+};
+
+// 버텍스 셰이더 입력
+struct VS_OBBINPUT
+{
+    float3 position : POSITION;
+};
+
+// 버텍스 셰이더 출력
+struct VS_OBBOUTPUT
+{
+    float4 position : SV_POSITION;
+};
+
+// 버텍스 셰이더
+VS_OBBOUTPUT VSOBB(VS_OBBINPUT input)
+{
+    VS_OBBOUTPUT output;
+    float4 pos = float4(input.position, 1.0f);
+    pos = mul(pos, gWorld);
+    pos = mul(pos, gView);
+    pos = mul(pos, gProjection);
+    output.position = pos;
+    return output;
+}
+
+// 픽셀 셰이더
+float4 PSOBB(VS_OBBOUTPUT input) : SV_TARGET
+{
+    return float4(1.0f, 0.0f, 0.0f, 1.0f); // 빨간색 선
+}

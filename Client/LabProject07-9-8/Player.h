@@ -92,7 +92,7 @@ public:
 	virtual void keyInput(UCHAR* key) {};
 
 	bool CheckCollisionOBB(CGameObject* other);
-	void SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
+	//void SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
 	void UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
 };
 

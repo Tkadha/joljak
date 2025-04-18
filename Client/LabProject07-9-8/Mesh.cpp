@@ -472,7 +472,7 @@ void CStandardMesh::ReleaseUploadBuffers()
 void CStandardMesh::LoadMeshFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, FILE *pInFile)
 {
 	char pstrToken[64] = { '\0' };
-	int nPositions = 0, nColors = 0, nNormals = 0, nTangents = 0, nBiTangents = 0, nTextureCoords = 0, nIndices = 0, nSubMeshes = 0, nSubIndices = 0;
+	int nColors = 0, nNormals = 0, nTangents = 0, nBiTangents = 0, nTextureCoords = 0, nIndices = 0, nSubMeshes = 0, nSubIndices = 0;
 
 	UINT nReads = (UINT)::fread(&m_nVertices, sizeof(int), 1, pInFile);
 
@@ -488,12 +488,12 @@ void CStandardMesh::LoadMeshFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 		}
 		else if (!strcmp(pstrToken, "<Positions>:"))
 		{
-			nReads = (UINT)::fread(&nPositions, sizeof(int), 1, pInFile);
-			if (nPositions > 0)
+			nReads = (UINT)::fread(&m_nPositions, sizeof(int), 1, pInFile);
+			if (m_nPositions > 0)
 			{
 				m_nType |= VERTEXT_POSITION;
-				m_pxmf3Positions = new XMFLOAT3[nPositions];
-				nReads = (UINT)::fread(m_pxmf3Positions, sizeof(XMFLOAT3), nPositions, pInFile);
+				m_pxmf3Positions = new XMFLOAT3[m_nPositions];
+				nReads = (UINT)::fread(m_pxmf3Positions, sizeof(XMFLOAT3), m_nPositions, pInFile);
 
 				m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
 
