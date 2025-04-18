@@ -1220,7 +1220,7 @@ CMonsterObject::CMonsterObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	SetChild(pMonsterModel->m_pModelRootObject, true);
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pMonsterModel);
 
-	FSM_manager = new FSMManager<CGameObject>(this);
+	FSM_manager = std::make_shared<FSMManager<CGameObject>>(this);
 	FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
 }
 

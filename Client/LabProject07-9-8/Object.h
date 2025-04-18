@@ -79,7 +79,8 @@ public:
 
 	CAnimationController*			m_pSkinnedAnimationController = NULL;
 
-	FSMManager<CGameObject>*		FSM_manager = NULL;
+	std::shared_ptr<FSMManager<CGameObject>> FSM_manager = NULL;
+	//FSMManager<CGameObject>*		FSM_manager = NULL;
 
 	virtual void FSMUpdate() {}
 
