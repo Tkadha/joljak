@@ -80,11 +80,15 @@ void AtkNPCMoveState::Execute(std::shared_ptr<CGameObject> npc)
 void AtkNPCMoveState::Exit(std::shared_ptr<CGameObject> npc)
 {
 	npc->m_pSkinnedAnimationController->SetTrackEnable(2, false);
+	duration_time = 10 * 1000; // 10ÃÊ
+	npc->m_pSkinnedAnimationController->SetTrackEnable(2, true);
 }
 
 
 void AtkNPCChaseState::Enter(std::shared_ptr<CGameObject> npc)
 {
+	starttime = std::chrono::system_clock::now();
+
 }
 
 void AtkNPCChaseState::Execute(std::shared_ptr<CGameObject> npc)

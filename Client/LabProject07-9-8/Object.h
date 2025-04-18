@@ -80,6 +80,7 @@ public:
 	CAnimationController*			m_pSkinnedAnimationController = NULL;
 
 	std::shared_ptr<FSMManager<CGameObject>> FSM_manager = NULL;
+	LPVOID									terraindata = NULL;
 	//FSMManager<CGameObject>*		FSM_manager = NULL;
 
 	virtual void FSMUpdate() {}
@@ -144,6 +145,8 @@ public:
 	void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList);
 	void InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void SetOBBShader(CShader*);
+
+	void SetTerraindata(LPVOID pContext) {terraindata = pContext;}
 
 public:
 	void FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnSkinnedMesh);
@@ -294,6 +297,7 @@ public:
 	{
 		FSM_manager->ChangeState(newstate);
 	}
+
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

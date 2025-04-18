@@ -115,7 +115,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	*/
 
 	// ������Ʈ ����
-	m_nHierarchicalGameObjects = 6;
+	m_nHierarchicalGameObjects = 3;
 	m_ppHierarchicalGameObjects = new CGameObject*[m_nHierarchicalGameObjects];
 
 	CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Cow.bin", NULL);
@@ -128,9 +128,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(2, 2);
 	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackEnable(2, false);
 	m_ppHierarchicalGameObjects[0]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[0]->SetPosition(1000.f, m_pTerrain->GetHeight(1000.0f, 1500.0f), 1500.f);
+	m_ppHierarchicalGameObjects[0]->SetPosition(1000.f/2, m_pTerrain->GetHeight(1000.0f, 1500.0f)/2, 1500.f/2);
 	m_ppHierarchicalGameObjects[0]->SetScale(8.0f, 8.0f, 8.0f);
-
+	m_ppHierarchicalGameObjects[0]->SetTerraindata(m_pTerrain);
 	XMFLOAT3 cowCenter = XMFLOAT3(1000.0f, m_pTerrain->GetHeight(1000.0f, 1500.0f)+50, 1500.0f);
 	XMFLOAT3 cowSize = XMFLOAT3(5.0f, 5.0f, 5.0f); // 실제 크기의 반
 	XMFLOAT4 cowRotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -155,6 +155,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[1]->SetScale(8.0f, 8.0f, 8.0f);
 	m_ppHierarchicalGameObjects[1]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[1]->SetPosition(800.0f / 2, m_pTerrain->GetHeight(800.0f, 1400.0f) / 2, 1400.0f / 2);
+	m_ppHierarchicalGameObjects[1]->SetTerraindata(m_pTerrain);
 
 	XMFLOAT3 cowCenter2 = XMFLOAT3(800.0f, m_pTerrain->GetHeight(800.0f, 1400.0f), 1400.0f);
 	XMFLOAT3 cowSize2 = XMFLOAT3(5.0f, 5.0f, 5.0f); // 실제 크기의 반
@@ -171,8 +172,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[2]->SetScale(10.0f, 10.0f, 10.0f);
 	m_ppHierarchicalGameObjects[2]->Rotate(0.f, 0.f, 0.f);
 	m_ppHierarchicalGameObjects[2]->SetPosition(500.0f/2, m_pTerrain->GetHeight(500.0f, 800.0f)/2, 800.0f/2);
+	m_ppHierarchicalGameObjects[2]->SetTerraindata(m_pTerrain);
 
-	m_ppHierarchicalGameObjects[3] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
+	/*m_ppHierarchicalGameObjects[3] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1);
 	m_ppHierarchicalGameObjects[3]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
 	m_ppHierarchicalGameObjects[3]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[3]->SetPosition(100.0f / 2, m_pTerrain->GetHeight(100.0f, 1400.0f) / 2, 1400.0f / 2);
@@ -188,7 +190,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[5]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[5]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[5]->SetPosition(1000.f / 2, m_pTerrain->GetHeight(1000.0f, 1500.0f) / 2, 1500.f / 2);
-	m_ppHierarchicalGameObjects[5]->SetScale(8.0f, 8.0f, 8.0f);
+	m_ppHierarchicalGameObjects[5]->SetScale(8.0f, 8.0f, 8.0f);*/
 	if (pCowModel) delete pCowModel;
 	
 

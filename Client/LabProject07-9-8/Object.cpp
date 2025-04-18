@@ -436,7 +436,18 @@ void CGameObject::MoveForward(float fDistance)
 	XMFLOAT3 xmf3Position = GetPosition();
 	XMFLOAT3 xmf3Look = GetLook();
 	xmf3Position = Vector3::Add(xmf3Position, xmf3Look, fDistance);
+	CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)terraindata;
+	XMFLOAT3 xmf3Scale = pTerrain->GetScale();
+	int z = (int)(xmf3Position.z / xmf3Scale.z);
+	bool bReverseQuad = ((z % 2) != 0);
+	float fHeight = pTerrain->GetHeight(xmf3Position.x*2, xmf3Position.z*2, bReverseQuad) + 0.0f;
+	fHeight /= 2;
+	if (xmf3Position.y < fHeight)
+	{
+		xmf3Position.y = fHeight;
+	}
 	CGameObject::SetPosition(xmf3Position);
+
 }
 
 void CGameObject::Rotate(float fPitch, float fYaw, float fRoll)

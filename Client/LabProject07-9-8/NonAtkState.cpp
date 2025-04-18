@@ -60,23 +60,24 @@ void NonAtkNPCMoveState::Execute(std::shared_ptr<CGameObject> npc)
 		npc->FSM_manager->ChangeState(std::make_shared<NonAtkNPCStandingState>());
 		return;
 	}
-	switch (move_type)
-	{
-	case 0:
-		// 전진
-		npc->MoveForward(0.2f);
-		break;
-	case 1:
-		// 회전하면서 전진
-		npc->Rotate(0.f, 0.5f, 0.f);
-		npc->MoveForward(0.1f);
-		break;
-	case 2:
-		// 회전
-		npc->Rotate(0.f, 0.25f, 0.f);
-		break;
-	}
-	// 메쉬기반 위치 조정하는거 넣어야함
+	npc->MoveForward(0.2f);
+	//switch (move_type)
+	//{
+	//case 0:
+	//	// 전진
+	//	npc->MoveForward(0.2f);
+	//	break;
+	//case 1:
+	//	// 회전하면서 전진
+	//	npc->Rotate(0.f, 0.5f, 0.f);
+	//	npc->MoveForward(0.1f);
+	//	break;
+	//case 2:
+	//	// 회전
+	//	npc->Rotate(0.f, 0.25f, 0.f);
+	//	break;
+	//}
+
 }
 
 void NonAtkNPCMoveState::Exit(std::shared_ptr<CGameObject> npc)
