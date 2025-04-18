@@ -76,7 +76,7 @@
     <ClCompile Include="FSMState.cpp">
       <Filter>소스 파일\FSM</Filter>
     </ClCompile>
-    <ClCompile Include="PigState.cpp">
+    <ClCompile Include="NonAtkState.cpp">
       <Filter>소스 파일\FSM</Filter>
     </ClCompile>
     <ClCompile Include="Player.cpp">
@@ -105,6 +105,9 @@
     </ClCompile>
     <ClCompile Include="NetworkManager.cpp">
       <Filter>소스 파일\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="AtkState.cpp">
+      <Filter>소스 파일\FSM</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -138,7 +141,7 @@
     <ClInclude Include="FSMState.h">
       <Filter>소스 파일\FSM</Filter>
     </ClInclude>
-    <ClInclude Include="PigState.h">
+    <ClInclude Include="NonAtkState.h">
       <Filter>소스 파일\FSM</Filter>
     </ClInclude>
     <ClInclude Include="Player.h">
@@ -167,6 +170,9 @@
     </ClInclude>
     <ClInclude Include="NetworkManager.h">
       <Filter>소스 파일\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="AtkState.h">
+      <Filter>소스 파일\FSM</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

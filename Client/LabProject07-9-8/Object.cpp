@@ -8,7 +8,7 @@
 #include "Scene.h"
 
 
-#include "PigState.h"
+#include "NonAtkState.h"
 //>>>>>>> Bin_test
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1127,7 +1127,7 @@ CMonsterObject::CMonsterObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pMonsterModel);
 
 	FSM_manager = new FSMManager<CGameObject>(this);
-	FSM_manager->SetCurrentState(PigState::Instance());
+	FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
 }
 
 CMonsterObject::~CMonsterObject()

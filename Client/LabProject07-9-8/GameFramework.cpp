@@ -134,21 +134,11 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	BuildObjects();
 
-	/*char nw_connect = 0;
-	std::cout << "Do you want to connect to the server? (y/n): ";
-	std::cin >> nw_connect;
-	if( nw_connect == 'y' || nw_connect == 'Y')
-	{
-		auto& nwManager = NetworkManager::GetInstance();
-		nwManager.Init();
 		std::thread t(NerworkThread);
-		t.detach();		
-	}*/
-
-	auto& nwManager = NetworkManager::GetInstance();
+	/*auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
 	std::thread t(&CGameFramework::NerworkThread, this);
-	t.detach();
+	t.detach();*/
 
 	return(true);
 }
