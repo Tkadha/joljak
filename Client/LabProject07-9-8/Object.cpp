@@ -330,37 +330,69 @@ void CGameObject::Animate(float fTimeElapsed)
 	if (m_pChild) m_pChild->Animate(fTimeElapsed);
 }
 
-	void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
+
+	if (m_pMesh)
 	{
-		if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
-		if (m_pMesh)
+		if (m_nMaterials > 0)
 		{
-			UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-
-			if (m_nMaterials > 0)
+			for (int i = 0; i < m_nMaterials; i++)
 			{
-				for (int i = 0; i < m_nMaterials; i++)
+				if (m_ppMaterials[i])
 				{
-					if (m_ppMaterials[i])
-					{
-						if (m_ppMaterials[i]->m_pShader) m_ppMaterials[i]->m_pShader->Render(pd3dCommandList, pCamera);
-						m_ppMaterials[i]->UpdateShaderVariable(pd3dCommandList);
-					}
-
-					m_pMesh->Render(pd3dCommandList, i);
-					//pd3dCommandList->SetPipelineState(m_pOBBPipelineState); // m_pOBBPipelineState는 미리 생성된 PSO
-					//m_OBBShader.OnPrepareRender(pd3dCommandList);
+					if (m_ppMaterials[i]->m_pShader) m_ppMaterials[i]->m_pShader->Render(pd3dCommandList, pCamera);
+					m_ppMaterials[i]->UpdateShaderVariable(pd3dCommandList);
 				}
+
+				m_pMesh->Render(pd3dCommandList, i);
+				//pd3dCommandList->SetPipelineState(m_pOBBPipelineState); // m_pOBBPipelineState는 미리 생성된 PSO
+				//m_OBBShader.OnPrepareRender(pd3dCommandList);
 			}
 		}
+	}
 
+	if (m_OBBMaterial->m_pShader)
+		RenderOBB(pd3dCommandList);
+
+	if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
+	if (m_pChild) m_pChild->Render(pd3dCommandList, pCamera);
+}
+void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRedner, CCamera* pCamera)
+{
+	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
+
+	if (m_pMesh)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+		if (m_nMaterials > 0)
+		{
+			for (int i = 0; i < m_nMaterials; i++)
+			{
+				if (m_ppMaterials[i])
+				{
+					if (m_ppMaterials[i]->m_pShader) m_ppMaterials[i]->m_pShader->Render(pd3dCommandList, pCamera);
+					m_ppMaterials[i]->UpdateShaderVariable(pd3dCommandList);
+				}
+
+				m_pMesh->Render(pd3dCommandList, i);
+				//pd3dCommandList->SetPipelineState(m_pOBBPipelineState); // m_pOBBPipelineState는 미리 생성된 PSO
+				//m_OBBShader.OnPrepareRender(pd3dCommandList);
+			}
+		}
+	}
+
+	if(obbRedner)
 		if (m_OBBMaterial->m_pShader)
 			RenderOBB(pd3dCommandList);
 
-		if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
-		if (m_pChild) m_pChild->Render(pd3dCommandList, pCamera);
-	}
+	if (m_pSibling) m_pSibling->Render(pd3dCommandList, obbRedner, pCamera);
+	if (m_pChild) m_pChild->Render(pd3dCommandList, obbRedner, pCamera);
+}
 
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, UINT nInstances, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView)
 {
