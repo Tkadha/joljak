@@ -152,6 +152,7 @@
     <ClCompile Include="imgui_impl_win32.cpp" />
     <ClCompile Include="imgui_tables.cpp" />
     <ClCompile Include="imgui_widgets.cpp" />
+    <ClCompile Include="Item.cpp" />
     <ClCompile Include="LabProject07-9-8.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
@@ -181,6 +182,7 @@
     <ClInclude Include="imstb_rectpack.h" />
     <ClInclude Include="imstb_textedit.h" />
     <ClInclude Include="imstb_truetype.h" />
+    <ClInclude Include="Item.h" />
     <ClInclude Include="LabProject07-9-8.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />

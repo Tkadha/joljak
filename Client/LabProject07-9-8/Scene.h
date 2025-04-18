@@ -127,7 +127,7 @@ public:
 	ID3D12Resource						*m_pd3dcbLights = NULL;
 	LIGHTS								*m_pcbMappedLights = NULL;
 
-	// ÀÎ½ºÅÏ½Ì
+	// ï¿½Î½ï¿½ï¿½Ï½ï¿½
 	ID3D12Resource* m_pd3dcbGameObjects = NULL;
 	VS_VB_INSTANCE* m_pcbMappedGameObjects = NULL;
 

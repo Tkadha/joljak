@@ -6,6 +6,27 @@
 #include "Timer.h"
 #include "Player.h"
 #include "Scene.h"
+#include "Item.h"
+#include "d3dx12.h"
+#include "WICTextureLoader12.h"
+#include <wrl.h> // 추가
+#include <vector>
+#include <string>
+using namespace Microsoft::WRL; // 추가
+
+struct CraftMaterial
+{
+	std::string MaterialName; // 재료 이름
+	int Quantity;             // 재료 수량
+};
+
+// 제작 아이템 구조체
+struct CraftItem
+{
+	std::string ResultItemName;        // 최종 제작 아이템 이름
+	std::vector<CraftMaterial> Materials; // 필요한 재료 목록
+	int ResultQuantity;                // 제작 결과 수량 (예: 2개 만들면 2)
+};
 
 class CGameFramework
 {
@@ -41,6 +62,12 @@ public:
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	std::shared_ptr<Item> CreateDummyItem();
+	void AddDummyItem();
+	void LoadIconTextures();
+	void CreateIconDescriptorHeap();
+	void InitializeCraftItems();
+	std::vector<CraftItem> m_vecCraftableItems;
 
 
 private:
@@ -50,6 +77,9 @@ private:
 	int							m_nWndClientWidth;
 	int							m_nWndClientHeight;
 	int                         m_nSelectedHotbarIndex = 0;
+	bool						ShowInventory = false;
+	bool						ShowCraftingUI = true; // 조합창 열기 여부
+	int							selectedCraftItemIndex = -1; // 현재 선택한 아이템 인덱스
         
 	IDXGIFactory4				*m_pdxgiFactory = NULL;
 	IDXGISwapChain3				*m_pdxgiSwapChain = NULL;
@@ -76,6 +106,7 @@ private:
 	HANDLE						m_hFenceEvent;
 
 	ID3D12DescriptorHeap* m_pd3dSrvDescriptorHeapForImGui = nullptr;
+	ID3D12DescriptorHeap* m_pd3dSrvDescriptorHeapForIcons = nullptr;
 
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;
@@ -90,5 +121,14 @@ private:
 	POINT						m_ptOldCursorPos;
 
 	_TCHAR						m_pszFrameRate[70];
+	int g_itemIDCounter = 0;
+	struct InventorySlot {
+		std::shared_ptr<Item> item;
+		bool IsEmpty() const { return item == nullptr; }
+	};
+
+	std::vector<InventorySlot> m_inventorySlots;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_pWoodTexture = nullptr;
+	D3D12_CPU_DESCRIPTOR_HANDLE m_WoodTextureHandle = {};
 };
 
