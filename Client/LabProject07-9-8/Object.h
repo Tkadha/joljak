@@ -9,6 +9,7 @@
 #include "Camera.h"
 #include "FSMManager.h"
 #include "ResourceManager.h"
+#include "ShaderManager.h"
 
 
 #define DIR_FORWARD					0x01
@@ -55,8 +56,8 @@ public:
 	CMesh							*m_pMesh = NULL;
 	int m_nMeshes = 0;
 
-	int								m_nMaterials = 0;
 	bool							isRender = true;
+	int								m_nMaterials = 0;
 	CMaterial						**m_ppMaterials = NULL;
 
 	// OBB
@@ -69,6 +70,9 @@ public:
 	ID3D12Resource* m_pOBBIndexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW m_OBBVertexBufferView;
 	D3D12_INDEX_BUFFER_VIEW m_OBBIndexBufferView;
+	// OBB 변환 행렬용 상수 버퍼
+	ID3D12Resource* m_pd3dcbOBBTransform = nullptr;
+	XMFLOAT4X4* m_pcbMappedOBBTransform = nullptr; // 맵핑된 포인터
 
 	CMaterial* m_OBBMaterial = NULL;
 	//COBBShader m_OBBShader;
@@ -147,7 +151,19 @@ public:
 	void SetOBB(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CShader* shader);
 	void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList);
 	void InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void SetOBBShader(CShader*);
+
+	// --- 재질 접근자 추가 ---
+	CMaterial* GetMaterial(int nIndex = 0) const {
+		// 인덱스 범위 및 포인터 유효성 검사
+		if (nIndex >= 0 && nIndex < m_nMaterials && m_ppMaterials) {
+			return m_ppMaterials[nIndex];
+		}
+		return nullptr; // 유효하지 않으면 nullptr 반환
+	}
+	int GetMaterialCount() const { return m_nMaterials; }
+
+	// --- OBB 렌더링 함수 선언 ---
+	virtual void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 public:
 	void FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnSkinnedMesh);
@@ -157,18 +173,18 @@ public:
 
 	void SetRootMotion(bool bRootMotion) { if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->SetRootMotion(bRootMotion); }
 
-	void LoadMaterialsFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CGameObject *pParent, FILE *pInFile, CShader *pShader, ResourceManager* pResourceManager);
+	void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, FILE* pInFile, CGameFramework* pGameFramework);
 
 	static void LoadAnimationFromFile(FILE *pInFile, CLoadedModelInfo *pLoadedModel);
-	static CGameObject *LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CGameObject *pParent, FILE *pInFile, CShader *pShader, int *pnSkinnedMeshes, ResourceManager* pResourceManager);
-
-	static CLoadedModelInfo *LoadGeometryAndAnimationFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, char *pstrFileName, CShader *pShader, ResourceManager* pResourceManager);
+	static CGameObject* LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, FILE* pInFile, int* pnSkinnedMeshes, CGameFramework* pGameFramework);
+	static CLoadedModelInfo *LoadGeometryAndAnimationFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, char *pstrFileName, CGameFramework* pGameFramework);
 
 	
-	static CGameObject* LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, FILE* pInFile, CShader* pShader, ResourceManager* pResourceManager);
-	static CGameObject* LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader, ResourceManager* pResourceManager);
+	static CGameObject* LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, FILE* pInFile, CGameFramework* pGameFramework);
+	static CGameObject* LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader, CGameFramework* pGameFramework);
 
 	static void PrintFrameInfo(CGameObject* pGameObject, CGameObject* pParent);
+
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -176,8 +192,8 @@ public:
 class CHeightMapTerrain : public CGameObject
 {
 public:
-	CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, ResourceManager* pResourceManager);
-	CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, int m, int k, const std::vector<std::pair<std::string, std::string>>& texturePairs);
+	CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, LPCTSTR pFileName,
+		int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, CGameFramework* pGameFramework);
 	virtual ~CHeightMapTerrain();
 private:
 	CHeightMapImage				*m_pHeightMapImage;
@@ -204,7 +220,7 @@ public:
 class CSkyBox : public CGameObject
 {
 public:
-	CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, ResourceManager* pResourceManager);
+	CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CSkyBox();
 
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
@@ -279,7 +295,7 @@ class CMonsterObject : public CGameObject
 	
 
 public:
-	CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks, ResourceManager* pResourceManager);
+	CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks, CGameFramework* pGameFramework);
 	virtual ~CMonsterObject();
 
 	virtual void FSMUpdate()
@@ -342,42 +358,42 @@ public:
 class CHairObject : public CGameObject
 {
 public:
-	CHairObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, ResourceManager* pResourceManager);
+	CHairObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameFramework* pGameFramework);
 	virtual ~CHairObject() {};
 };
 
 class CPineObject : public CGameObject
 {
 public:
-	CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, ResourceManager* pResourceManager);
+	CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameFramework* pGameFramework);
 	virtual ~CPineObject() {}
 };
 
 class CRockClusterAObject : public CGameObject
 {
 public:
-	CRockClusterAObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, ResourceManager* pResourceManager);
+	CRockClusterAObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameFramework* pGameFramework);
 	virtual ~CRockClusterAObject() {}
 };
 
 class CRockClusterBObject : public CGameObject
 {
 public:
-	CRockClusterBObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, ResourceManager* pResourceManager);
+	CRockClusterBObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameFramework* pGameFramework);
 	virtual ~CRockClusterBObject() {}
 };
 
 class CRockClusterCObject : public CGameObject
 {
 public:
-	CRockClusterCObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, ResourceManager* pResourceManager);
+	CRockClusterCObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameFramework* pGameFramework);
 	virtual ~CRockClusterCObject() {}
 };
 
 class CCliffFObject : public CGameObject
 {
 public:
-	CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, ResourceManager* pResourceManager);
+	CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameFramework* pGameFramework);
 	virtual ~CCliffFObject() {}
 };
 
@@ -385,14 +401,14 @@ public:
 class CSwordObject : public CGameObject
 {
 public:
-	CSwordObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, ResourceManager* pResourceManager);
+	CSwordObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameFramework* pGameFramework);
 	virtual ~CSwordObject() {}
 };
 
 class CStaticObject : public CGameObject
 {
 public:
-	CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* modelname, ResourceManager* pResourceManager);
+	CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* modelname, CGameFramework* pGameFramework);
 	virtual ~CStaticObject() {}
 };
 

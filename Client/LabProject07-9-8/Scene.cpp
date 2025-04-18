@@ -72,24 +72,25 @@ void CScene::BuildDefaultLightsAndMaterials()
 
 void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
-
-	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature); 
+	// ShaderManager 가져오기
+	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed!");
+	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
+	assert(pShaderManager != nullptr && "ShaderManager is not available!");
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); // 기존 코드 유지
 
 	BuildDefaultLightsAndMaterials();
 
-	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
 	if (!pResourceManager) {
 		// 리소스 매니저가 없다면 로딩 불가! 오류 처리
 		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
 		return;
 	}
 
-	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pResourceManager);
+	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pGameFramework);
 
 	XMFLOAT3 xmf3Scale(5.f, 0.2f, 5.f);
 	XMFLOAT4 xmf4Color(0.0f, 0.0f, 0.0f, 0.0f);
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color, pResourceManager);
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color, m_pGameFramework);
 	
 	// 랜덤 엔진
 	std::random_device rd;
@@ -100,7 +101,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	int nPineObjects = 10;
 	for (int i = 0; i < nPineObjects; ++i) {
-		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pResourceManager);
+		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen, 2, 6, 2, 10);
@@ -108,7 +109,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		m_vGameObjects.emplace_back(gameObj);
 	}
 	{
-		CGameObject* gameObj = new CSwordObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pResourceManager);
+		CGameObject* gameObj = new CSwordObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z)+10, z);
 		gameObj->SetScale(100,100,100);
@@ -116,7 +117,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	}
 	int nRockClusterAObjects = 10;
 	for (int i = 0; i < nRockClusterAObjects; ++i) {
-		CGameObject* gameObj = new CRockClusterAObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pResourceManager);
+		CGameObject* gameObj = new CRockClusterAObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen, 10, 20, 20, 30);
@@ -126,7 +127,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	
 	int nRockClusterBObjects = 10;
 	for (int i = 0; i < nRockClusterBObjects; ++i) {
-		CGameObject* gameObj = new CRockClusterBObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pResourceManager);
+		CGameObject* gameObj = new CRockClusterBObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen, 10, 20, 20, 30);
@@ -135,7 +136,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	}
 	int nRockClusterCObjects = 10;
 	for (int i = 0; i < nRockClusterCObjects; ++i) {
-		CGameObject* gameObj = new CRockClusterCObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pResourceManager);
+		CGameObject* gameObj = new CRockClusterCObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen, 10, 20, 20, 30);
@@ -145,7 +146,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	int nCliffFObjectCObjects = 5;
 	for (int i = 0; i < nRockClusterCObjects; ++i) {
-		CGameObject* gameObj = new CCliffFObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pResourceManager);
+		CGameObject* gameObj = new CCliffFObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen,5, 10, 5, 10);
@@ -158,9 +159,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_nHierarchicalGameObjects = 6;
 	m_ppHierarchicalGameObjects = new CGameObject*[m_nHierarchicalGameObjects];
 
-	CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Cow.bin", NULL, pResourceManager);
+	CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Cow.bin", m_pGameFramework);
 
-	m_ppHierarchicalGameObjects[0] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, pResourceManager);
+	m_ppHierarchicalGameObjects[0] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[0]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[0]->SetPosition(1000.f, m_pTerrain->GetHeight(1000.0f, 1500.0f), 1500.f);
@@ -175,7 +176,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	octree.insert(&tree_objects[0]);
 	
 
-	m_ppHierarchicalGameObjects[1] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, pResourceManager);
+	m_ppHierarchicalGameObjects[1] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[1]->SetScale(8.0f, 8.0f, 8.0f);
 	m_ppHierarchicalGameObjects[1]->Rotate(0.f, 180.f, 0.f);
@@ -189,7 +190,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 
-	m_ppHierarchicalGameObjects[2] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, pResourceManager);
+	m_ppHierarchicalGameObjects[2] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
 	//m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController = nullptr;
 	//m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController->m_pAnimationTracks = nullptr;
@@ -197,19 +198,19 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[2]->Rotate(0.f, 0.f, 0.f);
 	m_ppHierarchicalGameObjects[2]->SetPosition(500.0f/2, m_pTerrain->GetHeight(500.0f, 800.0f)/2, 800.0f/2);
 
-	m_ppHierarchicalGameObjects[3] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, pResourceManager);
+	m_ppHierarchicalGameObjects[3] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[3]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
 	m_ppHierarchicalGameObjects[3]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[3]->SetPosition(100.0f / 2, m_pTerrain->GetHeight(100.0f, 1400.0f) / 2, 1400.0f / 2);
 	m_ppHierarchicalGameObjects[3]->SetScale(10.0f, 10.0f, 10.0f);
 
-	m_ppHierarchicalGameObjects[4] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, pResourceManager);
+	m_ppHierarchicalGameObjects[4] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[4]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 3);
 	m_ppHierarchicalGameObjects[4]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[4]->SetPosition(200.0f /2 , m_pTerrain->GetHeight(200.0f, 500.0f)/2, 500.0f / 2);
 	m_ppHierarchicalGameObjects[4]->SetScale(8.0f, 8.0f, 8.0f);
 
-	m_ppHierarchicalGameObjects[5] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, pResourceManager);
+	m_ppHierarchicalGameObjects[5] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[5]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[5]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[5]->SetPosition(1000.f / 2, m_pTerrain->GetHeight(1000.0f, 1500.0f) / 2, 1500.f / 2);
@@ -224,7 +225,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		CShader* shader = new COBBShader();
 		//shader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 		//m_ppHierarchicalGameObjects[0]->m_OBBShader.CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
-		m_ppHierarchicalGameObjects[i]->SetOBBShader(shader);
 		m_ppHierarchicalGameObjects[i]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	}
 
@@ -232,23 +232,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		obj->SetOBB();
 		CShader* shader = new COBBShader();
 		//shader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
-		obj->SetOBBShader(shader);
 		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 		//obj->SetOBB(pd3dDevice, pd3dCommandList, shader);
 	}
-
-
-
-///*
-	m_nShaders = 1;
-	m_ppShaders = new CShader*[m_nShaders];
-
-	CEthanObjectsShader *pEthanObjectsShader = new CEthanObjectsShader();
-	//pEthanObjectsShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEthanModel, m_pTerrain);
-
-	m_ppShaders[0] = pEthanObjectsShader;
-//*/
-	//if (pEthanModel) delete pEthanModel;
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
@@ -261,17 +247,6 @@ void CScene::ReleaseObjects()
 	{
 		for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Release();
 		delete[] m_ppGameObjects;
-	}
-
-	if (m_ppShaders)
-	{
-		for (int i = 0; i < m_nShaders; i++)
-		{
-			m_ppShaders[i]->ReleaseShaderVariables();
-			m_ppShaders[i]->ReleaseObjects();
-			m_ppShaders[i]->Release();
-		}
-		delete[] m_ppShaders;
 	}
 
 	if (m_pTerrain) delete m_pTerrain;
@@ -532,7 +507,6 @@ void CScene::ReleaseUploadBuffers()
 	if (m_pSkyBox) m_pSkyBox->ReleaseUploadBuffers();
 	if (m_pTerrain) m_pTerrain->ReleaseUploadBuffers();
 
-	for (int i = 0; i < m_nShaders; i++) m_ppShaders[i]->ReleaseUploadBuffers();
 	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->ReleaseUploadBuffers();
 	for (int i = 0; i < m_nHierarchicalGameObjects; i++) m_ppHierarchicalGameObjects[i]->ReleaseUploadBuffers();
 }
@@ -565,8 +539,7 @@ void CScene::AnimateObjects(float fTimeElapsed)
 	m_fElapsedTime = fTimeElapsed;
 
 	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Animate(fTimeElapsed);
-	for (int i = 0; i < m_nShaders; i++) if (m_ppShaders[i]) m_ppShaders[i]->AnimateObjects(fTimeElapsed);
-
+	
 	if (m_pLights)
 	{
 		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
@@ -629,42 +602,140 @@ void CScene::AnimateObjects(float fTimeElapsed)
 }
 
 
-void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (m_pd3dGraphicsRootSignature) pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
+	// ShaderManager 가져오기 (매번 호출하는 대신 멤버 변수로 캐싱해도 좋음)
+	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed in CScene!");
+	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
+	assert(pShaderManager != nullptr && "ShaderManager is not available!");
 
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+	// 카메라 상수 버퍼(b1) 업데이트
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 
-	UpdateShaderVariables(pd3dCommandList);
+	// 3. 전역 조명 상수 버퍼 업데이트 
+	UpdateShaderVariables(pd3dCommandList); 
 
-	D3D12_GPU_VIRTUAL_ADDRESS d3dcbLightsGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
-	pd3dCommandList->SetGraphicsRootConstantBufferView(2, d3dcbLightsGpuVirtualAddress); //Lights
-	/*
-	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
-	{
-		if (m_ppHierarchicalGameObjects[i])
+	// --- 4. 렌더링 상태 추적 변수 ---
+	ID3D12RootSignature* currentRootSig = nullptr;
+	ID3D12PipelineState* currentPSO = nullptr;
+	CShader* pCurrentShader = nullptr; // 현재 활성화된 셰이더 추적
+
+	// --- 헬퍼 람다: 그래픽 상태 설정 (루트 서명 및 PSO) ---
+	auto SetGraphicsState = [&](CShader* pShader) {
+		if (!pShader) return; // 셰이더가 없으면 아무것도 안 함
+
+		// 셰이더 객체 자체가 바뀌었는지 확인 (가장 포괄적인 검사)
+		if (pShader != pCurrentShader)
 		{
-			if (m_ppHierarchicalGameObjects[i]->FSM_manager) m_ppHierarchicalGameObjects[i]->FSMUpdate();
+			pCurrentShader = pShader; // 현재 셰이더 업데이트
+
+			// 루트 서명 설정 (셰이더에 저장된 루트 서명 사용)
+			ID3D12RootSignature* pRootSig = pShader->GetRootSignature();
+			if (pRootSig && pRootSig != currentRootSig) {
+				pd3dCommandList->SetGraphicsRootSignature(pRootSig);
+				currentRootSig = pRootSig;
+				// 참고: 만약 Lights(b4)같은 공통 CBV가 여러 루트 서명에 존재하고,
+				// 루트 서명이 바뀔 때마다 다시 바인딩해야 한다면 여기서 처리 가능
+				// 예: pd3dCommandList->SetGraphicsRootConstantBufferView(2 또는 다른 인덱스, m_pd3dcbLights->GetGPUVirtualAddress());
+			}
+
+			// PSO 설정 (셰이더에 저장된 PSO 사용)
+			ID3D12PipelineState* pPSO = pShader->GetPipelineState();
+			if (pPSO && pPSO != currentPSO) {
+				pd3dCommandList->SetPipelineState(pPSO);
+				currentPSO = pPSO;
+			}
+		}
+		// 이미 같은 셰이더(같은 RS, 같은 PSO)라면 아무것도 변경 안 함
+	};
+
+
+	// --- 5. 렌더링 단계별 처리 ---
+
+	// 5.1. 스카이박스 렌더링
+	if (m_pSkyBox) {
+		// CSkyBox 객체가 자신의 CMaterial과 CShader를 가지고 있다고 가정
+		CMaterial* pSkyboxMat = m_pSkyBox->GetMaterial(0); // 첫 번째 재질 가정
+		if (pSkyboxMat && pSkyboxMat->m_pShader) {
+			SetGraphicsState(pSkyboxMat->m_pShader); // Skybox 셰이더/RS/PSO 설정
+			// CSkyBox::Render 내부에서는 필요한 CBV(카메라 b1), 텍스처(t13 테이블) 바인딩 및 Draw 호출
+			m_pSkyBox->Render(pd3dCommandList, pCamera);
 		}
 	}
-	*/
 
-	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
-	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
+	// 5.2. 지형 렌더링
+	if (m_pTerrain) {
+		CMaterial* pTerrainMat = m_pTerrain->GetMaterial(0);
+		if (pTerrainMat && pTerrainMat->m_pShader) {
+			SetGraphicsState(pTerrainMat->m_pShader); // Terrain 셰이더/RS/PSO 설정
+			// CHeightMapTerrain::Render 내부에서는 필요한 CBV(카메라 b1, 지형객체 b2), 텍스처(t1, t2 테이블) 바인딩 및 Draw 호출
+			m_pTerrain->Render(pd3dCommandList, pCamera);
+		}
+	}
 
-	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Render(pd3dCommandList, pCamera);
-	for (auto obj : m_vGameObjects) obj->Render(pd3dCommandList, pCamera);
-	for (int i = 0; i < m_nShaders; i++) if (m_ppShaders[i]) m_ppShaders[i]->Render(pd3dCommandList, pCamera);
-	//m_ppHierarchicalGameObjects[0]->RenderOBB(pd3dCommandList);
+	// 5.3. 일반 게임 오브젝트 렌더링 (m_ppGameObjects, m_vGameObjects)
+	// 중요: 성능을 위해서는 이 객체들을 렌더링 전에 CShader 포인터 기준으로 정렬하는 것이 좋습니다!
+	//      여기서는 간단하게 순차적으로 처리하며 상태를 변경합니다.
+	for (int i = 0; i < m_nGameObjects; i++) { // m_ppGameObjects 처리 (예시)
+		if (m_ppGameObjects[i] /*&& m_ppGameObjects[i]->IsVisible()*/) { // IsVisible() 같은 가시성 체크 추가 권장
+			CMaterial* pMaterial = m_ppGameObjects[i]->GetMaterial(0); // 또는 주 재질 인덱스
+			if (pMaterial && pMaterial->m_pShader) {
+				SetGraphicsState(pMaterial->m_pShader); // 객체의 셰이더에 맞는 상태 설정
+				// m_ppGameObjects[i]->Render 내부에서는 필요한 상수(b2), 텍스처(t6-t12 테이블) 바인딩 및 Draw 호출
+				m_ppGameObjects[i]->Render(pd3dCommandList, pCamera);
+			}
+		}
+	}
+	for (auto& obj : m_vGameObjects) { // m_vGameObjects 처리
+		if (obj /*&& obj->IsVisible()*/) {
+			CMaterial* pMaterial = obj->GetMaterial(0);
+			if (pMaterial && pMaterial->m_pShader) {
+				SetGraphicsState(pMaterial->m_pShader);
+				obj->Render(pd3dCommandList, pCamera);
+			}
+		}
+	}
 
-	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
-	{
-		if (m_ppHierarchicalGameObjects[i] && m_ppHierarchicalGameObjects[i]->isRender == true)
-		{
+	// 5.4. 계층적 게임 오브젝트 렌더링 (Skinned)
+	for (int i = 0; i < m_nHierarchicalGameObjects; i++) {
+		if (m_ppHierarchicalGameObjects[i] && m_ppHierarchicalGameObjects[i]->isRender == true) {
+			// 애니메이션 처리
 			m_ppHierarchicalGameObjects[i]->Animate(m_fElapsedTime);
 			if (!m_ppHierarchicalGameObjects[i]->m_pSkinnedAnimationController) m_ppHierarchicalGameObjects[i]->UpdateTransform(NULL);
-			m_ppHierarchicalGameObjects[i]->Render(pd3dCommandList, pCamera);
+
+			CMaterial* pMaterial = m_ppHierarchicalGameObjects[i]->GetMaterial(0);
+			if (pMaterial && pMaterial->m_pShader) {
+				SetGraphicsState(pMaterial->m_pShader); // Skinned 셰이더/RS/PSO 설정
+				// m_ppHierarchicalGameObjects[i]->Render 내부에서는 필요한 상수(b2), 본(b7, b8), 텍스처(t6-t12 테이블) 바인딩 및 Draw 호출
+				m_ppHierarchicalGameObjects[i]->Render(pd3dCommandList, pCamera);
+			}
 		}
 	}
+
+	// 5.5. OBB 렌더링 (선택적)
+	bool bRenderOBBs = true; // OBB 렌더링 여부 플래그 (예시)
+	if (bRenderOBBs) {
+		CShader* pOBBShader = pShaderManager->GetShader("OBB", pd3dCommandList);
+		if (pOBBShader) {
+			SetGraphicsState(pOBBShader); // OBB 셰이더/RS/PSO 설정
+
+			// OBB 렌더링이 필요한 객체들 순회
+			for (auto& obj : m_vGameObjects) {
+				if (obj /*&& obj->ShouldRenderOBB()*/) { // OBB 렌더링 조건 확인
+					// obj->RenderOBB 내부에서는 OBB의 월드 변환(b0) 업데이트 및 Draw 호출
+					obj->RenderOBB(pd3dCommandList, pCamera); // RenderOBB 함수 구현 필요
+				}
+			}
+			for (int i = 0; i < m_nHierarchicalGameObjects; ++i) {
+				if (m_ppHierarchicalGameObjects[i] /*&& m_ppHierarchicalGameObjects[i]->ShouldRenderOBB()*/) {
+					m_ppHierarchicalGameObjects[i]->RenderOBB(pd3dCommandList, pCamera);
+				}
+			}
+			pOBBShader->Release(); // GetShader로 얻은 참조 해제
+		}
+	}
+
+	// --- 6. ~ObjectShader 관련 렌더링 루프 제거 ---
+	// for (int i = 0; i < m_nShaders; i++) if (m_ppShaders[i]) m_ppShaders[i]->Render(pd3dCommandList, pCamera); // 제거!
 }

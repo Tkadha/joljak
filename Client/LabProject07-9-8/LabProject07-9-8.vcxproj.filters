@@ -45,8 +45,29 @@
     <Filter Include="소스 파일\Timer">
       <UniqueIdentifier>{cdde645c-aa52-4745-86ff-71fa21b3503c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="소스 파일\ResourceManager">
+    <Filter Include="소스 파일\Manager">
+      <UniqueIdentifier>{cdb652f0-b379-4c45-b0c5-d0573e157ef0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Manager\ResourceManager">
       <UniqueIdentifier>{956b5884-de85-4aa8-8403-f845341d00bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Manager\ShaderManager">
+      <UniqueIdentifier>{73fd3200-38a3-4c57-8710-96405d53d65d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\StandardShader">
+      <UniqueIdentifier>{ea58d607-523c-4fc1-811b-3fdf498559ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\SkinnedShader">
+      <UniqueIdentifier>{a5fc94a1-27ea-482c-afa0-fe59607532e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\TerrainShader">
+      <UniqueIdentifier>{8d55978a-2973-4038-9e0f-d8b01d1c7e38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\SkyBoxShader">
+      <UniqueIdentifier>{058b8d1b-6837-49ac-ba59-2b3d7e0019e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\OBBShader">
+      <UniqueIdentifier>{8e626803-5bc9-451f-91ab-28f2b59cc93c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -121,7 +142,25 @@
       <Filter>소스 파일\Timer</Filter>
     </ClCompile>
     <ClCompile Include="ResourceManager.cpp">
-      <Filter>소스 파일\ResourceManager</Filter>
+      <Filter>소스 파일\Manager\ResourceManager</Filter>
+    </ClCompile>
+    <ClCompile Include="ShaderManager.cpp">
+      <Filter>소스 파일\Manager\ShaderManager</Filter>
+    </ClCompile>
+    <ClCompile Include="StandardShader.cpp">
+      <Filter>소스 파일\Shader\StandardShader</Filter>
+    </ClCompile>
+    <ClCompile Include="SkinnedShader.cpp">
+      <Filter>소스 파일\Shader\SkinnedShader</Filter>
+    </ClCompile>
+    <ClCompile Include="TerrainShader.cpp">
+      <Filter>소스 파일\Shader\TerrainShader</Filter>
+    </ClCompile>
+    <ClCompile Include="SkyBoxShader.cpp">
+      <Filter>소스 파일\Shader\SkyBoxShader</Filter>
+    </ClCompile>
+    <ClCompile Include="OBBShader.cpp">
+      <Filter>소스 파일\Shader\OBBShader</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -186,11 +225,36 @@
       <Filter>소스 파일</Filter>
     </ClInclude>
     <ClInclude Include="ResourceManager.h">
-      <Filter>소스 파일\ResourceManager</Filter>
+      <Filter>소스 파일\Manager\ResourceManager</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderManager.h">
+      <Filter>소스 파일\Manager\ShaderManager</Filter>
+    </ClInclude>
+    <ClInclude Include="StandardShader.h">
+      <Filter>소스 파일\Shader\StandardShader</Filter>
+    </ClInclude>
+    <ClInclude Include="SkinnedShader.h">
+      <Filter>소스 파일\Shader\SkinnedShader</Filter>
+    </ClInclude>
+    <ClInclude Include="TerrainShader.h">
+      <Filter>소스 파일\Shader\TerrainShader</Filter>
+    </ClInclude>
+    <ClInclude Include="SkyBoxShader.h">
+      <Filter>소스 파일\Shader\SkyBoxShader</Filter>
+    </ClInclude>
+    <ClInclude Include="OBBShader.h">
+      <Filter>소스 파일\Shader\OBBShader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Light.hlsl" />
     <FxCompile Include="Shaders.hlsl" />
+    <FxCompile Include="Common.hlsl" />
+    <FxCompile Include="StandardShaders.hlsl" />
+    <FxCompile Include="SkinnedShaders.hlsl" />
+    <FxCompile Include="TerrainShaders.hlsl" />
+    <FxCompile Include="SkyboxShaders.hlsl" />
+    <FxCompile Include="OBBShader.hlsl" />
+    <FxCompile Include="InstancingShaders.hlsl" />
   </ItemGroup>
 </Project>

@@ -22,8 +22,12 @@
 
 #include <fstream>
 #include <vector>
+#include <array>
+#include <map>
 
 using namespace std;
+
+#include "d3dx12.h"
 
 #include <d3d12.h>
 #include <dxgi1_4.h>

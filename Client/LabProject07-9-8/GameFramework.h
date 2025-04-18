@@ -7,6 +7,7 @@
 #include "Player.h"
 #include "Scene.h"
 #include "ResourceManager.h"
+#include "ShaderManager.h"
 
 class CGameFramework
 {
@@ -83,6 +84,9 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCpuHandleStart;
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dSrvGpuHandleStart;
 
+	// 샘플러 힙 크기도 필요할 수 있음
+	UINT m_nSamplerDescriptorIncrementSize = 0; 
+
 	UINT m_nNextCbvOffset = 0; // CBV 영역 내 다음 오프셋
 	UINT m_nNextSrvOffset = 0; // SRV 영역 내 다음 오프셋 (CBV 영역 이후 시작)
 	UINT m_nTotalCbvDescriptors; // 생성 시 설정
@@ -90,6 +94,8 @@ private:
 
 	// 리소스 매니저 추가
 	std::unique_ptr<ResourceManager> m_pResourceManager;
+	//std::unique_ptr<ShaderManager> m_pShaderManager;
+	ShaderManager* m_pShaderManager;
 
 public:
 	// CBV 슬롯 할당 요청 (nDescriptors개 할당 후 시작 핸들 반환)
@@ -105,9 +111,13 @@ public:
 	D3D12_GPU_DESCRIPTOR_HANDLE CreateConstantBufferViews(int nConstantBufferViews, ID3D12Resource* pd3dConstantBuffers, UINT nStride);
 	void CreateShaderResourceViews(CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex);
 
+	// --- 디스크립터 크기 반환 함수 추가 ---
+	UINT GetSamplerDescriptorIncrementSize() const { return m_nSamplerDescriptorIncrementSize; }
+
 
 	ID3D12Device* GetDevice() { return m_pd3dDevice; }
 	ResourceManager* GetResourceManager() { return m_pResourceManager.get(); };
+	ShaderManager* GetShaderManager() { return m_pShaderManager; };
 
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;

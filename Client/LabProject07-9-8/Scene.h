@@ -4,10 +4,13 @@
 
 #pragma once
 
+#include "d3dx12.h"
 #include "Shader.h"
 #include "Player.h"
 #include "Octree.h"
 #include "ResourceManager.h"
+#include "ShaderManager.h"
+
 
 #define MAX_LIGHTS						16 
 
@@ -89,9 +92,6 @@ public:
 	CGameObject							**m_ppHierarchicalGameObjects = NULL;
 
 	XMFLOAT3							m_xmf3RotatePosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
-
-	int									m_nShaders = 0;
-	CShader								**m_ppShaders = NULL;
 
 	CSkyBox								*m_pSkyBox = NULL;
 	CHeightMapTerrain					*m_pTerrain = NULL;

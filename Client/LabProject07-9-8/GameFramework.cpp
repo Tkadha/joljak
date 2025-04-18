@@ -150,6 +150,18 @@ void CGameFramework::CreateDirect3DDevice()
 		hResult = D3D12CreateDevice(pd3dAdapter, D3D_FEATURE_LEVEL_12_0, _uuidof(ID3D12Device), (void **)&m_pd3dDevice);
 	}
 
+	// --- 디바이스 생성 직후 디스크립터 크기 조회 및 저장 ---
+	if (m_pd3dDevice) { // 디바이스가 성공적으로 생성되었다면
+		m_nCbvSrvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		m_nSamplerDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+	}
+	else {
+		// 디바이스 생성 실패 시 오류 처리
+		OutputDebugString(L"Error: Failed to create D3D12 Device. Cannot get descriptor sizes.\n");
+		// 필요하다면 프로그램 종료 또는 예외 처리
+	}
+	m_pShaderManager = new ShaderManager(m_pd3dDevice);
+
 	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS d3dMsaaQualityLevels;
 	d3dMsaaQualityLevels.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	d3dMsaaQualityLevels.SampleCount = 4;
@@ -164,7 +176,6 @@ void CGameFramework::CreateDirect3DDevice()
 
 	m_hFenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
 
-	m_nCbvSrvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	::gnCbvSrvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	::gnRtvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -407,13 +418,14 @@ void CGameFramework::BuildObjects()
 	m_pResourceManager = std::make_unique<ResourceManager>();
 	m_pResourceManager->Initialize(this);
 
+
 	m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
 
 	m_pScene = new CScene(this);
 	if (m_pScene) m_pScene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
 
 #ifdef _WITH_TERRAIN_PLAYER
-	CTerrainPlayer *pPlayer = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), m_pScene->m_pTerrain, m_pResourceManager.get());
+	CTerrainPlayer *pPlayer = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), m_pScene->m_pTerrain, this);
 #else
 	CAirplanePlayer *pPlayer = new CAirplanePlayer(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), NULL);
 	pPlayer->SetPosition(XMFLOAT3(425.0f, 240.0f, 640.0f));
@@ -425,7 +437,6 @@ void CGameFramework::BuildObjects()
 	pPlayer->SetOBB();
 	CShader* shader = new COBBShader();
 	//shader->CreateShader(m_pd3dDevice, m_pd3dCommandList, m_pd3dGraphicsRootSignature);
-	pPlayer->SetOBBShader(shader);
 	pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 
 
