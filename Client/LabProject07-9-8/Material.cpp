@@ -31,16 +31,21 @@ CMaterial::CMaterial(int nTextures, CGameFramework* pGameFramework)
 
 	// SRV 디스크립터 블록 할당 ---
 	// 이 재질이 사용할 텍스처 개수(m_nTextures)만큼 연속된 SRV 슬롯 할당 요청
-	if (m_nTextures > 0) {
-		// AllocateSrvDescriptors 함수는 시작 핸들(CPU/GPU)을 반환한다고 가정
-		if (!pGameFramework->AllocateSrvDescriptors(m_nTextures, m_d3dCpuSrvStartHandle, m_d3dSrvGpuStartHandle))
-		{
-			OutputDebugString(L"Error: Failed to allocate SRV descriptors for Material!\n");
-			// 실패 시 핸들 초기화
-			m_d3dCpuSrvStartHandle = { 0 }; 
-			m_d3dSrvGpuStartHandle = { 0 };
-		}
-	}
+    if (m_nTextures > 0) {
+        bool bAllocated = pGameFramework->AllocateSrvDescriptors(m_nTextures, m_d3dCpuSrvStartHandle, m_d3dSrvGpuStartHandle);
+        if (!bAllocated)
+        {
+            OutputDebugString(L"Error: Failed to allocate SRV descriptors for Material! (CMaterial Constructor)\n");
+            m_d3dCpuSrvStartHandle = { 0 };
+            m_d3dSrvGpuStartHandle = { 0 };
+        }
+        // --- 핸들 값 로그 추가 ---
+        wchar_t buffer[128];
+        swprintf_s(buffer, L"CMaterial Constructor: SRV Allocation Result=%d, GPU Handle Ptr=0x%llX\n",
+            bAllocated, m_d3dSrvGpuStartHandle.ptr);
+        OutputDebugStringW(buffer);
+        // --- 로그 추가 ---
+    }
 }
 
 CMaterial::~CMaterial()
@@ -92,100 +97,144 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
 	}
 }
 
-void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, CGameObject* pParent, FILE* pInFile, ResourceManager* pResourceManager)
+void CMaterial::LoadTextureFromFile(
+    ID3D12Device* pd3dDevice,
+    ID3D12GraphicsCommandList* pd3dCommandList,
+    UINT nTextureIndex,
+    UINT nTextureType,
+    CGameObject* pParent,
+    FILE* pInFile,
+    ResourceManager* pResourceManager)
 {
-	char pstrTextureName[64] = { '\0' };
+    // 1. 유효성 검사
+    if (nTextureIndex >= m_nTextures || !pInFile || !pResourceManager || m_d3dCpuSrvStartHandle.ptr == 0) {
+        OutputDebugStringW(L"!!!!!!!! ERROR: Invalid parameters or unallocated SRV slot in LoadTextureFromFile. !!!!!!!!\n");
+        // 파일 포인터를 읽기 위치라도 맞춰주어야 할 수 있으므로 주의 (아래 fread 부분 때문에)
+        // 임시로 길이만 읽고 넘어가거나, 파일 형식을 정확히 알아야 함
+        BYTE nStrLength = 0;
+        UINT nReads = (UINT)::fread(&nStrLength, sizeof(BYTE), 1, pInFile); // 길이 읽기
+        if (nStrLength > 0) {
+            char dummy[256];
+            if (nStrLength >= 256) nStrLength = 255; // 버퍼 오버플로우 방지
+            nReads = (UINT)::fread(dummy, sizeof(char), nStrLength, pInFile); // 이름 데이터 버리기
+        }
+        return;
+    }
 
-	BYTE nStrLength = 64;
-	UINT nReads = (UINT)::fread(&nStrLength, sizeof(BYTE), 1, pInFile);
-	nReads = (UINT)::fread(pstrTextureName, sizeof(char), nStrLength, pInFile);
-	pstrTextureName[nStrLength] = '\0';
+    // 2. 파일에서 텍스처 이름(char*) 읽기
+    char pstrTextureName[64] = { '\0' };
+    BYTE nStrLength = 0; // 길이를 먼저 읽음
+    UINT nReads = (UINT)::fread(&nStrLength, sizeof(BYTE), 1, pInFile);
+    if (nReads != 1 || nStrLength >= 64) { // 길이 읽기 실패 또는 버퍼 초과 시
+        OutputDebugStringW(L"!!!!!!!! ERROR: Failed to read texture name length or length too long. !!!!!!!!\n");
+        // 오류 처리: 파일 포인터 이동 등 필요할 수 있음
+        if (nStrLength > 0 && nStrLength < 255) { // 예상치 못한 길이라도 일단 읽고 넘어가기 시도
+            char dummy[256];
+            nReads = (UINT)::fread(dummy, sizeof(char), nStrLength, pInFile);
+        }
+        return;
+    }
+    nReads = (UINT)::fread(pstrTextureName, sizeof(char), nStrLength, pInFile);
+    if (nReads != nStrLength) {
+        OutputDebugStringW(L"!!!!!!!! ERROR: Failed to read texture name string. !!!!!!!!\n");
+        return;
+    }
+    pstrTextureName[nStrLength] = '\0'; // Null 종단 처리
 
-	bool bDuplicated = false;
-	if (strcmp(pstrTextureName, "null"))
-	{
-		SetMaterialType(nType);
+    OutputDebugStringA("CMaterial::LoadTextureFromFile - Read FileName (char*): ");
+    OutputDebugStringA(pstrTextureName);
+    OutputDebugStringA("\n");
 
-		char pstrFilePath[64] = { '\0' };
-		strcpy_s(pstrFilePath, 64, "Model/Textures/");
 
-		bDuplicated = (pstrTextureName[0] == '@');
-		strcpy_s(pstrFilePath + 15, 64 - 15, (bDuplicated) ? (pstrTextureName + 1) : pstrTextureName);
-		strcpy_s(pstrFilePath + 15 + ((bDuplicated) ? (nStrLength - 1) : nStrLength), 64 - 15 - ((bDuplicated) ? (nStrLength - 1) : nStrLength), ".dds");
+    // 3. "null" 텍스처 처리
+    if (!strcmp(pstrTextureName, "null"))
+    {
+        // null 텍스처인 경우 m_ppTextures[nTextureIndex]는 nullptr 유지
+        m_ppstrTextureNames[nTextureIndex][0] = L'\0'; // 이름 비우기
+        // 해당 SRV 슬롯은 비어있거나 기본값으로 채워야 할 수 있음 (선택 사항)
+        return;
+    }
 
-		size_t nConverted = 0;
-		mbstowcs_s(&nConverted, pwstrTextureName, 64, pstrFilePath, _TRUNCATE);
+    // 4. 파일 경로 조합 및 Wide Char 변환
+    char pstrFilePath[128] = { '\0' }; // 경로 포함 위해 버퍼 늘림
+    strcpy_s(pstrFilePath, 128, "Model/Textures/"); // 기본 경로
 
-		//#define _WITH_DISPLAY_TEXTURE_NAME
+    bool bDuplicated = (pstrTextureName[0] == '@'); // 중복 텍스처 여부 확인
+    // 경로 + 파일 이름 조합
+    strcat_s(pstrFilePath, 128, (bDuplicated) ? (pstrTextureName + 1) : pstrTextureName);
+    // 확장자(.dds) 추가
+    strcat_s(pstrFilePath, 128, ".dds");
 
-#ifdef _WITH_DISPLAY_TEXTURE_NAME
-		static int nTextures = 0, nRepeatedTextures = 0;
-		TCHAR pstrDebug[256] = { 0 };
-		_stprintf_s(pstrDebug, 256, _T("Texture Name: %d %c %s\n"), (pstrTextureName[0] == '@') ? nRepeatedTextures++ : nTextures++, (pstrTextureName[0] == '@') ? '@' : ' ', pwstrTextureName);
-		OutputDebugString(pstrDebug);
-#endif
-		if (!bDuplicated)
-		{
-			// --- 리소스 매니저 사용 ---
-			*ppTexture = pResourceManager->GetTexture(pwstrTextureName, pd3dCommandList);
-			if (*ppTexture)
-			{
-				(*ppTexture)->AddRef(); // 만약 CTexture가 참조 카운팅을 사용한다면
-				int nRootParamsInTexture = (*ppTexture)->GetRootParameters(); // CTexture가 자신이 바인딩될 파라미터 수를 안다면
-				for (int j = 0; j < nRootParamsInTexture; ++j) {
-					(*ppTexture)->SetRootParameterIndex(j, nRootParameter + j); // nRootParameter는 함수의 인자
-				}
-			}
-			else
-			{
-				// 텍스처 로딩 실패 처리
-				OutputDebugStringW((L"Error: Texture load failed via ResourceManager for " + std::wstring(pwstrTextureName) + L"\n").c_str());
-			}
-			// -----------------------
+    // Wide Char 변환
+    wchar_t pwstrTextureName[128] = { L'\0' }; // Wide Char 버퍼
+    size_t nConverted = 0;
+    mbstowcs_s(&nConverted, pwstrTextureName, 128, pstrFilePath, _TRUNCATE);
 
-		}
-		else
-		{
-			if (pParent)
-			{
-				while (pParent)
-				{
-					if (!pParent->m_pParent) break;
-					pParent = pParent->m_pParent;
-				}
-				CGameObject* pRootGameObject = pParent;
-				*ppTexture = pRootGameObject->FindReplicatedTexture(pwstrTextureName);
-				if (*ppTexture) (*ppTexture)->AddRef();
-			}
-		}
-	}
-}
+    if (nConverted <= 0) {
+        OutputDebugStringW(L"!!!!!!!! ERROR: Failed to convert texture path to wide char. !!!!!!!!\n");
+        return;
+    }
 
-void CMaterial::LoadTextureFromFile(ID3D12Device * pd3dDevice, ID3D12GraphicsCommandList * pd3dCommandList, UINT nTextureIndex, UINT nTextureType, _TCHAR * pwstrTextureName, CGameObject * pParent, ResourceManager * pResourceManager)
-{
-	if (nTextureIndex >= m_nTextures || !pResourceManager || m_d3dCpuSrvStartHandle.ptr == 0) {
-		// 인덱스 오류, 리소스 매니저 없음, 또는 SRV 슬롯 할당 실패 시 처리 안함
-		return;
-	}
+    // 5. 변환된 Wide Char 파일 이름 저장
+    lstrcpy(m_ppstrTextureNames[nTextureIndex], pwstrTextureName);
+    OutputDebugStringW(L"CMaterial::LoadTextureFromFile - Loading Texture: ");
+    OutputDebugStringW(pwstrTextureName);
+    OutputDebugStringW(L"\n");
 
-	// 텍스처 이름 저장 (기존 코드)
-	lstrcpy(m_ppstrTextureNames[nTextureIndex], pwstrTextureName);
+    // 6. 재질 타입 마스크 설정
+    SetMaterialType(nTextureType);
 
-	// ResourceManager를 통해 텍스처 리소스 로드/가져오기
-	CTexture* pTexture = pResourceManager->GetTexture(pwstrTextureName, pd3dCommandList);
-	m_ppTextures[nTextureIndex] = pTexture; // 포인터 저장 (AddRef 필요시 ResourceManager::GetTexture가 처리 가정)
+    // 7. 텍스처 로드/가져오기 및 SRV 생성
+    CTexture* pTexture = nullptr;
+    if (!bDuplicated) // 중복 텍스처가 아니면 ResourceManager 사용
+    {
+        pTexture = pResourceManager->GetTexture(pwstrTextureName, pd3dCommandList);
+        if (pTexture) {
+            pTexture->AddRef(); // ResourceManager가 AddRef 안 해준다면 여기서 AddRef
+            OutputDebugStringW(L"    Loaded via ResourceManager.\n");
+        }
+        else {
+            OutputDebugStringW(L"    !!!!!!!! FAILED to load via ResourceManager !!!!!!!!\n");
+        }
+    }
+    else // 중복 텍스처면 부모에서 찾기
+    {
+        if (pParent)
+        {
+            // 최상위 루트 객체 찾기 (기존 로직)
+            CGameObject* pRootGameObject = pParent;
+            while (pRootGameObject->m_pParent) pRootGameObject = pRootGameObject->m_pParent;
+            // 루트에서 텍스처 찾기
+            pTexture = pRootGameObject->FindReplicatedTexture(pwstrTextureName);
+            if (pTexture) {
+                pTexture->AddRef(); // 찾았으면 참조 카운트 증가
+                OutputDebugStringW(L"    Found replicated texture.\n");
+            }
+            else {
+                OutputDebugStringW(L"    !!!!!!!! FAILED to find replicated texture !!!!!!!!\n");
+            }
+        }
+    }
 
-	if (pTexture && pTexture->GetResource(0)) { // 텍스처 로딩 및 리소스 존재 확인
-		// 할당받은 SRV 블록 내에서 이 텍스처의 위치 계산
-		CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(m_d3dCpuSrvStartHandle);
-		cpuHandle.Offset(nTextureIndex, m_nCbvSrvDescriptorIncrementSize);
+    // 8. 텍스처 포인터 저장 및 SRV 생성
+    m_ppTextures[nTextureIndex] = pTexture; // 찾거나 로드한 텍스처 포인터 저장
+    if (pTexture && pTexture->GetResource(0))
+    {
+        CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(m_d3dCpuSrvStartHandle);
+        cpuHandle.Offset(nTextureIndex, m_nCbvSrvDescriptorIncrementSize);
 
-		// SRV 생성
-		ID3D12Resource* pShaderResource = pTexture->GetResource(0); // 텍스처 리소스
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = pTexture->GetShaderResourceViewDesc(0); // SRV 설정
-		pd3dDevice->CreateShaderResourceView(pShaderResource, &srvDesc, cpuHandle);
-	}
-
-	// 재질 타입 마스크 설정 (예시)
-	SetMaterialType(nTextureType); // 함수가 있다고 가정
+        ID3D12Resource* pShaderResource = pTexture->GetResource(0);
+        if (pShaderResource) { // 포인터 유효성 최종 확인
+            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = pTexture->GetShaderResourceViewDesc(0);
+            pd3dDevice->CreateShaderResourceView(pShaderResource, &srvDesc, cpuHandle);
+            OutputDebugStringW(L"    SRV Created.\n");
+        }
+        else {
+            OutputDebugStringW(L"    !!!!!!!! ERROR: Texture resource pointer is null before SRV creation! !!!!!!!!\n");
+        }
+    }
+    else {
+        // 텍스처 로드/찾기 실패, 또는 리소스 없음
+        OutputDebugStringW(L"    Warning: Texture resource is null or loading failed. Cannot create SRV.\n");
+    }
 }

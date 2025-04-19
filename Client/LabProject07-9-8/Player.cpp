@@ -265,11 +265,11 @@ void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 	DWORD nCameraMode = (pCamera) ? pCamera->GetMode() : 0x00;
 	if (nCameraMode == THIRD_PERSON_CAMERA || nCameraMode == FIRST_PERSON_CAMERA) CGameObject::Render(pd3dCommandList, pCamera);
 }
-void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, CCamera* pCamera)
-{
-	DWORD nCameraMode = (pCamera) ? pCamera->GetMode() : 0x00;
-	if (nCameraMode == THIRD_PERSON_CAMERA || nCameraMode == FIRST_PERSON_CAMERA) CGameObject::Render(pd3dCommandList, obbRender, pCamera);
-}
+//void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, CCamera* pCamera)
+//{
+//	DWORD nCameraMode = (pCamera) ? pCamera->GetMode() : 0x00;
+//	if (nCameraMode == THIRD_PERSON_CAMERA || nCameraMode == FIRST_PERSON_CAMERA) CGameObject::Render(pd3dCommandList, obbRender, pCamera);
+//}
 
 bool CPlayer::CheckCollisionOBB(CGameObject* other)
 {
@@ -355,7 +355,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 
 	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList,
-		pd3dGraphicsRootSignature, "Model/SK_Hu_M_FullBody.bin", pGameFramework);
+		pd3dGraphicsRootSignature, "Model/SK_Pig.bin", pGameFramework);
 	SetChild(pAngrybotModel->m_pModelRootObject, true);
 
 	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "thumb_02_r", "Model/Sword_01.bin", pGameFramework, XMFLOAT3(0.05, 0.00, -0.05));

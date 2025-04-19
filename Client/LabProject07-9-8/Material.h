@@ -60,8 +60,6 @@ public:
 	_TCHAR(*m_ppstrTextureNames)[64] = NULL;
 	CTexture** m_ppTextures = NULL; //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
 
-	void LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, CGameObject* pParent, FILE* pInFile, ResourceManager* pResourceManager);
-
 public:
 	// 텍스처 로딩 시 할당받은 SRV 블록의 시작 핸들 저장
 	D3D12_CPU_DESCRIPTOR_HANDLE m_d3dCpuSrvStartHandle = { 0 };
@@ -73,8 +71,6 @@ public:
 	// 생성자에서 텍스처 슬롯 개수 외에 Framework 포인터 받도록 수정
 	CMaterial(int nTextures, CGameFramework* pGameFramework);
 
-	// 텍스처 로딩 함수 수정
-	void LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nTextureIndex, UINT nTextureType, _TCHAR* pwstrTextureName, CGameObject* pParent, ResourceManager* pResourceManager);
 	
 	// 텍스처 테이블 시작 GPU 핸들 반환 함수
 	D3D12_GPU_DESCRIPTOR_HANDLE GetTextureTableGpuHandle() const { return m_d3dSrvGpuStartHandle; }
@@ -82,5 +78,17 @@ public:
 	// 텍스처 포인터 배열 접근자 (필요시)
 	CTexture* GetTexture(int index) const { return (index < m_nTextures) ? m_ppTextures[index] : nullptr; }
 	int GetTextureCount() const { return m_nTextures; }
+
+	void LoadTextureFromFile(
+		ID3D12Device* pd3dDevice,
+		ID3D12GraphicsCommandList* pd3dCommandList,
+		UINT nTextureIndex,         // 이 텍스처가 저장될 인덱스 (0:Albedo, 1:Specular...)
+		UINT nTextureType,          // 이 텍스처의 타입 마스크 (MATERIAL_ALBEDO_MAP 등)
+		CGameObject* pParent,       // 중복 텍스처 찾기용 부모 포인터
+		FILE* pInFile,              // 파일 포인터
+		ResourceManager* pResourceManager // 리소스 매니저
+	);
 };
+
+
 

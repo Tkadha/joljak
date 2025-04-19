@@ -65,23 +65,26 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
 // --- Pixel Shader ---
 // (PSStandard 함수는 Skinned, Instancing 에서도 사용될 수 있으므로,
 //  별도의 PBR_PS.hlsli 같은 파일로 분리하는 것이 더 좋을 수 있음)
+
 float4 PSStandard(VS_STANDARD_OUTPUT input) : SV_TARGET
+{
+    // 모든 계산 제거하고 그냥 빨간색 출력
+    return float4(1.0f, 0.0f, 0.0f, 1.0f);
+}
+
+float4 PSStandard2(VS_STANDARD_OUTPUT input) : SV_TARGET
 {
     // 1. Albedo 텍스처 샘플링 (또는 기본 Diffuse 색상 사용)
     float4 cAlbedoColor = float4(gMaterialInfo.DiffuseColor.rgb, 1.0f);
     if (gnTexturesMask & MATERIAL_ALBEDO_MAP)
     {
         cAlbedoColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
-        // 텍스처 알파값 사용 또는 Diffuse 알파 사용 결정
-        // cAlbedoColor.a = gMaterialInfo.DiffuseColor.a;
     }
-    else
-    {
-        cAlbedoColor.a = gMaterialInfo.DiffuseColor.a; // 텍스처 없으면 재질 알파 사용
-    }
+    // 알파 값 설정 (텍스처 또는 재질 값 사용)
+    cAlbedoColor.a = (gnTexturesMask & MATERIAL_ALBEDO_MAP) ? cAlbedoColor.a : gMaterialInfo.DiffuseColor.a;
 
 
-    // 2. 노멀 벡터 계산 (노멀맵 적용)
+    // 2. 노멀 벡터 계산
     float3 normalW;
     if (gnTexturesMask & MATERIAL_NORMAL_MAP)
     {
@@ -95,28 +98,26 @@ float4 PSStandard(VS_STANDARD_OUTPUT input) : SV_TARGET
         normalW = normalize(input.normalW);
     }
 
-    // 3. 조명 계산 (Light.hlsl 함수 호출)
-    // Lighting 함수는 gMaterialInfo를 사용하여 최종 조명 색상(Ambient+Diffuse+Specular)을 계산
-    float4 cIlluminationColor = Lighting(input.positionW, normalW);
+    // --- 3. 조명 계산 (수정된 Lighting 함수 호출) ---
+    // cbGameObjectInfo (b2) 에서 gMaterialInfo를 가져와 전달
+    float4 cIlluminationColor = Lighting(gMaterialInfo, input.positionW, normalW);
 
     // 4. 최종 색상 결정
-    // Lighting() 결과는 이미 재질 색상이 반영된 조명값이므로, Albedo와 곱하는 것이 아니라
-    // Albedo 텍스처 값은 Lighting() 함수 내부에서 gMaterialInfo.DiffuseColor 대신 사용되도록
-    // Lighting() 함수를 수정하거나, 여기서 최종 조합 방식을 결정해야 합니다.
-    // 현재 Lighting() 함수 구조를 유지한다면, 결과는 이미 조명+재질이므로 그대로 사용하거나,
-    // 여기에 Emissive 텍스처/색상을 추가하는 정도가 일반적입니다.
-    // float4 cEmissiveColor = float4(0,0,0,0);
-    // if (gnTexturesMask & MATERIAL_EMISSION_MAP) cEmissiveColor = gtxtEmissionTexture.Sample(gssWrap, input.uv);
-    // cIlluminationColor.rgb += gMaterialInfo.EmissiveColor.rgb + cEmissiveColor.rgb;
+    // Lighting() 결과가 이미 재질 색상이 반영된 조명값이므로,
+    // 여기에 Emissive 또는 다른 효과를 추가할 수 있음
 
-    // 알파값은 Albedo 또는 재질의 값을 사용
-    // cIlluminationColor.a = cAlbedoColor.a;
+    // 예: Albedo 텍스처 색상을 조명 결과의 Diffuse/Ambient 요소에 곱해주는 방식 (물리 기반에 가까움)
+    //     (이를 위해서는 Lighting 함수가 Ambient, Diffuse, Specular 요소를 분리 반환해야 함 - 현재 구조로는 어려움)
 
-    // 기존 코드의 Lerp 유지 시 (임시)
-    // return lerp(cAlbedoColor, cIlluminationColor, 0.5f);
+    // 예: 현재 Lighting 함수 출력을 그대로 사용하고 Emissive만 추가
+    float4 cEmissiveColor = gMaterialInfo.EmissiveColor; // 기본 Emissive
+    if (gnTexturesMask & MATERIAL_EMISSION_MAP)
+    {
+         // Emissive 텍스처를 샘플링하고 재질 색상과 조합 (예: 곱하기 또는 더하기)
+        cEmissiveColor *= gtxtEmissionTexture.Sample(gssWrap, input.uv);
+    }
+    cIlluminationColor.rgb += cEmissiveColor.rgb; // Emissive 더하기
+    cIlluminationColor.a = cAlbedoColor.a; // 최종 알파 설정
 
-    // 예시: 조명 계산 결과에 Emissive 추가 후 반환
-    cIlluminationColor.rgb += gMaterialInfo.EmissiveColor.rgb; // 재질 Emissive 더하기
-    cIlluminationColor.a = cAlbedoColor.a; // Albedo/재질 알파 사용
     return cIlluminationColor;
 }

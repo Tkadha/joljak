@@ -34,131 +34,138 @@ cbuffer cbLights : register(b4)
 	int						gnLights;
 };
 
-float4 DirectionalLight(int nIndex, float3 vNormal, float3 vToCamera)
+float4 DirectionalLight(int nIndex, MaterialInfo material, float3 vNormal, float3 vToCamera) // material 파라미터 추가
 {
-	float3 vToLight = -gLights[nIndex].m_vDirection;
-	float fDiffuseFactor = dot(vToLight, vNormal);
-	float fSpecularFactor = 0.0f;
-	if (fDiffuseFactor > 0.0f)
-	{
-		if (gMaterial.m_cSpecular.a != 0.0f)
-		{
-#ifdef _WITH_REFLECT
-			float3 vReflect = reflect(-vToLight, vNormal);
-			fSpecularFactor = pow(max(dot(vReflect, vToCamera), 0.0f), gMaterial.m_cSpecular.a);
-#else
-#ifdef _WITH_LOCAL_VIEWER_HIGHLIGHTING
-			float3 vHalf = normalize(vToCamera + vToLight);
-#else
-			float3 vHalf = float3(0.0f, 1.0f, 0.0f);
-#endif
-			fSpecularFactor = pow(max(dot(vHalf, vNormal), 0.0f), gMaterial.m_cSpecular.a);
-#endif
-		}
-	}
+    float3 vToLight = -gLights[nIndex].m_vDirection;
+    float fDiffuseFactor = saturate(dot(vToLight, vNormal)); // saturate 추가 (0 이상)
+    float fSpecularFactor = 0.0f;
+    if (fDiffuseFactor > 0.0f) // HLSL에서는 bool 대신 float 비교가 일반적
+    {
+        // material.SpecularColor.a (Power) 사용
+        if (material.SpecularColor.a != 0.0f)
+        {
+            float3 vHalf = normalize(vToCamera + vToLight);
+            fSpecularFactor = pow(saturate(dot(vHalf, vNormal)), material.SpecularColor.a); // saturate 추가
+        }
+    }
 
-	return((gLights[nIndex].m_cAmbient * gMaterial.m_cAmbient) + (gLights[nIndex].m_cDiffuse * fDiffuseFactor * gMaterial.m_cDiffuse) + (gLights[nIndex].m_cSpecular * fSpecularFactor * gMaterial.m_cSpecular));
+    // 파라미터로 받은 material 사용
+    return ((gLights[nIndex].m_cAmbient * material.AmbientColor)
+         + (gLights[nIndex].m_cDiffuse * fDiffuseFactor * material.DiffuseColor) // DiffuseColor 사용
+         + (gLights[nIndex].m_cSpecular * fSpecularFactor * material.SpecularColor));
 }
 
-float4 PointLight(int nIndex, float3 vPosition, float3 vNormal, float3 vToCamera)
+float4 PointLight(int nIndex, MaterialInfo material, float3 vPosition, float3 vNormal, float3 vToCamera) // material 파라미터 추가
 {
-	float3 vToLight = gLights[nIndex].m_vPosition - vPosition;
-	float fDistance = length(vToLight);
-	if (fDistance <= gLights[nIndex].m_fRange)
-	{
-		float fSpecularFactor = 0.0f;
-		vToLight /= fDistance;
-		float fDiffuseFactor = dot(vToLight, vNormal);
-		if (fDiffuseFactor > 0.0f)
-		{
-			if (gMaterial.m_cSpecular.a != 0.0f)
-			{
-#ifdef _WITH_REFLECT
-				float3 vReflect = reflect(-vToLight, vNormal);
-				fSpecularFactor = pow(max(dot(vReflect, vToCamera), 0.0f), gMaterial.m_cSpecular.a);
-#else
-#ifdef _WITH_LOCAL_VIEWER_HIGHLIGHTING
-				float3 vHalf = normalize(vToCamera + vToLight);
-#else
-				float3 vHalf = float3(0.0f, 1.0f, 0.0f);
-#endif
-				fSpecularFactor = pow(max(dot(vHalf, vNormal), 0.0f), gMaterial.m_cSpecular.a);
-#endif
-			}
-		}
-		float fAttenuationFactor = 1.0f / dot(gLights[nIndex].m_vAttenuation, float3(1.0f, fDistance, fDistance*fDistance));
+    float3 vToLight = gLights[nIndex].m_vPosition - vPosition;
+    float fDistance = length(vToLight);
+    // 거리가 범위 내일 때만 계산
+    if (fDistance <= gLights[nIndex].m_fRange)
+    {
+        float fSpecularFactor = 0.0f;
+        vToLight /= fDistance; // Normalize
+        float fDiffuseFactor = saturate(dot(vToLight, vNormal));
+        if (fDiffuseFactor > 0.0f)
+        {
+            if (material.SpecularColor.a != 0.0f)
+            {
+                float3 vHalf = normalize(vToCamera + vToLight);
+                fSpecularFactor = pow(saturate(dot(vHalf, vNormal)), material.SpecularColor.a);
+            }
+        }
+        float fAttenuationFactor = 1.0f / dot(gLights[nIndex].m_vAttenuation, float3(1.0f, fDistance, fDistance * fDistance));
+        // 거리가 0에 가까울 때 매우 커지는 것을 방지 (선택적)
+        fAttenuationFactor = saturate(fAttenuationFactor);
 
-		return(((gLights[nIndex].m_cAmbient * gMaterial.m_cAmbient) + (gLights[nIndex].m_cDiffuse * fDiffuseFactor * gMaterial.m_cDiffuse) + (gLights[nIndex].m_cSpecular * fSpecularFactor * gMaterial.m_cSpecular)) * fAttenuationFactor);
-	}
-	return(float4(0.0f, 0.0f, 0.0f, 0.0f));
+        // 파라미터로 받은 material 사용
+        return (((gLights[nIndex].m_cAmbient * material.AmbientColor)
+              + (gLights[nIndex].m_cDiffuse * fDiffuseFactor * material.DiffuseColor)
+              + (gLights[nIndex].m_cSpecular * fSpecularFactor * material.SpecularColor)) * fAttenuationFactor);
+    }
+    return float4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
-float4 SpotLight(int nIndex, float3 vPosition, float3 vNormal, float3 vToCamera)
+float4 SpotLight(int nIndex, MaterialInfo material, float3 vPosition, float3 vNormal, float3 vToCamera) // material 파라미터 추가
 {
-	float3 vToLight = gLights[nIndex].m_vPosition - vPosition;
-	float fDistance = length(vToLight);
-	if (fDistance <= gLights[nIndex].m_fRange)
-	{
-		float fSpecularFactor = 0.0f;
-		vToLight /= fDistance;
-		float fDiffuseFactor = dot(vToLight, vNormal);
-		if (fDiffuseFactor > 0.0f)
-		{
-			if (gMaterial.m_cSpecular.a != 0.0f)
-			{
-#ifdef _WITH_REFLECT
-				float3 vReflect = reflect(-vToLight, vNormal);
-				fSpecularFactor = pow(max(dot(vReflect, vToCamera), 0.0f), gMaterial.m_cSpecular.a);
-#else
-#ifdef _WITH_LOCAL_VIEWER_HIGHLIGHTING
-				float3 vHalf = normalize(vToCamera + vToLight);
-#else
-				float3 vHalf = float3(0.0f, 1.0f, 0.0f);
-#endif
-				fSpecularFactor = pow(max(dot(vHalf, vNormal), 0.0f), gMaterial.m_cSpecular.a);
-#endif
-			}
-		}
-#ifdef _WITH_THETA_PHI_CONES
-		float fAlpha = max(dot(-vToLight, gLights[nIndex].m_vDirection), 0.0f);
-		float fSpotFactor = pow(max(((fAlpha - gLights[nIndex].m_fPhi) / (gLights[nIndex].m_fTheta - gLights[nIndex].m_fPhi)), 0.0f), gLights[nIndex].m_fFalloff);
-#else
-		float fSpotFactor = pow(max(dot(-vToLight, gLights[i].m_vDirection), 0.0f), gLights[i].m_fFalloff);
-#endif
-		float fAttenuationFactor = 1.0f / dot(gLights[nIndex].m_vAttenuation, float3(1.0f, fDistance, fDistance*fDistance));
+    float3 vToLight = gLights[nIndex].m_vPosition - vPosition;
+    float fDistance = length(vToLight);
+    // 거리 및 스팟라이트 각도 내일 때만 계산
+    float fDot = dot(-normalize(vToLight), normalize(gLights[nIndex].m_vDirection)); // 조명 방향과 물체->조명 벡터 내적
+    float fMaxDot = gLights[nIndex].m_fPhi; // 외부 콘 각도 (cos(Phi))
 
-		return(((gLights[nIndex].m_cAmbient * gMaterial.m_cAmbient) + (gLights[nIndex].m_cDiffuse * fDiffuseFactor * gMaterial.m_cDiffuse) + (gLights[nIndex].m_cSpecular * fSpecularFactor * gMaterial.m_cSpecular)) * fAttenuationFactor * fSpotFactor);
-	}
-	return(float4(0.0f, 0.0f, 0.0f, 0.0f));
+    if (fDistance <= gLights[nIndex].m_fRange && fDot >= fMaxDot) // 범위 및 외부 콘 내부에 있는지 확인
+    {
+        float fSpecularFactor = 0.0f;
+        vToLight /= fDistance; // Normalize
+        float fDiffuseFactor = saturate(dot(vToLight, vNormal));
+        if (fDiffuseFactor > 0.0f)
+        {
+            if (material.SpecularColor.a != 0.0f)
+            {
+                float3 vHalf = normalize(vToCamera + vToLight);
+                fSpecularFactor = pow(saturate(dot(vHalf, vNormal)), material.SpecularColor.a);
+            }
+        }
+
+        // 스팟라이트 감쇠 (Theta: 내부 콘, Phi: 외부 콘)
+        float fSpotFactor = 1.0f;
+        float fMinDot = gLights[nIndex].m_fTheta; // 내부 콘 각도 (cos(Theta))
+        if (fDot < fMinDot) // 내부 콘과 외부 콘 사이라면 감쇠 적용
+        {
+            fSpotFactor = smoothstep(fMaxDot, fMinDot, fDot); // 또는 다른 감쇠 함수 사용
+            // fSpotFactor = pow(saturate((fDot - fMaxDot) / (fMinDot - fMaxDot)), gLights[nIndex].m_fFalloff); // 원래 코드 방식
+        }
+
+        // 거리 감쇠
+        float fAttenuationFactor = 1.0f / dot(gLights[nIndex].m_vAttenuation, float3(1.0f, fDistance, fDistance * fDistance));
+        fAttenuationFactor = saturate(fAttenuationFactor);
+
+        // 파라미터로 받은 material 사용
+        return (((gLights[nIndex].m_cAmbient * material.AmbientColor)
+              + (gLights[nIndex].m_cDiffuse * fDiffuseFactor * material.DiffuseColor)
+              + (gLights[nIndex].m_cSpecular * fSpecularFactor * material.SpecularColor)) * fAttenuationFactor * fSpotFactor);
+    }
+    return float4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
-float4 Lighting(float3 vPosition, float3 vNormal)
+
+// --- 최종 Lighting 함수 수정 ---
+// 이제 MaterialInfo를 파라미터로 받음
+float4 Lighting(MaterialInfo material, float3 vPosition, float3 vNormal)
 {
-	float3 vCameraPosition = float3(gvCameraPosition.x, gvCameraPosition.y, gvCameraPosition.z);
-	float3 vToCamera = normalize(vCameraPosition - vPosition);
+    // 카메라 위치는 여전히 전역 cbCameraInfo 사용
+    float3 vCameraPosition = gvCameraPosition.xyz;
+    float3 vToCamera = normalize(vCameraPosition - vPosition);
 
-	float4 cColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
-	[unroll(MAX_LIGHTS)] for (int i = 0; i < gnLights; i++)
-	{
-		if (gLights[i].m_bEnable)
-		{
-			if (gLights[i].m_nType == DIRECTIONAL_LIGHT)
-			{
-				cColor += DirectionalLight(i, vNormal, vToCamera);
-			}
-			else if (gLights[i].m_nType == POINT_LIGHT)
-			{
-				cColor += PointLight(i, vPosition, vNormal, vToCamera);
-			}
-			else if (gLights[i].m_nType == SPOT_LIGHT)
-			{
-				cColor += SpotLight(i, vPosition, vNormal, vToCamera);
-			}
-		}
-	}
-	cColor += (gcGlobalAmbientLight * gMaterial.m_cAmbient);
-	cColor.a = gMaterial.m_cDiffuse.a;
+    float4 cColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
 
-	return(cColor);
+    // 각 활성 조명에 대해 계산 (material 전달)
+    [unroll] // 루프 풀기 시도 (성능 향상 가능성)
+    for (int i = 0; i < gnLights; i++)
+    {
+        if (gLights[i].m_bEnable)
+        {
+            if (gLights[i].m_nType == DIRECTIONAL_LIGHT)
+            {
+                cColor += DirectionalLight(i, material, vNormal, vToCamera);
+            }
+            else if (gLights[i].m_nType == POINT_LIGHT)
+            {
+                cColor += PointLight(i, material, vPosition, vNormal, vToCamera);
+            }
+            else if (gLights[i].m_nType == SPOT_LIGHT)
+            {
+                cColor += SpotLight(i, material, vPosition, vNormal, vToCamera);
+            }
+        }
+    }
+
+    // 전역 앰비언트 추가 (material.AmbientColor 사용)
+    cColor += (gcGlobalAmbientLight * material.AmbientColor);
+
+    // 알파값은 재질 Diffuse의 알파 사용 (예시)
+    cColor.a = material.DiffuseColor.a;
+
+    return cColor;
 }
 

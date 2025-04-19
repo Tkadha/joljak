@@ -73,7 +73,9 @@ private:
 	ID3D12Fence					*m_pd3dFence = NULL;
 	UINT64						m_nFenceValues[m_nSwapChainBuffers];
 	HANDLE						m_hFenceEvent;
-
+	
+	// --- 종료 동기화용 펜스 값 추가 ---
+	UINT64                      m_nMasterFenceValue = 0;
 
 	// 상수 버퍼, 셰이더 리소스 디스크립터 힙 Scene에서 옮김
 private:
@@ -118,6 +120,10 @@ public:
 	ID3D12Device* GetDevice() { return m_pd3dDevice; }
 	ResourceManager* GetResourceManager() { return m_pResourceManager.get(); };
 	ShaderManager* GetShaderManager() { return m_pShaderManager; };
+
+
+
+	void WaitForGpu(); // GPU 대기 함수 추가
 
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;

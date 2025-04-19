@@ -45,7 +45,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CreateDirect3DDevice();
 	CreateCommandQueueAndList();
-	CreateCbvSrvDescriptorHeaps(0, 192);
+	CreateCbvSrvDescriptorHeaps(200, 1024);
 	CreateRtvAndDsvDescriptorHeaps();
 	CreateSwapChain();
 	CreateDepthStencilView();
@@ -175,7 +175,9 @@ void CGameFramework::CreateDirect3DDevice()
 	for (UINT i = 0; i < m_nSwapChainBuffers; i++) m_nFenceValues[i] = 0;
 
 	m_hFenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
-
+	
+	// 마스터 펜스 값 초기화
+	m_nMasterFenceValue = 0; // 0부터 시작
 
 	::gnCbvSrvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	::gnRtvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -380,11 +382,13 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 
 void CGameFramework::OnDestroy()
 {
+	WaitForGpu();
+	::CloseHandle(m_hFenceEvent);
+
     ReleaseObjects();
 
 	m_pResourceManager->ReleaseAll();
 
-	::CloseHandle(m_hFenceEvent);
 
 	if (m_pd3dDepthStencilBuffer) m_pd3dDepthStencilBuffer->Release();
 	if (m_pd3dDsvDescriptorHeap) m_pd3dDsvDescriptorHeap->Release();
@@ -435,8 +439,6 @@ void CGameFramework::BuildObjects()
 	m_pCamera = m_pPlayer->GetCamera();
 
 	pPlayer->SetOBB();
-	CShader* shader = new COBBShader();
-	//shader->CreateShader(m_pd3dDevice, m_pd3dCommandList, m_pd3dGraphicsRootSignature);
 	pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 
 
@@ -618,12 +620,12 @@ void CGameFramework::FrameAdvance()
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
 
-	if (m_pScene) m_pScene->Render(m_pd3dCommandList, obbRender, m_pCamera);
+	if (m_pScene) m_pScene->Render(m_pd3dCommandList, m_pCamera);
 
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 #endif
-	if (m_pPlayer) m_pPlayer->Render(m_pd3dCommandList, obbRender, m_pCamera);
+	//if (m_pPlayer) m_pPlayer->Render(m_pd3dCommandList, m_pCamera);
 
 	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
@@ -816,11 +818,18 @@ bool CGameFramework::AllocateCbvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIP
 }
 
 bool CGameFramework::AllocateSrvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle) {
+	// --- 로그 추가 ---
+	wchar_t buffer[128];
+	swprintf_s(buffer, L"AllocateSrvDescriptors: Requesting %u slots. Current offset: %u / Total SRV slots: %u\n",
+		nDescriptors, m_nNextSrvOffset, m_nTotalSrvDescriptors);
+	OutputDebugStringW(buffer);
+	// --- 로그 추가 ---
+
 	if (m_nNextSrvOffset + nDescriptors > m_nTotalSrvDescriptors) {
-		// 공간 부족!
-		return false;
+		OutputDebugStringW(L"    --> Allocation FAILED: Not enough space in SRV heap!\n"); // 실패 로그
+		return false; // 공간 부족!
 	}
-	// 시작 핸들 계산 (SRV 영역 시작 + 현재 오프셋)
+
 	outCpuStartHandle = m_d3dSrvCpuHandleStart;
 	outCpuStartHandle.ptr += (UINT64)m_nNextSrvOffset * m_nCbvSrvDescriptorIncrementSize;
 
@@ -829,5 +838,52 @@ bool CGameFramework::AllocateSrvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIP
 
 	// 다음 오프셋 업데이트
 	m_nNextSrvOffset += nDescriptors;
+
+	// --- 성공 로그 추가 ---
+	swprintf_s(buffer, L"    --> Allocation SUCCEEDED. New offset: %u. Start GPU Handle: %p\n",
+		m_nNextSrvOffset, (void*)outGpuStartHandle.ptr);
+	OutputDebugStringW(buffer);
+	// --- 성공 로그 추가 ---
+
 	return true;
+}
+
+
+void CGameFramework::WaitForGpu()
+{
+	// 필수 객체들 유효성 검사
+	if (!m_pd3dCommandQueue || !m_pd3dFence || m_hFenceEvent == INVALID_HANDLE_VALUE) {
+		OutputDebugString(L"Warning: Cannot wait for GPU, essential objects are missing.\n");
+		return;
+	}
+
+	// 1. 새로운 마스터 펜스 값을 사용하여 Signal 명령 예약
+	m_nMasterFenceValue++; // 이전 값보다 1 증가된 새 값 사용
+	UINT64 fenceValueToSignal = m_nMasterFenceValue;
+
+	HRESULT hr = m_pd3dCommandQueue->Signal(m_pd3dFence, fenceValueToSignal);
+	if (FAILED(hr)) {
+		OutputDebugString(L"!!!!!!!! ERROR: CommandQueue->Signal failed! !!!!!!!!\n");
+		return; // Signal 실패 시 대기 불가
+	}
+
+	// 2. GPU가 해당 펜스 값에 도달했는지 확인
+	if (m_pd3dFence->GetCompletedValue() < fenceValueToSignal)
+	{
+		// 3. 아직 도달하지 못했다면, 이벤트 핸들을 사용하여 대기
+		hr = m_pd3dFence->SetEventOnCompletion(fenceValueToSignal, m_hFenceEvent);
+		if (FAILED(hr)) {
+			OutputDebugString(L"!!!!!!!! ERROR: Fence->SetEventOnCompletion failed! !!!!!!!!\n");
+			return; // 이벤트 설정 실패 시 대기 불가
+		}
+
+		// 4. 이벤트가 Signal 상태가 될 때까지 무한 대기
+		OutputDebugString(L"Waiting for GPU to finish...\n");
+		WaitForSingleObjectEx(m_hFenceEvent, INFINITE, FALSE);
+		OutputDebugString(L"GPU finished.\n");
+	}
+	else {
+		// 이미 GPU가 해당 값 이상으로 진행함 (바로 종료 가능)
+		OutputDebugString(L"GPU already finished (Fence value check).\n");
+	}
 }

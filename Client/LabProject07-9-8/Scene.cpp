@@ -222,18 +222,12 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	for (int i = 0; i < m_nHierarchicalGameObjects; ++i) {
 		//m_ppHierarchicalGameObjects[0]->SetOBB(cowCenter, cowSize, cowRotation);
 		m_ppHierarchicalGameObjects[i]->SetOBB();
-		CShader* shader = new COBBShader();
-		//shader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
-		//m_ppHierarchicalGameObjects[0]->m_OBBShader.CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 		m_ppHierarchicalGameObjects[i]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	}
 
 	for (auto obj : m_vGameObjects) {
 		obj->SetOBB();
-		CShader* shader = new COBBShader();
-		//shader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
-		//obj->SetOBB(pd3dDevice, pd3dCommandList, shader);
 	}
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -479,15 +473,16 @@ void CScene::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	::memcpy(m_pcbMappedLights->m_pLights, m_pLights, sizeof(LIGHT) * m_nLights);
-	::memcpy(&m_pcbMappedLights->m_xmf4GlobalAmbient, &m_xmf4GlobalAmbient, sizeof(XMFLOAT4));
-	::memcpy(&m_pcbMappedLights->m_nLights, &m_nLights, sizeof(int));
-
-	//for (int j = 0; j < 100; j++)
-	//{
-	//	
-	//	XMStoreFloat4x4(&m_pcbMappedGameObjects[j].m_xmf4x4Transform, XMMatrixTranspose(XMLoadFloat4x4(&m_vGameObjects[j]->m_xmf4x4World)));
-	//}
+	if (m_pcbMappedLights && m_pLights) {
+		assert(m_nLights >= 0 && m_nLights <= MAX_LIGHTS && "Invalid number of lights!");
+		if (m_nLights < 0 || m_nLights > MAX_LIGHTS) {
+			OutputDebugStringA("!!!!!!!! ERROR: Invalid m_nLights value detected! Clamping to 0. !!!!!!!!\n");
+			m_nLights = 0; //임시
+		}
+		::memcpy(m_pcbMappedLights->m_pLights, m_pLights, sizeof(LIGHT) * m_nLights);
+		::memcpy(&m_pcbMappedLights->m_xmf4GlobalAmbient, &m_xmf4GlobalAmbient, sizeof(XMFLOAT4));
+		::memcpy(&m_pcbMappedLights->m_nLights, &m_nLights, sizeof(int));
+	}
 }
 
 void CScene::ReleaseShaderVariables()
@@ -616,6 +611,20 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// 3. 전역 조명 상수 버퍼 업데이트 
 	UpdateShaderVariables(pd3dCommandList); 
 
+	// --- 중요: 디스크립터 힙 설정 ---
+	ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() }; // CBV/SRV/UAV 힙 가져오기
+	if (ppHeaps[0]) { // 힙 포인터 유효성 검사
+		pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	}
+	else {
+		assert(!"CBV/SRV Descriptor Heap is NULL in CScene::Render!");
+		return; // 힙 없으면 렌더링 불가
+	}
+	// 만약 샘플러 힙도 동적으로 사용한다면 함께 설정:
+	// ID3D12DescriptorHeap* ppHeaps[] = { cbvSrvHeap, samplerHeap };
+	// pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	// --- 힙 설정 끝 ---
+
 	// --- 4. 렌더링 상태 추적 변수 ---
 	ID3D12RootSignature* currentRootSig = nullptr;
 	ID3D12PipelineState* currentPSO = nullptr;
@@ -635,9 +644,23 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			if (pRootSig && pRootSig != currentRootSig) {
 				pd3dCommandList->SetGraphicsRootSignature(pRootSig);
 				currentRootSig = pRootSig;
-				// 참고: 만약 Lights(b4)같은 공통 CBV가 여러 루트 서명에 존재하고,
-				// 루트 서명이 바뀔 때마다 다시 바인딩해야 한다면 여기서 처리 가능
-				// 예: pd3dCommandList->SetGraphicsRootConstantBufferView(2 또는 다른 인덱스, m_pd3dcbLights->GetGPUVirtualAddress());
+
+				// --- 카메라/조명 등 공통 CBV 바인딩 위치 이동 ---
+				// 현재 루트 서명이 카메라(b1 @ Param 0)를 사용하는지 확인 후 바인딩
+				// (주의: OBB 루트 서명은 Param 0을 다른 용도로 사용!)
+				// 더 정확한 방법은 각 루트 서명 생성 시 필요한 CBV 슬롯 정보를 저장해두는 것이지만,
+				// 여기서는 셰이더 타입 등으로 임시 구분
+				if (pShader != pShaderManager->GetShader("OBB", pd3dCommandList)) // OBB 셰이더가 아닐 때만 카메라 바인딩 시도
+				{
+					if (pCamera && pCamera->GetCameraConstantBuffer()) {
+						pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress()); // 카메라 CBV (b1)를 파라미터 0번에 바인딩
+					}
+					if (m_pd3dcbLights) {
+						// 조명 CBV (b4)를 파라미터 2번에 바인딩 (루트 서명 정의 기준)
+						pd3dCommandList->SetGraphicsRootConstantBufferView(2, m_pd3dcbLights->GetGPUVirtualAddress());
+					}
+				}
+				// --- 바인딩 로직 끝 ---
 			}
 
 			// PSO 설정 (셰이더에 저장된 PSO 사용)
@@ -654,15 +677,15 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// --- 5. 렌더링 단계별 처리 ---
 
 	// 5.1. 스카이박스 렌더링
-	if (m_pSkyBox) {
-		// CSkyBox 객체가 자신의 CMaterial과 CShader를 가지고 있다고 가정
-		CMaterial* pSkyboxMat = m_pSkyBox->GetMaterial(0); // 첫 번째 재질 가정
-		if (pSkyboxMat && pSkyboxMat->m_pShader) {
-			SetGraphicsState(pSkyboxMat->m_pShader); // Skybox 셰이더/RS/PSO 설정
-			// CSkyBox::Render 내부에서는 필요한 CBV(카메라 b1), 텍스처(t13 테이블) 바인딩 및 Draw 호출
-			m_pSkyBox->Render(pd3dCommandList, pCamera);
-		}
-	}
+	//if (m_pSkyBox) {
+	//	// CSkyBox 객체가 자신의 CMaterial과 CShader를 가지고 있다고 가정
+	//	CMaterial* pSkyboxMat = m_pSkyBox->GetMaterial(0); // 첫 번째 재질 가정
+	//	if (pSkyboxMat && pSkyboxMat->m_pShader) {
+	//		SetGraphicsState(pSkyboxMat->m_pShader); // Skybox 셰이더/RS/PSO 설정
+	//		// CSkyBox::Render 내부에서는 필요한 CBV(카메라 b1), 텍스처(t13 테이블) 바인딩 및 Draw 호출
+	//		m_pSkyBox->Render(pd3dCommandList, pCamera);
+	//	}
+	//}
 
 	// 5.2. 지형 렌더링
 	if (m_pTerrain) {
@@ -712,6 +735,24 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			}
 		}
 	}
+
+	if (m_pPlayer)
+	{
+		CMaterial* pPlayerMaterial = m_pPlayer->GetMaterial(0);
+		if (pPlayerMaterial && pPlayerMaterial->m_pShader)
+		{
+			// !!! 플레이어 렌더링 직전에 상태 설정 !!!
+			SetGraphicsState(pPlayerMaterial->m_pShader);
+			// 이제 플레이어에 맞는 RS/PSO 및 공통 CBV가 설정됨
+	
+			// 플레이어 렌더링 호출
+			m_pPlayer->Render(pd3dCommandList, pCamera);
+		}
+		else {
+			OutputDebugString(L"Warning: Player has no material or shader set for rendering.\n");
+		}
+	}
+
 	// 5.5. OBB 렌더링 (선택적)
 	bool bRenderOBBs = true; // OBB 렌더링 여부 플래그 (예시)
 	if (bRenderOBBs) {
@@ -735,6 +776,5 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		}
 	}
 
-	// --- 6. ~ObjectShader 관련 렌더링 루프 제거 ---
-	// for (int i = 0; i < m_nShaders; i++) if (m_ppShaders[i]) m_ppShaders[i]->Render(pd3dCommandList, pCamera); // 제거!
+
 }

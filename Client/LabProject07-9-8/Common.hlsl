@@ -61,8 +61,8 @@ cbuffer cbCameraInfo : register(b1)
 // 루트 서명에서 정적 샘플러로 정의하는 것이 더 효율적이지만,
 // HLSL 코드 내 참조를 위해 선언해 둘 수 있음
 
-//SamplerState gssWrap : register(s0); // Wrap 모드 샘플러
-//SamplerState gssClamp : register(s1); // Clamp 모드 샘플러
+SamplerState gssWrap : register(s0); // Wrap 모드 샘플러
+SamplerState gssClamp : register(s1); // Clamp 모드 샘플러
 
 // SamplerComparisonState gssShadow : register(s6); // 그림자 샘플러 등
 

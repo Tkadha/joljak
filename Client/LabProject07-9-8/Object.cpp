@@ -124,11 +124,21 @@ void CGameObject::SetShader(int nMaterial, CShader *pShader)
 	if (m_ppMaterials[nMaterial]) m_ppMaterials[nMaterial]->SetShader(pShader);
 }
 
-void CGameObject::SetMaterial(int nMaterial, CMaterial *pMaterial)
+void CGameObject::SetMaterial(int nIndex, CMaterial *pMaterial)
 {
-	if (m_ppMaterials[nMaterial]) m_ppMaterials[nMaterial]->Release();
-	m_ppMaterials[nMaterial] = pMaterial;
-	if (m_ppMaterials[nMaterial]) m_ppMaterials[nMaterial]->AddRef();
+	wchar_t buffer[128];
+	swprintf_s(buffer, L"SetMaterial: Index=%d, pMaterial=%p\n", nIndex, (void*)pMaterial);
+	OutputDebugStringW(buffer);
+
+	if (m_ppMaterials && (nIndex < m_nMaterials))
+	{
+		if (m_ppMaterials[nIndex]) m_ppMaterials[nIndex]->Release(); // 기존 재질 해제
+		m_ppMaterials[nIndex] = pMaterial;
+		if (m_ppMaterials[nIndex]) m_ppMaterials[nIndex]->AddRef(); // 새 재질 참조 증가
+	}
+	else {
+		OutputDebugStringW(L"  --> SetMaterial FAILED: Invalid index or m_ppMaterials is null.\n");
+	}
 }
 
 bool CGameObject::CheckCollisionOBB(CGameObject* other)
@@ -255,41 +265,61 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 
 void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	if(m_pMesh)
+	// 메쉬 유효성 검사 등 추가 가능
+	if (m_pMesh)
 	{
 		// OBB 모서리 데이터
 		XMFLOAT3 corners[8];
-		m_localOBB.GetCorners(corners);
+		m_worldOBB.GetCorners(corners); // m_worldOBB가 유효한지 먼저 확인 필요
 
-		// 2. OBB 정점 버퍼 생성
-		m_pOBBVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, corners, sizeof(XMFLOAT3) * 8, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, nullptr /* 업로드 버퍼 포인터 (선택) */);
-		m_OBBVertexBufferView.BufferLocation = m_pOBBVertexBuffer->GetGPUVirtualAddress();
-		m_OBBVertexBufferView.StrideInBytes = sizeof(XMFLOAT3);
-		m_OBBVertexBufferView.SizeInBytes = sizeof(XMFLOAT3) * 8;
+		// 2. OBB 정점 버퍼 생성 (+ HRESULT 확인)
+		m_pOBBVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, corners, sizeof(XMFLOAT3) * 8, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, nullptr);
+		if (!m_pOBBVertexBuffer) {
+			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Vertex Buffer! !!!!!!!!\n");
+			// 실패 시 이후 리소스 생성 중단 또는 다른 처리
+		}
+		else {
+			m_OBBVertexBufferView.BufferLocation = m_pOBBVertexBuffer->GetGPUVirtualAddress();
+			m_OBBVertexBufferView.StrideInBytes = sizeof(XMFLOAT3);
+			m_OBBVertexBufferView.SizeInBytes = sizeof(XMFLOAT3) * 8;
+		}
 
-		// 3. OBB 인덱스 데이터 정의 (라인 리스트, 12개 선 = 24개 인덱스)
-		UINT indices[] = {
-			0, 1, 1, 2, 2, 3, 3, 0, // 밑면
-			4, 5, 5, 6, 6, 7, 7, 4, // 윗면
-			0, 4, 1, 5, 2, 6, 3, 7  // 옆면 기둥
-		};
+		// 3. OBB 인덱스 데이터 정의 (변경 없음)
+		UINT indices[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
 
-		// 4. OBB 인덱스 버퍼 생성
+		// 4. OBB 인덱스 버퍼 생성 (+ HRESULT 확인)
 		m_pOBBIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, indices, sizeof(UINT) * 24, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, nullptr);
-		m_OBBIndexBufferView.BufferLocation = m_pOBBIndexBuffer->GetGPUVirtualAddress();
-		m_OBBIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
-		m_OBBIndexBufferView.SizeInBytes = sizeof(UINT) * 24;
+		if (!m_pOBBIndexBuffer) {
+			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Index Buffer! !!!!!!!!\n");
+		}
+		else {
+			m_OBBIndexBufferView.BufferLocation = m_pOBBIndexBuffer->GetGPUVirtualAddress();
+			m_OBBIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
+			m_OBBIndexBufferView.SizeInBytes = sizeof(UINT) * 24;
+		}
 
-		// 5. OBB 변환 행렬용 상수 버퍼 생성 (Upload Heap 사용: 매 프레임 업데이트)
-		UINT ncbElementBytes = (((sizeof(XMFLOAT4X4)) + 255) & ~255); // WVP 행렬 하나 크기 (256배수 정렬)
+		// 5. OBB 변환 행렬용 상수 버퍼 생성 (+ HRESULT 확인)
+		UINT ncbElementBytes = (((sizeof(XMFLOAT4X4)) + 255) & ~255);
 		m_pd3dcbOBBTransform = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-		// 맵핑된 포인터 저장
-		m_pd3dcbOBBTransform->Map(0, NULL, (void**)&m_pcbMappedOBBTransform);
-
+		if (!m_pd3dcbOBBTransform) {
+			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Transform CBV! !!!!!!!!\n");
+			m_pcbMappedOBBTransform = nullptr; // 맵핑 포인터도 null 처리
+		}
+		else {
+			// 맵핑된 포인터 저장 (+ HRESULT 확인)
+			HRESULT hr = m_pd3dcbOBBTransform->Map(0, NULL, (void**)&m_pcbMappedOBBTransform);
+			if (FAILED(hr) || !m_pcbMappedOBBTransform) {
+				OutputDebugString(L"!!!!!!!! ERROR: Failed to map OBB Transform CBV! !!!!!!!!\n");
+				m_pcbMappedOBBTransform = nullptr; // 실패 시 null 처리
+				// 필요시 m_pd3dcbOBBTransform Release 고려
+			}
+		}
 	}
 
+	// 자식/형제 객체 재귀 호출 (기존 코드 유지)
 	if (m_pSibling) m_pSibling->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	if (m_pChild) m_pChild->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+
 }
 
 
@@ -674,6 +704,13 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 	UINT nReads = 0;
 
 	m_nMaterials = ReadIntegerFromFile(pInFile);
+	// --- 로그 추가 ---
+	wchar_t buffer[128];
+	swprintf_s(buffer, L"LoadMaterialsFromFile: Expecting %d materials.\n", m_nMaterials);
+	OutputDebugStringW(buffer);
+	// --- 로그 추가 ---
+
+	if (m_nMaterials <= 0) return; // 재질 없으면 종료
 
 	m_ppMaterials = new CMaterial*[m_nMaterials];
 	for (int i = 0; i < m_nMaterials; i++) m_ppMaterials[i] = NULL;
@@ -683,11 +720,24 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 	for (; ; )
 	{
 		::ReadStringFromFile(pInFile, pstrToken);
+		// -- - 로그 추가-- -
+			OutputDebugStringA("LoadMaterialsFromFile: Read Token: ");
+		OutputDebugStringA(pstrToken);
+		OutputDebugStringA("\n");
+		// --- 로그 추가 ---
+
 
 		if (!strcmp(pstrToken, "<Material>:"))
 		{
 			nMaterial = ReadIntegerFromFile(pInFile);
-			pMaterial = new CMaterial(7, pGameFramework);
+			OutputDebugStringW((L"  Processing <Material> index: " + std::to_wstring(nMaterial) + L"\n").c_str());
+
+			pMaterial = new CMaterial(7, pGameFramework); // Assume 7 textures for now
+			// --- 로그 추가 ---
+			OutputDebugStringW((L"    new CMaterial result: " + std::wstring(pMaterial ? L"Success" : L"FAILED!") + L"\n").c_str());
+			// --- 로그 추가 ---
+
+			if (!pMaterial) continue; // Material 생성 실패 시 다음 토큰으로
 
 			// --- 셰이더 설정 로직 변경 ---
 			UINT nMeshType = GetMeshType();
@@ -723,7 +773,10 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 			}
 			// --- 셰이더 설정 로직 끝 ---
 
-			SetMaterial(nMaterial, pMaterial);
+			SetMaterial(nMaterial, pMaterial); // SetMaterial 호출
+			// --- 로그 추가 ---
+			OutputDebugStringW((L"    SetMaterial called for index: " + std::to_wstring(nMaterial) + L"\n").c_str());
+			// --- 로그 추가 ---
 		}
 		else if (!strcmp(pstrToken, "<AlbedoColor>:"))
 		{
@@ -760,36 +813,43 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		else if (!strcmp(pstrToken, "<AlbedoMap>:"))
 		{
 			// LoadTextureFromFile 호출 시 인덱스(0)와 타입(MATERIAL_ALBEDO_MAP) 전달
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 0, MATERIAL_ALBEDO_MAP, pMaterial->m_ppstrTextureNames[0], pParent, pResourceManager);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 0, MATERIAL_ALBEDO_MAP, pParent, pInFile, pResourceManager);
 		}
 		else if (!strcmp(pstrToken, "<SpecularMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 1, MATERIAL_SPECULAR_MAP, pMaterial->m_ppstrTextureNames[1], pParent, pResourceManager);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 1, MATERIAL_ALBEDO_MAP, pParent, pInFile, pResourceManager);
 		}
 		else if (!strcmp(pstrToken, "<NormalMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 2, MATERIAL_NORMAL_MAP, pMaterial->m_ppstrTextureNames[2], pParent, pResourceManager);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 2, MATERIAL_ALBEDO_MAP, pParent, pInFile, pResourceManager);
 		}
 		else if (!strcmp(pstrToken, "<MetallicMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 2, MATERIAL_NORMAL_MAP, pMaterial->m_ppstrTextureNames[3], pParent, pResourceManager);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 3, MATERIAL_ALBEDO_MAP, pParent, pInFile, pResourceManager);
 		}
 		else if (!strcmp(pstrToken, "<EmissionMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 2, MATERIAL_NORMAL_MAP, pMaterial->m_ppstrTextureNames[4], pParent, pResourceManager);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 4, MATERIAL_ALBEDO_MAP, pParent, pInFile, pResourceManager);
 		}
 		else if (!strcmp(pstrToken, "<DetailAlbedoMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 2, MATERIAL_NORMAL_MAP, pMaterial->m_ppstrTextureNames[5], pParent, pResourceManager);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 5, MATERIAL_ALBEDO_MAP, pParent, pInFile, pResourceManager);
 		}
 		else if (!strcmp(pstrToken, "<DetailNormalMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 2, MATERIAL_NORMAL_MAP, pMaterial->m_ppstrTextureNames[6], pParent, pResourceManager);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 6, MATERIAL_ALBEDO_MAP, pParent, pInFile, pResourceManager);
 		}
 		else if (!strcmp(pstrToken, "</Materials>"))
 		{
+			OutputDebugStringW(L"LoadMaterialsFromFile: Found </Materials>, exiting loop.\n");
 			break;
 		}
+	}
+
+	// 함수 종료 전 확인 (디버깅용)
+	for (int i = 0; i < m_nMaterials; ++i) {
+		swprintf_s(buffer, L"LoadMaterialsFromFile: Final check - Material[%d] pointer: %p\n", i, (void*)m_ppMaterials[i]);
+		OutputDebugStringW(buffer);
 	}
 }
 

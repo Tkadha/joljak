@@ -106,29 +106,54 @@ void CCamera::RegenerateViewMatrix()
 	m_xmf4x4View._43 = -Vector3::DotProduct(m_xmf3Position, m_xmf3Look);
 }
 
-void CCamera::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
+void CCamera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	UINT ncbElementBytes = ((sizeof(VS_CB_CAMERA_INFO) + 255) & ~255); //256�� ���
+	UINT ncbElementBytes = ((sizeof(VS_CB_CAMERA_INFO) + 255) & ~255); // 256의 배수
+
+	// 리소스 생성 함수 결과 확인
 	m_pd3dcbCamera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
-	m_pd3dcbCamera->Map(0, NULL, (void **)&m_pcbMappedCamera);
+	// --- 리소스 생성 확인 ---
+	if (!m_pd3dcbCamera) {
+		OutputDebugString(L"!!!!!!!! ERROR: Failed to create Camera Constant Buffer! !!!!!!!!\n");
+		// 실패 시 m_pcbMappedCamera도 당연히 nullptr 상태 유지
+		return;
+	}
+
+	// 맵핑 시도 및 결과 확인
+	HRESULT hResult = m_pd3dcbCamera->Map(0, NULL, (void**)&m_pcbMappedCamera);
+
+	// --- 맵핑 확인 ---
+	if (FAILED(hResult) || !m_pcbMappedCamera) {
+		OutputDebugString(L"!!!!!!!! ERROR: Failed to map Camera Constant Buffer! !!!!!!!!\n");
+		m_pcbMappedCamera = nullptr; // 안전하게 nullptr 처리
+		// 필요시 m_pd3dcbCamera도 Release 처리 고려
+	}
 }
 
-void CCamera::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
+
+
+void CCamera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	XMFLOAT4X4 xmf4x4View;
-	XMStoreFloat4x4(&xmf4x4View, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4View)));
-	::memcpy(&m_pcbMappedCamera->m_xmf4x4View, &xmf4x4View, sizeof(XMFLOAT4X4));
+	// --- 중요: 맵핑된 포인터 유효성 검사 ---
+	if (!m_pcbMappedCamera || !m_pd3dcbCamera) {
+		OutputDebugString(L"!!!!!!!! ERROR: Camera Constant Buffer or Mapped Pointer is NULL in UpdateShaderVariables! !!!!!!!!\n");
+		return; // 업데이트 및 바인딩 불가
+	}
 
-	XMFLOAT4X4 xmf4x4Projection;
-	XMStoreFloat4x4(&xmf4x4Projection, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4Projection)));
-	::memcpy(&m_pcbMappedCamera->m_xmf4x4Projection, &xmf4x4Projection, sizeof(XMFLOAT4X4));
+	// 데이터 복사 (memcpy 대신 구조체 멤버 직접 대입이 더 안전할 수 있음)
+	XMMATRIX viewMatrix = XMLoadFloat4x4(&m_xmf4x4View);
+	XMMATRIX projMatrix = XMLoadFloat4x4(&m_xmf4x4Projection);
 
-	::memcpy(&m_pcbMappedCamera->m_xmf3Position, &m_xmf3Position, sizeof(XMFLOAT3));
+	// Transpose는 HLSL에서 수행하거나 C++에서 수행 (일관성 유지)
+	// HLSL에서 Transpose 안 한다면 여기서 수행
+	XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4View, XMMatrixTranspose(viewMatrix));
+	XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4Projection, XMMatrixTranspose(projMatrix));
+	m_pcbMappedCamera->m_xmf3Position = m_xmf3Position;
 
-	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbCamera->GetGPUVirtualAddress();
-	pd3dCommandList->SetGraphicsRootConstantBufferView(0, d3dGpuVirtualAddress);
+	// CBV 바인딩은 여기서 하지 않음
 }
+
 
 void CCamera::ReleaseShaderVariables()
 {
