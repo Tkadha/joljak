@@ -39,9 +39,9 @@ class NonAtkNPCRunAwayState : public FSMState<CGameObject>
 	std::chrono::time_point<std::chrono::system_clock> starttime;
 	std::chrono::time_point<std::chrono::system_clock> endtime;
 	long long duration_time;
+	long long total_time;
 	char move_type;	// 0 전진 1 회전하면서 전진
 	char rotate_type; // 0 시계방향 1 반시계방향
-	bool change_dir = false;
 public:
 
 	virtual void Enter(std::shared_ptr<CGameObject> npc);

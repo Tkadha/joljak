@@ -90,12 +90,12 @@ void NonAtkNPCMoveState::Exit(std::shared_ptr<CGameObject> npc)
 void NonAtkNPCRunAwayState::Enter(std::shared_ptr<CGameObject> npc)
 {
 	starttime = std::chrono::system_clock::now();
+	total_time = 0; // 총 시간 초기화
 	duration_time = 10 * 1000; // 10초간 도망다님
 	move_type = rand_type(dre) % 2; // 랜덤한 이동 타입(0~1)
 	rotate_type = rand_type(dre) % 2; // 랜덤한 회전 타입(0~1)
 	std::cout << "Move State Enter, duration_time: " << duration_time << std::endl;
 	npc->m_pSkinnedAnimationController->SetTrackEnable(2, true);
-	change_dir = false;
 }
 
 void NonAtkNPCRunAwayState::Execute(std::shared_ptr<CGameObject> npc)
@@ -103,7 +103,7 @@ void NonAtkNPCRunAwayState::Execute(std::shared_ptr<CGameObject> npc)
 	endtime = std::chrono::system_clock::now();
 	auto exectime = endtime - starttime;
 	auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
-	if (exec_ms > duration_time)
+	if (total_time > duration_time)
 	{
 		// 상태 전환
 		npc->FSM_manager->ChangeState(std::make_shared<NonAtkNPCStandingState>());
@@ -122,11 +122,12 @@ void NonAtkNPCRunAwayState::Execute(std::shared_ptr<CGameObject> npc)
 		npc->MoveForward(0.2f);
 		break;
 	}
-	if (exec_ms > duration_time / 2 && !change_dir)
+	if (exec_ms > duration_time / 4)
 	{
 		move_type = rand_type(dre) % 2;
 		rotate_type = rand_type(dre) % 2;
-		change_dir = true;
+		total_time += exec_ms;
+		starttime = std::chrono::system_clock::now();
 	}
 }
 
