@@ -60,23 +60,24 @@ void NonAtkNPCMoveState::Execute(std::shared_ptr<CGameObject> npc)
 		npc->FSM_manager->ChangeState(std::make_shared<NonAtkNPCStandingState>());
 		return;
 	}
-	npc->MoveForward(0.2f);
-	//switch (move_type)
-	//{
-	//case 0:
-	//	// 전진
-	//	npc->MoveForward(0.2f);
-	//	break;
-	//case 1:
-	//	// 회전하면서 전진
-	//	npc->Rotate(0.f, 0.5f, 0.f);
-	//	npc->MoveForward(0.1f);
-	//	break;
-	//case 2:
-	//	// 회전
-	//	npc->Rotate(0.f, 0.25f, 0.f);
-	//	break;
-	//}
+	switch (move_type)
+	{
+	case 0:
+		// 전진
+		npc->MoveForward(0.2f);
+		break;
+	case 1:
+		// 회전하면서 전진
+		if(rotate_type == 0) npc->Rotate(0.f, -0.5f, 0.f);
+		else if(rotate_type == 1) npc->Rotate(0.f, 0.5f, 0.f);
+		npc->MoveForward(0.1f);
+		break;
+	case 2:
+		// 회전
+		if (rotate_type == 0) npc->Rotate(0.f, -0.25f, 0.f);
+		else if (rotate_type == 1) npc->Rotate(0.f, 0.25f, 0.f);
+		break;
+	}
 
 }
 
@@ -88,10 +89,45 @@ void NonAtkNPCMoveState::Exit(std::shared_ptr<CGameObject> npc)
 
 void NonAtkNPCRunAwayState::Enter(std::shared_ptr<CGameObject> npc)
 {
+	starttime = std::chrono::system_clock::now();
+	duration_time = 10 * 1000; // 10초간 도망다님
+	move_type = rand_type(dre) % 2; // 랜덤한 이동 타입(0~1)
+	rotate_type = rand_type(dre) % 2; // 랜덤한 회전 타입(0~1)
+	std::cout << "Move State Enter, duration_time: " << duration_time << std::endl;
+	npc->m_pSkinnedAnimationController->SetTrackEnable(2, true);
+	change_dir = false;
 }
 
 void NonAtkNPCRunAwayState::Execute(std::shared_ptr<CGameObject> npc)
 {
+	endtime = std::chrono::system_clock::now();
+	auto exectime = endtime - starttime;
+	auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
+	if (exec_ms > duration_time)
+	{
+		// 상태 전환
+		npc->FSM_manager->ChangeState(std::make_shared<NonAtkNPCStandingState>());
+		return;
+	}
+	switch (move_type)
+	{
+	case 0:
+		// 전진
+		npc->MoveForward(0.4f);
+		break;
+	case 1:
+		// 회전하면서 전진
+		if (rotate_type == 0) npc->Rotate(0.f, -0.5f, 0.f);
+		else if (rotate_type == 1) npc->Rotate(0.f, 0.5f, 0.f);
+		npc->MoveForward(0.2f);
+		break;
+	}
+	if (exec_ms > duration_time / 2 && !change_dir)
+	{
+		move_type = rand_type(dre) % 2;
+		rotate_type = rand_type(dre) % 2;
+		change_dir = true;
+	}
 }
 
 void NonAtkNPCRunAwayState::Exit(std::shared_ptr<CGameObject> npc)
