@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "Player.h"
 #include "Shader.h"
+#include "Scene.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CPlayer
@@ -550,21 +551,50 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 	}
 }
 
-void CTerrainPlayer::keyInput(UCHAR* key)
-{
-	m_pSkinnedAnimationController->SetTrackEnable(nAni, false);
-	if (key['F'] & 0xF0) {
-		nAni = 5;
-		bAction = true;
+void CTerrainPlayer::keyInput(UCHAR* key) {
+	// --- 애니메이션 로직 (기존 로직을 바탕으로 약간 수정) ---
+	bool fKeyPressed = (key['F'] & 0xF0);
+	bool spacePressed = (key[VK_SPACE] & 0xF0);
+	bool actionTriggered = false; // 이번 프레임에 액션이 시작되었는지 여부
+
+	if (fKeyPressed) {
+		if (nAni != 5) { // F 액션이 이미 실행 중이 아니라면
+			m_pSkinnedAnimationController->SetTrackEnable(nAni, false); // 이전 애니메이션 트랙 비활성화
+			nAni = 5; // F 액션 애니메이션 인덱스
+			bAction = true;
+			m_pSkinnedAnimationController->SetTrackEnable(nAni, true); // F 액션 트랙 활성화
+			actionTriggered = true;
+
+			PerformActionInteractionCheck();
+		}
 	}
-	if (key[VK_SPACE] & 0xF0) {
-		nAni = 6;
-		bAction = true;
+	else if (spacePressed) {
+		if (nAni != 6) { // 점프 액션이 이미 실행 중이 아니라면
+			m_pSkinnedAnimationController->SetTrackEnable(nAni, false);
+			nAni = 6; // 점프 애니메이션 인덱스
+			bAction = true;
+			m_pSkinnedAnimationController->SetTrackEnable(nAni, true);
+			actionTriggered = true;
+			// 점프 관련 로직 (물리 적용 등) 추가 가능
+		}
 	}
-	else if (!(key[VK_SPACE] & 0xF0) && !(key['F'] & 0xF0)) {
-		bAction = false;
+	else {
+		// F키나 스페이스바가 눌리지 않았을 때
+		if (bAction) { // 이전에 액션(F 또는 점프) 중이었다면
+			bAction = false; // 액션 상태 해제
+		}
 	}
-	m_pSkinnedAnimationController->SetTrackEnable(nAni, true);
+
+}
+
+// 'F' 키 액션 시 호출될 충돌/상호작용 검사 함수
+void CPlayer::PerformActionInteractionCheck() {
+	if (!m_pScene) {
+		return;
+	}
+
+	m_pScene->CheckPlayerInteraction(this);
+
 }
 
 

@@ -78,6 +78,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	BuildDefaultLightsAndMaterials();
 
+	m_pPlayer->SetOwningScene(this);
+
 	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
 	if (!pResourceManager) {
 		// 리소스 매니저가 없다면 로딩 불가! 오류 처리
@@ -569,26 +571,26 @@ void CScene::AnimateObjects(float fTimeElapsed)
 	//----------------------충돌체크------------------------------------
 
 	// Player <-> Object
-	for (auto& obj : m_vGameObjects) {
-		if (CollisionCheck(m_pPlayer, obj)) {
-			if (!obj->isRender)	continue;
-			// 나무 충돌처리
-			if (obj->m_objectType == GameObjectType::Tree) {
-				auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
-				obj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-				auto [w, h] = genRandom::generateRandomXZ(gen, 2, 6, 2, 10);
-				obj->SetScale(w, h, w);
-				//obj->isRender = false;
-			}
+	//for (auto& obj : m_vGameObjects) {
+	//	if (CollisionCheck(m_pPlayer, obj)) {
+	//		if (!obj->isRender)	continue;
+	//		// 나무 충돌처리
+	//		if (obj->m_objectType == GameObjectType::Tree) {
+	//			//auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
+	//			//obj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+	//			//auto [w, h] = genRandom::generateRandomXZ(gen, 2, 6, 2, 10);
+	//			//obj->SetScale(w, h, w);
+	//			obj->isRender = false;
+	//		}
 
-			// 돌 충돌처리
-			if (obj->m_objectType == GameObjectType::Rock) {
-				printf("[Rock 충돌 확인])\n");
-				obj->isRender = false;
-			}
+	//		// 돌 충돌처리
+	//		if (obj->m_objectType == GameObjectType::Rock) {
+	//			printf("[Rock 충돌 확인])\n");
+	//			obj->isRender = false;
+	//		}
 
-		}
-	}
+	//	}
+	//}
 
 	if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[0])) {
 		printf("[충돌 확인])\n");
@@ -732,5 +734,28 @@ void CScene::CollectHierarchyObjects(CGameObject* obj, std::vector<BoundingOrien
 	while (currentChild) {
 		CollectHierarchyObjects(currentChild, obbList); // 자식 노드에 대해 
 		currentChild = currentChild->m_pSibling;        // 다음 형제 자식
+	}
+}
+
+
+void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
+	if (!pPlayer) return;
+
+	// Player <-> Object
+	for (auto& obj : m_vGameObjects) {
+		if (CollisionCheck(m_pPlayer, obj)) {
+			if (!obj->isRender)	continue;
+			// 나무 충돌처리
+			if (obj->m_objectType == GameObjectType::Tree) {
+				obj->isRender = false;
+			}
+
+			// 돌 충돌처리
+			if (obj->m_objectType == GameObjectType::Rock) {
+				printf("[Rock 충돌 확인])\n");
+				obj->isRender = false;
+			}
+
+		}
 	}
 }

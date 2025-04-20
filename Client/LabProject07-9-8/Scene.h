@@ -75,6 +75,9 @@ public:
 
 	bool CollisionCheck(CGameObject* a, CGameObject* b);
 	void CollectHierarchyObjects(CGameObject* node, std::vector<BoundingOrientedBox>& obbList);
+	
+	// 플레이어의 'F' 키 상호작용 요청을 처리하는 함수
+	void CheckPlayerInteraction(CPlayer* pPlayer);
 
 
 	CPlayer								*m_pPlayer = NULL;

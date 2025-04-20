@@ -1268,8 +1268,9 @@ CHairObject::CHairObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL, pResourceManager);
 	//CLoadedModelInfo* pGameObject = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/SK_Hu_M_Hair_01_skin.bin", NULL);
 
-	//SetChild(pGameObject->m_pModelRootObject, true);
 	SetChild(pGameObject);
+
+	if (pInFile) fclose(pInFile); // 파일 닫기 추가
 }
 
 
@@ -1279,7 +1280,6 @@ CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	::fopen_s(&pInFile, "Model/FAE_Pine_A_LOD0.bin", "rb");
 	::rewind(pInFile);
 
-	// LoadFrameHierarchyFromFile 호출 시 pResourceManager 전달
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL, pResourceManager); // 마지막 인자 추가
 	SetChild(pGameObject);
 

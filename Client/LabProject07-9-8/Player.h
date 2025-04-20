@@ -10,6 +10,8 @@
 #include "Object.h"
 #include "Camera.h"
 
+class CScene
+
 class CPlayer : public CGameObject
 {
 protected:
@@ -38,6 +40,8 @@ protected:
 	XMFLOAT4 playerRotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
 	CCamera						*m_pCamera = NULL;
+
+	CScene* m_pScene = nullptr; // 자신을 소유한 Scene 포인터
 
 public:
 	CPlayer();
@@ -101,6 +105,9 @@ public:
 	void AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname, ResourceManager* pResourceManager, XMFLOAT3 offset, XMFLOAT3 rotate, XMFLOAT3 scale);
 	CGameObject* FindFrame(char* framename);
 
+
+	void SetOwningScene(CScene* pScene) { m_pScene = pScene; };
+	void PerformActionInteractionCheck();
 };
 
 class CAirplanePlayer : public CPlayer
