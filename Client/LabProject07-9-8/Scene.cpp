@@ -667,6 +667,14 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, CCamera* pCamera)
 {
 	if (m_pd3dGraphicsRootSignature) pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
+	ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() }; // CBV/SRV/UAV 힙 가져오기
+	if (ppHeaps[0]) { // 힙 포인터 유효성 검사
+		pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	}
+	else {
+		assert(!"CBV/SRV Descriptor Heap is NULL in CScene::Render!");
+		return; // 힙 없으면 렌더링 불가
+	}
 
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
