@@ -5,9 +5,12 @@
 #include "stdafx.h"
 #include <thread>
 #include "GameFramework.h"
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+#include "imgui_impl_dx12.h"
 #include "NetworkManager.h"
 
-// 네트워크 수신 스레드
+// ��Ʈ��ũ ���� ������
 void CGameFramework::NerworkThread()
 {
 	auto& nwManager = NetworkManager::GetInstance();
@@ -21,7 +24,7 @@ void CGameFramework::NerworkThread()
 		nwManager.PushQueue(reinterpret_cast<char*>(&p));*/
 
 
-		// 보낼 데이터가 있다면
+		// ���� �����Ͱ� �ִٸ�
 		while (!nwManager.send_queue.empty())
 		{
 			auto packet = nwManager.PopSendQueue();
@@ -30,7 +33,7 @@ void CGameFramework::NerworkThread()
 			SleepEx(1, TRUE);
 		}
 
-		// 꺼낼 데이터가 있다면	
+		// ���� �����Ͱ� �ִٸ�	
 		while (!nwManager.recv_queue.empty())
 		{
 			auto packet = nwManager.PopRecvQueue();
@@ -60,7 +63,7 @@ void CGameFramework::ProcessPacket(char* packet)
 	{
 		ROTATE_PACKET* recv_p = reinterpret_cast<ROTATE_PACKET*>(packet);
 		if (recv_p->uid != _MyID) {
-			//회전 값 적용하기
+			//ȸ�� �� �����ϱ�
 		}
 	}
 	break;
@@ -69,14 +72,11 @@ void CGameFramework::ProcessPacket(char* packet)
 		LOGIN_PACKET* recv_p = reinterpret_cast<LOGIN_PACKET*>(packet);
 		if (_MyID == -1) _MyID = recv_p->uid;
 		else if (PlayerList.find(recv_p->uid) == PlayerList.end()) {
-			PlayerList[recv_p->uid] = std::make_unique<CAngrybotObject>(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), nullptr, 1);
-			PlayerList[recv_p->uid]->ReleaseUploadBuffers();
+			//PlayerList[recv_p->uid] = std::make_unique<CAngrybotObject>(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), nullptr, 1);
+			//PlayerList[recv_p->uid]->ReleaseUploadBuffers();
 		}
 	}
 	break;
-#include "imgui.h"
-#include "imgui_impl_win32.h"
-#include "imgui_impl_dx12.h"
 
 	case E_PACKET::E_P_LOGOUT:
 	{
@@ -113,9 +113,8 @@ CGameFramework::CGameFramework()
 
 	m_pScene = NULL;
 	m_pPlayer = NULL;
-	_MyID = -1;
-	
 	m_inventorySlots.resize(25);
+	_MyID = -1;
 	_tcscpy_s(m_pszFrameRate, _T("LabProject ("));
 }
 
@@ -137,8 +136,6 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	CreateDepthStencilView();
 
 	CoInitialize(NULL);
-
-	
 
 	BuildObjects();
 	
@@ -164,7 +161,6 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	);
 	InitializeCraftItems();
 	ItemManager::Initialize();
-
 	/*auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
 	std::thread t(&CGameFramework::NerworkThread, this);
@@ -808,12 +804,12 @@ void CGameFramework::ProcessInput()
 			// 탑뷰: 마우스 휠로 줌인/줌아웃
 			// 실제로는 마우스 휠 이벤트를 처리하려면 별도의 메시지 처리가 필요할 수 있음
 			// 여기서는 예시로 키 입력으로 대체 (Q: 줌인, E: 줌아웃)
-			if (pKeysBuffer['Q'] & 0xF0){
+			if (pKeysBuffer['Q'] & 0xF0) {
 				XMFLOAT3 offset = m_pCamera->GetOffset();
 				offset.y = max(20.0f, offset.y - 10.0f);
 				m_pCamera->SetOffset(offset);
 			}
-			if (pKeysBuffer['E'] & 0xF0){
+			if (pKeysBuffer['E'] & 0xF0) {
 				XMFLOAT3 offset = m_pCamera->GetOffset();
 				offset.y = min(200.0f, offset.y + 10.0f);  // 줌아웃, 최대 높이 200
 				m_pCamera->SetOffset(offset);
@@ -822,18 +818,59 @@ void CGameFramework::ProcessInput()
 		else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA || m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
 		{
 			// 자유 시점: 마우스로 회전
-			if (cxDelta || cyDelta)
+			if (beforeDirection != dwDirection)
 			{
-				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-					m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-				else
-					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+				beforeDirection = dwDirection;
+				auto& nwManager = NetworkManager::GetInstance();
+				INPUT_PACKET p;
+				p.direction = dwDirection;
+				printf("Direction: %d\n", dwDirection);
+				p.size = sizeof(INPUT_PACKET);
+				p.type = static_cast<char>(E_PACKET::E_P_INPUT);
+				nwManager.PushSendQueue(p, p.size);
 			}
-		}
 
-		if (dwDirection) m_pPlayer->Move(dwDirection, 12.25f, true);
+			if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
+			{
+				auto& nwManager = NetworkManager::GetInstance();
+
+				if (cxDelta || cyDelta)
+				{
+					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+						m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+					else
+						m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+					{
+						ROTATE_PACKET p;
+						auto& lookv = m_pPlayer->GetLookVector();
+						p.look.x = lookv.x;
+						p.look.y = lookv.y;
+						p.look.z = lookv.z;
+						auto& rightv = m_pPlayer->GetRightVector();
+						p.right.x = rightv.x;
+						p.right.y = rightv.y;
+						p.right.z = rightv.z;
+						auto& upv = m_pPlayer->GetUpVector();
+						p.up.x = upv.x;
+						p.up.y = upv.y;
+						p.up.z = upv.z;
+						p.size = sizeof(ROTATE_PACKET);
+						p.type = static_cast<char>(E_PACKET::E_P_ROTATE);
+
+						nwManager.PushSendQueue(p, p.size);
+					}
+
+				}
+				if (dwDirection)
+				{
+					m_pPlayer->Move(dwDirection, 12.25f, true);
+				}
+			}
+
+			if (dwDirection) m_pPlayer->Move(dwDirection, 12.25f, true);
+		}
+		m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 	}
-	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 }
 
 void CGameFramework::AnimateObjects()

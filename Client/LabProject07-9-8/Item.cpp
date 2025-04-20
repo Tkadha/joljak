@@ -14,31 +14,55 @@ void ItemManager::Initialize()
     m_Items.clear();
 
     int id = 0;
-    m_Items.push_back(std::make_shared<Item>(id++, "막대기"));
-    m_Items.push_back(std::make_shared<Item>(id++, "제작대"));
-    m_Items.push_back(std::make_shared<Item>(id++, "화로"));
-    m_Items.push_back(std::make_shared<Item>(id++, "그릇"));
-    m_Items.push_back(std::make_shared<Item>(id++, "횃불"));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("wood")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("stone")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("iron")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("coal")));
 
-    m_Items.push_back(std::make_shared<Item>(id++, "나무 곡괭이"));
-    m_Items.push_back(std::make_shared<Item>(id++, "나무 도끼"));
-    m_Items.push_back(std::make_shared<Item>(id++, "나무 검"));
-    m_Items.push_back(std::make_shared<Item>(id++, "나무 망치"));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("wooden_pickaxe")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("wooden_axe")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("wooden_sword")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("wooden_hammer")));
 
-    m_Items.push_back(std::make_shared<Item>(id++, "돌 곡괭이"));
-    m_Items.push_back(std::make_shared<Item>(id++, "돌 도끼"));
-    m_Items.push_back(std::make_shared<Item>(id++, "돌 검"));
-    m_Items.push_back(std::make_shared<Item>(id++, "돌 망치"));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("stone_pickaxe")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("stone_axe")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("stone_sword")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("stone_hammer")));
 
-    m_Items.push_back(std::make_shared<Item>(id++, "철괴 곡괭이"));
-    m_Items.push_back(std::make_shared<Item>(id++, "철괴 도끼"));
-    m_Items.push_back(std::make_shared<Item>(id++, "철괴 검"));
-    m_Items.push_back(std::make_shared<Item>(id++, "철괴 망치"));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("iron_pickaxe")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("iron_axe")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("iron_sword")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("iron_hammer")));
 
-    m_Items.push_back(std::make_shared<Item>(id++, "나무"));
-    m_Items.push_back(std::make_shared<Item>(id++, "돌"));
-    m_Items.push_back(std::make_shared<Item>(id++, "철괴"));
-    m_Items.push_back(std::make_shared<Item>(id++, "석탄"));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("crafting_table")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("furnace")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("bowl")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("torch")));
+
+    /*m_Items.push_back(std::make_shared<Item>(id++, std::string("제작대")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("화로")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("그릇")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("횃불")));
+
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("나무곡괭이")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("나무도끼")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("나무검")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("나무망치")));
+
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("돌 곡괭이")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("돌 도끼")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("돌 검")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("돌 망치")));
+
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("철괴 곡괭이")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("철괴 도끼")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("철괴 검")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("철괴 망치")));
+
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("나무")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("돌")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("철괴")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("석탄")));*/
 }
 
 // 아이템 리스트 반환

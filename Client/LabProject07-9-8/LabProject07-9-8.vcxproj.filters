@@ -159,6 +159,15 @@
     <ClCompile Include="ResourceManager.cpp">
       <Filter>소스 파일\ResourceManager</Filter>
     </ClCompile>
+    <ClCompile Include="NetworkManager.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="RandomUtil.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="AtkState.cpp">
+      <Filter>소스 파일\FSM</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FSMManager.h">
@@ -247,6 +256,11 @@
     </ClInclude>
     <ClInclude Include="ResourceManager.h">
       <Filter>소스 파일\ResourceManager</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkManager.h" />
+    <ClInclude Include="RandomUtil.h" />
+    <ClInclude Include="AtkState.h">
+      <Filter>소스 파일\FSM</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

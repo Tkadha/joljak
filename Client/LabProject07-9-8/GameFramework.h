@@ -179,7 +179,7 @@ public:
 
 	DWORD						beforeDirection = 0;
 
-	std::unordered_map<ULONGLONG, std::unique_ptr<CAngrybotObject>> PlayerList;
+	std::unordered_map<ULONGLONG, std::unique_ptr<CMonsterObject>> PlayerList;	// 오브젝트 수정해야함
 	ULONGLONG					_MyID = -1;
 };
 

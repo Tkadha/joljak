@@ -98,7 +98,6 @@ public:
 
 	std::shared_ptr<FSMManager<CGameObject>> FSM_manager = NULL;
 	LPVOID									terraindata = NULL;
-	//FSMManager<CGameObject>*		FSM_manager = NULL;
 
 	GameObjectType m_objectType = GameObjectType::Unknown;
 
