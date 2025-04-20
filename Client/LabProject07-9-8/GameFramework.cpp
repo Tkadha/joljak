@@ -717,13 +717,12 @@ void CGameFramework::ProcessInput()
 			// 탑뷰: 마우스 휠로 줌인/줌아웃
 			// 실제로는 마우스 휠 이벤트를 처리하려면 별도의 메시지 처리가 필요할 수 있음
 			// 여기서는 예시로 키 입력으로 대체 (Q: 줌인, E: 줌아웃)
-			if (pKeysBuffer['Q'] & 0xF0)
-				offset.y = min(200.0f, offset.y + 10.0f);
+			if (pKeysBuffer['Q'] & 0xF0){
 				XMFLOAT3 offset = m_pCamera->GetOffset();
 				offset.y = max(20.0f, offset.y - 10.0f);
 				m_pCamera->SetOffset(offset);
 			}
-			if (pKeysBuffer['E'] & 0xF0)
+			if (pKeysBuffer['E'] & 0xF0){
 				XMFLOAT3 offset = m_pCamera->GetOffset();
 				offset.y = min(200.0f, offset.y + 10.0f);  // 줌아웃, 최대 높이 200
 				m_pCamera->SetOffset(offset);
@@ -1333,6 +1332,14 @@ void CGameFramework::CraftSelectedItem()
 				}
 				else
 				{
+					remaining -= slot.quantity;
+					slot.item = nullptr;
+					slot.quantity = 0;
+				}
+			}
+		}
+	}
+
 	// 2. 결과 아이템 추가
 	for (InventorySlot& slot : m_inventorySlots)
 	{
@@ -1517,11 +1524,4 @@ bool CGameFramework::AllocateSrvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIP
 	// 다음 오프셋 업데이트
 	m_nNextSrvOffset += nDescriptors;
 	return true;
-}					remaining -= slot.quantity;
-					slot.item = nullptr;
-					slot.quantity = 0;
-				}
-			}
-		}
-	}
-
+}
