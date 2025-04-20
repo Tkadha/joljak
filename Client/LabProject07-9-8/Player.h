@@ -73,6 +73,7 @@ public:
 	XMFLOAT3 GetRightVector() { return(m_xmf3Right); }
 
 	void SetFriction(float fFriction) { m_fFriction = fFriction; }
+	void SetStopFriction(float fStopFriction) { m_fStopFriction = fStopFriction; } // 추가: 정지 마찰 설정
 	void SetGravity(const XMFLOAT3& xmf3Gravity) { m_xmf3Gravity = xmf3Gravity; }
 	void SetMaxVelocityXZ(float fMaxVelocity) { m_fMaxVelocityXZ = fMaxVelocity; }
 	void SetMaxVelocityY(float fMaxVelocity) { m_fMaxVelocityY = fMaxVelocity; }

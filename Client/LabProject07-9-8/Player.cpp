@@ -361,6 +361,7 @@ CGameObject* CPlayer::FindFrame(char* framename)
 }
 
 
+
 CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext, ResourceManager* pResourceManager)
 {
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
@@ -374,7 +375,15 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	//AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Boots_Peasant_Armor", "Model/Boots_Peasant_Armor.bin");
 	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pResourceManager, XMFLOAT3(-0.25, 0.1, 0), XMFLOAT3(90, 0, 90));
 	//AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_03", "Model/Torso_Peasant_03_Armor.bin", XMFLOAT3(0, 0, 0), XMFLOAT3(90, 0, 90));
-
+	
+	
+	SetGravity(DirectX::XMFLOAT3(0.0f, -9.8f * 10.0f, 0.0f)); // 중력 설정 (스케일 조절 필요 시)
+	SetMaxVelocityXZ(20.0f); // 최대 수평 속도
+	SetMaxVelocityY(40.0f);  // 최대 수직 속도 (낙하 속도)
+	SetFriction(5.0f);       // 이동 중 마찰
+	SetStopFriction(25.0f);  // 정지 시 마찰 (이동 중 마찰보다 훨씬 크게)
+	m_fStaminaRegenRate = 8.0f; // 스태미나 회복률
+	m_fStaminaMoveCost = 15.0f; // 스태미나 이동 소모율
 	
 
 	int nAnimation{10};
@@ -446,10 +455,6 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
 			break;
 		case THIRD_PERSON_CAMERA:
-			SetFriction(250.0f);
-			SetGravity(XMFLOAT3(0.0f, -250.0f, 0.0f));
-			SetMaxVelocityXZ(300.0f);
-			SetMaxVelocityY(400.0f);
 			m_pCamera = OnChangeCamera(THIRD_PERSON_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.25f);
 			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, -30.0f));		// 카占쌨띰옙 占쏙옙치 占쏙옙占쏙옙
