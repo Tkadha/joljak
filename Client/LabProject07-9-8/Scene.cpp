@@ -205,18 +205,21 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[3]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[3]->SetPosition(100.0f / 2, m_pTerrain->GetHeight(100.0f, 1400.0f) / 2, 1400.0f / 2);
 	m_ppHierarchicalGameObjects[3]->SetScale(10.0f, 10.0f, 10.0f);
+	m_ppHierarchicalGameObjects[3]->SetTerraindata(m_pTerrain);
 
 	m_ppHierarchicalGameObjects[4] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, pResourceManager);
 	m_ppHierarchicalGameObjects[4]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 3);
 	m_ppHierarchicalGameObjects[4]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[4]->SetPosition(200.0f /2 , m_pTerrain->GetHeight(200.0f, 500.0f)/2, 500.0f / 2);
 	m_ppHierarchicalGameObjects[4]->SetScale(8.0f, 8.0f, 8.0f);
+	m_ppHierarchicalGameObjects[4]->SetTerraindata(m_pTerrain);
 
 	m_ppHierarchicalGameObjects[5] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, pResourceManager);
 	m_ppHierarchicalGameObjects[5]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[5]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[5]->SetPosition(1000.f / 2, m_pTerrain->GetHeight(1000.0f, 1500.0f) / 2, 1500.f / 2);
 	m_ppHierarchicalGameObjects[5]->SetScale(8.0f, 8.0f, 8.0f);
+	m_ppHierarchicalGameObjects[5]->SetTerraindata(m_pTerrain);
 	if (pCowModel) delete pCowModel;
 	
 
@@ -672,7 +675,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, 
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dcbLightsGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(2, d3dcbLightsGpuVirtualAddress); //Lights
-	/*
+	
 	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
 	{
 		if (m_ppHierarchicalGameObjects[i])
@@ -680,7 +683,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, 
 			if (m_ppHierarchicalGameObjects[i]->FSM_manager) m_ppHierarchicalGameObjects[i]->FSMUpdate();
 		}
 	}
-	*/
+	
 
 	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
@@ -689,7 +692,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, 
 	{
 		if (obj->isRender) obj->Render(pd3dCommandList, obbRender,pCamera);
 	}
-	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
+	for (int i = 0; i < 3; i++)
 	{
 		if (m_ppHierarchicalGameObjects[i] && m_ppHierarchicalGameObjects[i]->isRender == true)
 		{
