@@ -644,9 +644,34 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 		if (Playerstamina > Maxstamina) Playerstamina = Maxstamina;
 	}
 
-	// 8. 애니메이션 상태 등 업데이트 (필요 시)
-	// if (Vector3::LengthXY(m_xmf3Velocity) > 0.1f) nAni = WALKING_ANI; else nAni = IDLE_ANI;
+	// --- 추가된 애니메이션 전환 로직 ---
+// 9. 속도 기반 애니메이션 전환 (Idle 상태로)
+// m_pSkinnedAnimationController 가 CGameObject 또는 CPlayer의 멤버라고 가정
+	if (m_pSkinnedAnimationController) // 애니메이션 컨트롤러가 유효한지 확인
+	{
+		// 현재 수평 속도 계산 (마찰/감속 적용 후)
+		// float fCurrentHorizontalSpeed = Vector3::LengthXY(m_xmf3Velocity); // 이미 위에서 계산됨 (fHorizontalSpeed)
 
+		// 속도가 거의 0이고, 현재 애니메이션이 Idle(0)이 아니며, 특별한 액션 중이 아닐 때
+		if (IsZero(fHorizontalSpeed) && nAni != 0 && !bAction)
+		{
+			// Idle 애니메이션(트랙 0) 활성화
+			m_pSkinnedAnimationController->SetTrackEnable(0, true);
+			// 현재 재생 중이던 애니메이션(트랙 nAni) 비활성화
+			m_pSkinnedAnimationController->SetTrackEnable(nAni, false);
+			// 비활성화된 트랙의 재생 위치 초기화 (선택 사항)
+			m_pSkinnedAnimationController->SetTrackPosition(nAni, 0.0f);
+			// 현재 애니메이션 상태를 Idle(0)로 설정
+			nAni = 0;
+		}
+		// (선택 사항) 만약 걷거나 뛰는 애니메이션 전환 로직도 여기에 넣는다면:
+		// else if (!IsNearlyZero(fCurrentHorizontalSpeed) && nAni == 0 && !bAction) {
+		//     // 걷는 애니메이션 (트랙 1 가정) 시작
+		//     m_pSkinnedAnimationController->SetTrackEnable(0, false); // Idle 비활성화
+		//     m_pSkinnedAnimationController->SetTrackEnable(1, true);  // Walk 활성화
+		//     nAni = 1;
+		// }
+	}
 
 // 9. 이동 입력 상태 초기화 (Update 마지막)
 	m_bIsMovingInputActive = false;
