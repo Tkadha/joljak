@@ -31,6 +31,20 @@ class COBBShader;
 #define RESOURCE_BUFFER				0x05
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+enum class GameObjectType : int {
+	Unknown,
+	Rock,
+	Tree,
+	Cliff,
+	Cow,
+	Player,
+	Terrain 
+
+	// ... 필요한 만큼 추가 ...
+};
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -83,6 +97,8 @@ public:
 	CAnimationController*			m_pSkinnedAnimationController = NULL;
 
 	FSMManager<CGameObject>*		FSM_manager = NULL;
+
+	GameObjectType m_objectType = GameObjectType::Unknown;
 
 	virtual void FSMUpdate() {}
 
@@ -211,69 +227,6 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-class CSuperCobraObject : public CGameObject
-{
-public:
-	CSuperCobraObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature);
-	virtual ~CSuperCobraObject();
-
-private:
-	CGameObject					*m_pMainRotorFrame = NULL;
-	CGameObject					*m_pTailRotorFrame = NULL;
-
-public:
-	virtual void OnPrepareAnimate();
-	virtual void Animate(float fTimeElapsed);
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-class CGunshipObject : public CGameObject
-{
-public:
-	CGunshipObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature);
-	virtual ~CGunshipObject();
-
-private:
-	CGameObject					*m_pMainRotorFrame = NULL;
-	CGameObject					*m_pTailRotorFrame = NULL;
-
-public:
-	virtual void OnPrepareAnimate();
-	virtual void Animate(float fTimeElapsed);
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-class CMi24Object : public CGameObject
-{
-public:
-	CMi24Object(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature);
-	virtual ~CMi24Object();
-
-private:
-	CGameObject					*m_pMainRotorFrame = NULL;
-	CGameObject					*m_pTailRotorFrame = NULL;
-
-public:
-	virtual void OnPrepareAnimate();
-	virtual void Animate(float fTimeElapsed);
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-class CAngrybotAnimationController : public CAnimationController
-{
-public:
-	CAngrybotAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, CLoadedModelInfo* pModel);
-	~CAngrybotAnimationController();
-
-	virtual void OnRootMotion(CGameObject* pRootGameObject);
-};
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
 
 class CMonsterObject : public CGameObject
 {
@@ -305,14 +258,6 @@ public:
 	virtual void HandleCallback(void* pCallbackData, float fTrackPosition);
 };
 
-class CEthanAnimationController : public CAnimationController
-{
-public:
-	CEthanAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, CLoadedModelInfo* pModel);
-	~CEthanAnimationController();
-
-	virtual void OnRootMotion(CGameObject* pRootGameObject);
-};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

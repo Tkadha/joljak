@@ -97,7 +97,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 
-
 	int nPineObjects = 10;
 	for (int i = 0; i < nPineObjects; ++i) {
 		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pResourceManager);
@@ -105,6 +104,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen, 2, 6, 2, 10);
 		gameObj->SetScale(w, h, w);
+		
 		m_vGameObjects.emplace_back(gameObj);
 	}
 	{
@@ -143,15 +143,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		m_vGameObjects.emplace_back(gameObj);
 	}
 
-	int nCliffFObjectCObjects = 5;
-	for (int i = 0; i < nRockClusterCObjects; ++i) {
-		CGameObject* gameObj = new CCliffFObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pResourceManager);
-		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen,5, 10, 5, 10);
-		gameObj->SetScale(w, h, w);
-		m_vGameObjects.emplace_back(gameObj);
-	}
 
 
 	// ������Ʈ ����
@@ -239,40 +230,12 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 
-///*
-	m_nShaders = 1;
-	m_ppShaders = new CShader*[m_nShaders];
-
-	CEthanObjectsShader *pEthanObjectsShader = new CEthanObjectsShader();
-	//pEthanObjectsShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEthanModel, m_pTerrain);
-
-	m_ppShaders[0] = pEthanObjectsShader;
-//*/
-	//if (pEthanModel) delete pEthanModel;
-
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
 void CScene::ReleaseObjects()
 {
 	if (m_pd3dGraphicsRootSignature) m_pd3dGraphicsRootSignature->Release();
-
-	if (m_ppGameObjects)
-	{
-		for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Release();
-		delete[] m_ppGameObjects;
-	}
-
-	if (m_ppShaders)
-	{
-		for (int i = 0; i < m_nShaders; i++)
-		{
-			m_ppShaders[i]->ReleaseShaderVariables();
-			m_ppShaders[i]->ReleaseObjects();
-			m_ppShaders[i]->Release();
-		}
-		delete[] m_ppShaders;
-	}
 
 	if (m_pTerrain) delete m_pTerrain;
 	if (m_pSkyBox) delete m_pSkyBox;
@@ -532,8 +495,6 @@ void CScene::ReleaseUploadBuffers()
 	if (m_pSkyBox) m_pSkyBox->ReleaseUploadBuffers();
 	if (m_pTerrain) m_pTerrain->ReleaseUploadBuffers();
 
-	for (int i = 0; i < m_nShaders; i++) m_ppShaders[i]->ReleaseUploadBuffers();
-	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->ReleaseUploadBuffers();
 	for (int i = 0; i < m_nHierarchicalGameObjects; i++) m_ppHierarchicalGameObjects[i]->ReleaseUploadBuffers();
 }
 
@@ -563,9 +524,6 @@ bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 void CScene::AnimateObjects(float fTimeElapsed)
 {
 	m_fElapsedTime = fTimeElapsed;
-
-	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Animate(fTimeElapsed);
-	for (int i = 0; i < m_nShaders; i++) if (m_ppShaders[i]) m_ppShaders[i]->AnimateObjects(fTimeElapsed);
 
 	if (m_pLights)
 	{
@@ -606,6 +564,26 @@ void CScene::AnimateObjects(float fTimeElapsed)
 	//printf("%f %f %f\n", m_ppHierarchicalGameObjects[0]->m_xmf4x4World._41, m_ppHierarchicalGameObjects[0]->m_xmf4x4World._42, m_ppHierarchicalGameObjects[0]->m_xmf4x4World._43);
 	//printf("%f %f %f\n", m_ppHierarchicalGameObjects[0]->m_pChild->m_pChild->m_pChild->m_xmf4x4World._11, m_ppHierarchicalGameObjects[0]->m_pChild->m_pChild->m_pChild->m_xmf4x4World._12, m_ppHierarchicalGameObjects[0]->m_pChild->m_pChild->m_pChild->m_xmf4x4World._13);
 #endif // !1
+
+
+	//----------------------충돌체크------------------------------------
+
+	// Player <-> Object
+	for (auto obj : m_vGameObjects) {
+		if (CollisionCheck(m_pPlayer, obj)) {
+			// 나무 충돌처리
+			if (obj->m_objectType == GameObjectType::Tree) {
+				obj->isRender = false;
+			}
+
+			// 돌 충돌처리
+			if (obj->m_objectType == GameObjectType::Rock) {
+				obj->isRender = false;
+			}
+
+
+		}
+	}
 
 	if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[0])) {
 		printf("[충돌 확인])\n");
@@ -653,11 +631,8 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
-	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Render(pd3dCommandList, pCamera);
 	for (auto obj : m_vGameObjects) obj->Render(pd3dCommandList, pCamera);
-	for (int i = 0; i < m_nShaders; i++) if (m_ppShaders[i]) m_ppShaders[i]->Render(pd3dCommandList, pCamera);
-	//m_ppHierarchicalGameObjects[0]->RenderOBB(pd3dCommandList);
-
+	
 	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
 	{
 		if (m_ppHierarchicalGameObjects[i] && m_ppHierarchicalGameObjects[i]->isRender == true)
@@ -692,9 +667,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, 
 	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
-	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Render(pd3dCommandList, pCamera);
 	for (auto obj : m_vGameObjects) obj->Render(pd3dCommandList, obbRender, pCamera);
-	for (int i = 0; i < m_nShaders; i++) if (m_ppShaders[i]) m_ppShaders[i]->Render(pd3dCommandList, pCamera);
 	//m_ppHierarchicalGameObjects[0]->RenderOBB(pd3dCommandList);
 
 	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
@@ -705,5 +678,50 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, 
 			if (!m_ppHierarchicalGameObjects[i]->m_pSkinnedAnimationController) m_ppHierarchicalGameObjects[i]->UpdateTransform(NULL);
 			m_ppHierarchicalGameObjects[i]->Render(pd3dCommandList, obbRender, pCamera);
 		}
+	}
+}
+
+
+bool CScene::CollisionCheck(CGameObject* a, CGameObject* b)
+{
+	if (!a || !b) {
+		return false;
+	}
+
+	// a 모든 OBB 수집
+	std::vector<DirectX::BoundingOrientedBox> obbListA;
+	CollectHierarchyObjects(a, obbListA);
+
+	//b 모든 OBB 수집
+	std::vector<DirectX::BoundingOrientedBox> obbListB;
+	CollectHierarchyObjects(b, obbListB);
+
+	// 충돌 검사
+	for (const auto& obbA : obbListA) { 
+		for (const auto& obbB : obbListB) {
+			if (obbA.Intersects(obbB)) {
+				return true; // 충돌 시 즉시 true 반환
+			}
+		}
+	}
+
+	// 충돌 없으면 false 반환
+	return false;
+
+}
+
+void CScene::CollectHierarchyObjects(CGameObject* obj, std::vector<BoundingOrientedBox>& obbList) {
+	if (!obj) {
+		return; // 재귀 탈출 조건
+	}
+
+	if(obj->m_pMesh)
+		obbList.push_back(obj->m_localOBB);
+
+	// 재귀 호출
+	CGameObject* currentChild = obj->m_pChild;
+	while (currentChild) {
+		CollectHierarchyObjects(currentChild, obbList); // 자식 노드에 대해 
+		currentChild = currentChild->m_pSibling;        // 다음 형제 자식
 	}
 }

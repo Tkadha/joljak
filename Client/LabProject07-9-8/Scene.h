@@ -73,6 +73,10 @@ public:
 
 	void ReleaseUploadBuffers();
 
+	bool CollisionCheck(CGameObject* a, CGameObject* b);
+	void CollectHierarchyObjects(CGameObject* node, std::vector<BoundingOrientedBox>& obbList);
+
+
 	CPlayer								*m_pPlayer = NULL;
 	
 
@@ -82,17 +86,13 @@ protected:
 public:
 	float								m_fElapsedTime = 0.0f;
 
-	int									m_nGameObjects = 0;
-	CGameObject							**m_ppGameObjects = NULL;
-	vector<CGameObject*>					m_vGameObjects{};
+	vector<CGameObject*>				m_vGameObjects{};
 
 	int									m_nHierarchicalGameObjects = 0;
 	CGameObject							**m_ppHierarchicalGameObjects = NULL;
 
 	XMFLOAT3							m_xmf3RotatePosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
-	int									m_nShaders = 0;
-	CShader								**m_ppShaders = NULL;
 
 	CSkyBox								*m_pSkyBox = NULL;
 	CHeightMapTerrain					*m_pTerrain = NULL;
