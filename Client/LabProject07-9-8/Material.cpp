@@ -48,14 +48,17 @@ CMaterial::CMaterial(int nTextures, CGameFramework* pGameFramework)
     }
 }
 
-CMaterial::~CMaterial()
-{
-	if (m_pShader) m_pShader->Release();
-
-	// 텍스처 포인터 배열 해제 (AddRef/Release 관리 가정 시 여기서 Release 호출 필요 없음)
-	// ResourceManager가 텍스처 생명주기 관리
-	if (m_ppTextures) delete[] m_ppTextures;
-	if (m_ppstrTextureNames) delete[] m_ppstrTextureNames;
+// CMaterial 소멸자 수정
+CMaterial::~CMaterial() {
+    if (m_pShader) m_pShader->Release();
+    if (m_ppTextures) {
+        for (int i = 0; i < m_nTextures; ++i) {
+            if (m_ppTextures[i]) m_ppTextures[i]->Release(); // 각 텍스처 참조 해제
+        }
+        delete[] m_ppTextures;
+    }
+    if (m_ppstrTextureNames) delete[] m_ppstrTextureNames;
+    // SRV 핸들 해제는 불필요 (힙 자체 관리)
 }
 
 void CMaterial::SetShader(CShader* pShader)
@@ -83,18 +86,18 @@ void CMaterial::ReleaseUploadBuffers()
 
 void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4AmbientColor, 16);
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4AlbedoColor, 20);
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4SpecularColor, 24);
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4EmissiveColor, 28);
+	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4AmbientColor, 16);
+	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4AlbedoColor, 20);
+	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4SpecularColor, 24);
+	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4EmissiveColor, 28);
 
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 1, &m_nType, 32);
+	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 1, &m_nType, 32);
 
-	for (int i = 0; i < m_nTextures; i++)
-	{
-		if (m_ppTextures[i]) m_ppTextures[i]->UpdateShaderVariables(pd3dCommandList);
-		//if (m_ppTextures[i]) m_ppTextures[i]->UpdateShaderVariable(pd3dCommandList, 0, 0);
-	}
+	//for (int i = 0; i < m_nTextures; i++)
+	//{
+	//	if (m_ppTextures[i]) m_ppTextures[i]->UpdateShaderVariables(pd3dCommandList);
+	//	//if (m_ppTextures[i]) m_ppTextures[i]->UpdateShaderVariable(pd3dCommandList, 0, 0);
+	//}
 }
 
 void CMaterial::LoadTextureFromFile(
@@ -190,7 +193,6 @@ void CMaterial::LoadTextureFromFile(
     {
         pTexture = pResourceManager->GetTexture(pwstrTextureName, pd3dCommandList);
         if (pTexture) {
-            pTexture->AddRef(); // ResourceManager가 AddRef 안 해준다면 여기서 AddRef
             OutputDebugStringW(L"    Loaded via ResourceManager.\n");
         }
         else {
@@ -216,25 +218,28 @@ void CMaterial::LoadTextureFromFile(
         }
     }
 
-    // 8. 텍스처 포인터 저장 및 SRV 생성
-    m_ppTextures[nTextureIndex] = pTexture; // 찾거나 로드한 텍스처 포인터 저장
-    if (pTexture && pTexture->GetResource(0))
-    {
+    // 8. 텍스처 포인터 저장
+    if (m_ppTextures[nTextureIndex]) m_ppTextures[nTextureIndex]->Release(); // 이전 텍스처 참조 해제
+    m_ppTextures[nTextureIndex] = pTexture; // 새 텍스처 포인터 저장 (pTexture는 AddRef된 상태여야 함)
+
+
+    // --- 9. SRV 생성 ---
+    if (pTexture && pTexture->GetResource(0)) { // CTexture 객체 및 내부 리소스 유효성 검사
+        // SRV 생성 위치 계산
         CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(m_d3dCpuSrvStartHandle);
         cpuHandle.Offset(nTextureIndex, m_nCbvSrvDescriptorIncrementSize);
 
         ID3D12Resource* pShaderResource = pTexture->GetResource(0);
-        if (pShaderResource) { // 포인터 유효성 최종 확인
-            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = pTexture->GetShaderResourceViewDesc(0);
-            pd3dDevice->CreateShaderResourceView(pShaderResource, &srvDesc, cpuHandle);
-            OutputDebugStringW(L"    SRV Created.\n");
-        }
-        else {
-            OutputDebugStringW(L"    !!!!!!!! ERROR: Texture resource pointer is null before SRV creation! !!!!!!!!\n");
-        }
+        // CTexture로부터 올바른 SRV 설정(Dimension 포함) 가져오기
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = pTexture->GetShaderResourceViewDesc(0); // 인덱스 0 사용 (큐브맵 등은 내부 리소스가 하나일 수 있음)
+
+        // SRV 생성
+        pd3dDevice->CreateShaderResourceView(pShaderResource, &srvDesc, cpuHandle); 
+        OutputDebugStringW(L"    SRV Created in CMaterial.\n"); 
+
     }
     else {
-        // 텍스처 로드/찾기 실패, 또는 리소스 없음
-        OutputDebugStringW(L"    Warning: Texture resource is null or loading failed. Cannot create SRV.\n");
+        // 텍스처 로드 실패 또는 리소스 없음
+        OutputDebugStringW(L"    Warning: Texture resource is null. Cannot create SRV in CMaterial.\n");
     }
 }

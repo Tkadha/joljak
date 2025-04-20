@@ -1233,22 +1233,6 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	
 	CShader* pTerrainShader = pShaderManager->GetShader("Terrain", pd3dCommandList); 
 	
-	// 루트 파라미터 인덱스 설정 (SetTexture 내부 또는 여기서?)
-	if (pTerrainBaseTexture) {
-		UINT skyboxRootParamIndex = 13;
-		int nRootParams = pTerrainBaseTexture->GetRootParameters();
-		for (int j = 0; j < nRootParams; ++j) {
-			pTerrainBaseTexture->SetRootParameterIndex(j, skyboxRootParamIndex + j);
-		}
-	}
-	if (pTerrainDetailTexture) {
-		UINT skyboxRootParamIndex = 14;
-		int nRootParams = pTerrainDetailTexture->GetRootParameters();
-		for (int j = 0; j < nRootParams; ++j) {
-			pTerrainDetailTexture->SetRootParameterIndex(j, skyboxRootParamIndex + j);
-		}
-	}
-
 	// 6. 재질 생성 및 설정
 	CMaterial* pTerrainMaterial = new CMaterial(2); // Texture 슬롯 2개
 	pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);   // Base 텍스처 설정 (0번 슬롯)
@@ -1296,15 +1280,6 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 
 	// --- 4. 셰이더 가져오기 (ShaderManager 사용) ---
 	CShader* pSkyBoxShader = pShaderManager->GetShader("Skybox", pd3dCommandList); // 이름으로 요청
-	
-	// 루트 파라미터 인덱스 설정 (SetTexture 내부 또는 여기서?)
-	if (pSkyBoxTexture) {
-		UINT skyboxRootParamIndex = 10;
-		int nRootParams = pSkyBoxTexture->GetRootParameters();
-		for (int j = 0; j < nRootParams; ++j) {
-			pSkyBoxTexture->SetRootParameterIndex(j, skyboxRootParamIndex + j);
-		}
-	}
 
 	// 6. 재질 생성 및 설정
 	CMaterial* pSkyBoxMaterial = new CMaterial(1);

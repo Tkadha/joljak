@@ -620,10 +620,6 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		assert(!"CBV/SRV Descriptor Heap is NULL in CScene::Render!");
 		return; // 힙 없으면 렌더링 불가
 	}
-	// 만약 샘플러 힙도 동적으로 사용한다면 함께 설정:
-	// ID3D12DescriptorHeap* ppHeaps[] = { cbvSrvHeap, samplerHeap };
-	// pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-	// --- 힙 설정 끝 ---
 
 	// --- 4. 렌더링 상태 추적 변수 ---
 	ID3D12RootSignature* currentRootSig = nullptr;

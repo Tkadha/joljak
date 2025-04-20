@@ -745,61 +745,6 @@ D3D12_GPU_DESCRIPTOR_HANDLE CGameFramework::CreateConstantBufferViews(int nConst
 	return gpuStartHandle;
 }
 
-void CGameFramework::CreateShaderResourceViews(CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex)
-{
-	if (!pTexture) return;
-
-	int nTextures = pTexture->GetTextures(); // 생성해야 할 SRV 개수
-	if (nTextures <= 0) return;
-
-	D3D12_CPU_DESCRIPTOR_HANDLE cpuStartHandle = { 0 };
-	D3D12_GPU_DESCRIPTOR_HANDLE gpuStartHandle = { 0 };
-
-	// --- 1. 프레임워크의 할당 함수를 호출하여 디스크립터 슬롯 확보 ---
-	if (!AllocateSrvDescriptors(nTextures, cpuStartHandle, gpuStartHandle))
-	{
-		// 힙 공간 부족 등의 이유로 할당 실패
-		OutputDebugString(L"Failed to allocate SRV descriptors.\n");
-		// 오류 처리
-		return;
-	}
-
-	// 할당받은 시작 핸들부터 순차적으로 SRV 생성
-	D3D12_CPU_DESCRIPTOR_HANDLE currentCpuHandle = cpuStartHandle;
-	D3D12_GPU_DESCRIPTOR_HANDLE currentGpuHandle = gpuStartHandle;
-
-	for (int i = 0; i < nTextures; i++)
-	{
-		ID3D12Resource* pShaderResource = pTexture->GetResource(i); // 텍스처 리소스 가져오기
-		D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceViewDesc = pTexture->GetShaderResourceViewDesc(i); // SRV 설정 가져오기
-
-		if (pShaderResource)
-		{
-			// 현재 CPU 핸들 위치에 SRV 생성
-			m_pd3dDevice->CreateShaderResourceView(pShaderResource, &d3dShaderResourceViewDesc, currentCpuHandle);
-		}
-		else
-		{
-			// 리소스가 없는 경우 (예: 텍스처 로딩 실패) 처리
-		}
-
-
-		// --- 2. 생성된 SRV의 GPU 핸들을 CTexture 객체에 저장 ---
-		pTexture->SetGpuDescriptorHandle(i, currentGpuHandle);
-
-		// 다음 디스크립터 슬롯으로 핸들 이동
-		currentCpuHandle.ptr += m_nCbvSrvDescriptorIncrementSize;
-		currentGpuHandle.ptr += m_nCbvSrvDescriptorIncrementSize;
-	}
-
-	// --- 3. 루트 파라미터 인덱스 설정 ---
-	int nRootParameters = pTexture->GetRootParameters();
-	for (int j = 0; j < nRootParameters; j++)
-	{
-		pTexture->SetRootParameterIndex(j, nRootParameterStartIndex + j);
-	}
-}
-
 bool CGameFramework::AllocateCbvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle) {
 	if (m_nNextCbvOffset + nDescriptors > m_nTotalCbvDescriptors) {
 		// 공간 부족!
