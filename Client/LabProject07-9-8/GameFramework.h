@@ -164,7 +164,7 @@ public:
 
 	POINT						m_ptOldCursorPos;
 
-	_TCHAR						m_pszFrameRate[70];
+	_TCHAR						m_pszFrameRate[128];
 	int g_itemIDCounter = 0;
 	struct InventorySlot {
 		std::shared_ptr<Item> item;

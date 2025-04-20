@@ -700,8 +700,6 @@ void CTerrainPlayer::keyInput(UCHAR* keys)
 		nAni = 6; // Space 액션에 해당하는 애니메이션 번호
 		bAction = true; // 액션 중 상태로 설정
 		isActionKeyPressed = true;
-		// 만약 점프 로직이라면, 여기서 점프 시작 처리를 할 수 있습니다.
-		// Jump();
 	}
 	else {
 		// 'F'와 'Space' 키가 모두 눌려있지 않으면 액션 상태 해제
@@ -712,39 +710,41 @@ void CTerrainPlayer::keyInput(UCHAR* keys)
 		// bAction = false; // 단순하게 처리할 수도 있음
 	}
 
-	//// 키 입력에 따라 Move 함수 호출 및 상태 변경
-	//if (!bAction) {
-	//	if (keys[VK_UP] || keys['W']) {
-	//		Move(DIR_FORWARD, fSpeed); // Move 함수 내부에서 SetMovingInputActive(true) 호출됨
-	//		bMoved = true;
-	//	}
-	//	if (keys[VK_DOWN] || keys['S']) {
-	//		Move(DIR_BACKWARD, fSpeed);
-	//		bMoved = true;
-	//	}
-	//	if (keys[VK_LEFT] || keys['A']) {
-	//		// 캐릭터 회전 로직 (필요 시)
-	//		// Rotate(0.0f, -rotationSpeed * fTimeElapsed, 0.0f);
-	//		Move(DIR_LEFT, fSpeed); // 왼쪽 '이동'만 처리 (스트레이핑)
-	//		bMoved = true;
-	//	}
-	//	if (keys[VK_RIGHT] || keys['D']) {
-	//		// 캐릭터 회전 로직 (필요 시)
-	//		// Rotate(0.0f, rotationSpeed * fTimeElapsed, 0.0f);
-	//		Move(DIR_RIGHT, fSpeed); // 오른쪽 '이동'만 처리 (스트레이핑)
-	//		bMoved = true;
-	//	}
-	//	// 점프 등 다른 키 입력 처리...
-	//	// if (keys[VK_SPACE]) { /* Jump(); */ }
-	//}
+		//// 키 입력에 따라 Move 함수 호출 및 상태 변경
+		//if (!bAction) {
+		//	if (keys[VK_UP] || keys['W']) {
+		//		Move(DIR_FORWARD, fSpeed); // Move 함수 내부에서 SetMovingInputActive(true) 호출됨
+		//		bMoved = true;
+		//	}
+		//	if (keys[VK_DOWN] || keys['S']) {
+		//		Move(DIR_BACKWARD, fSpeed);
+		//		bMoved = true;
+		//	}
+		//	if (keys[VK_LEFT] || keys['A']) {
+		//		// 캐릭터 회전 로직 (필요 시)
+		//		// Rotate(0.0f, -rotationSpeed * fTimeElapsed, 0.0f);
+		//		Move(DIR_LEFT, fSpeed); // 왼쪽 '이동'만 처리 (스트레이핑)
+		//		bMoved = true;
+		//	}
+		//	if (keys[VK_RIGHT] || keys['D']) {
+		//		// 캐릭터 회전 로직 (필요 시)
+		//		// Rotate(0.0f, rotationSpeed * fTimeElapsed, 0.0f);
+		//		Move(DIR_RIGHT, fSpeed); // 오른쪽 '이동'만 처리 (스트레이핑)
+		//		bMoved = true;
+		//	}
+		//	// 점프 등 다른 키 입력 처리...
+		//	// if (keys[VK_SPACE]) { /* Jump(); */ }
+		//}
 
 	 // ---- 4. 애니메이션 트랙 업데이트 (상태 변경 시) ----
 	if (previousAni != nAni && m_pSkinnedAnimationController) {
 		// 이전 애니메이션 비활성화
 		m_pSkinnedAnimationController->SetTrackEnable(previousAni, false);
+		m_pSkinnedAnimationController->SetTrackPosition(previousAni, 0.0f); // 처음부터 다시 재생하도록 리셋
 
 		// 새 애니메이션 활성화
 		m_pSkinnedAnimationController->SetTrackEnable(nAni, true);
+		m_pSkinnedAnimationController->SetTrackPosition(nAni, 0.0f); // 처음부터 재생하도록 리셋
 	}
 
 	// 다른 키 입력 처리 (액션 등)

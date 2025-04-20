@@ -111,7 +111,7 @@ CGameFramework::CGameFramework()
 	m_pPlayer = NULL;
 	m_inventorySlots.resize(25);
 	_MyID = -1;
-	_tcscpy_s(m_pszFrameRate, _T("LabProject ("));
+	_tcscpy_s(m_pszFrameRate, 128, _T("Survival Odyssey ("));
 }
 
 CGameFramework::~CGameFramework()
@@ -780,8 +780,8 @@ void CGameFramework::ProcessInput()
 		if (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
 		if (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0) dwDirection |= DIR_LEFT;
 		if (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
-		if (pKeysBuffer[VK_SPACE] & 0xF0) dwDirection |= DIR_UP;
-		if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
+		//if (pKeysBuffer[VK_SPACE] & 0xF0) dwDirection |= DIR_UP;
+		//if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
 		else m_pPlayer->keyInput(pKeysBuffer);
 
 		// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
@@ -1280,10 +1280,10 @@ void CGameFramework::FrameAdvance()
 
 	MoveToNextFrame();
 
-	m_GameTimer.GetFrameRate(m_pszFrameRate + 12, 37);
+	m_GameTimer.GetFrameRate(m_pszFrameRate + 18, 37);
 	size_t nLength = _tcslen(m_pszFrameRate);
 	XMFLOAT3 xmf3Position = m_pPlayer->GetPosition();
-	_stprintf_s(m_pszFrameRate + nLength, 70 - nLength, _T("(%4f, %4f, %4f)"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
+	_stprintf_s(m_pszFrameRate + nLength, 128 - nLength, _T("(%4f, %4f, %4f)"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
 	::SetWindowText(m_hWnd, m_pszFrameRate);
 }
 void CGameFramework::CreateCbvSrvDescriptorHeap()
