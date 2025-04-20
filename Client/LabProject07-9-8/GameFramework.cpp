@@ -455,7 +455,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			case 'I':
 				AddDummyItem();
 				break;
-			case 'R':
+			case 'O':
 				if (ShowCraftingUI == false)
 					ShowCraftingUI = true;
 				else
@@ -509,7 +509,7 @@ void CGameFramework::AddDummyItem()
 	{
 		if (m_inventorySlots[0].IsEmpty())
 		{
-			auto tempItem = ItemManager::GetItemByName("나무");
+			auto tempItem = ItemManager::GetItemByName("wood");
 			if (tempItem)
 			{
 				m_inventorySlots[0].item = tempItem;
@@ -519,12 +519,24 @@ void CGameFramework::AddDummyItem()
 
 		if (m_inventorySlots[1].IsEmpty())
 		{
-			auto tempItem2 = ItemManager::GetItemByName("돌");
+			auto tempItem2 = ItemManager::GetItemByName("stone");
 			if (tempItem2)
 			{
 				m_inventorySlots[1].item = tempItem2;
 				m_inventorySlots[1].quantity = 3;
 			}
+		}
+	}
+}
+
+void CGameFramework::AddItem(const std::string &name)
+{
+	for (int i = 0; i < m_inventorySlots.size(); i++) {
+		if (m_inventorySlots[i].IsEmpty()) {
+			auto tempItem = ItemManager::GetItemByName(name);
+			m_inventorySlots[i].item = tempItem;
+			m_inventorySlots[i].quantity = 3;
+			break;
 		}
 	}
 }
@@ -1092,7 +1104,7 @@ void CGameFramework::FrameAdvance()
 				{
 					// 아이템이 있을 때, 이름으로 출력
 					std::string buttonLabel = m_inventorySlots[i].item->GetName();
-					buttonLabel += " x" + std::to_string(m_inventorySlots[i].quantity);
+					buttonLabel += "x" + std::to_string(m_inventorySlots[i].quantity);
 					ImGui::Button(buttonLabel.c_str(), ImVec2(slotSize, slotSize));
 				}
 				else
@@ -1291,120 +1303,120 @@ void CGameFramework::InitializeCraftItems()
 
 	// 막대기
 	m_vecCraftableItems.push_back({
-		"막대기",
-		{ {"나무", 2} },
+		"stick",
+		{ {"wood", 2} },
 		2
 		});
 
 	// 제작대
 	m_vecCraftableItems.push_back({
-		"제작대",
-		{ {"나무", 4} },
+		"crafting_table",
+		{ {"wood", 4} },
 		1
 		});
 
 	// 화로
 	m_vecCraftableItems.push_back({
-		"화로",
-		{ {"돌", 8} },
+		"furance",
+		{ {"stone", 8} },
 		1
 		});
 
 	// 그릇
 	m_vecCraftableItems.push_back({
-		"그릇",
-		{ {"나무", 1} },
+		"bowl",
+		{ {"wood", 1} },
 		1
 		});
 
 	// 횃불
 	m_vecCraftableItems.push_back({
-		"횃불",
-		{ {"막대기", 1}, {"석탄", 1} },
+		"torch",
+		{ {"stick", 1}, {"coal", 1} },
 		2
 		});
 
 	// 나무 곡괭이
 	m_vecCraftableItems.push_back({
-		"나무 곡괭이",
-		{ {"막대기", 2}, {"나무", 3} },
+		"wooden_pickaxe",
+		{ {"stick", 2}, {"wood", 3} },
 		1
 		});
 
 	// 나무 도끼
 	m_vecCraftableItems.push_back({
-		"나무 도끼",
-		{ {"막대기", 2}, {"나무", 3} },
+		"wooden_axe",
+		{ {"stick", 2}, {"wood", 3} },
 		1
 		});
 
 	// 나무 검
 	m_vecCraftableItems.push_back({
-		"나무 검",
-		{ {"막대기", 1}, {"나무", 2} },
+		"wooden_sword",
+		{ {"stick", 1}, {"wood", 2} },
 		1
 		});
 
 	// 나무 망치
 	m_vecCraftableItems.push_back({
-		"나무 망치",
-		{ {"막대기", 2}, {"나무", 3} },
+		"wooden_hammer",
+		{ {"stick", 2}, {"wood", 3} },
 		1
 		});
 
 	// 돌 곡괭이
 	m_vecCraftableItems.push_back({
-		"돌 곡괭이",
-		{ {"막대기", 2}, {"돌", 3} },
+		"stone_pickaxe",
+		{ {"stick", 2}, {"stone", 3} },
 		1
 		});
 
 	// 돌 도끼
 	m_vecCraftableItems.push_back({
-		"돌 도끼",
-		{ {"막대기", 2}, {"돌", 3} },
+		"stone_axe",
+		{ {"stick", 2}, {"stone", 3} },
 		1
 		});
 
 	// 돌 검
 	m_vecCraftableItems.push_back({
-		"돌 검",
-		{ {"막대기", 1}, {"돌", 2} },
+		"stone_sword",
+		{ {"stick", 1}, {"stone", 2} },
 		1
 		});
 
 	// 돌 망치
 	m_vecCraftableItems.push_back({
-		"돌 망치",
-		{ {"막대기", 2}, {"돌", 3} },
+		"stone_hammer",
+		{ {"stick", 2}, {"stone", 3} },
 		1
 		});
 
 	// 철 곡괭이
 	m_vecCraftableItems.push_back({
-		"철 곡괭이",
-		{ {"막대기", 2}, {"철괴", 3} },
+		"iron_pickaxe",
+		{ {"stick", 2}, {"iron", 3} },
 		1
 		});
 
 	// 철 도끼
 	m_vecCraftableItems.push_back({
-		"철 도끼",
-		{ {"막대기", 2}, {"철괴", 3} },
+		"iron_axe",
+		{ {"stick", 2}, {"iron", 3} },
 		1
 		});
 
 	// 철 검
 	m_vecCraftableItems.push_back({
-		"철 검",
-		{ {"막대기", 1}, {"철괴", 2} },
+		"iron_sword",
+		{ {"stick", 1}, {"iron", 2} },
 		1
 		});
 
 	// 철 망치
 	m_vecCraftableItems.push_back({
-		"철 망치",
-		{ {"막대기", 2}, {"철괴", 3} },
+		"iron_hammer",
+		{ {"stick", 2}, {"iron", 3} },
 		1
 		});
 }

@@ -687,7 +687,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, 
 
 	for (auto obj : m_vGameObjects)
 	{
-		if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
+		if (obj->isRender) obj->Render(pd3dCommandList, obbRender,pCamera);
 	}
 	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
 	{
@@ -756,12 +756,14 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 			// 나무 충돌처리
 			if (obj->m_objectType == GameObjectType::Tree) {
 				obj->isRender = false;
+				m_pGameFramework->AddItem("wood");
 			}
 
 			// 돌 충돌처리
 			if (obj->m_objectType == GameObjectType::Rock) {
 				printf("[Rock 충돌 확인])\n");
 				obj->isRender = false;
+				m_pGameFramework->AddItem("stone");
 			}
 
 		}

@@ -42,7 +42,7 @@ enum class GameObjectType : int {
 	Player,
 	Terrain 
 
-	// ... ÇÊ¿äÇÑ ¸¸Å­ Ãß°¡ ...
+	// ... ï¿½Ê¿ï¿½ï¿½ï¿½ ï¿½ï¿½Å­ ï¿½ß°ï¿½ ...
 };
 
 

@@ -38,6 +38,7 @@ void ItemManager::Initialize()
     m_Items.push_back(std::make_shared<Item>(id++, std::string("furnace")));
     m_Items.push_back(std::make_shared<Item>(id++, std::string("bowl")));
     m_Items.push_back(std::make_shared<Item>(id++, std::string("torch")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("stick")));
 
     /*m_Items.push_back(std::make_shared<Item>(id++, std::string("제작대")));
     m_Items.push_back(std::make_shared<Item>(id++, std::string("화로")));

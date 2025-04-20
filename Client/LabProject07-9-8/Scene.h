@@ -116,6 +116,8 @@ public:
 
 	std::vector<tree_obj>				tree_objects;
 	Octree								octree{ XMFLOAT3 {0,0,0}, XMFLOAT3{10200,4000,10200} };
+	bool								checkTree = false;
+	bool								checkRock = false;
 
 
 	CGameFramework* m_pGameFramework;
