@@ -569,8 +569,9 @@ void CScene::AnimateObjects(float fTimeElapsed)
 	//----------------------충돌체크------------------------------------
 
 	// Player <-> Object
-	for (auto obj : m_vGameObjects) {
+	for (auto& obj : m_vGameObjects) {
 		if (CollisionCheck(m_pPlayer, obj)) {
+			if (!obj->isRender)	continue;
 			// 나무 충돌처리
 			if (obj->m_objectType == GameObjectType::Tree) {
 				auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
