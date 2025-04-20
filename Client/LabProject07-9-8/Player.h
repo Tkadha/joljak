@@ -32,6 +32,15 @@ protected:
 	float           			m_fMaxVelocityY = 0.0f;
 	float           			m_fFriction = 0.0f;
 
+	// 이동 수정
+	// --- 추가된 멤버 변수 ---
+	float						m_fStopFriction = 10.0f; // 정지 시 마찰 계수 (기본값 설정, 생성자에서 조절 가능)
+	bool						m_bIsMovingInputActive = false; // 현재 프레임 이동 입력 여부
+	float                       m_fStaminaRegenRate = 5.0f; // 초당 스태미나 회복량 (기본값)
+	float                       m_fStaminaMoveCost = 10.0f; // 이동 시 초당 스태미나 소모량 (기본값)
+	// ----------------------
+
+
 	LPVOID						m_pPlayerUpdatedContext = NULL;
 	LPVOID						m_pCameraUpdatedContext = NULL;
 
@@ -79,6 +88,12 @@ public:
 
 	CCamera *GetCamera() { return(m_pCamera); }
 	void SetCamera(CCamera *pCamera) { m_pCamera = pCamera; }
+
+
+
+	// 이동 수정
+	void SetMovingInputActive(bool isActive) { m_bIsMovingInputActive = isActive; }
+
 
 	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false);
 	void Move(const XMFLOAT3& xmf3Shift, bool bVelocity = false);
@@ -160,12 +175,12 @@ public:
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
 	virtual void OnCameraUpdateCallback(float fTimeElapsed);
 
-	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false);
-
-	virtual void Update(float fTimeElapsed);
+	// 핵심 이동 및 업데이트 로직 오버라이딩
+	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false) override;
+	virtual void Update(float fTimeElapsed) override;
 
 	int nAni{};
 	BOOL bAction = false;
-	void keyInput(UCHAR* key);
+	void keyInput(UCHAR* keys, float fTimeElapsed);
 };
 

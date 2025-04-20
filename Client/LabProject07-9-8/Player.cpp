@@ -91,7 +91,7 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 			m_pCamera->Move(xmf3Shift);
 		}
 	}
-	UpdateOBB(m_xmf3Position, playerSize, playerRotation);
+	//UpdateOBB(m_xmf3Position, playerSize, playerRotation);
 }
 
 void CPlayer::Rotate(float x, float y, float z)
@@ -544,57 +544,153 @@ void CTerrainPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVeloci
 	CPlayer::Move(dwDirection, fDistance, bUpdateVelocity);
 }
 
+//void CTerrainPlayer::Update(float fTimeElapsed)
+//{
+//	CPlayer::Update(fTimeElapsed);
+//
+//	if (m_pSkinnedAnimationController)
+//	{
+//		float fLength = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
+//		if (::IsZero(fLength) && nAni && !bAction)
+//		{
+//			m_pSkinnedAnimationController->SetTrackEnable(0, true);
+//			m_pSkinnedAnimationController->SetTrackEnable(nAni, false);
+//			m_pSkinnedAnimationController->SetTrackPosition(nAni, 0.0f);
+//			nAni = 0;
+//		}
+//	}
+//}
+
 void CTerrainPlayer::Update(float fTimeElapsed)
 {
-	CPlayer::Update(fTimeElapsed);
+	if (fTimeElapsed <= 0.0001f) return;
 
-	if (m_pSkinnedAnimationController)
+	// 1. 중력 적용 (시간에 따른 속도 변화)
+	DirectX::XMFLOAT3 gravityEffect = Vector3::ScalarProduct(m_xmf3Gravity, fTimeElapsed, false);
+	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, gravityEffect);
+
+	// 2. 마찰/감속 적용
+	float fHorizontalSpeed = Vector3::LengthXY(m_xmf3Velocity);
+	if (fHorizontalSpeed > 0.0f)
 	{
-		float fLength = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
-		if (::IsZero(fLength) && nAni && !bAction)
+		float fFrictionCoefficient = m_bIsMovingInputActive ? m_fFriction : m_fStopFriction;
+		float fDeceleration = fFrictionCoefficient * fTimeElapsed;
+
+		if (fDeceleration > fHorizontalSpeed)
 		{
-			m_pSkinnedAnimationController->SetTrackEnable(0, true);
-			m_pSkinnedAnimationController->SetTrackEnable(nAni, false);
-			m_pSkinnedAnimationController->SetTrackPosition(nAni, 0.0f);
-			nAni = 0;
+			fDeceleration = fHorizontalSpeed;
 		}
+
+		DirectX::XMFLOAT3 xmf3HorizontalVelocity = DirectX::XMFLOAT3(m_xmf3Velocity.x, 0.0f, m_xmf3Velocity.z);
+		DirectX::XMFLOAT3 xmf3DecelDirection = Vector3::Normalize(xmf3HorizontalVelocity);
+		DirectX::XMFLOAT3 xmf3DecelVector = Vector3::ScalarProduct(xmf3DecelDirection, -fDeceleration, false);
+
+		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3DecelVector);
 	}
+
+	// 3. 속도 제한
+	float fLengthXZ = Vector3::LengthXY(m_xmf3Velocity);
+	if (fLengthXZ > m_fMaxVelocityXZ)
+	{
+		float fScale = m_fMaxVelocityXZ / fLengthXZ;
+		m_xmf3Velocity.x *= fScale;
+		m_xmf3Velocity.z *= fScale;
+	}
+	if (fabsf(m_xmf3Velocity.y) > m_fMaxVelocityY)
+	{
+		m_xmf3Velocity.y = copysignf(m_fMaxVelocityY, m_xmf3Velocity.y);
+	}
+
+	// 4. 위치 업데이트
+	DirectX::XMFLOAT3 xmf3Displacement = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
+	m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Displacement);
+
+	// OBB 업데이트 (쿼터니언 회전값 사용 필요 시 m_qRotation 같은 변수 사용)
+	// 현재는 playerRotation 멤버를 사용
+	UpdateOBB(m_xmf3Position, playerSize, playerRotation); // playerRotation 업데이트 로직 필요 시 추가
+
+	// 5. 카메라 이동
+	if (m_pCamera) {
+		m_pCamera->Move(xmf3Displacement);
+	}
+
+	// 6. 콜백 및 카메라 시점 업데이트
+	OnPlayerUpdateCallback(fTimeElapsed); // 오버라이딩된 함수 호출
+
+	if (m_pCamera) {
+		DWORD nCurrentCameraMode = m_pCamera->GetMode();
+		if (nCurrentCameraMode == THIRD_PERSON_CAMERA) { // THIRD_PERSON_CAMERA 값 정의 필요
+			m_pCamera->Update(m_xmf3Position, fTimeElapsed);
+		}
+		OnCameraUpdateCallback(fTimeElapsed); // 오버라이딩된 함수 호출
+
+		DirectX::XMFLOAT3 lookAtPos = m_xmf3Position;
+		// float m_fCameraLookAtHeightOffset = 15.0f; // 오프셋 값 필요 시 CPlayer에 멤버로 추가
+		lookAtPos.y += 15.0f; // 카메라 시점 높이 조절
+		if (nCurrentCameraMode == THIRD_PERSON_CAMERA) {
+			m_pCamera->SetLookAt(lookAtPos);
+		}
+		m_pCamera->RegenerateViewMatrix();
+	}
+
+	// 7. 스태미나 회복
+	if (Playerstamina < Maxstamina) {
+		Playerstamina += m_fStaminaRegenRate * fTimeElapsed;
+		if (Playerstamina > Maxstamina) Playerstamina = Maxstamina;
+	}
+
+	// 8. 애니메이션 상태 등 업데이트 (필요 시)
+	// if (Vector3::LengthXY(m_xmf3Velocity) > 0.1f) nAni = WALKING_ANI; else nAni = IDLE_ANI;
+
+
+// 9. 이동 입력 상태 초기화 (Update 마지막)
+	m_bIsMovingInputActive = false;
 }
 
-void CTerrainPlayer::keyInput(UCHAR* key) {
-	// --- 애니메이션 로직 (기존 로직을 바탕으로 약간 수정) ---
-	bool fKeyPressed = (key['F'] & 0xF0);
-	bool spacePressed = (key[VK_SPACE] & 0xF0);
-	bool actionTriggered = false; // 이번 프레임에 액션이 시작되었는지 여부
+void CTerrainPlayer::keyInput(UCHAR* keys, float fTimeElapsed) // fTimeElapsed 추가
+{
+	float fSpeed = PlayerSpeed; // PlayerSpeed 멤버 사용 (조정 필요 시 스케일 적용)
 
-	if (fKeyPressed) {
-		if (nAni != 5) { // F 액션이 이미 실행 중이 아니라면
-			m_pSkinnedAnimationController->SetTrackEnable(nAni, false); // 이전 애니메이션 트랙 비활성화
-			nAni = 5; // F 액션 애니메이션 인덱스
-			bAction = true;
-			m_pSkinnedAnimationController->SetTrackEnable(nAni, true); // F 액션 트랙 활성화
-			actionTriggered = true;
+	bool bMoved = false; // 이번 입력 처리에서 이동이 있었는지 체크
 
-			PerformActionInteractionCheck();
-		}
+	// 키 입력에 따라 Move 함수 호출 및 상태 변경
+	if (keys[VK_UP] || keys['W']) {
+		Move(DIR_FORWARD, fSpeed); // Move 함수 내부에서 SetMovingInputActive(true) 호출됨
+		bMoved = true;
 	}
-	else if (spacePressed) {
-		if (nAni != 6) { // 점프 액션이 이미 실행 중이 아니라면
-			m_pSkinnedAnimationController->SetTrackEnable(nAni, false);
-			nAni = 6; // 점프 애니메이션 인덱스
-			bAction = true;
-			m_pSkinnedAnimationController->SetTrackEnable(nAni, true);
-			actionTriggered = true;
-			// 점프 관련 로직 (물리 적용 등) 추가 가능
-		}
+	if (keys[VK_DOWN] || keys['S']) {
+		Move(DIR_BACKWARD, fSpeed);
+		bMoved = true;
 	}
-	else {
-		// F키나 스페이스바가 눌리지 않았을 때
-		if (bAction) { // 이전에 액션(F 또는 점프) 중이었다면
-			bAction = false; // 액션 상태 해제
-		}
+	if (keys[VK_LEFT] || keys['A']) {
+		// 캐릭터 회전 로직 (필요 시)
+		// Rotate(0.0f, -rotationSpeed * fTimeElapsed, 0.0f);
+		Move(DIR_LEFT, fSpeed); // 왼쪽 '이동'만 처리 (스트레이핑)
+		bMoved = true;
+	}
+	if (keys[VK_RIGHT] || keys['D']) {
+		// 캐릭터 회전 로직 (필요 시)
+		// Rotate(0.0f, rotationSpeed * fTimeElapsed, 0.0f);
+		Move(DIR_RIGHT, fSpeed); // 오른쪽 '이동'만 처리 (스트레이핑)
+		bMoved = true;
+	}
+	// 점프 등 다른 키 입력 처리...
+	// if (keys[VK_SPACE]) { /* Jump(); */ }
+
+		// 이동 입력이 있었고 스태미나가 있다면 스태미나 소모
+	if (bMoved && Playerstamina > 0) {
+		Playerstamina -= m_fStaminaMoveCost * fTimeElapsed;
+		if (Playerstamina < 0) Playerstamina = 0;
 	}
 
+
+	// 다른 키 입력 처리 (액션 등)
+	if (keys['E']) {
+		// 상호작용 시도
+		PerformActionInteractionCheck();
+	}
+
+	// ... 기타 키 입력 처리 ...
 }
 
 // 'F' 키 액션 시 호출될 충돌/상호작용 검사 함수

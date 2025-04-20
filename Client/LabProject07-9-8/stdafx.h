@@ -211,6 +211,12 @@ namespace Vector3
 	{
 		return(TransformCoord(xmf3Vector, XMLoadFloat4x4(&xmmtx4x4Matrix)));
 	}
+
+
+	// XZ 평면에서의 벡터 길이 계산
+	static float LengthXY(const DirectX::XMFLOAT3& v) {
+		return sqrtf(v.x * v.x + v.z * v.z);
+	}
 }
 
 namespace Vector4
