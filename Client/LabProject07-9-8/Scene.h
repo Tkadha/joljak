@@ -108,7 +108,7 @@ public:
 	ID3D12Resource						*m_pd3dcbLights = NULL;
 	LIGHTS								*m_pcbMappedLights = NULL;
 
-	// 인스턴싱
+	// �ν��Ͻ�
 	ID3D12Resource* m_pd3dcbGameObjects = NULL;
 	VS_VB_INSTANCE* m_pcbMappedGameObjects = NULL;
 

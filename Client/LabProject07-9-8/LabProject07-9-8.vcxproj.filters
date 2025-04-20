@@ -45,6 +45,15 @@
     <Filter Include="소스 파일\Timer">
       <UniqueIdentifier>{cdde645c-aa52-4745-86ff-71fa21b3503c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\IMGUI">
+      <UniqueIdentifier>{135af955-6971-42b0-8853-ad3bcf43f3c9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\BackEnd">
+      <UniqueIdentifier>{25d1ca23-351c-464a-bcab-04ee6aacf332}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\ITEM">
+      <UniqueIdentifier>{0aa10127-1162-4757-9bda-d05014381c40}</UniqueIdentifier>
+    </Filter>
     <Filter Include="소스 파일\ResourceManager">
       <UniqueIdentifier>{956b5884-de85-4aa8-8403-f845341d00bc}</UniqueIdentifier>
     </Filter>
@@ -120,6 +129,30 @@
     <ClCompile Include="Timer.cpp">
       <Filter>소스 파일\Timer</Filter>
     </ClCompile>
+    <ClCompile Include="imgui.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_demo.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_draw.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_tables.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_widgets.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_dx12.cpp">
+      <Filter>소스 파일\BackEnd</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_win32.cpp">
+      <Filter>소스 파일\BackEnd</Filter>
+    </ClCompile>
+    <ClCompile Include="Item.cpp">
+      <Filter>소스 파일\ITEM</Filter>
+    </ClCompile>
     <ClCompile Include="ResourceManager.cpp">
       <Filter>소스 파일\ResourceManager</Filter>
     </ClCompile>
@@ -184,6 +217,30 @@
     </ClInclude>
     <ClInclude Include="stdafx.h">
       <Filter>소스 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_internal.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_rectpack.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_textedit.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_truetype.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_dx12.h">
+      <Filter>소스 파일\BackEnd</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_win32.h">
+      <Filter>소스 파일\BackEnd</Filter>
+    </ClInclude>
+    <ClInclude Include="Item.h">
+      <Filter>소스 파일\ITEM</Filter>
     </ClInclude>
     <ClInclude Include="ResourceManager.h">
       <Filter>소스 파일\ResourceManager</Filter>

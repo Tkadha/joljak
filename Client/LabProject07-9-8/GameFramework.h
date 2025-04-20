@@ -6,7 +6,28 @@
 #include "Timer.h"
 #include "Player.h"
 #include "Scene.h"
+#include "Item.h"
+#include "d3dx12.h"
+#include "WICTextureLoader12.h"
+#include <wrl.h> // ì¶”ê°€
+#include <vector>
+#include <string>
+using namespace Microsoft::WRL; // ì¶”ê°€
 #include "ResourceManager.h"
+
+struct CraftMaterial
+{
+	std::string MaterialName; // ì¬ë£Œ ì´ë¦„
+	int Quantity;             // ì¬ë£Œ ìˆ˜ëŸ‰
+};
+
+// ì œì‘ ì•„ì´í…œ êµ¬ì¡°ì²´
+struct CraftItem
+{
+	std::string ResultItemName;        // ìµœì¢… ì œì‘ ì•„ì´í…œ ì´ë¦„
+	std::vector<CraftMaterial> Materials; // í•„ìš”í•œ ì¬ë£Œ ëª©ë¡
+	int ResultQuantity;                // ì œì‘ ê²°ê³¼ ìˆ˜ëŸ‰ (ì˜ˆ: 2ê°œ ë§Œë“¤ë©´ 2)
+};
 
 class CGameFramework
 {
@@ -34,6 +55,7 @@ public:
     void ProcessInput();
     void AnimateObjects();
     void FrameAdvance();
+	void CreateCbvSrvDescriptorHeap();
 
 	void WaitForGpuComplete();
 	void MoveToNextFrame();
@@ -41,6 +63,15 @@ public:
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	std::shared_ptr<Item> CreateDummyItem();
+	void AddDummyItem();
+	void LoadIconTextures();
+	void CreateIconDescriptorHeap();
+	void InitializeCraftItems();
+	bool CanCraftItem();
+	void CraftSelectedItem();
+	std::vector<CraftItem> m_vecCraftableItems;
+
 
 private:
 	HINSTANCE					m_hInstance;
@@ -48,6 +79,10 @@ private:
 
 	int							m_nWndClientWidth;
 	int							m_nWndClientHeight;
+	int                         m_nSelectedHotbarIndex = 0;
+	bool						ShowInventory = false;
+	bool						ShowCraftingUI = false; // ì¡°í•©ì°½ ì—´ê¸° ì—¬ë¶€
+	int							selectedCraftItemIndex = -1; // í˜„ì¬ ì„ íƒí•œ ì•„ì´í…œ ì¸ë±ìŠ¤
         
 	IDXGIFactory4				*m_pdxgiFactory = NULL;
 	IDXGISwapChain3				*m_pdxgiSwapChain = NULL;
@@ -74,7 +109,7 @@ private:
 	HANDLE						m_hFenceEvent;
 
 
-	// »ó¼ö ¹öÆÛ, ¼ÎÀÌ´õ ¸®¼Ò½º µğ½ºÅ©¸³ÅÍ Èü Scene¿¡¼­ ¿Å±è
+	// ìƒìˆ˜ ë²„í¼, ì…°ì´ë” ë¦¬ì†ŒìŠ¤ ë””ìŠ¤í¬ë¦½í„° í™ Sceneì—ì„œ ì˜®ê¹€
 private:
 	ComPtr<ID3D12DescriptorHeap>	m_pd3dCbvSrvDescriptorHeap;
 	UINT							m_nCbvSrvDescriptorIncrementSize;
@@ -83,21 +118,21 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCpuHandleStart;
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dSrvGpuHandleStart;
 
-	UINT m_nNextCbvOffset = 0; // CBV ¿µ¿ª ³» ´ÙÀ½ ¿ÀÇÁ¼Â
-	UINT m_nNextSrvOffset = 0; // SRV ¿µ¿ª ³» ´ÙÀ½ ¿ÀÇÁ¼Â (CBV ¿µ¿ª ÀÌÈÄ ½ÃÀÛ)
-	UINT m_nTotalCbvDescriptors; // »ı¼º ½Ã ¼³Á¤
-	UINT m_nTotalSrvDescriptors; // »ı¼º ½Ã ¼³Á¤
+	UINT m_nNextCbvOffset = 0; // CBV ì˜ì—­ ë‚´ ë‹¤ìŒ ì˜¤í”„ì…‹
+	UINT m_nNextSrvOffset = 0; // SRV ì˜ì—­ ë‚´ ë‹¤ìŒ ì˜¤í”„ì…‹ (CBV ì˜ì—­ ì´í›„ ì‹œì‘)
+	UINT m_nTotalCbvDescriptors; // ìƒì„± ì‹œ ì„¤ì •
+	UINT m_nTotalSrvDescriptors; // ìƒì„± ì‹œ ì„¤ì •
 
-	// ¸®¼Ò½º ¸Å´ÏÀú Ãß°¡
+	// ë¦¬ì†ŒìŠ¤ ë§¤ë‹ˆì € ì¶”ê°€
 	std::unique_ptr<ResourceManager> m_pResourceManager;
 
 public:
-	// CBV ½½·Ô ÇÒ´ç ¿äÃ» (nDescriptors°³ ÇÒ´ç ÈÄ ½ÃÀÛ ÇÚµé ¹İÈ¯)
+	// CBV ìŠ¬ë¡¯ í• ë‹¹ ìš”ì²­ (nDescriptorsê°œ í• ë‹¹ í›„ ì‹œì‘ í•¸ë“¤ ë°˜í™˜)
 	bool AllocateCbvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle);
-	// SRV ½½·Ô ÇÒ´ç ¿äÃ»
+	// SRV ìŠ¬ë¡¯ í• ë‹¹ ìš”ì²­
 	bool AllocateSrvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle);
 
-	// ÈüÀÇ ½ÃÀÛ ÇÚµé ¹İÈ¯ ÇÔ¼ö µî...
+	// í™ì˜ ì‹œì‘ í•¸ë“¤ ë°˜í™˜ í•¨ìˆ˜ ë“±...
 	ID3D12DescriptorHeap* GetCbvSrvHeap() { return m_pd3dCbvSrvDescriptorHeap.Get(); }
 	UINT GetCbvSrvDescriptorSize() { return m_nCbvSrvDescriptorIncrementSize; }
 
@@ -108,6 +143,9 @@ public:
 
 	ID3D12Device* GetDevice() { return m_pd3dDevice; }
 	ResourceManager* GetResourceManager() { return m_pResourceManager.get(); };
+
+	ID3D12DescriptorHeap* m_pd3dSrvDescriptorHeapForImGui = nullptr;
+	ID3D12DescriptorHeap* m_pd3dSrvDescriptorHeapForIcons = nullptr;
 
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;
@@ -122,6 +160,16 @@ public:
 	POINT						m_ptOldCursorPos;
 
 	_TCHAR						m_pszFrameRate[70];
+	int g_itemIDCounter = 0;
+	struct InventorySlot {
+		std::shared_ptr<Item> item;
+		int quantity = 0;
+		bool IsEmpty() const { return item == nullptr; }
+	};
+
+	std::vector<InventorySlot> m_inventorySlots;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_pWoodTexture = nullptr;
+	D3D12_CPU_DESCRIPTOR_HANDLE m_WoodTextureHandle = {};
 
 	BOOL obbRender = FALSE;
 };
