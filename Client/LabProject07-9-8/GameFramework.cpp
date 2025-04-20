@@ -58,7 +58,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	
 
 	BuildObjects();
-
+	
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -80,6 +80,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 		m_pd3dSrvDescriptorHeapForImGui->GetGPUDescriptorHandleForHeapStart()
 	);
 	InitializeCraftItems();
+	ItemManager::Initialize();
 	return(true);
 }
 
@@ -370,6 +371,11 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			case 'I':
 				AddDummyItem();
 				break;
+			case 'R':
+				if (ShowCraftingUI == false)
+					ShowCraftingUI = true;
+				else
+					ShowCraftingUI = false;
 			}
 		default:
 			break;
@@ -414,17 +420,28 @@ std::shared_ptr<Item> CGameFramework::CreateDummyItem()
 
 void CGameFramework::AddDummyItem()
 {
-	for (auto& slot : m_inventorySlots)
+	if (m_inventorySlots.size() >= 5) // 인벤토리 5칸 이상이면
 	{
-		if (slot.IsEmpty())
+		if (m_inventorySlots[0].IsEmpty())
 		{
-			slot.item = CreateDummyItem();
-			OutputDebugStringA("더미 아이템 추가됨\n");
-			return;
+			auto tempItem = ItemManager::GetItemByName("나무");
+			if (tempItem)
+			{
+				m_inventorySlots[0].item = tempItem;
+				m_inventorySlots[0].quantity = 5;
+			}
+		}
+
+		if (m_inventorySlots[1].IsEmpty())
+		{
+			auto tempItem2 = ItemManager::GetItemByName("돌");
+			if (tempItem2)
+			{
+				m_inventorySlots[1].item = tempItem2;
+				m_inventorySlots[1].quantity = 3;
+			}
 		}
 	}
-
-	OutputDebugStringA("인벤토리가 가득 찼습니다\n");
 }
 
 void CGameFramework::LoadIconTextures()
@@ -767,8 +784,7 @@ void CGameFramework::FrameAdvance()
 	const int HotbarCount = 5;
 	const float SlotSize = 54.0f;
 	const float SlotSpacing = 6.0f;
-
-	const float ExtraPadding = 18.0f; 
+	const float ExtraPadding = 18.0f;
 
 	const float TotalWidth = (SlotSize * HotbarCount) + (SlotSpacing * (HotbarCount - 1));
 	const float WindowWidth = TotalWidth + ExtraPadding;
@@ -782,25 +798,29 @@ void CGameFramework::FrameAdvance()
 		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
 		ImGuiWindowFlags_NoBackground);
+
 	ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
 
 	for (int i = 0; i < HotbarCount; ++i)
 	{
 		if (i > 0) ImGui::SameLine();
 
-		if (i == m_nSelectedHotbarIndex)
-			ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(255, 255, 0, 255));
-
 		ImGui::PushID(i);
-		ImGui::Button(std::to_string(i + 1).c_str(), ImVec2(SlotSize, SlotSize));
+
+		// 인벤토리 0~4번 슬롯에서 가져옴
+		if (!m_inventorySlots[i].IsEmpty())
+		{
+			std::string itemName = m_inventorySlots[i].item->GetName(); // 아이템 이름 가져오기
+			ImGui::Button(itemName.c_str(), ImVec2(SlotSize, SlotSize)); // 아이템 이름 표시
+		}
+		else
+		{
+			ImGui::Button(" ", ImVec2(SlotSize, SlotSize)); // 빈 슬롯이면 빈 버튼
+		}
+
 		ImGui::PopID();
-
-		if (i == m_nSelectedHotbarIndex)
-			ImGui::PopStyleColor();
-
-		if (ImGui::IsItemClicked())
-			m_nSelectedHotbarIndex = i;
 	}
+
 	ImGui::PopStyleVar();
 	ImGui::End();
 
@@ -890,84 +910,81 @@ void CGameFramework::FrameAdvance()
 		// ▶ 2열로 나누기
 		ImGui::Columns(2, nullptr, false);
 
-		for (int i = 0; i < m_inventorySlots.size(); ++i)
+		// 왼쪽: 인벤토리 슬롯
 		{
-			ImGui::PushID(i);
-
-			if (!m_inventorySlots[i].IsEmpty())
+			for (int i = 0; i < m_inventorySlots.size(); ++i)
 			{
-				// 아이템이 있을 때
-				ID3D12DescriptorHeap* ppIconHeaps[] = { m_pd3dSrvDescriptorHeapForIcons };
-				m_pd3dCommandList->SetDescriptorHeaps(_countof(ppIconHeaps), ppIconHeaps);
+				ImGui::PushID(i);
 
-				// 아이템 아이콘 출력
-				ImTextureID textureID = (ImTextureID)m_pd3dSrvDescriptorHeapForIcons->GetGPUDescriptorHandleForHeapStart().ptr;
-				ImVec2 iconSize = ImVec2(50, 50);
+				if (!m_inventorySlots[i].IsEmpty())
+				{
+					// 아이템이 있을 때, 이름으로 출력
+					std::string buttonLabel = m_inventorySlots[i].item->GetName();
+					buttonLabel += " x" + std::to_string(m_inventorySlots[i].quantity);
+					ImGui::Button(buttonLabel.c_str(), ImVec2(slotSize, slotSize));
+				}
+				else
+				{
+					// 아이템이 없을 때 빈 칸
+					ImGui::Button(" ", ImVec2(slotSize, slotSize));
+				}
 
-				ImGui::ImageButton("##icon", textureID, iconSize);
-				
+				ImGui::PopID();
+
+				if ((i + 1) % inventoryCols != 0)
+					ImGui::SameLine(0.0f, spacing); // 열 넘어갈 때 정렬
 			}
-			else
-			{
-				// 아이템이 없을 때 빈 칸
-				ImGui::Button(" ", ImVec2(50, 50));
-			}
-
-			ImGui::PopID();
-
-			if ((i + 1) % 5 != 0)
-				ImGui::SameLine();
 		}
-
 
 		ImGui::NextColumn();
 
-		
+		// 오른쪽: 플레이어 스탯
+		{
+			ImGui::Text("플레이어 레벨: %d", m_pPlayer->PlayerLevel);
+			ImGui::Text("스테이터스:");
 
-		// ▶ 오른쪽: 스탯 정보 출력
-		ImGui::Text("플레이어 레벨: %d", m_pPlayer ->PlayerLevel);
-		ImGui::Text("스테이터스:");
+			ImGui::BulletText("체력: %d / %d", m_pPlayer->Playerhp, m_pPlayer->Maxhp);
+			ImGui::SameLine();
+			if (m_pPlayer->StatPoint > 0) {
+				if (ImGui::Button("+##hp")) { m_pPlayer->Maxhp += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerhp += 10; }
+			}
+			else {
+				ImGui::BeginDisabled(); ImGui::Button("+##hp"); ImGui::EndDisabled();
+			}
 
-		ImGui::BulletText("체력: %d / %d", m_pPlayer->Playerhp, m_pPlayer->Maxhp);
-		ImGui::SameLine();
-		if (m_pPlayer->StatPoint > 0) {
-			if (ImGui::Button("+##hp")) { m_pPlayer->Maxhp += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerhp += 10; }
-		}
-		else {
-			ImGui::BeginDisabled(); ImGui::Button("+##hp"); ImGui::EndDisabled();
+			ImGui::BulletText("스태미너: %d / %d", m_pPlayer->Playerstamina, m_pPlayer->Maxstamina);
+			ImGui::SameLine();
+			if (m_pPlayer->StatPoint > 0) {
+				if (ImGui::Button("+##stamina")) { m_pPlayer->Maxstamina += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerstamina += 10; }
+			}
+			else {
+				ImGui::BeginDisabled(); ImGui::Button("+##stamina"); ImGui::EndDisabled();
+			}
+
+			ImGui::BulletText("공격력: %d", m_pPlayer->PlayerAttack);
+			ImGui::SameLine();
+			if (m_pPlayer->StatPoint > 0) {
+				if (ImGui::Button("+##atk")) { m_pPlayer->PlayerAttack += 1; m_pPlayer->StatPoint--; }
+			}
+			else {
+				ImGui::BeginDisabled(); ImGui::Button("+##atk"); ImGui::EndDisabled();
+			}
+
+			ImGui::BulletText("이동속도: %d", m_pPlayer->PlayerSpeed);
+			ImGui::SameLine();
+			if (m_pPlayer->StatPoint > 0) {
+				if (ImGui::Button("+##speed")) { m_pPlayer->PlayerSpeed += 0.2f; m_pPlayer->StatPoint--; }
+			}
+			else {
+				ImGui::BeginDisabled(); ImGui::Button("+##speed"); ImGui::EndDisabled();
+			}
+
+			ImGui::Spacing();
+			ImGui::Separator();
+			ImGui::Text("보유 포인트: %d", m_pPlayer->StatPoint);
 		}
 
-		ImGui::BulletText("스태미너: %d / %d", m_pPlayer->Playerstamina, m_pPlayer->Maxstamina);
-		ImGui::SameLine();
-		if (m_pPlayer->StatPoint > 0) {
-			if (ImGui::Button("+##stamina")) { m_pPlayer->Maxstamina += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerstamina += 10; }
-		}
-		else {
-			ImGui::BeginDisabled(); ImGui::Button("+##stamina"); ImGui::EndDisabled();
-		}
-
-		ImGui::BulletText("공격력: %d", m_pPlayer->PlayerAttack);
-		ImGui::SameLine();
-		if (m_pPlayer->StatPoint > 0) {
-			if (ImGui::Button("+##atk")) { m_pPlayer->PlayerAttack += 1; m_pPlayer->StatPoint--; }
-		}
-		else {
-			ImGui::BeginDisabled(); ImGui::Button("+##atk"); ImGui::EndDisabled();
-		}
-
-		ImGui::BulletText("이동속도: %d", m_pPlayer->PlayerSpeed);
-		ImGui::SameLine();
-		if (m_pPlayer->StatPoint > 0) {
-			if (ImGui::Button("+##speed")) { m_pPlayer->PlayerSpeed += 0.2; m_pPlayer->StatPoint--; }
-		}
-		else {
-			ImGui::BeginDisabled(); ImGui::Button("+##speed"); ImGui::EndDisabled();
-		}
-
-		ImGui::Spacing();
-		ImGui::Separator();
-		ImGui::Text("보유 포인트: %d", m_pPlayer->StatPoint);
-		ImGui::Columns(1); // 정렬 초기화
+		ImGui::Columns(1); // 열 정리
 		ImGui::End();
 	}
 	////////////////////////////////////////////////////////////////////////////////////// 조합창
@@ -1027,7 +1044,10 @@ void CGameFramework::FrameAdvance()
 
 			if (ImGui::Button("조합하기", ImVec2(200, 50)))
 			{
-				// 조합 버튼 클릭 시 처리할 로직
+				if (CanCraftItem())
+				{
+					CraftSelectedItem();
+				}
 			}
 		}
 
@@ -1209,4 +1229,83 @@ void CGameFramework::InitializeCraftItems()
 		{ {"막대기", 2}, {"철괴", 3} },
 		1
 		});
+}
+bool CGameFramework::CanCraftItem()
+{
+	if (selectedCraftItemIndex < 0 || selectedCraftItemIndex >= m_vecCraftableItems.size())
+		return false; // 잘못된 인덱스
+
+	const CraftItem& selectedItem = m_vecCraftableItems[selectedCraftItemIndex];
+
+	// 필요한 재료들 다 검사
+	for (const CraftMaterial& material : selectedItem.Materials)
+	{
+		int requiredQuantity = material.Quantity;
+		int playerQuantity = 0;
+
+		// 인벤토리를 돌면서 같은 재료 찾기
+		for (const InventorySlot& slot : m_inventorySlots)
+		{
+			if (!slot.IsEmpty() && slot.item->GetName() == material.MaterialName)
+			{
+				playerQuantity += slot.quantity;
+			}
+		}
+
+		// 한 가지라도 부족하면 바로 실패
+		if (playerQuantity < requiredQuantity)
+			return false;
+	}
+
+	// 모든 재료가 충분하면 성공
+	return true;
+}
+
+void CGameFramework::CraftSelectedItem()
+{
+	if (selectedCraftItemIndex < 0 || selectedCraftItemIndex >= m_vecCraftableItems.size())
+		return;
+
+	const CraftItem& selectedItem = m_vecCraftableItems[selectedCraftItemIndex];
+
+	// 1. 필요한 재료 차감
+	for (const CraftMaterial& material : selectedItem.Materials)
+	{
+		int remaining = material.Quantity;
+
+		for (InventorySlot& slot : m_inventorySlots)
+		{
+			if (!slot.IsEmpty() && slot.item->GetName() == material.MaterialName)
+			{
+				if (slot.quantity >= remaining)
+				{
+					slot.quantity -= remaining;
+					if (slot.quantity == 0)
+						slot.item = nullptr;
+					break;
+				}
+				else
+				{
+					remaining -= slot.quantity;
+					slot.item = nullptr;
+					slot.quantity = 0;
+				}
+			}
+		}
+	}
+
+	// 2. 결과 아이템 추가
+	for (InventorySlot& slot : m_inventorySlots)
+	{
+		if (slot.IsEmpty())
+		{
+			std::shared_ptr<Item> newItem = ItemManager::GetItemByName(selectedItem.ResultItemName);
+			if (newItem)
+			{
+				slot.item = newItem; // shared_ptr에서 raw pointer 꺼내기
+				slot.quantity = selectedItem.ResultQuantity;
+			}
+			break;
+		}
+	}
 }

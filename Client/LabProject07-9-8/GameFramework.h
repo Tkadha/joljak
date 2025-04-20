@@ -67,6 +67,8 @@ public:
 	void LoadIconTextures();
 	void CreateIconDescriptorHeap();
 	void InitializeCraftItems();
+	bool CanCraftItem();
+	void CraftSelectedItem();
 	std::vector<CraftItem> m_vecCraftableItems;
 
 
@@ -78,7 +80,7 @@ private:
 	int							m_nWndClientHeight;
 	int                         m_nSelectedHotbarIndex = 0;
 	bool						ShowInventory = false;
-	bool						ShowCraftingUI = true; // 조합창 열기 여부
+	bool						ShowCraftingUI = false; // 조합창 열기 여부
 	int							selectedCraftItemIndex = -1; // 현재 선택한 아이템 인덱스
         
 	IDXGIFactory4				*m_pdxgiFactory = NULL;
@@ -124,6 +126,7 @@ private:
 	int g_itemIDCounter = 0;
 	struct InventorySlot {
 		std::shared_ptr<Item> item;
+		int quantity = 0;
 		bool IsEmpty() const { return item == nullptr; }
 	};
 
