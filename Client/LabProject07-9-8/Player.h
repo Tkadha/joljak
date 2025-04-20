@@ -10,7 +10,7 @@
 #include "Object.h"
 #include "Camera.h"
 
-class CScene
+class CScene;
 
 class CPlayer : public CGameObject
 {

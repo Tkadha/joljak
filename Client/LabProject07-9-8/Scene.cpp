@@ -78,7 +78,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	BuildDefaultLightsAndMaterials();
 
-	m_pPlayer->SetOwningScene(this);
 
 	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
 	if (!pResourceManager) {

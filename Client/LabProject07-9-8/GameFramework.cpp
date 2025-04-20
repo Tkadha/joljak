@@ -421,6 +421,7 @@ void CGameFramework::BuildObjects()
 
 	m_pScene->m_pPlayer = m_pPlayer = pPlayer;
 	m_pCamera = m_pPlayer->GetCamera();
+	m_pPlayer->SetOwningScene(m_pScene);
 
 	pPlayer->SetOBB();
 	CShader* shader = new COBBShader();
