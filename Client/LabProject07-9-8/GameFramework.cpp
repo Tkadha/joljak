@@ -10,7 +10,6 @@
 #include "imgui_impl_dx12.h"
 #include "NetworkManager.h"
 
-// ��Ʈ��ũ ���� ������
 void CGameFramework::NerworkThread()
 {
 	auto& nwManager = NetworkManager::GetInstance();
@@ -24,7 +23,6 @@ void CGameFramework::NerworkThread()
 		nwManager.PushQueue(reinterpret_cast<char*>(&p));*/
 
 
-		// ���� �����Ͱ� �ִٸ�
 		while (!nwManager.send_queue.empty())
 		{
 			auto packet = nwManager.PopSendQueue();
@@ -33,7 +31,6 @@ void CGameFramework::NerworkThread()
 			SleepEx(1, TRUE);
 		}
 
-		// ���� �����Ͱ� �ִٸ�	
 		while (!nwManager.recv_queue.empty())
 		{
 			auto packet = nwManager.PopRecvQueue();
@@ -63,7 +60,6 @@ void CGameFramework::ProcessPacket(char* packet)
 	{
 		ROTATE_PACKET* recv_p = reinterpret_cast<ROTATE_PACKET*>(packet);
 		if (recv_p->uid != _MyID) {
-			//ȸ�� �� �����ϱ�
 		}
 	}
 	break;
@@ -161,6 +157,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	);
 	InitializeCraftItems();
 	ItemManager::Initialize();
+
 	/*auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
 	std::thread t(&CGameFramework::NerworkThread, this);
@@ -463,7 +460,9 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					ShowCraftingUI = true;
 				else
 					ShowCraftingUI = false;
+				break;
 			}
+			break;
 		default:
 			break;
 	}
@@ -471,8 +470,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 
 LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
-	if (ImGui_ImplWin32_WndProcHandler(hWnd, nMessageID, wParam, lParam))
-		return true;
+	if (ImGui_ImplWin32_WndProcHandler(hWnd, nMessageID, wParam, lParam)) return true;
 	switch (nMessageID)
 	{
 		case WM_ACTIVATE:

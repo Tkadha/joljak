@@ -12,8 +12,8 @@
 #include <wrl.h> // 추가
 #include <vector>
 #include <string>
-using namespace Microsoft::WRL; // 추가
 #include "ResourceManager.h"
+using namespace Microsoft::WRL; // 추가
 
 struct CraftMaterial
 {
