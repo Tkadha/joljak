@@ -393,10 +393,10 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	SetCameraUpdatedContext(pContext);
 
 	CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)pContext;
-	SetPosition(XMFLOAT3(800.0f, pTerrain->GetHeight(800.0f, 800.0f), 800.0f));
+	SetPosition(XMFLOAT3(1500.0f, pTerrain->GetHeight(1500.0f, 1500.0f), 1500.0f));
 	SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
 
-	m_pCamera->Move(XMFLOAT3(310.0f, pTerrain->GetHeight(310.0f, 590.0f) + 20.0f, 590.0f));
+	m_pCamera->Move(XMFLOAT3(1500.0f, pTerrain->GetHeight(1500.0f, 1500.0f) + 20.0f, 1500.0f));
 	if (pAngrybotModel) delete pAngrybotModel;
 }
 

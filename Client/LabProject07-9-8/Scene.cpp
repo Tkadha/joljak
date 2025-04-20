@@ -573,14 +573,18 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		if (CollisionCheck(m_pPlayer, obj)) {
 			// 나무 충돌처리
 			if (obj->m_objectType == GameObjectType::Tree) {
-				obj->isRender = false;
+				auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
+				obj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+				auto [w, h] = genRandom::generateRandomXZ(gen, 2, 6, 2, 10);
+				obj->SetScale(w, h, w);
+				//obj->isRender = false;
 			}
 
 			// 돌 충돌처리
 			if (obj->m_objectType == GameObjectType::Rock) {
+				printf("[Rock 충돌 확인])\n");
 				obj->isRender = false;
 			}
-
 
 		}
 	}
@@ -631,7 +635,10 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
-	for (auto obj : m_vGameObjects) obj->Render(pd3dCommandList, pCamera);
+	for (auto obj : m_vGameObjects) 
+	{
+		if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
+	}
 	
 	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
 	{
@@ -667,9 +674,10 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, 
 	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
-	for (auto obj : m_vGameObjects) obj->Render(pd3dCommandList, obbRender, pCamera);
-	//m_ppHierarchicalGameObjects[0]->RenderOBB(pd3dCommandList);
-
+	for (auto obj : m_vGameObjects)
+	{
+		if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
+	}
 	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
 	{
 		if (m_ppHierarchicalGameObjects[i] && m_ppHierarchicalGameObjects[i]->isRender == true)
@@ -716,7 +724,7 @@ void CScene::CollectHierarchyObjects(CGameObject* obj, std::vector<BoundingOrien
 	}
 
 	if(obj->m_pMesh)
-		obbList.push_back(obj->m_localOBB);
+		obbList.push_back(obj->m_worldOBB);
 
 	// 재귀 호출
 	CGameObject* currentChild = obj->m_pChild;
