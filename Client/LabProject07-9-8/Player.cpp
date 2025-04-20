@@ -373,15 +373,15 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "thumb_02_r", "Model/Sword_01.bin", pResourceManager, XMFLOAT3(0.05, 0.00, -0.05));
 	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Helmet", "Model/Hair_01.bin", pResourceManager, XMFLOAT3(0, 0.1, 0));
 	//AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Boots_Peasant_Armor", "Model/Boots_Peasant_Armor.bin");
-	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pResourceManager, XMFLOAT3(-0.25, 0.1, 0), XMFLOAT3(90, 0, 90));
+	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pResourceManager, XMFLOAT3(-0.25, 0.05, 0), XMFLOAT3(90, 0, 90), XMFLOAT3(1.0, 1.5, 1.0));
 	//AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_03", "Model/Torso_Peasant_03_Armor.bin", XMFLOAT3(0, 0, 0), XMFLOAT3(90, 0, 90));
 	
 	
 	SetGravity(DirectX::XMFLOAT3(0.0f, -9.8f * 10.0f, 0.0f)); // 중력 설정 (스케일 조절 필요 시)
-	SetMaxVelocityXZ(20.0f); // 최대 수평 속도
+	SetMaxVelocityXZ(40.0f); // 최대 수평 속도
 	SetMaxVelocityY(40.0f);  // 최대 수직 속도 (낙하 속도)
 	SetFriction(5.0f);       // 이동 중 마찰
-	SetStopFriction(25.0f);  // 정지 시 마찰 (이동 중 마찰보다 훨씬 크게)
+	SetStopFriction(100.0f);  // 정지 시 마찰 (이동 중 마찰보다 훨씬 크게)
 	m_fStaminaRegenRate = 8.0f; // 스태미나 회복률
 	m_fStaminaMoveCost = 15.0f; // 스태미나 이동 소모율
 	
@@ -677,7 +677,7 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 	m_bIsMovingInputActive = false;
 }
 
-void CTerrainPlayer::keyInput(UCHAR* keys, float fTimeElapsed) // fTimeElapsed 추가
+void CTerrainPlayer::keyInput(UCHAR* keys)
 {
 	float fSpeed = PlayerSpeed; // PlayerSpeed 멤버 사용 (조정 필요 시 스케일 적용)
 
@@ -712,41 +712,39 @@ void CTerrainPlayer::keyInput(UCHAR* keys, float fTimeElapsed) // fTimeElapsed �
 		// bAction = false; // 단순하게 처리할 수도 있음
 	}
 
-	// 키 입력에 따라 Move 함수 호출 및 상태 변경
-	if (!bAction) {
-		if (keys[VK_UP] || keys['W']) {
-			Move(DIR_FORWARD, fSpeed); // Move 함수 내부에서 SetMovingInputActive(true) 호출됨
-			bMoved = true;
-		}
-		if (keys[VK_DOWN] || keys['S']) {
-			Move(DIR_BACKWARD, fSpeed);
-			bMoved = true;
-		}
-		if (keys[VK_LEFT] || keys['A']) {
-			// 캐릭터 회전 로직 (필요 시)
-			// Rotate(0.0f, -rotationSpeed * fTimeElapsed, 0.0f);
-			Move(DIR_LEFT, fSpeed); // 왼쪽 '이동'만 처리 (스트레이핑)
-			bMoved = true;
-		}
-		if (keys[VK_RIGHT] || keys['D']) {
-			// 캐릭터 회전 로직 (필요 시)
-			// Rotate(0.0f, rotationSpeed * fTimeElapsed, 0.0f);
-			Move(DIR_RIGHT, fSpeed); // 오른쪽 '이동'만 처리 (스트레이핑)
-			bMoved = true;
-		}
-		// 점프 등 다른 키 입력 처리...
-		// if (keys[VK_SPACE]) { /* Jump(); */ }
-	}
+	//// 키 입력에 따라 Move 함수 호출 및 상태 변경
+	//if (!bAction) {
+	//	if (keys[VK_UP] || keys['W']) {
+	//		Move(DIR_FORWARD, fSpeed); // Move 함수 내부에서 SetMovingInputActive(true) 호출됨
+	//		bMoved = true;
+	//	}
+	//	if (keys[VK_DOWN] || keys['S']) {
+	//		Move(DIR_BACKWARD, fSpeed);
+	//		bMoved = true;
+	//	}
+	//	if (keys[VK_LEFT] || keys['A']) {
+	//		// 캐릭터 회전 로직 (필요 시)
+	//		// Rotate(0.0f, -rotationSpeed * fTimeElapsed, 0.0f);
+	//		Move(DIR_LEFT, fSpeed); // 왼쪽 '이동'만 처리 (스트레이핑)
+	//		bMoved = true;
+	//	}
+	//	if (keys[VK_RIGHT] || keys['D']) {
+	//		// 캐릭터 회전 로직 (필요 시)
+	//		// Rotate(0.0f, rotationSpeed * fTimeElapsed, 0.0f);
+	//		Move(DIR_RIGHT, fSpeed); // 오른쪽 '이동'만 처리 (스트레이핑)
+	//		bMoved = true;
+	//	}
+	//	// 점프 등 다른 키 입력 처리...
+	//	// if (keys[VK_SPACE]) { /* Jump(); */ }
+	//}
 
 	 // ---- 4. 애니메이션 트랙 업데이트 (상태 변경 시) ----
 	if (previousAni != nAni && m_pSkinnedAnimationController) {
 		// 이전 애니메이션 비활성화
 		m_pSkinnedAnimationController->SetTrackEnable(previousAni, false);
-		m_pSkinnedAnimationController->SetTrackPosition(previousAni, 0.0f); // 처음부터 다시 재생하도록 리셋
 
 		// 새 애니메이션 활성화
 		m_pSkinnedAnimationController->SetTrackEnable(nAni, true);
-		m_pSkinnedAnimationController->SetTrackPosition(nAni, 0.0f); // 처음부터 재생하도록 리셋
 	}
 
 	// 다른 키 입력 처리 (액션 등)

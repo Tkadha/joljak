@@ -182,6 +182,6 @@ public:
 
 	int nAni{};
 	BOOL bAction = false;
-	void keyInput(UCHAR* keys, float fTimeElapsed);
+	void keyInput(UCHAR* keys);
 };
 
