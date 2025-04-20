@@ -682,42 +682,76 @@ void CTerrainPlayer::keyInput(UCHAR* keys, float fTimeElapsed) // fTimeElapsed �
 	float fSpeed = PlayerSpeed; // PlayerSpeed 멤버 사용 (조정 필요 시 스케일 적용)
 
 	bool bMoved = false; // 이번 입력 처리에서 이동이 있었는지 체크
+	int previousAni = nAni;     // 입력 처리 전의 애니메이션 상태 저장
+	bool isActionKeyPressed = false; // F 또는 Space 키가 눌렸는지 여부
+
+
+	// ---- 1. 액션 키 입력 처리 ('F', Space) ----
+// 다른 키보다 액션 키를 먼저 처리하여 상태를 결정할 수 있습니다.
+	if (keys['F'] & 0x80) { // 'F' 키가 눌려있는지 확인 (0x80: 현재 키 눌림 상태)
+		// F 액션 (예: 공격, 상호작용 등)
+		nAni = 5; // F 액션에 해당하는 애니메이션 번호
+		bAction = true; // 액션 중 상태로 설정
+		isActionKeyPressed = true;
+		PerformActionInteractionCheck();
+	}
+	else if (keys[VK_SPACE] & 0x80) { // 'Space' 키가 눌려있는지 확인 (F가 안 눌렸을 때만 체크)
+		// Space 액션 (예: 점프 준비, 구르기 등)
+		nAni = 6; // Space 액션에 해당하는 애니메이션 번호
+		bAction = true; // 액션 중 상태로 설정
+		isActionKeyPressed = true;
+		// 만약 점프 로직이라면, 여기서 점프 시작 처리를 할 수 있습니다.
+		// Jump();
+	}
+	else {
+		// 'F'와 'Space' 키가 모두 눌려있지 않으면 액션 상태 해제
+		// (주의: 다른 요인으로 bAction이 true가 될 수 있다면 이 부분 수정 필요)
+		if (bAction && (previousAni == 5 || previousAni == 6)) { // F 또는 Space로 인한 액션이었을 경우만 해제
+			bAction = false;
+		}
+		// bAction = false; // 단순하게 처리할 수도 있음
+	}
 
 	// 키 입력에 따라 Move 함수 호출 및 상태 변경
-	if (keys[VK_UP] || keys['W']) {
-		Move(DIR_FORWARD, fSpeed); // Move 함수 내부에서 SetMovingInputActive(true) 호출됨
-		bMoved = true;
-	}
-	if (keys[VK_DOWN] || keys['S']) {
-		Move(DIR_BACKWARD, fSpeed);
-		bMoved = true;
-	}
-	if (keys[VK_LEFT] || keys['A']) {
-		// 캐릭터 회전 로직 (필요 시)
-		// Rotate(0.0f, -rotationSpeed * fTimeElapsed, 0.0f);
-		Move(DIR_LEFT, fSpeed); // 왼쪽 '이동'만 처리 (스트레이핑)
-		bMoved = true;
-	}
-	if (keys[VK_RIGHT] || keys['D']) {
-		// 캐릭터 회전 로직 (필요 시)
-		// Rotate(0.0f, rotationSpeed * fTimeElapsed, 0.0f);
-		Move(DIR_RIGHT, fSpeed); // 오른쪽 '이동'만 처리 (스트레이핑)
-		bMoved = true;
-	}
-	// 점프 등 다른 키 입력 처리...
-	// if (keys[VK_SPACE]) { /* Jump(); */ }
-
-		// 이동 입력이 있었고 스태미나가 있다면 스태미나 소모
-	if (bMoved && Playerstamina > 0) {
-		Playerstamina -= m_fStaminaMoveCost * fTimeElapsed;
-		if (Playerstamina < 0) Playerstamina = 0;
+	if (!bAction) {
+		if (keys[VK_UP] || keys['W']) {
+			Move(DIR_FORWARD, fSpeed); // Move 함수 내부에서 SetMovingInputActive(true) 호출됨
+			bMoved = true;
+		}
+		if (keys[VK_DOWN] || keys['S']) {
+			Move(DIR_BACKWARD, fSpeed);
+			bMoved = true;
+		}
+		if (keys[VK_LEFT] || keys['A']) {
+			// 캐릭터 회전 로직 (필요 시)
+			// Rotate(0.0f, -rotationSpeed * fTimeElapsed, 0.0f);
+			Move(DIR_LEFT, fSpeed); // 왼쪽 '이동'만 처리 (스트레이핑)
+			bMoved = true;
+		}
+		if (keys[VK_RIGHT] || keys['D']) {
+			// 캐릭터 회전 로직 (필요 시)
+			// Rotate(0.0f, rotationSpeed * fTimeElapsed, 0.0f);
+			Move(DIR_RIGHT, fSpeed); // 오른쪽 '이동'만 처리 (스트레이핑)
+			bMoved = true;
+		}
+		// 점프 등 다른 키 입력 처리...
+		// if (keys[VK_SPACE]) { /* Jump(); */ }
 	}
 
+	 // ---- 4. 애니메이션 트랙 업데이트 (상태 변경 시) ----
+	if (previousAni != nAni && m_pSkinnedAnimationController) {
+		// 이전 애니메이션 비활성화
+		m_pSkinnedAnimationController->SetTrackEnable(previousAni, false);
+		m_pSkinnedAnimationController->SetTrackPosition(previousAni, 0.0f); // 처음부터 다시 재생하도록 리셋
+
+		// 새 애니메이션 활성화
+		m_pSkinnedAnimationController->SetTrackEnable(nAni, true);
+		m_pSkinnedAnimationController->SetTrackPosition(nAni, 0.0f); // 처음부터 재생하도록 리셋
+	}
 
 	// 다른 키 입력 처리 (액션 등)
-	if (keys['E']) {
+	if (keys['F']) {
 		// 상호작용 시도
-		PerformActionInteractionCheck();
 	}
 
 	// ... 기타 키 입력 처리 ...
