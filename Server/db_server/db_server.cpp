@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include <iostream>
 #ifdef _DEBUG
 #pragma comment(lib,"../x64/Debug/serverlib.lib")
@@ -7,16 +6,22 @@
 #endif
 #include "../ServerLib/ServerHeader.h"
 #include "../Global.h"
+
+#include "DBManager.h"
 using namespace std;
 
-#define PORT 8999
+#define LOBBY_PORT 8999
+#define GAME_PORT 9000
+#define PORT 9001
 
+DBManager dbm;
 char gameserver_addr[] = "127.0.0.1";
 //------------------------------------
 // 
-//			Lobby Server
+//			database Server
 // 
 //------------------------------------
+
 #define IOCPCOUNT 1
 
 Iocp iocp(IOCPCOUNT); // 본 예제는 스레드를 딱 하나만 쓴다. 따라서 여기도 1이 들어간다.
@@ -120,11 +125,9 @@ void worker_thread()
 	}
 }
 
-
-
 int main(int argc, char* argv[])
 {
-	SetConsoleTitle(L"LobbyServer");
+	SetConsoleTitle(L"DataBaseServer");
 	try
 	{
 		g_l_socket = make_shared<Socket>(SocketType::Tcp);
@@ -147,6 +150,7 @@ int main(int argc, char* argv[])
 
 		for (auto& th : worker_threads) th->join();
 
+		g_l_socket->Close();
 	}
 	catch (Exception& e)
 	{
@@ -155,23 +159,59 @@ int main(int argc, char* argv[])
 	}
 	return 0;
 }
+//
+//int main()
+//{
+//	if(dbm.Login("test", "test")) printf("로그인 성공\n");
+//	else printf("로그인 실패\n");
+//}
 
 void ProcessPacket(shared_ptr<RemoteClient>& client, char* packet)
 {
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
-	case E_PACKET::E_P_INGAME:
+	case E_PACKET::E_DB_REGISTER:	// 회원가입
 	{
-		INGAME_PACKET* r_packet = reinterpret_cast<INGAME_PACKET*>(packet);
-		CHANGEPORT_PACKET s_packet;
-		s_packet.port = 9000;
-		strcpy(s_packet.addr, gameserver_addr);
-		for (auto cl : RemoteClient::remoteClients) {
-			if (cl.second != client) cl.second->tcpConnection.m_isReadOverlapped = false;
-			cout << "Send: " << client->m_id << " to " << cl.second->m_id << endl;
-			cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
-			if (cl.second != client) cl.second->tcpConnection.m_isReadOverlapped = true;
+		DB_REGISTER_PACKET* db_register_packet = (DB_REGISTER_PACKET*)packet;
+		if (dbm.Register(db_register_packet->id, db_register_packet->pw)) {	// 회원가입 성공
+			DB_SUCCESS_FAIL_PACKET sf_packet;
+			sf_packet.kind = static_cast<char>(E_PACKET::E_DB_REGISTER);
+			sf_packet.result = 1;	// 성공
+			sf_packet.uid = db_register_packet->uid;
+			client->tcpConnection.Send((char*)&sf_packet, sizeof(DB_SUCCESS_FAIL_PACKET));
+		}
+		else {	// 회원가입 실패
+			DB_SUCCESS_FAIL_PACKET sf_packet;
+			sf_packet.kind = static_cast<char>(E_PACKET::E_DB_REGISTER);
+			sf_packet.result = 0;	// 실패
+			sf_packet.uid = db_register_packet->uid;
+			client->tcpConnection.Send((char*)&sf_packet, sizeof(DB_SUCCESS_FAIL_PACKET));
+		}
+		break;
+	}
+	case E_PACKET::E_DB_LOGIN:	// 로그인	
+	{
+		DB_LOGIN_PACKET* db_login_packet = (DB_LOGIN_PACKET*)packet;
+		cout << "DB_LOGIN_PACKET: " << db_login_packet->id << " " << db_login_packet->pw << endl;
+		cout << "user: "<< db_login_packet->uid << endl;
+
+		if (dbm.Login(db_login_packet->id, db_login_packet->pw)) {	// 로그인 성공
+			DB_SUCCESS_FAIL_PACKET sf_packet;
+			sf_packet.kind = static_cast<char>(E_PACKET::E_DB_LOGIN);
+			sf_packet.result = 1;	// 성공
+			sf_packet.uid = db_login_packet->uid;
+			cout << "login success: " << db_login_packet->id << " " << db_login_packet->pw << endl;
+			cout << "user: " << db_login_packet->uid << endl;
+			cout<< "send packet: " << sf_packet.kind << " " << sf_packet.result << " " << sf_packet.uid << endl;
+			client->tcpConnection.Send((char*)&sf_packet, sizeof(DB_SUCCESS_FAIL_PACKET));
+		}
+		else {
+			DB_SUCCESS_FAIL_PACKET sf_packet;
+			sf_packet.kind = static_cast<char>(E_PACKET::E_DB_LOGIN);
+			sf_packet.result = 0;	// 실패
+			sf_packet.uid = db_login_packet->uid;
+			client->tcpConnection.Send((char*)&sf_packet, sizeof(DB_SUCCESS_FAIL_PACKET));
 		}
 		break;
 	}

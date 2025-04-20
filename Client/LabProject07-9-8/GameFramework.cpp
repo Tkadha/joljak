@@ -3,11 +3,91 @@
 //-----------------------------------------------------------------------------
 
 #include "stdafx.h"
+#include <thread>
 #include "GameFramework.h"
+#include "NetworkManager.h"
+
+// 네트워크 수신 스레드
+void CGameFramework::NerworkThread()
+{
+	auto& nwManager = NetworkManager::GetInstance();
+	nwManager.do_recv();
+	while (true)
+	{
+		/*CHAT_PACKET p;
+		strcpy(p.chat, "send message\n");
+		p.size = sizeof(CHAT_PACKET);
+		p.type = static_cast<char>(E_PACKET::E_P_CHAT);
+		nwManager.PushQueue(reinterpret_cast<char*>(&p));*/
+
+
+		// 보낼 데이터가 있다면
+		while (!nwManager.send_queue.empty())
+		{
+			auto packet = nwManager.PopSendQueue();
+
+			nwManager.do_send(packet.first.get(), packet.second);
+			SleepEx(1, TRUE);
+		}
+
+		// 꺼낼 데이터가 있다면	
+		while (!nwManager.recv_queue.empty())
+		{
+			auto packet = nwManager.PopRecvQueue();
+			ProcessPacket(packet.first.get());
+
+		}
+		SleepEx(100, TRUE);
+	}
+}
+void CGameFramework::ProcessPacket(char* packet)
+{
+	E_PACKET type = static_cast<E_PACKET>(packet[1]);
+	switch (type)
+	{
+	case E_PACKET::E_P_POSITION:
+	{
+		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
+		if (recv_p->uid == _MyID) {
+			m_pPlayer->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z });
+		}
+		else {
+			PlayerList[recv_p->uid]->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z });
+		}
+	}
+	break;
+	case E_PACKET::E_P_ROTATE:
+	{
+		ROTATE_PACKET* recv_p = reinterpret_cast<ROTATE_PACKET*>(packet);
+		if (recv_p->uid != _MyID) {
+			//회전 값 적용하기
+		}
+	}
+	break;
+	case E_PACKET::E_P_LOGIN:
+	{
+		LOGIN_PACKET* recv_p = reinterpret_cast<LOGIN_PACKET*>(packet);
+		if (_MyID == -1) _MyID = recv_p->uid;
+		else if (PlayerList.find(recv_p->uid) == PlayerList.end()) {
+			PlayerList[recv_p->uid] = std::make_unique<CAngrybotObject>(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), nullptr, 1);
+			PlayerList[recv_p->uid]->ReleaseUploadBuffers();
+		}
+	}
+	break;
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
 
+	case E_PACKET::E_P_LOGOUT:
+	{
+		LOGOUT_PACKET* recv_p = reinterpret_cast<LOGOUT_PACKET*>(packet);
+		PlayerList.erase(recv_p->uid);
+	}
+	break;
+	default:
+		break;
+	}
+}
 CGameFramework::CGameFramework()
 {
 	m_pdxgiFactory = NULL;
@@ -33,6 +113,8 @@ CGameFramework::CGameFramework()
 
 	m_pScene = NULL;
 	m_pPlayer = NULL;
+	_MyID = -1;
+	
 	m_inventorySlots.resize(25);
 	_tcscpy_s(m_pszFrameRate, _T("LabProject ("));
 }
@@ -82,6 +164,12 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	);
 	InitializeCraftItems();
 	ItemManager::Initialize();
+
+	/*auto& nwManager = NetworkManager::GetInstance();
+	nwManager.Init();
+	std::thread t(&CGameFramework::NerworkThread, this);
+	t.detach();*/
+
 	return(true);
 }
 
@@ -650,7 +738,10 @@ void CGameFramework::BuildObjects()
 void CGameFramework::ReleaseObjects()
 {
 	if (m_pPlayer) m_pPlayer->Release();
-
+	//for( auto& player : PlayerList)
+	//{
+	//	player.second->Release();
+	//}
 	if (m_pScene) m_pScene->ReleaseObjects();
 	if (m_pScene) delete m_pScene;
 }
@@ -1106,6 +1197,12 @@ void CGameFramework::FrameAdvance()
 	ID3D12DescriptorHeap* ppHeaps[] = { m_pd3dSrvDescriptorHeapForImGui };
 	m_pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_pd3dCommandList);
+
+	// network another player
+	for (auto& p : PlayerList) {
+		p.second->Render(m_pd3dCommandList, m_pCamera);
+	}
+
 
 	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;

@@ -140,6 +140,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Animation.cpp" />
+    <ClCompile Include="AtkState.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="DDSTextureLoader12.cpp" />
     <ClCompile Include="FSMManager.cpp" />
@@ -156,11 +157,13 @@
     <ClCompile Include="LabProject07-9-8.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="NetworkManager.cpp" />
     <ClCompile Include="Object.cpp" />
+    <ClCompile Include="NonAtkState.cpp" />
     <ClCompile Include="Octree.cpp" />
-    <ClCompile Include="PigState.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
+    <ClCompile Include="RandomUtil.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="stdafx.cpp" />
@@ -170,6 +173,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Animation.h" />
+    <ClInclude Include="AtkState.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DDSTextureLoader12.h" />
@@ -187,10 +191,12 @@
     <ClInclude Include="LabProject07-9-8.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />
+    <ClInclude Include="NetworkManager.h" />
     <ClInclude Include="Object.h" />
+    <ClInclude Include="NonAtkState.h" />
     <ClInclude Include="Octree.h" />
-    <ClInclude Include="PigState.h" />
     <ClInclude Include="Player.h" />
+    <ClInclude Include="RandomUtil.h" />
     <ClInclude Include="ResourceManager.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Shader.h" />

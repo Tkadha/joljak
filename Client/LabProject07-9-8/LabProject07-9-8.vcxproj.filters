@@ -57,6 +57,9 @@
     <Filter Include="소스 파일\ResourceManager">
       <UniqueIdentifier>{956b5884-de85-4aa8-8403-f845341d00bc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Network">
+      <UniqueIdentifier>{059782b4-6ff6-42cd-840c-e49c6e010703}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LabProject07-9-8.rc">
@@ -84,7 +87,7 @@
     <ClCompile Include="FSMState.cpp">
       <Filter>소스 파일\FSM</Filter>
     </ClCompile>
-    <ClCompile Include="PigState.cpp">
+    <ClCompile Include="NonAtkState.cpp">
       <Filter>소스 파일\FSM</Filter>
     </ClCompile>
     <ClCompile Include="Player.cpp">
@@ -164,7 +167,7 @@
     <ClInclude Include="FSMState.h">
       <Filter>소스 파일\FSM</Filter>
     </ClInclude>
-    <ClInclude Include="PigState.h">
+    <ClInclude Include="NonAtkState.h">
       <Filter>소스 파일\FSM</Filter>
     </ClInclude>
     <ClInclude Include="Player.h">

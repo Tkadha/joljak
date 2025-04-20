@@ -29,6 +29,7 @@ struct CraftItem
 	int ResultQuantity;                // 제작 결과 수량 (예: 2개 만들면 2)
 };
 
+#include <unordered_map>
 class CGameFramework
 {
 public:
@@ -73,6 +74,9 @@ public:
 	std::vector<CraftItem> m_vecCraftableItems;
 
 
+
+	void NerworkThread();
+	void ProcessPacket(char* packet);
 private:
 	HINSTANCE					m_hInstance;
 	HWND						m_hWnd; 
@@ -81,8 +85,8 @@ private:
 	int							m_nWndClientHeight;
 	int                         m_nSelectedHotbarIndex = 0;
 	bool						ShowInventory = false;
-	bool						ShowCraftingUI = false; // 조합창 열기 여부
-	int							selectedCraftItemIndex = -1; // 현재 선택한 아이템 인덱스
+	bool						ShowCraftingUI = false; // ����â ���� ����
+	int							selectedCraftItemIndex = -1; // ���� ������ ������ �ε���
         
 	IDXGIFactory4				*m_pdxgiFactory = NULL;
 	IDXGISwapChain3				*m_pdxgiSwapChain = NULL;
@@ -109,7 +113,7 @@ private:
 	HANDLE						m_hFenceEvent;
 
 
-	// 상수 버퍼, 셰이더 리소스 디스크립터 힙 Scene에서 옮김
+	// ��� ����, ���̴� ���ҽ� ��ũ���� �� Scene���� �ű�
 private:
 	ComPtr<ID3D12DescriptorHeap>	m_pd3dCbvSrvDescriptorHeap;
 	UINT							m_nCbvSrvDescriptorIncrementSize;
@@ -118,21 +122,21 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCpuHandleStart;
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dSrvGpuHandleStart;
 
-	UINT m_nNextCbvOffset = 0; // CBV 영역 내 다음 오프셋
-	UINT m_nNextSrvOffset = 0; // SRV 영역 내 다음 오프셋 (CBV 영역 이후 시작)
-	UINT m_nTotalCbvDescriptors; // 생성 시 설정
-	UINT m_nTotalSrvDescriptors; // 생성 시 설정
+	UINT m_nNextCbvOffset = 0; // CBV ���� �� ���� ������
+	UINT m_nNextSrvOffset = 0; // SRV ���� �� ���� ������ (CBV ���� ���� ����)
+	UINT m_nTotalCbvDescriptors; // ���� �� ����
+	UINT m_nTotalSrvDescriptors; // ���� �� ����
 
-	// 리소스 매니저 추가
+	// ���ҽ� �Ŵ��� �߰�
 	std::unique_ptr<ResourceManager> m_pResourceManager;
 
 public:
-	// CBV 슬롯 할당 요청 (nDescriptors개 할당 후 시작 핸들 반환)
+	// CBV ���� �Ҵ� ��û (nDescriptors�� �Ҵ� �� ���� �ڵ� ��ȯ)
 	bool AllocateCbvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle);
-	// SRV 슬롯 할당 요청
+	// SRV ���� �Ҵ� ��û
 	bool AllocateSrvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle);
 
-	// 힙의 시작 핸들 반환 함수 등...
+	// ���� ���� �ڵ� ��ȯ �Լ� ��...
 	ID3D12DescriptorHeap* GetCbvSrvHeap() { return m_pd3dCbvSrvDescriptorHeap.Get(); }
 	UINT GetCbvSrvDescriptorSize() { return m_nCbvSrvDescriptorIncrementSize; }
 
@@ -172,5 +176,10 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE m_WoodTextureHandle = {};
 
 	BOOL obbRender = FALSE;
+
+	DWORD						beforeDirection = 0;
+
+	std::unordered_map<ULONGLONG, std::unique_ptr<CAngrybotObject>> PlayerList;
+	ULONGLONG					_MyID = -1;
 };
 

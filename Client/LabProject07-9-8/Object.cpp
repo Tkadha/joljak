@@ -9,7 +9,7 @@
 #include "GameFramework.h"
 
 
-#include "PigState.h"
+#include "NonAtkState.h"
 //>>>>>>> Bin_test
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -514,7 +514,18 @@ void CGameObject::MoveForward(float fDistance)
 	XMFLOAT3 xmf3Position = GetPosition();
 	XMFLOAT3 xmf3Look = GetLook();
 	xmf3Position = Vector3::Add(xmf3Position, xmf3Look, fDistance);
+	CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)terraindata;
+	XMFLOAT3 xmf3Scale = pTerrain->GetScale();
+	int z = (int)(xmf3Position.z / xmf3Scale.z);
+	bool bReverseQuad = ((z % 2) != 0);
+	float fHeight = pTerrain->GetHeight(xmf3Position.x*2, xmf3Position.z*2, bReverseQuad) + 0.0f;
+	fHeight /= 2;
+	if (xmf3Position.y < fHeight)
+	{
+		xmf3Position.y = fHeight;
+	}
 	CGameObject::SetPosition(xmf3Position);
+
 }
 
 void CGameObject::Rotate(float fPitch, float fYaw, float fRoll)
@@ -1205,8 +1216,8 @@ CMonsterObject::CMonsterObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	SetChild(pMonsterModel->m_pModelRootObject, true);
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pMonsterModel);
 
-	FSM_manager = new FSMManager<CGameObject>(this);
-	FSM_manager->SetCurrentState(PigState::Instance());
+	FSM_manager = std::make_shared<FSMManager<CGameObject>>(this);
+	FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
 }
 
 CMonsterObject::~CMonsterObject()
