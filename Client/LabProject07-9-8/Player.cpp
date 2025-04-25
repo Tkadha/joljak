@@ -373,7 +373,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "thumb_02_r", "Model/Sword_01.bin", pResourceManager, XMFLOAT3(0.05, 0.00, -0.05));
 	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Helmet", "Model/Hair_01.bin", pResourceManager, XMFLOAT3(0, 0.1, 0));
 	//AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Boots_Peasant_Armor", "Model/Boots_Peasant_Armor.bin");
-	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pResourceManager, XMFLOAT3(-0.25, 0.05, 0), XMFLOAT3(90, 0, 90), XMFLOAT3(1.0, 1.5, 1.0));
+	AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pResourceManager, XMFLOAT3(-0.25, 0.055, 0), XMFLOAT3(90, 0, 90), XMFLOAT3(1.0, 1.3, 1.1));
 	//AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_03", "Model/Torso_Peasant_03_Armor.bin", XMFLOAT3(0, 0, 0), XMFLOAT3(90, 0, 90));
 	
 	

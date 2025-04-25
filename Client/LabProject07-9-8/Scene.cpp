@@ -98,7 +98,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 
-	int nPineObjects = 10;
+	int nPineObjects = 20;
 	for (int i = 0; i < nPineObjects; ++i) {
 		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pResourceManager);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
@@ -106,13 +106,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, 2, 6, 2, 10);
 		gameObj->SetScale(w, h, w);
 		
-		m_vGameObjects.emplace_back(gameObj);
-	}
-	{
-		CGameObject* gameObj = new CSwordObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pResourceManager);
-		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z)+10, z);
-		gameObj->SetScale(100,100,100);
 		m_vGameObjects.emplace_back(gameObj);
 	}
 	int nRockClusterAObjects = 10;
