@@ -4,35 +4,26 @@
 #include "GameFramework.h"
 #include "ResourceManager.h"
 
-CMaterial::CMaterial(int nTextures) : m_nTextures(nTextures)
-{
-	m_ppTextures = new CTexture * [m_nTextures];
-	m_ppstrTextureNames = new _TCHAR[m_nTextures][64];
-	for (int i = 0; i < m_nTextures; i++) m_ppTextures[i] = nullptr;
-	for (int i = 0; i < m_nTextures; i++) m_ppstrTextureNames[i][0] = '\0';
-}
-
 
 CMaterial::CMaterial(int nTextures, CGameFramework* pGameFramework)
-	: m_nTextures(nTextures), m_pShader(nullptr), 
-	m_d3dCpuSrvStartHandle({ 0 }), m_d3dSrvGpuStartHandle({ 0 }), m_nCbvSrvDescriptorIncrementSize(0)
+	: m_nTextures(nTextures), m_pShader(nullptr), m_pGameFramework(pGameFramework),
+    m_d3dCpuSrvStartHandle({ 0 }), m_d3dSrvGpuStartHandle({ 0 }), m_nCbvSrvDescriptorIncrementSize(0)
 {
 	assert(pGameFramework != nullptr && "GameFramework pointer is needed for CMaterial!");
 	// Framework에서 크기 가져오기
 	m_nCbvSrvDescriptorIncrementSize = pGameFramework->GetCbvSrvDescriptorSize();
 
 
-
-	// 텍스처 이름/포인터 배열 초기화 (기존 코드)
-	m_ppTextures = new CTexture * [m_nTextures];
-	for (int i = 0; i < m_nTextures; i++) m_ppTextures[i] = NULL;
-	m_ppstrTextureNames = new _TCHAR[m_nTextures][64];
-	for (int i = 0; i < m_nTextures; i++) m_ppstrTextureNames[i][0] = '\0';
-
 	// SRV 디스크립터 블록 할당 ---
 	// 이 재질이 사용할 텍스처 개수(m_nTextures)만큼 연속된 SRV 슬롯 할당 요청
     if (m_nTextures > 0) {
+        m_vTextures.resize(m_nTextures); // shared_ptr 벡터 리사이즈
+        m_ppstrTextureNames = new _TCHAR[m_nTextures][64];
+        for (int i = 0; i < m_nTextures; i++) m_ppstrTextureNames[i][0] = '\0';
+       
+        // SRV 블록 할당
         bool bAllocated = pGameFramework->AllocateSrvDescriptors(m_nTextures, m_d3dCpuSrvStartHandle, m_d3dSrvGpuStartHandle);
+
         if (!bAllocated)
         {
             OutputDebugString(L"Error: Failed to allocate SRV descriptors for Material! (CMaterial Constructor)\n");
@@ -46,17 +37,14 @@ CMaterial::CMaterial(int nTextures, CGameFramework* pGameFramework)
         OutputDebugStringW(buffer);
         // --- 로그 추가 ---
     }
+    else {
+        m_ppstrTextureNames = nullptr; // 텍스처 없으면 이름 배열도 null
+    }
 }
 
 // CMaterial 소멸자 수정
 CMaterial::~CMaterial() {
     if (m_pShader) m_pShader->Release();
-    if (m_ppTextures) {
-        for (int i = 0; i < m_nTextures; ++i) {
-            if (m_ppTextures[i]) m_ppTextures[i]->Release(); // 각 텍스처 참조 해제
-        }
-        delete[] m_ppTextures;
-    }
     if (m_ppstrTextureNames) delete[] m_ppstrTextureNames;
     // SRV 핸들 해제는 불필요 (힙 자체 관리)
 }
@@ -68,36 +56,16 @@ void CMaterial::SetShader(CShader* pShader)
 	if (m_pShader) m_pShader->AddRef();
 }
 
-void CMaterial::SetTexture(CTexture* pTexture, UINT nTexture)
-{
-	if (nTexture < 0 || nTexture >= m_nTextures) return;
-	if (m_ppTextures[nTexture]) m_ppTextures[nTexture]->Release();
-	m_ppTextures[nTexture] = pTexture;
-	if (m_ppTextures[nTexture]) m_ppTextures[nTexture]->AddRef();
+CTexture* CMaterial::GetTexture(int index) const {
+    return (index >= 0 && index < m_vTextures.size()) ? m_vTextures[index].get() : nullptr;
 }
 
-void CMaterial::ReleaseUploadBuffers()
-{
-	for (int i = 0; i < m_nTextures; i++)
-	{
-		if (m_ppTextures[i]) m_ppTextures[i]->ReleaseUploadBuffers();
-	}
-}
-
-void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
-{
-	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4AmbientColor, 16);
-	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4AlbedoColor, 20);
-	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4SpecularColor, 24);
-	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4EmissiveColor, 28);
-
-	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 1, &m_nType, 32);
-
-	//for (int i = 0; i < m_nTextures; i++)
-	//{
-	//	if (m_ppTextures[i]) m_ppTextures[i]->UpdateShaderVariables(pd3dCommandList);
-	//	//if (m_ppTextures[i]) m_ppTextures[i]->UpdateShaderVariable(pd3dCommandList, 0, 0);
-	//}
+void CMaterial::ReleaseUploadBuffers() {
+    for (const auto& pTexture : m_vTextures) {
+        if (pTexture) {
+            pTexture->ReleaseUploadBuffers();
+        }
+    }
 }
 
 void CMaterial::LoadTextureFromFile(
@@ -152,9 +120,8 @@ void CMaterial::LoadTextureFromFile(
     // 3. "null" 텍스처 처리
     if (!strcmp(pstrTextureName, "null"))
     {
-        // null 텍스처인 경우 m_ppTextures[nTextureIndex]는 nullptr 유지
-        m_ppstrTextureNames[nTextureIndex][0] = L'\0'; // 이름 비우기
-        // 해당 SRV 슬롯은 비어있거나 기본값으로 채워야 할 수 있음 (선택 사항)
+        m_vTextures[nTextureIndex].reset(); // 해당 슬롯 shared_ptr 비우기
+        if (m_ppstrTextureNames) m_ppstrTextureNames[nTextureIndex][0] = L'\0';
         return;
     }
 
@@ -179,7 +146,7 @@ void CMaterial::LoadTextureFromFile(
     }
 
     // 5. 변환된 Wide Char 파일 이름 저장
-    lstrcpy(m_ppstrTextureNames[nTextureIndex], pwstrTextureName);
+    if (m_ppstrTextureNames) lstrcpy(m_ppstrTextureNames[nTextureIndex], pwstrTextureName);
     OutputDebugStringW(L"CMaterial::LoadTextureFromFile - Loading Texture: ");
     OutputDebugStringW(pwstrTextureName);
     OutputDebugStringW(L"\n");
@@ -188,7 +155,7 @@ void CMaterial::LoadTextureFromFile(
     SetMaterialType(nTextureType);
 
     // 7. 텍스처 로드/가져오기 및 SRV 생성
-    CTexture* pTexture = nullptr;
+    std::shared_ptr<CTexture> pTexture = nullptr;
     if (!bDuplicated) // 중복 텍스처가 아니면 ResourceManager 사용
     {
         pTexture = pResourceManager->GetTexture(pwstrTextureName, pd3dCommandList);
@@ -199,19 +166,18 @@ void CMaterial::LoadTextureFromFile(
             OutputDebugStringW(L"    !!!!!!!! FAILED to load via ResourceManager !!!!!!!!\n");
         }
     }
-    else // 중복 텍스처면 부모에서 찾기
+    else // 중복 텍스처 처리
     {
         if (pParent)
         {
-            // 최상위 루트 객체 찾기 (기존 로직)
+            // 최상위 루트 객체 찾기
             CGameObject* pRootGameObject = pParent;
             while (pRootGameObject->m_pParent) pRootGameObject = pRootGameObject->m_pParent;
             // 루트에서 텍스처 찾기
-            pTexture = pRootGameObject->FindReplicatedTexture(pwstrTextureName);
+            pTexture = pRootGameObject->FindReplicatedTexture(pwstrTextureName); // shared_ptr 반환 받음
             if (pTexture) {
-                pTexture->AddRef(); // 찾았으면 참조 카운트 증가
-                OutputDebugStringW(L"    Found replicated texture.\n");
-            }
+                OutputDebugStringW(L"    Found replicated texture (manual AddRef).\n");
+                }
             else {
                 OutputDebugStringW(L"    !!!!!!!! FAILED to find replicated texture !!!!!!!!\n");
             }
@@ -219,10 +185,9 @@ void CMaterial::LoadTextureFromFile(
     }
 
     // 8. 텍스처 포인터 저장
-    if (m_ppTextures[nTextureIndex]) m_ppTextures[nTextureIndex]->Release(); // 이전 텍스처 참조 해제
-    m_ppTextures[nTextureIndex] = pTexture; // 새 텍스처 포인터 저장 (pTexture는 AddRef된 상태여야 함)
-
-
+    if (nTextureIndex < m_vTextures.size()) {
+        m_vTextures[nTextureIndex] = pTexture;
+    }
     // --- 9. SRV 생성 ---
     if (pTexture && pTexture->GetResource(0)) { // CTexture 객체 및 내부 리소스 유효성 검사
         // SRV 생성 위치 계산
@@ -234,12 +199,49 @@ void CMaterial::LoadTextureFromFile(
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = pTexture->GetShaderResourceViewDesc(0); // 인덱스 0 사용 (큐브맵 등은 내부 리소스가 하나일 수 있음)
 
         // SRV 생성
-        pd3dDevice->CreateShaderResourceView(pShaderResource, &srvDesc, cpuHandle); 
-        OutputDebugStringW(L"    SRV Created in CMaterial.\n"); 
+        if (pShaderResource) {
+            pd3dDevice->CreateShaderResourceView(pShaderResource, &srvDesc, cpuHandle);
+            OutputDebugStringW(L"    SRV Created in CMaterial.\n");
+        }
 
     }
     else {
         // 텍스처 로드 실패 또는 리소스 없음
         OutputDebugStringW(L"    Warning: Texture resource is null. Cannot create SRV in CMaterial.\n");
+    }
+}
+
+bool CMaterial::AssignTexture(UINT nTextureIndex, std::shared_ptr<CTexture> pTexture, ID3D12Device* pd3dDevice)
+{
+    // 인덱스 및 핸들 유효성 검사
+    if (nTextureIndex >= (UINT)m_nTextures || m_d3dCpuSrvStartHandle.ptr == 0 || !pd3dDevice) {
+        OutputDebugStringW(L"!!!!!!!! ERROR: Invalid index or unallocated SRV slot in AssignTexture. !!!!!!!!\n");
+        return false;
+    }
+
+    // shared_ptr 저장 (벡터 사용)
+    m_vTextures[nTextureIndex] = pTexture;
+
+    // SRV 생성
+    if (pTexture && pTexture->GetResource(0)) {
+        CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(m_d3dCpuSrvStartHandle);
+        cpuHandle.Offset(nTextureIndex, m_nCbvSrvDescriptorIncrementSize);
+
+        ID3D12Resource* pShaderResource = pTexture->GetResource(0);
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = pTexture->GetShaderResourceViewDesc(0);
+
+        if (pShaderResource) {
+            pd3dDevice->CreateShaderResourceView(pShaderResource, &srvDesc, cpuHandle);
+            OutputDebugStringW(L"    SRV Created in CMaterial::AssignTexture.\n");
+            return true;
+        }
+        else {
+            OutputDebugStringW(L"    Warning: Texture resource pointer is null before SRV creation in AssignTexture.\n");
+            return false; // 리소스 없으면 실패 간주
+        }
+    }
+    else {
+        OutputDebugStringW(L"    Warning: Texture pointer is null. Cannot create SRV in AssignTexture.\n");
+         return false; // 텍스처 없으면 실패 간주
     }
 }

@@ -13,11 +13,7 @@ ResourceManager::~ResourceManager()
 }
 
 void ResourceManager::ReleaseAll() {
-    for (auto const& [key, pTexture] : m_TextureCache) {
-        if (pTexture) pTexture->Release(); // 캐시가 가지고 있던 참조 해제
-    }
     m_TextureCache.clear();
-    // ... (루트 서명, 셰이더 해제) ...
 }
 
 bool ResourceManager::Initialize(CGameFramework* pFramework)
@@ -27,14 +23,13 @@ bool ResourceManager::Initialize(CGameFramework* pFramework)
     return true;
 }
 
-CTexture* ResourceManager::GetTexture(const std::wstring& filename, ID3D12GraphicsCommandList* cmdList)
+std::shared_ptr<CTexture> ResourceManager::GetTexture(const std::wstring& filename, ID3D12GraphicsCommandList* cmdList)
 {
     // 1. 캐시 확인
     auto findIter = m_TextureCache.find(filename);
     if (findIter != m_TextureCache.end())
     {
-        // 캐시에 있으면 참조 카운트 증가 후 반환
-        if (findIter->second) findIter->second->AddRef();
+        // 캐시에 있으면 shared_ptr 복사하여 반환 
         return findIter->second;
     }
 
@@ -42,21 +37,20 @@ CTexture* ResourceManager::GetTexture(const std::wstring& filename, ID3D12Graphi
     OutputDebugStringW((L"Loading Texture: " + filename + L"\n").c_str());
 
     // CTexture 객체 생성
-    CTexture* newTexture = new CTexture();
-    if (!newTexture) { /* 오류 처리 */ return nullptr; }
+    auto newTexture = std::make_shared<CTexture>();
+    if (!newTexture) {
+        OutputDebugStringW((L"Error: Failed to create shared_ptr<CTexture> for " + filename + L"\n").c_str());
+        return nullptr; // 또는 빈 shared_ptr 반환: std::shared_ptr<CTexture>();
+    }
 
-    // 3. 로드 시도
+    // 3. 로드 시도 (CTexture 내부에서 리소스 로딩 및 타입 결정)
     if (!newTexture->LoadTextureFromDDSFile(m_pFramework->GetDevice(), cmdList, filename.c_str()))
     {
         OutputDebugStringW((L"Error: CTexture::LoadTextureFromDDSFile failed for: " + filename + L"\n").c_str());
-        delete newTexture; // 실패 시 생성한 객체 삭제
-        return nullptr;
+        return nullptr; // 로드 실패 시 nullptr (빈 shared_ptr) 반환
     }
 
-    // 4. 캐시에 추가 및 참조 카운트 관리
-    newTexture->AddRef(); // 캐시에서 참조하므로 AddRef
-    m_TextureCache[filename] = newTexture; // map에 저장 (대입 가능)
-
-    newTexture->AddRef(); // 호출자를 위한 참조 AddRef
-    return newTexture;
+    // 4. 캐시에 추가 및 shared_ptr 반환
+    m_TextureCache[filename] = newTexture; // 캐시에 shared_ptr 저장
+    return newTexture; // 새로 생성된 shared_ptr 반환
 }

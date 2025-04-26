@@ -101,7 +101,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	int nPineObjects = 10;
 	for (int i = 0; i < nPineObjects; ++i) {
-		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pGameFramework);
+		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen, 2, 6, 2, 10);
@@ -109,7 +109,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		m_vGameObjects.emplace_back(gameObj);
 	}
 	{
-		CGameObject* gameObj = new CSwordObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pGameFramework);
+		CGameObject* gameObj = new CSwordObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z)+10, z);
 		gameObj->SetScale(100,100,100);
@@ -117,7 +117,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	}
 	int nRockClusterAObjects = 10;
 	for (int i = 0; i < nRockClusterAObjects; ++i) {
-		CGameObject* gameObj = new CRockClusterAObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pGameFramework);
+		CGameObject* gameObj = new CRockClusterAObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen, 10, 20, 20, 30);
@@ -127,7 +127,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	
 	int nRockClusterBObjects = 10;
 	for (int i = 0; i < nRockClusterBObjects; ++i) {
-		CGameObject* gameObj = new CRockClusterBObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pGameFramework);
+		CGameObject* gameObj = new CRockClusterBObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen, 10, 20, 20, 30);
@@ -136,7 +136,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	}
 	int nRockClusterCObjects = 10;
 	for (int i = 0; i < nRockClusterCObjects; ++i) {
-		CGameObject* gameObj = new CRockClusterCObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pGameFramework);
+		CGameObject* gameObj = new CRockClusterCObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen, 10, 20, 20, 30);
@@ -146,7 +146,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	int nCliffFObjectCObjects = 5;
 	for (int i = 0; i < nRockClusterCObjects; ++i) {
-		CGameObject* gameObj = new CCliffFObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pGameFramework);
+		CGameObject* gameObj = new CCliffFObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen,5, 10, 5, 10);
@@ -159,9 +159,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_nHierarchicalGameObjects = 6;
 	m_ppHierarchicalGameObjects = new CGameObject*[m_nHierarchicalGameObjects];
 
-	CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Cow.bin", m_pGameFramework);
+	CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Cow.bin", m_pGameFramework);
 
-	m_ppHierarchicalGameObjects[0] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, m_pGameFramework);
+	m_ppHierarchicalGameObjects[0] = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[0]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[0]->SetPosition(1000.f, m_pTerrain->GetHeight(1000.0f, 1500.0f), 1500.f);
@@ -176,7 +176,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	octree.insert(&tree_objects[0]);
 	
 
-	m_ppHierarchicalGameObjects[1] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, m_pGameFramework);
+	m_ppHierarchicalGameObjects[1] = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[1]->SetScale(8.0f, 8.0f, 8.0f);
 	m_ppHierarchicalGameObjects[1]->Rotate(0.f, 180.f, 0.f);
@@ -190,7 +190,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 
-	m_ppHierarchicalGameObjects[2] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, m_pGameFramework);
+	m_ppHierarchicalGameObjects[2] = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
 	//m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController = nullptr;
 	//m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController->m_pAnimationTracks = nullptr;
@@ -198,19 +198,19 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppHierarchicalGameObjects[2]->Rotate(0.f, 0.f, 0.f);
 	m_ppHierarchicalGameObjects[2]->SetPosition(500.0f/2, m_pTerrain->GetHeight(500.0f, 800.0f)/2, 800.0f/2);
 
-	m_ppHierarchicalGameObjects[3] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, m_pGameFramework);
+	m_ppHierarchicalGameObjects[3] = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[3]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
 	m_ppHierarchicalGameObjects[3]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[3]->SetPosition(100.0f / 2, m_pTerrain->GetHeight(100.0f, 1400.0f) / 2, 1400.0f / 2);
 	m_ppHierarchicalGameObjects[3]->SetScale(10.0f, 10.0f, 10.0f);
 
-	m_ppHierarchicalGameObjects[4] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, m_pGameFramework);
+	m_ppHierarchicalGameObjects[4] = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[4]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 3);
 	m_ppHierarchicalGameObjects[4]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[4]->SetPosition(200.0f /2 , m_pTerrain->GetHeight(200.0f, 500.0f)/2, 500.0f / 2);
 	m_ppHierarchicalGameObjects[4]->SetScale(8.0f, 8.0f, 8.0f);
 
-	m_ppHierarchicalGameObjects[5] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, m_pGameFramework);
+	m_ppHierarchicalGameObjects[5] = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[5]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[5]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[5]->SetPosition(1000.f / 2, m_pTerrain->GetHeight(1000.0f, 1500.0f) / 2, 1500.f / 2);
@@ -235,8 +235,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 void CScene::ReleaseObjects()
 {
-	if (m_pd3dGraphicsRootSignature) m_pd3dGraphicsRootSignature->Release();
-
 	if (m_ppGameObjects)
 	{
 		for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Release();
@@ -255,197 +253,6 @@ void CScene::ReleaseObjects()
 	ReleaseShaderVariables();
 
 	if (m_pLights) delete[] m_pLights;
-}
-
-ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)
-{
-	ID3D12RootSignature *pd3dGraphicsRootSignature = NULL;
-
-	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[10];
-
-	pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[0].NumDescriptors = 1;
-	pd3dDescriptorRanges[0].BaseShaderRegister = 6; //t6: gtxtAlbedoTexture
-	pd3dDescriptorRanges[0].RegisterSpace = 0;
-	pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[1].NumDescriptors = 1;
-	pd3dDescriptorRanges[1].BaseShaderRegister = 7; //t7: gtxtSpecularTexture
-	pd3dDescriptorRanges[1].RegisterSpace = 0;
-	pd3dDescriptorRanges[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[2].NumDescriptors = 1;
-	pd3dDescriptorRanges[2].BaseShaderRegister = 8; //t8: gtxtNormalTexture
-	pd3dDescriptorRanges[2].RegisterSpace = 0;
-	pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[3].NumDescriptors = 1;
-	pd3dDescriptorRanges[3].BaseShaderRegister = 9; //t9: gtxtMetallicTexture
-	pd3dDescriptorRanges[3].RegisterSpace = 0;
-	pd3dDescriptorRanges[3].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[4].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[4].NumDescriptors = 1;
-	pd3dDescriptorRanges[4].BaseShaderRegister = 10; //t10: gtxtEmissionTexture
-	pd3dDescriptorRanges[4].RegisterSpace = 0;
-	pd3dDescriptorRanges[4].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[5].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[5].NumDescriptors = 1;
-	pd3dDescriptorRanges[5].BaseShaderRegister = 11; //t11: gtxtEmissionTexture
-	pd3dDescriptorRanges[5].RegisterSpace = 0;
-	pd3dDescriptorRanges[5].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[6].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[6].NumDescriptors = 1;
-	pd3dDescriptorRanges[6].BaseShaderRegister = 12; //t12: gtxtEmissionTexture
-	pd3dDescriptorRanges[6].RegisterSpace = 0;
-	pd3dDescriptorRanges[6].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[7].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[7].NumDescriptors = 1;
-	pd3dDescriptorRanges[7].BaseShaderRegister = 13; //t13: gtxtSkyBoxTexture
-	pd3dDescriptorRanges[7].RegisterSpace = 0;
-	pd3dDescriptorRanges[7].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[8].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[8].NumDescriptors = 1;
-	pd3dDescriptorRanges[8].BaseShaderRegister = 1; //t1: gtxtTerrainBaseTexture
-	pd3dDescriptorRanges[8].RegisterSpace = 0;
-	pd3dDescriptorRanges[8].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[9].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[9].NumDescriptors = 1;
-	pd3dDescriptorRanges[9].BaseShaderRegister = 2; //t2: gtxtTerrainDetailTexture
-	pd3dDescriptorRanges[9].RegisterSpace = 0;
-	pd3dDescriptorRanges[9].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	D3D12_ROOT_PARAMETER pd3dRootParameters[15];
-
-	pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[0].Descriptor.ShaderRegister = 1; //Camera
-	pd3dRootParameters[0].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
-	pd3dRootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-	pd3dRootParameters[1].Constants.Num32BitValues = 33;
-	pd3dRootParameters[1].Constants.ShaderRegister = 2; //GameObject
-	pd3dRootParameters[1].Constants.RegisterSpace = 0;
-	pd3dRootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
-	pd3dRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[2].Descriptor.ShaderRegister = 4; //Lights
-	pd3dRootParameters[2].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
-	pd3dRootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
-	pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[4].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[4].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[1]);
-	pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[5].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[5].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[2]);
-	pd3dRootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[6].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[6].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[3]);
-	pd3dRootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[7].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[7].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[4]);
-	pd3dRootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[8].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[8].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[5]);
-	pd3dRootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[9].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[9].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[9].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[6]);
-	pd3dRootParameters[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[10].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[10].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[10].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[7]);
-	pd3dRootParameters[10].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[11].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[11].Descriptor.ShaderRegister = 7; //Skinned Bone Offsets
-	pd3dRootParameters[11].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[11].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-
-	pd3dRootParameters[12].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[12].Descriptor.ShaderRegister = 8; //Skinned Bone Transforms
-	pd3dRootParameters[12].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[12].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-
-	pd3dRootParameters[13].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[13].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[13].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[8]);
-	pd3dRootParameters[13].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[14].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[14].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[14].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[9]);
-	pd3dRootParameters[14].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[2];
-
-	pd3dSamplerDescs[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-	pd3dSamplerDescs[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	pd3dSamplerDescs[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	pd3dSamplerDescs[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	pd3dSamplerDescs[0].MipLODBias = 0;
-	pd3dSamplerDescs[0].MaxAnisotropy = 1;
-	pd3dSamplerDescs[0].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	pd3dSamplerDescs[0].MinLOD = 0;
-	pd3dSamplerDescs[0].MaxLOD = D3D12_FLOAT32_MAX;
-	pd3dSamplerDescs[0].ShaderRegister = 0;
-	pd3dSamplerDescs[0].RegisterSpace = 0;
-	pd3dSamplerDescs[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dSamplerDescs[1].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-	pd3dSamplerDescs[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	pd3dSamplerDescs[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	pd3dSamplerDescs[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	pd3dSamplerDescs[1].MipLODBias = 0;
-	pd3dSamplerDescs[1].MaxAnisotropy = 1;
-	pd3dSamplerDescs[1].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	pd3dSamplerDescs[1].MinLOD = 0;
-	pd3dSamplerDescs[1].MaxLOD = D3D12_FLOAT32_MAX;
-	pd3dSamplerDescs[1].ShaderRegister = 1;
-	pd3dSamplerDescs[1].RegisterSpace = 0;
-	pd3dSamplerDescs[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-	D3D12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc;
-	::ZeroMemory(&d3dRootSignatureDesc, sizeof(D3D12_ROOT_SIGNATURE_DESC));
-	d3dRootSignatureDesc.NumParameters = _countof(pd3dRootParameters);
-	d3dRootSignatureDesc.pParameters = pd3dRootParameters;
-	d3dRootSignatureDesc.NumStaticSamplers = _countof(pd3dSamplerDescs);
-	d3dRootSignatureDesc.pStaticSamplers = pd3dSamplerDescs;
-	d3dRootSignatureDesc.Flags = d3dRootSignatureFlags;
-
-	ID3DBlob *pd3dSignatureBlob = NULL;
-	ID3DBlob *pd3dErrorBlob = NULL;
-	D3D12SerializeRootSignature(&d3dRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &pd3dSignatureBlob, &pd3dErrorBlob);
-	pd3dDevice->CreateRootSignature(0, pd3dSignatureBlob->GetBufferPointer(), pd3dSignatureBlob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void **)&pd3dGraphicsRootSignature);
-	if (pd3dSignatureBlob) pd3dSignatureBlob->Release();
-	if (pd3dErrorBlob) pd3dErrorBlob->Release();
-
-	return(pd3dGraphicsRootSignature);
 }
 
 void CScene::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -643,7 +450,6 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 				// --- 카메라/조명 등 공통 CBV 바인딩 위치 이동 ---
 				// 현재 루트 서명이 카메라(b1 @ Param 0)를 사용하는지 확인 후 바인딩
-				// (주의: OBB 루트 서명은 Param 0을 다른 용도로 사용!)
 				// 더 정확한 방법은 각 루트 서명 생성 시 필요한 CBV 슬롯 정보를 저장해두는 것이지만,
 				// 여기서는 셰이더 타입 등으로 임시 구분
 				if (pShader != pShaderManager->GetShader("OBB", pd3dCommandList)) // OBB 셰이더가 아닐 때만 카메라 바인딩 시도
@@ -673,79 +479,100 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// --- 5. 렌더링 단계별 처리 ---
 
 	// 5.1. 스카이박스 렌더링
-	//if (m_pSkyBox) {
-	//	// CSkyBox 객체가 자신의 CMaterial과 CShader를 가지고 있다고 가정
-	//	CMaterial* pSkyboxMat = m_pSkyBox->GetMaterial(0); // 첫 번째 재질 가정
-	//	if (pSkyboxMat && pSkyboxMat->m_pShader) {
-	//		SetGraphicsState(pSkyboxMat->m_pShader); // Skybox 셰이더/RS/PSO 설정
-	//		// CSkyBox::Render 내부에서는 필요한 CBV(카메라 b1), 텍스처(t13 테이블) 바인딩 및 Draw 호출
-	//		m_pSkyBox->Render(pd3dCommandList, pCamera);
-	//	}
-	//}
+	if (m_pSkyBox) {
+		// CSkyBox 객체가 자신의 CMaterial과 CShader를 가지고 있다고 가정
+		CMaterial* pSkyboxMat = m_pSkyBox->GetMaterial(0); // 첫 번째 재질 가정
+		if (pSkyboxMat && pSkyboxMat->m_pShader) {
+			SetGraphicsState(pSkyboxMat->m_pShader); // Skybox 셰이더/RS/PSO 설정
+			if (pCamera && pCamera->GetCameraConstantBuffer()) {
+				pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress()); // 카메라 CBV (b1)를 파라미터 0번에 바인딩
+			}
+			// CSkyBox::Render 내부에서는 필요한 CBV(카메라 b1), 텍스처(t13 테이블) 바인딩 및 Draw 호출
+			m_pSkyBox->Render(pd3dCommandList, pCamera);
+		}
+	}
 
 	// 5.2. 지형 렌더링
 	if (m_pTerrain) {
 		CMaterial* pTerrainMat = m_pTerrain->GetMaterial(0);
 		if (pTerrainMat && pTerrainMat->m_pShader) {
 			SetGraphicsState(pTerrainMat->m_pShader); // Terrain 셰이더/RS/PSO 설정
+			if (pCamera && pCamera->GetCameraConstantBuffer()) {
+				pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress()); // 카메라 CBV (b1)를 파라미터 0번에 바인딩
+			}
 			// CHeightMapTerrain::Render 내부에서는 필요한 CBV(카메라 b1, 지형객체 b2), 텍스처(t1, t2 테이블) 바인딩 및 Draw 호출
 			m_pTerrain->Render(pd3dCommandList, pCamera);
 		}
 	}
 
+
 	// 5.3. 일반 게임 오브젝트 렌더링 (m_ppGameObjects, m_vGameObjects)
 	// 중요: 성능을 위해서는 이 객체들을 렌더링 전에 CShader 포인터 기준으로 정렬하는 것이 좋습니다!
-	//      여기서는 간단하게 순차적으로 처리하며 상태를 변경합니다.
-	for (int i = 0; i < m_nGameObjects; i++) { // m_ppGameObjects 처리 (예시)
-		if (m_ppGameObjects[i] /*&& m_ppGameObjects[i]->IsVisible()*/) { // IsVisible() 같은 가시성 체크 추가 권장
-			CMaterial* pMaterial = m_ppGameObjects[i]->GetMaterial(0); // 또는 주 재질 인덱스
-			if (pMaterial && pMaterial->m_pShader) {
-				SetGraphicsState(pMaterial->m_pShader); // 객체의 셰이더에 맞는 상태 설정
-				// m_ppGameObjects[i]->Render 내부에서는 필요한 상수(b2), 텍스처(t6-t12 테이블) 바인딩 및 Draw 호출
-				m_ppGameObjects[i]->Render(pd3dCommandList, pCamera);
-			}
-		}
-	}
-	for (auto& obj : m_vGameObjects) { // m_vGameObjects 처리
-		if (obj /*&& obj->IsVisible()*/) {
-			CMaterial* pMaterial = obj->GetMaterial(0);
-			if (pMaterial && pMaterial->m_pShader) {
-				SetGraphicsState(pMaterial->m_pShader);
-				obj->Render(pd3dCommandList, pCamera);
-			}
-		}
-	}
-
-	// 5.4. 계층적 게임 오브젝트 렌더링 (Skinned)
-	for (int i = 0; i < m_nHierarchicalGameObjects; i++) {
-		if (m_ppHierarchicalGameObjects[i] && m_ppHierarchicalGameObjects[i]->isRender == true) {
-			// 애니메이션 처리
-			m_ppHierarchicalGameObjects[i]->Animate(m_fElapsedTime);
-			if (!m_ppHierarchicalGameObjects[i]->m_pSkinnedAnimationController) m_ppHierarchicalGameObjects[i]->UpdateTransform(NULL);
-
-			CMaterial* pMaterial = m_ppHierarchicalGameObjects[i]->GetMaterial(0);
-			if (pMaterial && pMaterial->m_pShader) {
-				SetGraphicsState(pMaterial->m_pShader); // Skinned 셰이더/RS/PSO 설정
-				// m_ppHierarchicalGameObjects[i]->Render 내부에서는 필요한 상수(b2), 본(b7, b8), 텍스처(t6-t12 테이블) 바인딩 및 Draw 호출
-				m_ppHierarchicalGameObjects[i]->Render(pd3dCommandList, pCamera);
-			}
-		}
-	}
-
-	if (m_pPlayer)
-	{
-		CMaterial* pPlayerMaterial = m_pPlayer->GetMaterial(0);
-		if (pPlayerMaterial && pPlayerMaterial->m_pShader)
-		{
-			// !!! 플레이어 렌더링 직전에 상태 설정 !!!
-			SetGraphicsState(pPlayerMaterial->m_pShader);
-			// 이제 플레이어에 맞는 RS/PSO 및 공통 CBV가 설정됨
 	
-			// 플레이어 렌더링 호출
-			m_pPlayer->Render(pd3dCommandList, pCamera);
+	// Standard/Skinned 셰이더가 사용할 공통 CBV 설정
+	bool bStandardSkinnedStateSet = false;
+	if (pCamera && pCamera->GetCameraConstantBuffer()) {
+		pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress()); // 카메라 (b1 @ 인덱스 0)
+		bStandardSkinnedStateSet = true;
+	}
+	if (m_pd3dcbLights) {
+		pd3dCommandList->SetGraphicsRootConstantBufferView(2, m_pd3dcbLights->GetGPUVirtualAddress()); // 조명 (b4 @ 인덱스 2)
+		bStandardSkinnedStateSet = true;
+	}
+
+	if(bStandardSkinnedStateSet)
+	{
+		for (int i = 0; i < m_nGameObjects; i++) { // m_ppGameObjects 처리 (예시)
+			if (m_ppGameObjects[i] /*&& m_ppGameObjects[i]->IsVisible()*/) { // IsVisible() 같은 가시성 체크 추가 권장
+				CMaterial* pMaterial = m_ppGameObjects[i]->GetMaterial(0); // 또는 주 재질 인덱스
+				if (pMaterial && pMaterial->m_pShader) {
+					SetGraphicsState(pMaterial->m_pShader); // 객체의 셰이더에 맞는 상태 설정
+					// m_ppGameObjects[i]->Render 내부에서는 필요한 상수(b2), 텍스처(t6-t12 테이블) 바인딩 및 Draw 호출
+					m_ppGameObjects[i]->Render(pd3dCommandList, pCamera);
+				}
+			}
 		}
-		else {
-			OutputDebugString(L"Warning: Player has no material or shader set for rendering.\n");
+		for (auto& obj : m_vGameObjects) { // m_vGameObjects 처리
+			if (obj /*&& obj->IsVisible()*/) {
+				CMaterial* pMaterial = obj->GetMaterial(0);
+				if (pMaterial && pMaterial->m_pShader) {
+					SetGraphicsState(pMaterial->m_pShader);
+					obj->Render(pd3dCommandList, pCamera);
+				}
+			}
+		}
+
+		// 5.4. 계층적 게임 오브젝트 렌더링 (Skinned)
+		for (int i = 0; i < m_nHierarchicalGameObjects; i++) {
+			if (m_ppHierarchicalGameObjects[i] && m_ppHierarchicalGameObjects[i]->isRender == true) {
+				// 애니메이션 처리
+				m_ppHierarchicalGameObjects[i]->Animate(m_fElapsedTime);
+				if (!m_ppHierarchicalGameObjects[i]->m_pSkinnedAnimationController) m_ppHierarchicalGameObjects[i]->UpdateTransform(NULL);
+
+				CMaterial* pMaterial = m_ppHierarchicalGameObjects[i]->GetMaterial(0);
+				if (pMaterial && pMaterial->m_pShader) {
+					SetGraphicsState(pMaterial->m_pShader); // Skinned 셰이더/RS/PSO 설정
+					// m_ppHierarchicalGameObjects[i]->Render 내부에서는 필요한 상수(b2), 본(b7, b8), 텍스처(t6-t12 테이블) 바인딩 및 Draw 호출
+					m_ppHierarchicalGameObjects[i]->Render(pd3dCommandList, pCamera);
+				}
+			}
+		}
+
+		if (m_pPlayer)
+		{
+			CMaterial* pPlayerMaterial = m_pPlayer->GetMaterial(0);
+			if (pPlayerMaterial && pPlayerMaterial->m_pShader)
+			{
+				// !!! 플레이어 렌더링 직전에 상태 설정 !!!
+				SetGraphicsState(pPlayerMaterial->m_pShader);
+				// 이제 플레이어에 맞는 RS/PSO 및 공통 CBV가 설정됨
+
+				// 플레이어 렌더링 호출
+				m_pPlayer->Render(pd3dCommandList, pCamera);
+			}
+			else {
+				OutputDebugString(L"Warning: Player has no material or shader set for rendering.\n");
+			}
 		}
 	}
 

@@ -20,7 +20,8 @@ class CGameFramework;
 class CMaterial
 {
 public:
-	CMaterial(int nTextures);
+	CMaterial(int nTextures, CGameFramework* pGameFramework);
+
 	virtual ~CMaterial();
 
 private:
@@ -40,10 +41,7 @@ public:
 
 	void SetShader(CShader* pShader);
 	void SetMaterialType(UINT nType) { m_nType |= nType; }
-	void SetTexture(CTexture* pTexture, UINT nTexture = 0);
-
-	virtual void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList);
-
+	
 	virtual void ReleaseUploadBuffers();
 
 public:
@@ -58,9 +56,8 @@ public:
 public:
 	int 							m_nTextures = 0;
 	_TCHAR(*m_ppstrTextureNames)[64] = NULL;
-	CTexture** m_ppTextures = NULL; //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
+	std::vector<std::shared_ptr<CTexture>> m_vTextures; // shared_ptr 벡터 사용
 
-public:
 	// 텍스처 로딩 시 할당받은 SRV 블록의 시작 핸들 저장
 	D3D12_CPU_DESCRIPTOR_HANDLE m_d3dCpuSrvStartHandle = { 0 };
 	D3D12_GPU_DESCRIPTOR_HANDLE m_d3dSrvGpuStartHandle = { 0 };
@@ -68,15 +65,14 @@ public:
 	// SRV 디스크립터 크기 (Framework 등에서 얻어와야 함)
 	UINT m_nCbvSrvDescriptorIncrementSize = 0;
 
-	// 생성자에서 텍스처 슬롯 개수 외에 Framework 포인터 받도록 수정
-	CMaterial(int nTextures, CGameFramework* pGameFramework);
+	CGameFramework* m_pGameFramework = nullptr;
 
 	
 	// 텍스처 테이블 시작 GPU 핸들 반환 함수
 	D3D12_GPU_DESCRIPTOR_HANDLE GetTextureTableGpuHandle() const { return m_d3dSrvGpuStartHandle; }
 
 	// 텍스처 포인터 배열 접근자 (필요시)
-	CTexture* GetTexture(int index) const { return (index < m_nTextures) ? m_ppTextures[index] : nullptr; }
+	CTexture* GetTexture(int index) const;
 	int GetTextureCount() const { return m_nTextures; }
 
 	void LoadTextureFromFile(
@@ -88,6 +84,9 @@ public:
 		FILE* pInFile,              // 파일 포인터
 		ResourceManager* pResourceManager // 리소스 매니저
 	);
+
+	// 텍스처 설정 및 SRV 생성 함수 추가
+	bool AssignTexture(UINT nTextureIndex, std::shared_ptr<CTexture> pTexture, ID3D12Device* pd3dDevice);
 };
 
 

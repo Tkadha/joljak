@@ -17,7 +17,7 @@ public:
 
     bool Initialize(CGameFramework* pFramework);
 
-    CTexture* GetTexture(const std::wstring& filename, ID3D12GraphicsCommandList* cmdList);
+    std::shared_ptr<CTexture> GetTexture(const std::wstring& filename, ID3D12GraphicsCommandList* cmdList);
 
     void ReleaseAll();
 
@@ -25,6 +25,5 @@ private:
     CGameFramework* m_pFramework = nullptr;
 
     // 텍스처 캐시 (파일 경로 -> CTexture 객체)
-    // unique_ptr를 사용하여 ResourceManager가 텍스처 소유권 관리
-    std::map<std::wstring, CTexture*> m_TextureCache;
+    std::map<std::wstring, std::shared_ptr<CTexture>> m_TextureCache;
 };

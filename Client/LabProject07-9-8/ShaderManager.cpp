@@ -115,7 +115,7 @@ ID3D12RootSignature* ShaderManager::CreateStandardRootSignature()
 
     CD3DX12_ROOT_PARAMETER rootParameters[4]; // CBV(b1 Camera), Constants(b2 Object), CBV(b4 Lights), Table(t6-t12 Textures)
     rootParameters[0].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL);
-    rootParameters[1].InitAsConstants(33, 2, 0, D3D12_SHADER_VISIBILITY_ALL); // 1 Matrix + 4 float4 Material + 1 uint Mask = 16 + 16 + 1 = 33 DWORDS
+    rootParameters[1].InitAsConstants(41, 2, 0, D3D12_SHADER_VISIBILITY_ALL); // 1 Matrix + 4 float4 Material + 1 uint Mask = 16 + 16 + 1 = 33 DWORDS
     rootParameters[2].InitAsConstantBufferView(4, 0, D3D12_SHADER_VISIBILITY_ALL); // b4: Lights (이 레지스터를 사용한다고 가정)
     rootParameters[3].InitAsDescriptorTable(1, &descRangeSRV[0], D3D12_SHADER_VISIBILITY_PIXEL);
 
@@ -142,7 +142,7 @@ ID3D12RootSignature* ShaderManager::CreateSkinnedRootSignature()
 
     CD3DX12_ROOT_PARAMETER rootParameters[6]; // Standard + CBV(b7), CBV(b8)
     rootParameters[0].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL); // b1: Camera
-    rootParameters[1].InitAsConstants(33, 2, 0, D3D12_SHADER_VISIBILITY_ALL);     // b2: Object
+    rootParameters[1].InitAsConstants(41, 2, 0, D3D12_SHADER_VISIBILITY_ALL);     // b2: Object
     rootParameters[2].InitAsConstantBufferView(4, 0, D3D12_SHADER_VISIBILITY_ALL); // b4: Lights
     rootParameters[3].InitAsDescriptorTable(1, &descRangeSRV[0], D3D12_SHADER_VISIBILITY_PIXEL); // t6-t12
     rootParameters[4].InitAsConstantBufferView(7, 0, D3D12_SHADER_VISIBILITY_VERTEX); // b7: Bone Offsets
@@ -171,7 +171,7 @@ ID3D12RootSignature* ShaderManager::CreateTerrainRootSignature()
 
     CD3DX12_ROOT_PARAMETER rootParameters[3]; // CBV(b1 Camera), Constants(b2 Object), Table(t1, t2 Textures)
     rootParameters[0].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_VERTEX); // VS에서만 필요
-    rootParameters[1].InitAsConstants(33, 2, 0, D3D12_SHADER_VISIBILITY_VERTEX);     // VS에서만 필요
+    rootParameters[1].InitAsConstants(16, 2, 0, D3D12_SHADER_VISIBILITY_VERTEX);     // VS에서만 필요
     rootParameters[2].InitAsDescriptorTable(1, &descRangeSRV[0], D3D12_SHADER_VISIBILITY_PIXEL); // PS에서만 필요
 
     auto staticSamplers = GetStaticSamplers();
@@ -263,10 +263,8 @@ ID3D12RootSignature* ShaderManager::CreateInstancingRootSignature()
 }
 
 
-// --- 셰이더 관리 구현 (다음 단계에서 구현) ---
 CShader* ShaderManager::GetShader(const std::string& name, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-    // ... (다음 단계에서 CreateShaderInternal 구현과 함께 완성) ...
     auto it = m_Shaders.find(name);
     if (it != m_Shaders.end())
     {
@@ -281,9 +279,9 @@ CShader* ShaderManager::GetShader(const std::string& name, ID3D12GraphicsCommand
         CShader* pNewShader = CreateShaderInternal(name, pd3dCommandList);
         if (pNewShader)
         {
-            pNewShader->AddRef(); // Manager stores a reference
+            pNewShader->AddRef();
             m_Shaders[name] = pNewShader;
-            pNewShader->AddRef(); // Caller gets a reference
+            pNewShader->AddRef();
             return pNewShader;
         }
         else
@@ -301,7 +299,7 @@ CShader* ShaderManager::CreateShaderInternal(const std::string& name, ID3D12Grap
 {
     CShader* pShader = nullptr;
     ID3D12RootSignature* pRootSig = nullptr;
-    std::string rootSignatureName = ""; // 이 셰이더에 필요한 루트 서명 이름
+    std::string rootSignatureName = "";
 
     // 1. 셰이더 이름에 따라 사용할 클래스와 루트 서명 이름 결정
     if (name == "Standard") {
@@ -336,53 +334,42 @@ CShader* ShaderManager::CreateShaderInternal(const std::string& name, ID3D12Grap
         return nullptr; // 모르는 셰이더 이름
     }
 
+    // 셰이더 객체 생성 실패 시
+    if (!pShader) {
+        OutputDebugStringA("Error: Failed to instantiate shader object.\n");
+        return nullptr;
+    }
+
     // 2. 필요한 루트 서명 가져오기 (실패 시 생성된 셰이더 객체 삭제)
     if (!rootSignatureName.empty()) {
         pRootSig = GetRootSignature(rootSignatureName);
         if (!pRootSig) {
-            OutputDebugStringA("Error: Failed to get Root Signature '");
-            OutputDebugStringA(rootSignatureName.c_str());
-            OutputDebugStringA("' for shader '");
-            OutputDebugStringA(name.c_str());
-            OutputDebugStringA("'\n");
+            OutputDebugStringA(("Error: Failed to get Root Signature '" + rootSignatureName + "' for shader '" + name + "'\n").c_str());
             delete pShader; // 루트 서명 없으면 셰이더 생성 불가
             return nullptr;
         }
     }
     else {
-        OutputDebugStringA("Error: Root Signature name not set for shader '");
-        OutputDebugStringA(name.c_str());
-        OutputDebugStringA("'\n");
+        OutputDebugStringA(("Error: Root Signature name not set for shader '" + name + "'\n").c_str());
         delete pShader;
         return nullptr;
     }
 
+    // 3. PSO 생성
+    pShader->CreateShader(m_pd3dDevice, pd3dCommandList, pRootSig);
 
-    // 3. 셰이더 생성 (내부적으로 VS/PS 컴파일 및 PSO 생성)
-    if (pShader && pRootSig) {
-        // CShader::CreateShader 함수는 내부적으로 PSO를 생성함
-        pShader->CreateShader(m_pd3dDevice, pd3dCommandList, pRootSig);
 
-        // 생성된 PSO 확인 (선택 사항)
-        if (!pShader->GetPipelineState()) {
-            OutputDebugStringA("Error: Failed to create Pipeline State Object for shader '");
-            OutputDebugStringA(name.c_str());
-            OutputDebugStringA("'\n");
-            delete pShader;
-            return nullptr;
-        }
-
-        // 생성된 셰이더 객체에 사용된 루트 서명 포인터 저장
-        pShader->SetRootSignature(pRootSig);
-
-        OutputDebugStringA("Successfully created Shader and PSO: ");
-        OutputDebugStringA(name.c_str());
-        OutputDebugStringA("\n");
-
-        return pShader; // 성공적으로 생성된 셰이더 객체 반환
+    // 4. PSO 생성 성공 여부 확인
+    if (!pShader->GetPipelineState()) {
+        OutputDebugStringA(("Error: Failed to create PSO for shader '" + name + "'\n").c_str());
+        delete pShader; // PSO 생성 실패 시 객체 삭제
+        return nullptr;
     }
 
-    // 여기까지 오면 실패한 경우
-    delete pShader; // pShader가 할당되었지만 pRootSig가 없거나 다른 문제 발생 시 정리
-    return nullptr;
+    // 5. 셰이더 객체에 루트 서명 포인터 저장
+    pShader->SetRootSignature(pRootSig);
+
+
+    OutputDebugStringA(("Successfully created Shader and PSO: " + name + "\n").c_str());
+    return pShader; // 성공
 }
