@@ -4,7 +4,7 @@
 #include "RandomUtil.h"
 
 
-
+//=====================================Standing=================================================
 void AtkNPCStandingState::Enter(std::shared_ptr<CGameObject> npc)
 {
 	starttime = std::chrono::system_clock::now();
@@ -24,7 +24,8 @@ void AtkNPCStandingState::Execute(std::shared_ptr<CGameObject> npc)
 		npc->FSM_manager->ChangeState(std::make_shared<AtkNPCMoveState>());
 		return;
 	}
-	//auto obj = dynamic_cast<CMonsterObject*>(npc.get());
+	// 주변에 플레이어가 있는지 확인
+	// 플레이어가 있으면 Chase로 변경
 
 }
 
@@ -36,6 +37,7 @@ void AtkNPCStandingState::Exit(std::shared_ptr<CGameObject> npc)
 
 
 
+//=====================================Move=================================================
 
 void AtkNPCMoveState::Enter(std::shared_ptr<CGameObject> npc)
 {
@@ -80,10 +82,9 @@ void AtkNPCMoveState::Execute(std::shared_ptr<CGameObject> npc)
 void AtkNPCMoveState::Exit(std::shared_ptr<CGameObject> npc)
 {
 	npc->m_pSkinnedAnimationController->SetTrackEnable(2, false);
-	duration_time = 10 * 1000; // 10초
-	npc->m_pSkinnedAnimationController->SetTrackEnable(2, true);
 }
 
+//=====================================Chase=================================================
 
 void AtkNPCChaseState::Enter(std::shared_ptr<CGameObject> npc)
 {
@@ -96,5 +97,101 @@ void AtkNPCChaseState::Execute(std::shared_ptr<CGameObject> npc)
 }
 
 void AtkNPCChaseState::Exit(std::shared_ptr<CGameObject> npc)
+{
+}
+
+//=====================================Die=================================================
+
+void AtkNPCDieState::Enter(std::shared_ptr<CGameObject> npc)
+{
+	starttime = std::chrono::system_clock::now();
+	duration_time = 10 * 1000; // 10초간 죽어있음
+	if (npc->m_objectType == GameObjectType::Wolf)
+		npc->m_pSkinnedAnimationController->SetTrackEnable(8, true);
+	else if (npc->m_objectType == GameObjectType::Toad)
+		npc->m_pSkinnedAnimationController->SetTrackEnable(7, true);
+	else if (npc->m_objectType == GameObjectType::Wasp)
+		npc->m_pSkinnedAnimationController->SetTrackEnable(5, true);
+	else
+		npc->m_pSkinnedAnimationController->SetTrackEnable(9, true);
+
+}
+
+void AtkNPCDieState::Execute(std::shared_ptr<CGameObject> npc)
+{
+	endtime = std::chrono::system_clock::now();
+	auto exectime = endtime - starttime;
+	auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
+	if (exec_ms > duration_time)
+	{
+		// 상태 전환
+		npc->FSM_manager->ChangeState(std::make_shared<AtkNPCRespawnState>());
+		return;
+	}
+}
+
+void AtkNPCDieState::Exit(std::shared_ptr<CGameObject> npc)
+{
+	if (npc->m_objectType == GameObjectType::Wolf)
+		npc->m_pSkinnedAnimationController->SetTrackEnable(8, false);
+	else if (npc->m_objectType == GameObjectType::Toad)
+		npc->m_pSkinnedAnimationController->SetTrackEnable(7, false);
+	else if (npc->m_objectType == GameObjectType::Wasp)
+		npc->m_pSkinnedAnimationController->SetTrackEnable(5, false);
+	else
+		npc->m_pSkinnedAnimationController->SetTrackEnable(9, false);
+}
+
+
+//=====================================Respawn=================================================
+
+void AtkNPCRespawnState::Enter(std::shared_ptr<CGameObject> npc)
+{
+	npc->isRender = false;
+	starttime = std::chrono::system_clock::now();
+	duration_time = 20 * 1000; // 20초간 안보이도록
+}
+
+void AtkNPCRespawnState::Execute(std::shared_ptr<CGameObject> npc)
+{
+	endtime = std::chrono::system_clock::now();
+	auto exectime = endtime - starttime;
+	auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
+	if (exec_ms > duration_time)
+	{
+		// 랜덤 위치에 생성
+		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
+		CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)npc->terraindata;
+		XMFLOAT3 xmf3Scale = pTerrain->GetScale();
+		int scale_z = (int)(z / xmf3Scale.z);
+		bool bReverseQuad = ((scale_z % 2) != 0);
+		float fHeight = pTerrain->GetHeight(x, z, bReverseQuad) + 0.0f;
+		float y{};
+		if (y < fHeight)y = fHeight;
+
+		npc->SetPosition(x, y, z);
+		// 상태 전환
+		npc->FSM_manager->ChangeState(std::make_shared<AtkNPCStandingState>());
+		return;
+	}
+}
+
+void AtkNPCRespawnState::Exit(std::shared_ptr<CGameObject> npc)
+{
+	npc->isRender = true;
+}
+
+//=====================================Attack=================================================
+
+
+void AtkNPCAttackState::Enter(std::shared_ptr<CGameObject> npc)
+{
+}
+
+void AtkNPCAttackState::Execute(std::shared_ptr<CGameObject> npc)
+{
+}
+
+void AtkNPCAttackState::Exit(std::shared_ptr<CGameObject> npc)
 {
 }

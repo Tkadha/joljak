@@ -41,7 +41,14 @@ enum class GameObjectType : int {
 	Cow,
 	Pig,
 	Player,
-	Terrain 
+	Terrain,
+	Toad,
+	Wasp,
+	Wolf,
+	Bat,
+	Snake,
+	Turtle,
+	Spider
 
 	// ... �ʿ��� ��ŭ �߰� ...
 };

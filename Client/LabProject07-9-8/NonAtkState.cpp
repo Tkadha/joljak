@@ -4,6 +4,7 @@
 #include "RandomUtil.h"
 
 
+//=====================================Standing=================================================
 
 
 void NonAtkNPCStandingState::Enter(std::shared_ptr<CGameObject> npc)
@@ -35,6 +36,7 @@ void NonAtkNPCStandingState::Exit(std::shared_ptr<CGameObject> npc)
 }
 
 
+//=====================================Move=================================================
 
 
 
@@ -116,6 +118,7 @@ void NonAtkNPCMoveState::Exit(std::shared_ptr<CGameObject> npc)
 	npc->m_pSkinnedAnimationController->SetTrackEnable(2, false);
 }
 
+//=====================================RunAway=================================================
 
 void NonAtkNPCRunAwayState::Enter(std::shared_ptr<CGameObject> npc)
 {
@@ -199,6 +202,7 @@ void NonAtkNPCRunAwayState::Exit(std::shared_ptr<CGameObject> npc)
 		npc->m_pSkinnedAnimationController->SetTrackEnable(6, false);
 }
 
+//=====================================Die=================================================
 
 void NonAtkNPCDieState::Enter(std::shared_ptr<CGameObject> npc)
 {
@@ -231,6 +235,7 @@ void NonAtkNPCDieState::Exit(std::shared_ptr<CGameObject> npc)
 	else if (npc->m_objectType == GameObjectType::Pig)
 		npc->m_pSkinnedAnimationController->SetTrackEnable(9, false);
 }
+//=====================================Respawn=================================================
 
 void NonAtkNPCRespawnState::Enter(std::shared_ptr<CGameObject> npc)
 {
