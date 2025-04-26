@@ -97,7 +97,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	std::mt19937 gen(rd());
 
 
-
+	int tree_obj_count{ 0 };
 	int nPineObjects = 10;
 	for (int i = 0; i < nPineObjects; ++i) {
 		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pResourceManager);
@@ -107,6 +107,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		gameObj->SetScale(w, h, w);
 		
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 	{
 		CGameObject* gameObj = new CSwordObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pResourceManager);
@@ -123,6 +125,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, 10, 20, 20, 30);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 	
 	int nRockClusterBObjects = 10;
@@ -133,6 +137,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, 10, 20, 20, 30);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 	int nRockClusterCObjects = 10;
 	for (int i = 0; i < nRockClusterCObjects; ++i) {
@@ -142,97 +148,59 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, 10, 20, 20, 30);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 
 
 
 	// ������Ʈ ����
-	m_nHierarchicalGameObjects = 6;
-	m_ppHierarchicalGameObjects = new CGameObject*[m_nHierarchicalGameObjects];
-
-	CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Cow.bin", NULL, pResourceManager);
-
-	m_ppHierarchicalGameObjects[0] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 3, pResourceManager);
-	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(1, 1);
-	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackEnable(1, false);
-	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(2, 2);
-	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackEnable(2, false);
-	m_ppHierarchicalGameObjects[0]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[0]->SetPosition(1000.f/2, m_pTerrain->GetHeight(1000.0f, 1500.0f)/2, 1500.f/2);
-	m_ppHierarchicalGameObjects[0]->SetScale(8.0f, 8.0f, 8.0f);
-	m_ppHierarchicalGameObjects[0]->SetTerraindata(m_pTerrain);
-	XMFLOAT3 cowCenter = XMFLOAT3(1000.0f, m_pTerrain->GetHeight(1000.0f, 1500.0f)+50, 1500.0f);
-	XMFLOAT3 cowSize = XMFLOAT3(5.0f, 5.0f, 5.0f); // 실제 크기의 반
-	XMFLOAT4 cowRotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-
 	
-	tree_objects.emplace_back(0, m_ppHierarchicalGameObjects[0]->m_worldOBB.Center);
-	octree.insert(&tree_objects[0]);
-	
-
-	m_ppHierarchicalGameObjects[1] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 3, pResourceManager);
-	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(1, 1);
-	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackEnable(1, false);
-	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(2, 2);
-	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackEnable(2, false);
-
-	m_ppHierarchicalGameObjects[1]->SetScale(8.0f, 8.0f, 8.0f);
-	m_ppHierarchicalGameObjects[1]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[1]->SetPosition(800.0f / 2, m_pTerrain->GetHeight(800.0f, 1400.0f) / 2, 1400.0f / 2);
-	m_ppHierarchicalGameObjects[1]->SetTerraindata(m_pTerrain);
-
-	XMFLOAT3 cowCenter2 = XMFLOAT3(800.0f, m_pTerrain->GetHeight(800.0f, 1400.0f), 1400.0f);
-	XMFLOAT3 cowSize2 = XMFLOAT3(5.0f, 5.0f, 5.0f); // 실제 크기의 반
-	XMFLOAT4 cowRotation2 = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-
-	m_ppHierarchicalGameObjects[1]->SetOBB(cowCenter2, cowSize2, cowRotation2);
-
-
-
-	m_ppHierarchicalGameObjects[2] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, pResourceManager);
-	m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-	//m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController = nullptr;
-	//m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController->m_pAnimationTracks = nullptr;
-	m_ppHierarchicalGameObjects[2]->SetScale(10.0f, 10.0f, 10.0f);
-	m_ppHierarchicalGameObjects[2]->Rotate(0.f, 0.f, 0.f);
-	m_ppHierarchicalGameObjects[2]->SetPosition(500.0f/2, m_pTerrain->GetHeight(500.0f, 800.0f)/2, 800.0f/2);
-	m_ppHierarchicalGameObjects[2]->SetTerraindata(m_pTerrain);
-
-	m_ppHierarchicalGameObjects[3] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, pResourceManager);
-	m_ppHierarchicalGameObjects[3]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
-	m_ppHierarchicalGameObjects[3]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[3]->SetPosition(100.0f / 2, m_pTerrain->GetHeight(100.0f, 1400.0f) / 2, 1400.0f / 2);
-	m_ppHierarchicalGameObjects[3]->SetScale(10.0f, 10.0f, 10.0f);
-	m_ppHierarchicalGameObjects[3]->SetTerraindata(m_pTerrain);
-
-	m_ppHierarchicalGameObjects[4] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, pResourceManager);
-	m_ppHierarchicalGameObjects[4]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 3);
-	m_ppHierarchicalGameObjects[4]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[4]->SetPosition(200.0f /2 , m_pTerrain->GetHeight(200.0f, 500.0f)/2, 500.0f / 2);
-	m_ppHierarchicalGameObjects[4]->SetScale(8.0f, 8.0f, 8.0f);
-	m_ppHierarchicalGameObjects[4]->SetTerraindata(m_pTerrain);
-
-	m_ppHierarchicalGameObjects[5] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 1, pResourceManager);
-	m_ppHierarchicalGameObjects[5]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[5]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[5]->SetPosition(1000.f / 2, m_pTerrain->GetHeight(1000.0f, 1500.0f) / 2, 1500.f / 2);
-	m_ppHierarchicalGameObjects[5]->SetScale(8.0f, 8.0f, 8.0f);
-	m_ppHierarchicalGameObjects[5]->SetTerraindata(m_pTerrain);
-	if (pCowModel) delete pCowModel;
-	
-
-
-	for (int i = 0; i < m_nHierarchicalGameObjects; ++i) {
-		//m_ppHierarchicalGameObjects[0]->SetOBB(cowCenter, cowSize, cowRotation);
-		m_ppHierarchicalGameObjects[i]->SetOBB();
-		CShader* shader = new COBBShader();
-		//shader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
-		//m_ppHierarchicalGameObjects[0]->m_OBBShader.CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
-		m_ppHierarchicalGameObjects[i]->SetOBBShader(shader);
-		m_ppHierarchicalGameObjects[i]->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+	int nCowObjects = 10;
+	for (int i = 0; i < nCowObjects; ++i)
+	{
+		CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Cow.bin", NULL, pResourceManager);
+		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, 10, pResourceManager);
+		gameobj->m_objectType = GameObjectType::Cow;
+		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+		int animate_count = 10;
+		for (int j = 1; j < animate_count; ++j) {
+			gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+		}
+		gameobj->Rotate(0.f, 180.f, 0.f);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
+		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		gameobj->SetScale(12.0f, 12.0f, 12.0f);
+		gameobj->SetTerraindata(m_pTerrain);
+		m_vGameObjects.emplace_back(gameobj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+		if (pCowModel) delete pCowModel;
 	}
+	int nPigObjects = 10;
+	for (int i = 0; i < nPigObjects; ++i)
+	{
+		CLoadedModelInfo* pPigModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Pig.bin", NULL, pResourceManager);
+		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pPigModel, 10, pResourceManager);
+		gameobj->m_objectType = GameObjectType::Pig;
+		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+		int animate_count = 10;
+		for (int j = 1; j < animate_count; ++j) {
+			gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+		}
+		gameobj->Rotate(0.f, 180.f, 0.f);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
+		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		gameobj->SetScale(12.0f, 12.0f, 12.0f);
+		gameobj->SetTerraindata(m_pTerrain);
+		m_vGameObjects.emplace_back(gameobj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+		if (pPigModel) delete pPigModel;
+	}
+
 
 	for (auto obj : m_vGameObjects) {
 		obj->SetOBB();
@@ -255,11 +223,9 @@ void CScene::ReleaseObjects()
 	if (m_pTerrain) delete m_pTerrain;
 	if (m_pSkyBox) delete m_pSkyBox;
 
-	if (m_ppHierarchicalGameObjects)
-	{
-		for (int i = 0; i < m_nHierarchicalGameObjects; i++) if (m_ppHierarchicalGameObjects[i]) m_ppHierarchicalGameObjects[i]->Release();
-		delete[] m_ppHierarchicalGameObjects;
-	}
+	
+	for (auto obj : m_vGameObjects) if (obj) obj->Release();
+	m_vGameObjects.clear();
 
 	ReleaseShaderVariables();
 
@@ -510,7 +476,6 @@ void CScene::ReleaseUploadBuffers()
 	if (m_pSkyBox) m_pSkyBox->ReleaseUploadBuffers();
 	if (m_pTerrain) m_pTerrain->ReleaseUploadBuffers();
 
-	for (int i = 0; i < m_nHierarchicalGameObjects; i++) m_ppHierarchicalGameObjects[i]->ReleaseUploadBuffers();
 }
 
 
@@ -605,25 +570,9 @@ void CScene::AnimateObjects(float fTimeElapsed)
 	//	}
 	//}
 
-	if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[0])) {
-		printf("[충돌 확인])\n");
-		m_pPlayer->checkmove = true;
-
-	}
-	if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[1])) {
-
-		m_ppHierarchicalGameObjects[1]->isRender = false;
-	}
-
-	std::vector<tree_obj*> results;
-
-	tree_obj p(-1, m_pPlayer->GetPosition());
-	octree.query(p, XMFLOAT3(200, 200, 200), results);
-	for (auto& obj : results) {
-		if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[obj->u_id])) {
-			printf("contect!\n");
-		}
-	}
+	//std::vector<tree_obj*> results;
+	//tree_obj p(-1, m_pPlayer->GetPosition());
+	//octree.query(p, XMFLOAT3(200, 200, 200), results);
 }
 
 
@@ -639,13 +588,7 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 	D3D12_GPU_VIRTUAL_ADDRESS d3dcbLightsGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(2, d3dcbLightsGpuVirtualAddress); //Lights
 	
-	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
-	{
-		if (m_ppHierarchicalGameObjects[i])
-		{
-			if (m_ppHierarchicalGameObjects[i]->FSM_manager) m_ppHierarchicalGameObjects[i]->FSMUpdate();
-		}
-	}
+	
 	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
@@ -654,15 +597,7 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 		if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
 	}
 	
-	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
-	{
-		if (m_ppHierarchicalGameObjects[i] && m_ppHierarchicalGameObjects[i]->isRender == true)
-		{
-			m_ppHierarchicalGameObjects[i]->Animate(m_fElapsedTime);
-			if (!m_ppHierarchicalGameObjects[i]->m_pSkinnedAnimationController) m_ppHierarchicalGameObjects[i]->UpdateTransform(NULL);
-			m_ppHierarchicalGameObjects[i]->Render(pd3dCommandList, pCamera);
-		}
-	}
+	
 }
 void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, CCamera* pCamera)
 {
@@ -684,13 +619,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dcbLightsGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(2, d3dcbLightsGpuVirtualAddress); //Lights
 	
-	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
-	{
-		if (m_ppHierarchicalGameObjects[i])
-		{
-			if (m_ppHierarchicalGameObjects[i]->FSM_manager) m_ppHierarchicalGameObjects[i]->FSMUpdate();
-		}
-	}
+	
 	
 
 	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
@@ -698,17 +627,13 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, 
 
 	for (auto obj : m_vGameObjects)
 	{
-		if (obj->isRender) obj->Render(pd3dCommandList, obbRender,pCamera);
+		if (obj->m_objectType == GameObjectType::Cow) 
+			printf("");
+		if (obj->FSM_manager) obj->FSMUpdate();
+		if (obj->m_pSkinnedAnimationController) obj->Animate(m_fElapsedTime);
+		if (obj->isRender) obj->Render(pd3dCommandList, obbRender, pCamera);	
 	}
-	for (int i = 0; i < 3; i++)
-	{
-		if (m_ppHierarchicalGameObjects[i] && m_ppHierarchicalGameObjects[i]->isRender == true)
-		{
-			m_ppHierarchicalGameObjects[i]->Animate(m_fElapsedTime);
-			if (!m_ppHierarchicalGameObjects[i]->m_pSkinnedAnimationController) m_ppHierarchicalGameObjects[i]->UpdateTransform(NULL);
-			m_ppHierarchicalGameObjects[i]->Render(pd3dCommandList, obbRender, pCamera);
-		}
-	}
+	
 }
 
 
@@ -745,7 +670,7 @@ void CScene::CollectHierarchyObjects(CGameObject* obj, std::vector<BoundingOrien
 		return; // 재귀 탈출 조건
 	}
 
-	if(obj->m_pMesh)
+	if (obj->m_pMesh)
 		obbList.push_back(obj->m_worldOBB);
 
 	// 재귀 호출
@@ -756,10 +681,10 @@ void CScene::CollectHierarchyObjects(CGameObject* obj, std::vector<BoundingOrien
 	}
 }
 
-
+#include "NonAtkState.h"
 void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 	if (!pPlayer) return;
-
+	
 	// Player <-> Object
 	for (auto& obj : m_vGameObjects) {
 		if (CollisionCheck(m_pPlayer, obj)) {
@@ -769,12 +694,15 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 				obj->isRender = false;
 				m_pGameFramework->AddItem("wood");
 			}
-
 			// 돌 충돌처리
 			if (obj->m_objectType == GameObjectType::Rock) {
 				printf("[Rock 충돌 확인])\n");
 				obj->isRender = false;
 				m_pGameFramework->AddItem("stone");
+			}
+			if (obj->m_objectType == GameObjectType::Cow || obj->m_objectType == GameObjectType::Pig) {
+				//if (obj->FSM_manager)obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCRunAwayState>());
+				if (obj->FSM_manager)obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCDieState>());
 			}
 
 		}

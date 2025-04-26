@@ -60,6 +60,9 @@
     <Filter Include="소스 파일\Network">
       <UniqueIdentifier>{059782b4-6ff6-42cd-840c-e49c6e010703}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Util">
+      <UniqueIdentifier>{bbe8cb24-eb18-44ad-a7ed-76328cc46b13}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LabProject07-9-8.rc">
@@ -159,14 +162,14 @@
     <ClCompile Include="ResourceManager.cpp">
       <Filter>소스 파일\ResourceManager</Filter>
     </ClCompile>
-    <ClCompile Include="RandomUtil.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="AtkState.cpp">
       <Filter>소스 파일\FSM</Filter>
     </ClCompile>
     <ClCompile Include="NetworkManager.cpp">
       <Filter>소스 파일\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="RandomUtil.cpp">
+      <Filter>소스 파일\Util</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -257,12 +260,14 @@
     <ClInclude Include="ResourceManager.h">
       <Filter>소스 파일\ResourceManager</Filter>
     </ClInclude>
-    <ClInclude Include="RandomUtil.h" />
     <ClInclude Include="AtkState.h">
       <Filter>소스 파일\FSM</Filter>
     </ClInclude>
     <ClInclude Include="NetworkManager.h">
       <Filter>소스 파일\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="RandomUtil.h">
+      <Filter>소스 파일\Util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

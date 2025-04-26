@@ -518,8 +518,7 @@ void CGameObject::MoveForward(float fDistance)
 	XMFLOAT3 xmf3Scale = pTerrain->GetScale();
 	int z = (int)(xmf3Position.z / xmf3Scale.z);
 	bool bReverseQuad = ((z % 2) != 0);
-	float fHeight = pTerrain->GetHeight(xmf3Position.x*2, xmf3Position.z*2, bReverseQuad) + 0.0f;
-	fHeight /= 2;
+	float fHeight = pTerrain->GetHeight(xmf3Position.x, xmf3Position.z, bReverseQuad) + 0.0f;
 	if (xmf3Position.y < fHeight)
 	{
 		xmf3Position.y = fHeight;

@@ -39,6 +39,7 @@ enum class GameObjectType : int {
 	Tree,
 	Cliff,
 	Cow,
+	Pig,
 	Player,
 	Terrain 
 

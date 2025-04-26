@@ -91,8 +91,8 @@ public:
 
 	vector<CGameObject*>				m_vGameObjects{};
 
-	int									m_nHierarchicalGameObjects = 0;
-	CGameObject							**m_ppHierarchicalGameObjects = NULL;
+	//int									m_nHierarchicalGameObjects = 0;
+	//CGameObject							**m_ppHierarchicalGameObjects = NULL;
 
 	XMFLOAT3							m_xmf3RotatePosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
