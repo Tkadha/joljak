@@ -21,7 +21,7 @@
 class CShader;
 class CStandardShader;
 class COBBShader;
-
+class CScene;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 #define RESOURCE_TEXTURE2D			0x01
@@ -107,6 +107,7 @@ public:
 	std::shared_ptr<FSMManager<CGameObject>> FSM_manager = NULL;
 	LPVOID									terraindata = NULL;
 
+	CScene* m_pScene = nullptr; // 자신을 소유한 Scene 포인터
 	GameObjectType m_objectType = GameObjectType::Unknown;
 
 	virtual void FSMUpdate() {}
@@ -176,6 +177,7 @@ public:
 	void SetOBBShader(CShader*);
 
 	void SetTerraindata(LPVOID pContext) {terraindata = pContext;}
+	void SetOwningScene(CScene* pScene) { m_pScene = pScene; };
 
 public:
 	void FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnSkinnedMesh);
@@ -241,7 +243,7 @@ public:
 
 class CMonsterObject : public CGameObject
 {
-	
+	int _hp = 20;
 
 public:
 	CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks, ResourceManager* pResourceManager);
@@ -255,7 +257,9 @@ public:
 	{
 		FSM_manager->ChangeState(newstate);
 	}
-
+	void Sethp(int hp) { _hp = hp; }
+	void Decreasehp(int num) { _hp -= num; }
+	int Gethp() { return _hp; }
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

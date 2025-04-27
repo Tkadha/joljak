@@ -10,7 +10,6 @@
 #include "Object.h"
 #include "Camera.h"
 
-class CScene;
 
 class CPlayer : public CGameObject
 {
@@ -41,7 +40,6 @@ protected:
 
 	CCamera						*m_pCamera = NULL;
 
-	CScene* m_pScene = nullptr; // 자신을 소유한 Scene 포인터
 
 public:
 	CPlayer();
@@ -116,7 +114,6 @@ public:
 	CGameObject* FindFrame(char* framename);
 
 
-	void SetOwningScene(CScene* pScene) { m_pScene = pScene; };
 	void PerformActionInteractionCheck();
 };
 

@@ -7,9 +7,6 @@
 #include "Shader.h"
 #include "Scene.h"
 #include "GameFramework.h"
-
-
-#include "NonAtkState.h"
 //>>>>>>> Bin_test
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -519,10 +516,7 @@ void CGameObject::MoveForward(float fDistance)
 	int z = (int)(xmf3Position.z / xmf3Scale.z);
 	bool bReverseQuad = ((z % 2) != 0);
 	float fHeight = pTerrain->GetHeight(xmf3Position.x, xmf3Position.z, bReverseQuad) + 0.0f;
-	if (xmf3Position.y < fHeight)
-	{
-		xmf3Position.y = fHeight;
-	}
+	xmf3Position.y = fHeight;
 	CGameObject::SetPosition(xmf3Position);
 
 }
@@ -1216,7 +1210,6 @@ CMonsterObject::CMonsterObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pMonsterModel);
 
 	FSM_manager = std::make_shared<FSMManager<CGameObject>>(this);
-	FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
 }
 
 CMonsterObject::~CMonsterObject()

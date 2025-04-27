@@ -1,8 +1,9 @@
 #include "AtkState.h"
 #include "Object.h"
+#include "Scene.h"
 #include <iostream>
 #include "RandomUtil.h"
-
+#include <cmath> // sqrt, pow 함수 사용
 
 //=====================================Standing=================================================
 void AtkNPCStandingState::Enter(std::shared_ptr<CGameObject> npc)
@@ -24,8 +25,32 @@ void AtkNPCStandingState::Execute(std::shared_ptr<CGameObject> npc)
 		npc->FSM_manager->ChangeState(std::make_shared<AtkNPCMoveState>());
 		return;
 	}
+
 	// 주변에 플레이어가 있는지 확인
 	// 플레이어가 있으면 Chase로 변경
+	if (npc->m_pScene) {
+		auto playerInfo = npc->m_pScene->GetPlayerInfo();
+		if (playerInfo)
+		{
+			XMFLOAT3 playerPos = playerInfo->GetPosition();
+			XMFLOAT3 npcPos = npc->GetPosition();
+
+			// 두 위치 사이의 3D 거리 계산
+			float distance = sqrt(
+				pow(playerPos.x - npcPos.x, 2) +
+				pow(playerPos.y - npcPos.y, 2) +
+				pow(playerPos.z - npcPos.z, 2)
+			);
+
+			// 500 범위 내에 있다면 Chase 상태로 전환
+			float detectionRange = 500.f;
+			if (distance < detectionRange)
+			{
+				npc->FSM_manager->ChangeState(std::make_shared<AtkNPCChaseState>());
+				return;
+			}
+		}
+	}
 
 }
 
@@ -46,7 +71,22 @@ void AtkNPCMoveState::Enter(std::shared_ptr<CGameObject> npc)
 	move_type = rand_type(dre); // 랜덤한 이동 타입(0~2)
 	rotate_type = rand_type(dre) % 2; // 랜덤한 회전 타입(0~1)
 	std::cout << "Move State Enter, duration_time: " << duration_time << std::endl;
-	npc->m_pSkinnedAnimationController->SetTrackEnable(2, true);
+	switch (npc->m_objectType)
+	{
+	case GameObjectType::Spider:
+	case GameObjectType::Wasp:
+	case GameObjectType::Wolf:
+	case GameObjectType::Snake:
+	case GameObjectType::Bat:
+	case GameObjectType::Turtle:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(2, true);
+		break;
+	case GameObjectType::Toad:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(1, true);
+		break;
+	defalut:	// 잘못된 타입이다.
+		break;
+	}
 }
 
 void AtkNPCMoveState::Execute(std::shared_ptr<CGameObject> npc)
@@ -77,27 +117,142 @@ void AtkNPCMoveState::Execute(std::shared_ptr<CGameObject> npc)
 		npc->Rotate(0.f, 0.25f, 0.f);
 		break;
 	}
+
+	// standing과 동일하게 위치 기반으로 일정 범위 내면 chase 상태 변경
+	if (npc->m_pScene) {
+		auto playerInfo = npc->m_pScene->GetPlayerInfo();
+		if (playerInfo)
+		{
+			XMFLOAT3 playerPos = playerInfo->GetPosition();
+			XMFLOAT3 npcPos = npc->GetPosition();
+
+			// 두 위치 사이의 3D 거리 계산
+			float distance = sqrt(
+				pow(playerPos.x - npcPos.x, 2) +
+				pow(playerPos.y - npcPos.y, 2) +
+				pow(playerPos.z - npcPos.z, 2)
+			);
+
+			// 500 범위 내에 있다면 Chase 상태로 전환
+			float detectionRange = 500.f;
+			if (distance < detectionRange)
+			{
+				npc->FSM_manager->ChangeState(std::make_shared<AtkNPCChaseState>());
+				return;
+			}
+		}
+	}
 }
 
 void AtkNPCMoveState::Exit(std::shared_ptr<CGameObject> npc)
 {
-	npc->m_pSkinnedAnimationController->SetTrackEnable(2, false);
+	switch (npc->m_objectType)
+	{
+	case GameObjectType::Spider:
+	case GameObjectType::Wasp:
+	case GameObjectType::Wolf:
+	case GameObjectType::Snake:
+	case GameObjectType::Bat:
+	case GameObjectType::Turtle:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(2, false);
+		break;
+	case GameObjectType::Toad:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(1, false);
+		break;
+	defalut:	// 잘못된 타입이다.
+		break;
+	}
 }
 
 //=====================================Chase=================================================
 
 void AtkNPCChaseState::Enter(std::shared_ptr<CGameObject> npc)
 {
-	starttime = std::chrono::system_clock::now();
-
+	switch (npc->m_objectType)
+	{
+	case GameObjectType::Spider:
+	case GameObjectType::Wasp:
+	case GameObjectType::Wolf:
+	case GameObjectType::Snake:
+	case GameObjectType::Bat:
+	case GameObjectType::Turtle:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(2, true);
+		break;
+	case GameObjectType::Toad:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(1, true);
+		break;
+	defalut:	// 잘못된 타입이다.
+		break;
+	}
 }
 
 void AtkNPCChaseState::Execute(std::shared_ptr<CGameObject> npc)
 {
+	// 플레이어 위치로 다가감. 일정범위로 붙게되면 attack 상태 변경
+	if (npc->m_pScene)
+	{
+		auto playerInfo = npc->m_pScene->GetPlayerInfo();
+		if (playerInfo)
+		{
+			XMFLOAT3 playerPos = playerInfo->GetPosition();
+			XMFLOAT3 npcPos = npc->GetPosition();
+
+			// 플레이어 방향 벡터 계산
+			XMVECTOR targetDirectionVec = XMVector3Normalize(XMVectorSet(playerPos.x - npcPos.x, 0.0f, playerPos.z - npcPos.z, 0.0f));
+			XMFLOAT3 targetDirection;
+			XMStoreFloat3(&targetDirection, targetDirectionVec);
+
+			// 목표 Yaw 값 계산
+			float targetYaw = atan2f(targetDirection.x, targetDirection.z);
+
+			// 현재 NPC의 회전 값 가져오기 (GetLook 벡터를 사용하여 Yaw 계산)
+			XMFLOAT3 currentLook = npc->GetLook();
+			float currentYaw = atan2f(currentLook.x, currentLook.z);
+
+			// 목표 방향으로 회전
+			npc->Rotate(0.0f, targetYaw - currentYaw, 0.0f);
+
+			// 앞으로 이동 (현재 Look 벡터 방향으로)
+			npc->MoveForward(0.4f);
+
+			// 공격 범위 확인 (예: 50 유닛 이내) 후 Attack 상태로 전환하는 로직 추가 가능
+			float attackRange = 50.0f;
+			float distanceToPlayer = sqrt(pow(playerPos.x - npcPos.x, 2) + pow(playerPos.y - npcPos.y, 2) + pow(playerPos.z - npcPos.z, 2));
+			if (distanceToPlayer < attackRange)
+			{
+				//npc->FSM_manager->ChangeState(std::make_shared<AtkNPCAttackState>());
+				//return;
+			}
+
+			// 추격 중 멈춤 조건 (예: 플레이어가 너무 멀리 벗어남)
+			float loseRange = 1000.f;
+			if (distanceToPlayer > loseRange)
+			{
+				npc->FSM_manager->ChangeState(std::make_shared<AtkNPCStandingState>());
+				return;
+			}
+		}
+	}
 }
 
 void AtkNPCChaseState::Exit(std::shared_ptr<CGameObject> npc)
 {
+	switch (npc->m_objectType)
+	{
+	case GameObjectType::Spider:
+	case GameObjectType::Wasp:
+	case GameObjectType::Wolf:
+	case GameObjectType::Snake:
+	case GameObjectType::Bat:
+	case GameObjectType::Turtle:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(2, false);
+		break;
+	case GameObjectType::Toad:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(1, false);
+		break;
+	defalut:	// 잘못된 타입이다.
+		break;
+	}
 }
 
 //=====================================Die=================================================
@@ -186,6 +341,25 @@ void AtkNPCRespawnState::Exit(std::shared_ptr<CGameObject> npc)
 
 void AtkNPCAttackState::Enter(std::shared_ptr<CGameObject> npc)
 {
+	switch (npc->m_objectType)
+	{
+	case GameObjectType::Spider:
+		break;
+	case GameObjectType::Wasp:
+		break;
+	case GameObjectType::Wolf:
+		break;
+	case GameObjectType::Snake:
+		break;
+	case GameObjectType::Bat:
+		break;
+	case GameObjectType::Toad:
+		break;
+	case GameObjectType::Turtle:
+		break;
+	defalut:	// 잘못된 타입이다.
+		break;
+	}
 }
 
 void AtkNPCAttackState::Execute(std::shared_ptr<CGameObject> npc)
@@ -194,4 +368,23 @@ void AtkNPCAttackState::Execute(std::shared_ptr<CGameObject> npc)
 
 void AtkNPCAttackState::Exit(std::shared_ptr<CGameObject> npc)
 {
+	switch (npc->m_objectType)
+	{
+	case GameObjectType::Spider:
+		break;
+	case GameObjectType::Wasp:
+		break;
+	case GameObjectType::Wolf:
+		break;
+	case GameObjectType::Snake:
+		break;
+	case GameObjectType::Bat:
+		break;
+	case GameObjectType::Toad:
+		break;
+	case GameObjectType::Turtle:
+		break;
+	defalut:	// 잘못된 타입이다.
+		break;
+	}
 }
