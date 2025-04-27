@@ -16,4 +16,6 @@ public:
     virtual D3D12_SHADER_BYTECODE CreatePixelShader() override;
 
     // 다른 상태(Rasterizer, Blend, DepthStencil)는 CShader 기본값 사용
+
+    virtual std::string GetShaderType() const override { return "Terrain"; }
 };

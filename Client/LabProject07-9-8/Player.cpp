@@ -347,7 +347,7 @@ CGameObject* CPlayer::FindFrame(char* framename)
 		if (found) return found;
 	}
 	return nullptr;
-}
+} 
 
 
 CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, void *pContext, CGameFramework* pGameFramework) : CPlayer(pGameFramework)

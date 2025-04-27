@@ -418,7 +418,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// 3. 전역 조명 상수 버퍼 업데이트 
 	UpdateShaderVariables(pd3dCommandList); 
 
-	// --- 중요: 디스크립터 힙 설정 ---
+	// 디스크립터 힙 설정 
 	ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() }; // CBV/SRV/UAV 힙 가져오기
 	if (ppHeaps[0]) { // 힙 포인터 유효성 검사
 		pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
@@ -429,151 +429,45 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 
 	// --- 4. 렌더링 상태 추적 변수 ---
-	ID3D12RootSignature* currentRootSig = nullptr;
-	ID3D12PipelineState* currentPSO = nullptr;
-	CShader* pCurrentShader = nullptr; // 현재 활성화된 셰이더 추적
-
-	// --- 헬퍼 람다: 그래픽 상태 설정 (루트 서명 및 PSO) ---
-	auto SetGraphicsState = [&](CShader* pShader) {
-		if (!pShader) return; // 셰이더가 없으면 아무것도 안 함
-
-		// 셰이더 객체 자체가 바뀌었는지 확인 (가장 포괄적인 검사)
-		if (pShader != pCurrentShader)
-		{
-			pCurrentShader = pShader; // 현재 셰이더 업데이트
-
-			// 루트 서명 설정 (셰이더에 저장된 루트 서명 사용)
-			ID3D12RootSignature* pRootSig = pShader->GetRootSignature();
-			if (pRootSig && pRootSig != currentRootSig) {
-				pd3dCommandList->SetGraphicsRootSignature(pRootSig);
-				currentRootSig = pRootSig;
-
-				// --- 카메라/조명 등 공통 CBV 바인딩 위치 이동 ---
-				// 현재 루트 서명이 카메라(b1 @ Param 0)를 사용하는지 확인 후 바인딩
-				// 더 정확한 방법은 각 루트 서명 생성 시 필요한 CBV 슬롯 정보를 저장해두는 것이지만,
-				// 여기서는 셰이더 타입 등으로 임시 구분
-				if (pShader != pShaderManager->GetShader("OBB", pd3dCommandList)) // OBB 셰이더가 아닐 때만 카메라 바인딩 시도
-				{
-					if (pCamera && pCamera->GetCameraConstantBuffer()) {
-						pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress()); // 카메라 CBV (b1)를 파라미터 0번에 바인딩
-					}
-					if (m_pd3dcbLights) {
-						// 조명 CBV (b4)를 파라미터 2번에 바인딩 (루트 서명 정의 기준)
-						pd3dCommandList->SetGraphicsRootConstantBufferView(2, m_pd3dcbLights->GetGPUVirtualAddress());
-					}
-				}
-				// --- 바인딩 로직 끝 ---
-			}
-
-			// PSO 설정 (셰이더에 저장된 PSO 사용)
-			ID3D12PipelineState* pPSO = pShader->GetPipelineState();
-			if (pPSO && pPSO != currentPSO) {
-				pd3dCommandList->SetPipelineState(pPSO);
-				currentPSO = pPSO;
-			}
-		}
-		// 이미 같은 셰이더(같은 RS, 같은 PSO)라면 아무것도 변경 안 함
-	};
+	m_pCurrentRootSignature = nullptr;
+	m_pCurrentPSO = nullptr;
+	m_pCurrentShader = nullptr;
 
 
 	// --- 5. 렌더링 단계별 처리 ---
 
 	// 5.1. 스카이박스 렌더링
 	if (m_pSkyBox) {
-		// CSkyBox 객체가 자신의 CMaterial과 CShader를 가지고 있다고 가정
-		CMaterial* pSkyboxMat = m_pSkyBox->GetMaterial(0); // 첫 번째 재질 가정
-		if (pSkyboxMat && pSkyboxMat->m_pShader) {
-			SetGraphicsState(pSkyboxMat->m_pShader); // Skybox 셰이더/RS/PSO 설정
-			if (pCamera && pCamera->GetCameraConstantBuffer()) {
-				pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress()); // 카메라 CBV (b1)를 파라미터 0번에 바인딩
-			}
-			// CSkyBox::Render 내부에서는 필요한 CBV(카메라 b1), 텍스처(t13 테이블) 바인딩 및 Draw 호출
-			m_pSkyBox->Render(pd3dCommandList, pCamera);
-		}
+		m_pSkyBox->Render(pd3dCommandList, pCamera); // SkyBox::Render 내부에서 상태 설정 및 렌더링
 	}
 
 	// 5.2. 지형 렌더링
 	if (m_pTerrain) {
-		CMaterial* pTerrainMat = m_pTerrain->GetMaterial(0);
-		if (pTerrainMat && pTerrainMat->m_pShader) {
-			SetGraphicsState(pTerrainMat->m_pShader); // Terrain 셰이더/RS/PSO 설정
-			if (pCamera && pCamera->GetCameraConstantBuffer()) {
-				pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress()); // 카메라 CBV (b1)를 파라미터 0번에 바인딩
-			}
-			// CHeightMapTerrain::Render 내부에서는 필요한 CBV(카메라 b1, 지형객체 b2), 텍스처(t1, t2 테이블) 바인딩 및 Draw 호출
-			m_pTerrain->Render(pd3dCommandList, pCamera);
+		m_pTerrain->Render(pd3dCommandList, pCamera); // Terrain::Render 내부에서 상태 설정 및 렌더링
+	}
+
+	// 5.3. 일반 게임 오브젝트 렌더링
+	for (auto& obj : m_vGameObjects) {
+		if (obj /*&& obj->IsVisible()*/) {
+			obj->Render(pd3dCommandList, pCamera); // GameObject::Render 내부에서 상태 설정 및 렌더링 (재귀 포함)
 		}
 	}
 
+	// 5.4. 계층적 게임 오브젝트 렌더링
+	for (int i = 0; i < m_nHierarchicalGameObjects; i++) {
+		if (m_ppHierarchicalGameObjects[i] && m_ppHierarchicalGameObjects[i]->isRender == true) {
+			// 애니메이션 처리 
+			m_ppHierarchicalGameObjects[i]->Animate(m_fElapsedTime);
+			if (!m_ppHierarchicalGameObjects[i]->m_pSkinnedAnimationController) m_ppHierarchicalGameObjects[i]->UpdateTransform(NULL);
 
-	// 5.3. 일반 게임 오브젝트 렌더링 (m_ppGameObjects, m_vGameObjects)
-	// 중요: 성능을 위해서는 이 객체들을 렌더링 전에 CShader 포인터 기준으로 정렬하는 것이 좋습니다!
-	
-	// Standard/Skinned 셰이더가 사용할 공통 CBV 설정
-	bool bStandardSkinnedStateSet = false;
-	if (pCamera && pCamera->GetCameraConstantBuffer()) {
-		pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress()); // 카메라 (b1 @ 인덱스 0)
-		bStandardSkinnedStateSet = true;
-	}
-	if (m_pd3dcbLights) {
-		pd3dCommandList->SetGraphicsRootConstantBufferView(2, m_pd3dcbLights->GetGPUVirtualAddress()); // 조명 (b4 @ 인덱스 2)
-		bStandardSkinnedStateSet = true;
+			m_ppHierarchicalGameObjects[i]->Render(pd3dCommandList, pCamera); // GameObject::Render 내부에서 상태 설정 및 렌더링 (재귀 포함)
+		}
 	}
 
-	if(bStandardSkinnedStateSet)
+	// 5.5. 플레이어 렌더링
+	if (m_pPlayer)
 	{
-		for (int i = 0; i < m_nGameObjects; i++) { // m_ppGameObjects 처리 (예시)
-			if (m_ppGameObjects[i] /*&& m_ppGameObjects[i]->IsVisible()*/) { // IsVisible() 같은 가시성 체크 추가 권장
-				CMaterial* pMaterial = m_ppGameObjects[i]->GetMaterial(0); // 또는 주 재질 인덱스
-				if (pMaterial && pMaterial->m_pShader) {
-					SetGraphicsState(pMaterial->m_pShader); // 객체의 셰이더에 맞는 상태 설정
-					// m_ppGameObjects[i]->Render 내부에서는 필요한 상수(b2), 텍스처(t6-t12 테이블) 바인딩 및 Draw 호출
-					m_ppGameObjects[i]->Render(pd3dCommandList, pCamera);
-				}
-			}
-		}
-		for (auto& obj : m_vGameObjects) { // m_vGameObjects 처리
-			if (obj /*&& obj->IsVisible()*/) {
-				CMaterial* pMaterial = obj->GetMaterial(0);
-				if (pMaterial && pMaterial->m_pShader) {
-					SetGraphicsState(pMaterial->m_pShader);
-					obj->Render(pd3dCommandList, pCamera);
-				}
-			}
-		}
-
-		// 5.4. 계층적 게임 오브젝트 렌더링 (Skinned)
-		for (int i = 0; i < m_nHierarchicalGameObjects; i++) {
-			if (m_ppHierarchicalGameObjects[i] && m_ppHierarchicalGameObjects[i]->isRender == true) {
-				// 애니메이션 처리
-				m_ppHierarchicalGameObjects[i]->Animate(m_fElapsedTime);
-				if (!m_ppHierarchicalGameObjects[i]->m_pSkinnedAnimationController) m_ppHierarchicalGameObjects[i]->UpdateTransform(NULL);
-
-				CMaterial* pMaterial = m_ppHierarchicalGameObjects[i]->GetMaterial(0);
-				if (pMaterial && pMaterial->m_pShader) {
-					SetGraphicsState(pMaterial->m_pShader); // Skinned 셰이더/RS/PSO 설정
-					// m_ppHierarchicalGameObjects[i]->Render 내부에서는 필요한 상수(b2), 본(b7, b8), 텍스처(t6-t12 테이블) 바인딩 및 Draw 호출
-					m_ppHierarchicalGameObjects[i]->Render(pd3dCommandList, pCamera);
-				}
-			}
-		}
-
-		if (m_pPlayer)
-		{
-			CMaterial* pPlayerMaterial = m_pPlayer->GetMaterial(0);
-			if (pPlayerMaterial && pPlayerMaterial->m_pShader)
-			{
-				// !!! 플레이어 렌더링 직전에 상태 설정 !!!
-				SetGraphicsState(pPlayerMaterial->m_pShader);
-				// 이제 플레이어에 맞는 RS/PSO 및 공통 CBV가 설정됨
-
-				// 플레이어 렌더링 호출
-				m_pPlayer->Render(pd3dCommandList, pCamera);
-			}
-			else {
-				OutputDebugString(L"Warning: Player has no material or shader set for rendering.\n");
-			}
-		}
+		//m_pPlayer->Render(pd3dCommandList, pCamera); // Player::Render (GameObject::Render 상속) 내부에서 상태 설정 및 렌더링
 	}
 
 	// 5.5. OBB 렌더링 (선택적)
@@ -581,23 +475,60 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	if (bRenderOBBs) {
 		CShader* pOBBShader = pShaderManager->GetShader("OBB", pd3dCommandList);
 		if (pOBBShader) {
-			SetGraphicsState(pOBBShader); // OBB 셰이더/RS/PSO 설정
+			// OBB 렌더링 시작 전에 상태 설정
+			SetGraphicsState(pd3dCommandList, pOBBShader); // CScene의 멤버 함수 호출
 
-			// OBB 렌더링이 필요한 객체들 순회
 			for (auto& obj : m_vGameObjects) {
-				if (obj /*&& obj->ShouldRenderOBB()*/) { // OBB 렌더링 조건 확인
-					// obj->RenderOBB 내부에서는 OBB의 월드 변환(b0) 업데이트 및 Draw 호출
-					obj->RenderOBB(pd3dCommandList, pCamera); // RenderOBB 함수 구현 필요
+				if (obj /*&& obj->ShouldRenderOBB()*/) {
+					// RenderOBB 내부에서는 OBB용 CBV만 바인딩
+					obj->RenderOBB(pd3dCommandList, pCamera);
 				}
 			}
 			for (int i = 0; i < m_nHierarchicalGameObjects; ++i) {
-				if (m_ppHierarchicalGameObjects[i] /*&& m_ppHierarchicalGameObjects[i]->ShouldRenderOBB()*/) {
+				if (m_ppHierarchicalGameObjects[i] /*&& ... */) {
 					m_ppHierarchicalGameObjects[i]->RenderOBB(pd3dCommandList, pCamera);
 				}
 			}
-			pOBBShader->Release(); // GetShader로 얻은 참조 해제
+
+			// 플레이어 OBB 렌더링 등
+			if (m_pPlayer) {
+				m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
+			}
+
+			pOBBShader->Release();
 		}
 	}
 
 
+}
+
+void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader)
+{
+	if (!pShader || !pd3dCommandList) return;
+
+	// 셰이더 객체 자체가 바뀌었는지 확인
+	if (pShader != m_pCurrentShader)
+	{
+		m_pCurrentShader = pShader; // 현재 셰이더 업데이트
+
+		// 루트 서명 설정 (셰이더에 저장된 루트 서명 사용)
+		ID3D12RootSignature* pRootSig = pShader->GetRootSignature();
+		if (pRootSig && pRootSig != m_pCurrentRootSignature) {
+			pd3dCommandList->SetGraphicsRootSignature(pRootSig);
+			m_pCurrentRootSignature = pRootSig;
+			// !!! 여기서 공통 CBV 바인딩 로직은 제거됨 !!!
+		}
+
+		// PSO 설정 (셰이더에 저장된 PSO 사용)
+		ID3D12PipelineState* pPSO = pShader->GetPipelineState();
+		if (pPSO && pPSO != m_pCurrentPSO) {
+			pd3dCommandList->SetPipelineState(pPSO);
+			m_pCurrentPSO = pPSO;
+		}
+	}
+	// 이미 같은 셰이더(같은 RS, 같은 PSO)라면 아무것도 변경 안 함
+}
+
+ShaderManager* CScene::GetShaderManager() const {
+	return m_pGameFramework ? m_pGameFramework->GetShaderManager() : nullptr;
 }

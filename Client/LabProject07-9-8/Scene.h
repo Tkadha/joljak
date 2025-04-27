@@ -73,6 +73,17 @@ public:
 
 	void ReleaseUploadBuffers();
 
+	void SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader);
+
+	// 조명 버퍼 접근자 
+	ID3D12Resource* GetLightsConstantBuffer() const { return m_pd3dcbLights; }
+
+	// ShaderManager 접근자 
+	ShaderManager* GetShaderManager() const; // 구현 필요 (m_pGameFramework 통해)
+
+	// CGameFramework 접근자 
+	CGameFramework* GetGameFramework() const { return m_pGameFramework; }
+
 	CPlayer								*m_pPlayer = NULL;
 	
 public:
@@ -109,4 +120,10 @@ public:
 
 
 	CGameFramework* m_pGameFramework;
+
+
+
+	ID3D12RootSignature* m_pCurrentRootSignature = nullptr;
+	ID3D12PipelineState* m_pCurrentPSO = nullptr;
+	CShader* m_pCurrentShader = nullptr;
 };

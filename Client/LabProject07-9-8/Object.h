@@ -88,6 +88,8 @@ public:
 
 	FSMManager<CGameObject>*		FSM_manager = NULL;
 
+	CGameFramework* m_pGameFramework;
+
 	virtual void FSMUpdate() {}
 
 	void SetMesh(CMesh *pMesh);

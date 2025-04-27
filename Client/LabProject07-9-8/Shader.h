@@ -55,6 +55,10 @@ public:
 	ID3D12RootSignature* GetRootSignature() const { return m_pd3dGraphicsRootSignature; }
 	ID3D12PipelineState* GetPipelineState() const { return m_pd3dPipelineState; }
 
+	// --- GetShaderType 가상 함수 추가 ---
+	// 이 함수는 각 파생 셰이더 클래스가 자신의 타입을 문자열로 반환하도록 강제합니다.
+	virtual std::string GetShaderType() const = 0; // 순수 가상 함수로 선언
+
 protected:
 	ID3DBlob							*m_pd3dVertexShaderBlob = NULL;
 	ID3DBlob							*m_pd3dPixelShaderBlob = NULL;

@@ -120,7 +120,7 @@ public:
 	ResourceManager* GetResourceManager() { return m_pResourceManager.get(); };
 	ShaderManager* GetShaderManager() { return m_pShaderManager; };
 
-
+	CScene* GetScene() { return m_pScene; }
 
 	void WaitForGpu(); // GPU 대기 함수 추가
 

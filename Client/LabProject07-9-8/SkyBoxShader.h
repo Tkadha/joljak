@@ -17,4 +17,6 @@ public:
     // 셰이더 바이트코드 생성 오버라이드
     virtual D3D12_SHADER_BYTECODE CreateVertexShader() override;
     virtual D3D12_SHADER_BYTECODE CreatePixelShader() override;
+
+    virtual std::string GetShaderType() const override { return "Skybox"; }
 };

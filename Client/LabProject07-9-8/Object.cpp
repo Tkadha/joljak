@@ -37,12 +37,14 @@ struct cbGameObjectInfo {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-CGameObject::CGameObject(CGameFramework* pGameFramework)
+CGameObject::CGameObject(CGameFramework* pGameFramework) : m_pGameFramework(pGameFramework)
 {
 	m_xmf4x4ToParent = Matrix4x4::Identity();
 	m_xmf4x4World = Matrix4x4::Identity();
 
 	m_OBBMaterial = new CMaterial(1, pGameFramework);
+
+
 }
 
 CGameObject::CGameObject(int nMaterials, CGameFramework* pGameFramework) : CGameObject(pGameFramework)
@@ -398,17 +400,43 @@ void CGameObject::Animate(float fTimeElapsed)
 
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	UpdateTransform(NULL); // 월드 행렬 업데이트 등
+	CScene* pScene = m_pGameFramework ? m_pGameFramework->GetScene() : nullptr;
+	if (!pScene) return; // 씬 없으면 렌더링 불가
 
-	if (m_pMesh && m_nMaterials > 0)
+
+
+	// 이 객체가 직접 렌더링할 메쉬와 첫 번째 재질/셰이더를 가지고 있는지 확인
+	CMaterial* pPrimaryMaterial = GetMaterial(0); // 상태 설정 기준으로 첫 번째 재질 사용
+
+	if (m_pMesh && pPrimaryMaterial && pPrimaryMaterial->m_pShader)
 	{
+		pScene->SetGraphicsState(pd3dCommandList, pPrimaryMaterial->m_pShader);
+
+
+		// --- 공통 CBV 바인딩 ---
+		// 카메라 CBV (b1 @ 인덱스 0)
+		if (pCamera && pCamera->GetCameraConstantBuffer()) {
+			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress());
+		}
+		// 조명 CBV (b4 @ 인덱스 2) - Standard/Skinned/Instancing 인 경우에만 바인딩
+		CShader* pCurrentShader = pPrimaryMaterial->m_pShader; // 편의상
+		std::string shaderType = pCurrentShader->GetShaderType(); // GetShaderType() 함수 필요
+		if (shaderType == "Standard" || shaderType == "Skinned" /* || shaderType == "Instancing" */) {
+			ID3D12Resource* pLightBuffer = pScene->GetLightsConstantBuffer(); // CScene 함수 통해 접근
+			if (pLightBuffer) {
+				pd3dCommandList->SetGraphicsRootConstantBufferView(2, pLightBuffer->GetGPUVirtualAddress());
+			}
+		}
+
+		UpdateTransform(NULL); // 월드 행렬 업데이트 등
+
 		// 이 GameObject에 속한 모든 메쉬/재질 쌍에 대해 반복
 		for (int i = 0; i < m_nMaterials; i++)
 		{
-			if (m_ppMaterials[i])
+			CMaterial* pMaterial = GetMaterial(i); // 현재 재질
+			// 현재 재질과 Primary 재질의 셰이더가 다르면 SetGraphicsState 다시 호출? (복잡도 증가, 일단 생략)
+			if (pMaterial && pMaterial->m_pShader == pCurrentShader) // 같은 셰이더를 사용하는 재질만 그림 (단순화)
 			{
-				CMaterial* pMaterial = m_ppMaterials[i]; // 현재 재질
-
 				// --- 리소스 바인딩 ---
 				// 현재 CShader (및 RootSignature)는 CScene::Render에서 이미 설정됨
 				// 1. 객체별 상수 업데이트 (루트 상수 b2 사용)
@@ -1266,37 +1294,43 @@ CHeightMapTerrain::~CHeightMapTerrain(void)
 
 void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	UpdateTransform(NULL); // 지형 월드 행렬 업데이트
+	CScene* pScene = m_pGameFramework ? m_pGameFramework->GetScene() : nullptr;
+	if (!pScene) return;
 
-	// SetGraphicsState(TerrainShader)는 CScene::Render에서 호출됨 가정
 
-	if (m_pMesh && m_nMaterials > 0)
+	CMaterial* pMaterial = GetMaterial(0); // 지형은 재질 하나 가정
+	if (m_pMesh && pMaterial && pMaterial->m_pShader)
 	{
-		CMaterial* pMaterial = GetMaterial(0); // 지형 재질 하나 가정
-		if (pMaterial)
-		{
-			// --- 지형 리소스 바인딩 ---
-			// 1. 카메라 CBV (b1 @ Param 0)는 SetGraphicsState 에서 바인딩됨
+		// --- 상태 설정 ---
+		pScene->SetGraphicsState(pd3dCommandList, pMaterial->m_pShader);
 
-			// 2. 지형 객체 상수 바인딩 (b2 @ Param 1 - 월드 행렬만)
-			XMFLOAT4X4 gmtxGameObject; // 월드 행렬만 필요
-			XMStoreFloat4x4(&gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
-			// 루트 파라미터 1번에 16 DWORDS (행렬 크기) 설정
-			pd3dCommandList->SetGraphicsRoot32BitConstants(1, 16, &gmtxGameObject, 0);
-
-			// 3. 지형 텍스처 테이블 바인딩 (t1, t2 @ Param 2)
-			D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle();
-			if (textureTableHandle.ptr != 0) {
-				// 루트 파라미터 인덱스 2번에 바인딩!
-				pd3dCommandList->SetGraphicsRootDescriptorTable(2, textureTableHandle);
-			}
-			else {
-				OutputDebugString(L"Warning: Terrain material has null texture handle for binding.\n");
-			}
-
-			// --- 그리기 ---
-			m_pMesh->Render(pd3dCommandList, 0);
+		// --- 공통 CBV 바인딩 ---
+		// 카메라 CBV (b1 @ 인덱스 0)
+		if (pCamera && pCamera->GetCameraConstantBuffer()) {
+			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress());
 		}
+
+		UpdateTransform(NULL); // 지형 월드 행렬 업데이트
+
+		// 1. 지형 객체 상수 바인딩 (b2 @ Param 1 - 월드 행렬만)
+		XMFLOAT4X4 gmtxGameObject; // 월드 행렬만 필요
+		XMStoreFloat4x4(&gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+		// 루트 파라미터 1번에 16 DWORDS (행렬 크기) 설정
+		pd3dCommandList->SetGraphicsRoot32BitConstants(1, 16, &gmtxGameObject, 0);
+
+		// 2. 지형 텍스처 테이블 바인딩 (t1, t2 @ Param 2)
+		D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle();
+		if (textureTableHandle.ptr != 0) {
+			// 루트 파라미터 인덱스 2번에 바인딩!
+			pd3dCommandList->SetGraphicsRootDescriptorTable(2, textureTableHandle);
+		}
+		else {
+			OutputDebugString(L"Warning: Terrain material has null texture handle for binding.\n");
+		}
+
+		// --- 그리기 ---
+		m_pMesh->Render(pd3dCommandList, 0);
+
 	}
 	// 지형은 자식/형제 없음
 }
@@ -1345,30 +1379,39 @@ CSkyBox::~CSkyBox()
 
 void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
-	XMFLOAT3 xmf3CameraPos = pCamera->GetPosition();
-	SetPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
-	UpdateTransform(NULL); // 월드 행렬 업데이트
 
-	if (m_pMesh && m_nMaterials > 0) {
-		CMaterial* pMaterial = GetMaterial(0); // 스카이박스는 재질 하나 가정
-		if (pMaterial)
-		{
-			// --- 스카이박스 리소스 바인딩 ---
-			// 1. 카메라 CBV (b1 @ Param 0)는 SetGraphicsState 에서 바인딩됨
+	CScene* pScene = m_pGameFramework ? m_pGameFramework->GetScene() : nullptr;
+	if (!pScene || !pCamera) return;
 
-			// 2. 스카이박스 텍스처 테이블 바인딩 (t13 @ Param 1)
-			D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle();
-			if (textureTableHandle.ptr != 0) {
-				// 루트 파라미터 인덱스 1번에 바인딩!
-				pd3dCommandList->SetGraphicsRootDescriptorTable(1, textureTableHandle);
-			}
-			else {
-				OutputDebugString(L"Warning: Skybox material has null texture handle for binding.\n");
-			}
+	CMaterial* pMaterial = GetMaterial(0); // 스카이박스는 재질 하나 가정
+	if (m_pMesh && pMaterial && pMaterial->m_pShader)
+	{
+		pScene->SetGraphicsState(pd3dCommandList, pMaterial->m_pShader);
 
-			// --- 그리기 ---
-			m_pMesh->Render(pd3dCommandList, 0); // 메쉬 렌더링
+		// --- 공통 CBV 바인딩 ---
+		// 카메라 CBV (b1 @ 인덱스 0)
+		if (pCamera->GetCameraConstantBuffer()) { // pCamera는 null 아님
+			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress());
 		}
+
+		// --- 스카이박스 리소스 바인딩 ---
+		XMFLOAT3 xmf3CameraPos = pCamera->GetPosition();
+		SetPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
+		UpdateTransform(NULL); // 월드 행렬 업데이트
+
+		// 스카이박스 텍스처 테이블 바인딩 (t13 @ Param 1)
+		D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle();
+		if (textureTableHandle.ptr != 0) {
+			// 루트 파라미터 인덱스 1번에 바인딩!
+			pd3dCommandList->SetGraphicsRootDescriptorTable(1, textureTableHandle);
+		}
+		else {
+			OutputDebugString(L"Warning: Skybox material has null texture handle for binding.\n");
+		}
+
+		// --- 그리기 ---
+		m_pMesh->Render(pd3dCommandList, 0); // 메쉬 렌더링
+
 	}
 	// 스카이박스는 자식/형제 없음
 }
