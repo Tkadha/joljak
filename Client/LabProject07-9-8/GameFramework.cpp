@@ -123,6 +123,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 {
 	m_hInstance = hInstance;
 	m_hWnd = hMainWnd;
+	m_nIconCount = 0;
 
 	CreateDirect3DDevice();
 	CreateCommandQueueAndList();
@@ -145,7 +146,6 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CreateCbvSrvDescriptorHeap();
 	CreateIconDescriptorHeap();
-	//LoadIconTextures();
 	ImGui_ImplWin32_Init(m_hWnd);
 	ImGui_ImplDX12_Init(
 		m_pd3dDevice,
@@ -157,6 +157,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	);
 	InitializeCraftItems();
 	ItemManager::Initialize();
+	InitializeItemIcons();
 
 	/*auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
@@ -541,113 +542,106 @@ void CGameFramework::AddItem(const std::string &name)
 	}
 }
 
-void CGameFramework::LoadIconTextures()
+ImTextureID CGameFramework::LoadIconTexture(const std::wstring& filename)
 {
-	// 1. 업로드 버퍼 준비
-	ID3D12Resource* pUploadBuffer = nullptr;
+	ID3D12Resource* pTexture = nullptr;
 	std::unique_ptr<uint8_t[]> decodedData;
 	D3D12_SUBRESOURCE_DATA subresourceData = {};
 
 	HRESULT hr = LoadWICTextureFromFile(
 		m_pd3dDevice,
-		L"ICON/wood.png",
-		&m_pWoodTexture,
+		filename.c_str(),
+		&pTexture,
 		decodedData,
 		subresourceData
 	);
 
-	if (SUCCEEDED(hr))
+	if (FAILED(hr))
 	{
-		// 2. 업로드 버퍼 생성
-		UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_pWoodTexture.Get(), 0, 1);
-
-		D3D12_HEAP_PROPERTIES heapProps = {};
-		heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
-		heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-		heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-		heapProps.CreationNodeMask = 1;
-		heapProps.VisibleNodeMask = 1;
-
-		D3D12_RESOURCE_DESC bufferDesc = {};
-		bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		bufferDesc.Alignment = 0;
-		bufferDesc.Width = uploadBufferSize;
-		bufferDesc.Height = 1;
-		bufferDesc.DepthOrArraySize = 1;
-		bufferDesc.MipLevels = 1;
-		bufferDesc.Format = DXGI_FORMAT_UNKNOWN;
-		bufferDesc.SampleDesc.Count = 1;
-		bufferDesc.SampleDesc.Quality = 0;
-		bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-		bufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-		hr = m_pd3dDevice->CreateCommittedResource(
-			&heapProps,
-			D3D12_HEAP_FLAG_NONE,
-			&bufferDesc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&pUploadBuffer)
-		);
-
-		if (FAILED(hr))
-		{
-			MessageBox(NULL, L"Failed to create upload buffer!", L"Error", MB_OK);
-			return;
-		}
-
-		// 3. 업로드 버퍼로 데이터 복사
-		UpdateSubresources(
-			m_pd3dCommandList,
-			m_pWoodTexture.Get(),
-			pUploadBuffer,
-			0, 0, 1,
-			&subresourceData
-		);
-
-		// 4. 리소스 상태 전환
-		D3D12_RESOURCE_BARRIER barrier = {};
-		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = m_pWoodTexture.Get();
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-
-		m_pd3dCommandList->ResourceBarrier(1, &barrier);
-
-		// 5. CreateShaderResourceView
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = 1;
-
-		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_pd3dSrvDescriptorHeapForIcons->GetCPUDescriptorHandleForHeapStart();
-
-		m_pd3dDevice->CreateShaderResourceView(m_pWoodTexture.Get(), &srvDesc, cpuHandle);
-
-		// 6. 업로드 버퍼 해제
-		if (pUploadBuffer)
-		{
-			pUploadBuffer->Release();
-			pUploadBuffer = nullptr;
-		}
-
-		m_pd3dCommandList->Close();
-
-		// 8. 커맨드리스트 제출
-		ID3D12CommandList* ppCommandLists[] = { m_pd3dCommandList };
-		m_pd3dCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-		// 9. GPU가 완료될 때까지 대기
-		WaitForGpuComplete();
+		MessageBox(NULL, L"LoadWICTextureFromFile 실패!", L"Error", MB_OK);
+		return (ImTextureID)nullptr;
 	}
-	else
+
+	// ⭐⭐ CommandList Reset ⭐⭐
+	m_pd3dCommandAllocator->Reset();
+	m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
+
+	// 📦 업로드용 임시 버퍼 생성
+	D3D12_RESOURCE_DESC textureDesc = pTexture->GetDesc();
+	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(pTexture, 0, 1);
+
+	D3D12_HEAP_PROPERTIES heapProps = {};
+	heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+
+	D3D12_RESOURCE_DESC bufferDesc = {};
+	bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	bufferDesc.Width = uploadBufferSize;
+	bufferDesc.Height = 1;
+	bufferDesc.DepthOrArraySize = 1;
+	bufferDesc.MipLevels = 1;
+	bufferDesc.SampleDesc.Count = 1;
+	bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	ID3D12Resource* pUploadBuffer = nullptr;
+	hr = m_pd3dDevice->CreateCommittedResource(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&bufferDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&pUploadBuffer)
+	);
+
+	if (FAILED(hr))
 	{
-		MessageBox(NULL, L"Failed to load wood texture!", L"Error", MB_OK);
+		MessageBox(NULL, L"UploadBuffer 생성 실패!", L"Error", MB_OK);
+		return (ImTextureID)nullptr;
 	}
+
+	// 📦 서브리소스 업데이트
+	UpdateSubresources(m_pd3dCommandList, pTexture, pUploadBuffer, 0, 0, 1, &subresourceData);
+
+	// 📦 텍스처 barrier
+	D3D12_RESOURCE_BARRIER barrier = {};
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	barrier.Transition.pResource = pTexture;
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+	m_pd3dCommandList->ResourceBarrier(1, &barrier);
+
+	// ⭐⭐ CommandList Close + Execute ⭐⭐
+	m_pd3dCommandList->Close();
+	ID3D12CommandList* ppCommandLists[] = { m_pd3dCommandList };
+	m_pd3dCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+	// ⭐⭐ GPU 작업 기다리기
+	WaitForGpuComplete();
+
+	// ➡️ SRV 만들기
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = textureDesc.Format;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_pd3dSrvDescriptorHeapForIcons->GetCPUDescriptorHandleForHeapStart();
+	cpuHandle.ptr += (m_nIconCount * m_nCbvSrvDescriptorIncrementSize);
+
+	m_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, cpuHandle);
+
+	// ➡️ 텍스처 핸들 리턴
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = m_pd3dSrvDescriptorHeapForIcons->GetGPUDescriptorHandleForHeapStart();
+	gpuHandle.ptr += (m_nIconCount * m_nCbvSrvDescriptorIncrementSize);
+
+	m_nIconCount++;
+
+	return reinterpret_cast<ImTextureID>(reinterpret_cast<void*>(gpuHandle.ptr));
 }
+
+
+
 
 
 
@@ -991,22 +985,35 @@ void CGameFramework::FrameAdvance()
 
 		ImGui::PushID(i);
 
-		// 인벤토리 0~4번 슬롯에서 가져옴
 		if (!m_inventorySlots[i].IsEmpty())
 		{
-			std::string itemName = m_inventorySlots[i].item->GetName(); // 아이템 이름 가져오기
-			ImGui::Button(itemName.c_str(), ImVec2(SlotSize, SlotSize)); // 아이템 이름 표시
+			// 버튼 먼저 생성 (테두리 유지)
+			ImVec2 pos = ImGui::GetCursorScreenPos();
+			ImGui::Button(" ", ImVec2(SlotSize, SlotSize));
+
+			// 버튼 위에 아이콘을 따로 그리기
+			ImTextureID icon = m_inventorySlots[i].item->GetIconHandle();
+			if (icon)
+			{
+				ImGui::GetWindowDrawList()->AddImage(
+					icon,
+					pos,
+					ImVec2(pos.x + SlotSize, pos.y + SlotSize)
+				);
+			}
 		}
 		else
 		{
-			ImGui::Button(" ", ImVec2(SlotSize, SlotSize)); // 빈 슬롯이면 빈 버튼
+			ImGui::Button(" ", ImVec2(SlotSize, SlotSize)); // 빈 슬롯은 그냥 테두리만
 		}
 
 		ImGui::PopID();
 	}
 
+
 	ImGui::PopStyleVar();
 	ImGui::End();
+
 
 
 	//////////////////////////////////////////////////플레이어 UI
@@ -1102,21 +1109,35 @@ void CGameFramework::FrameAdvance()
 
 				if (!m_inventorySlots[i].IsEmpty())
 				{
-					// 아이템이 있을 때, 이름으로 출력
-					std::string buttonLabel = m_inventorySlots[i].item->GetName();
-					buttonLabel += "x" + std::to_string(m_inventorySlots[i].quantity);
-					ImGui::Button(buttonLabel.c_str(), ImVec2(slotSize, slotSize));
+					ImTextureID icon = m_inventorySlots[i].item->GetIconHandle();
+
+					if (icon)
+					{
+						ImGui::Image(icon, ImVec2(slotSize, slotSize));
+
+						// 🔥 수량 위치 조정
+						ImVec2 pos = ImGui::GetItemRectMin();
+						ImGui::SetCursorScreenPos(ImVec2(pos.x + 2, pos.y + 2)); // ← (아이콘 왼쪽 위에 가깝게)
+
+						ImGui::Text("%d", m_inventorySlots[i].quantity);
+					}
+					else
+					{
+						// 아이콘이 없으면 이름 출력
+						std::string buttonLabel = m_inventorySlots[i].item->GetName() + " x" + std::to_string(m_inventorySlots[i].quantity);
+						ImGui::Button(buttonLabel.c_str(), ImVec2(slotSize, slotSize));
+					}
 				}
 				else
 				{
-					// 아이템이 없을 때 빈 칸
+					// 빈 칸
 					ImGui::Button(" ", ImVec2(slotSize, slotSize));
 				}
 
 				ImGui::PopID();
 
 				if ((i + 1) % inventoryCols != 0)
-					ImGui::SameLine(0.0f, spacing); // 열 넘어갈 때 정렬
+					ImGui::SameLine(0.0f, spacing);
 			}
 		}
 
@@ -1500,7 +1521,23 @@ void CGameFramework::CraftSelectedItem()
 	}
 }
 
+void CGameFramework::InitializeItemIcons()
+{
+	auto& items = ItemManager::GetItems();
 
+	for (auto& item : items)
+	{
+		if (item->GetName() == "wood")
+		{
+			ImTextureID woodIcon = LoadIconTexture(L"wood.png");
+			item->SetIconHandle(woodIcon);
+		}
+		else
+		{
+			item->SetIconHandle((ImTextureID)nullptr);  // 나머지 아이템은 아이콘 없음
+		}
+	}
+}
 
 
 void CGameFramework::CreateCbvSrvDescriptorHeaps(int nConstantBufferViews, int nShaderResourceViews)
