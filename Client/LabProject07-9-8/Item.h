@@ -3,6 +3,9 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include "imgui.h"
+
+
 
 class Item
 {
@@ -12,9 +15,13 @@ public:
     int GetID() const { return m_ID; }
     const std::string& GetName() const { return m_Name; }
 
+    void SetIconHandle(ImTextureID icon) { m_iconHandle = icon; }
+    ImTextureID GetIconHandle() const { return m_iconHandle; }
+
 private:
     int m_ID;
     std::string m_Name;
+    ImTextureID m_iconHandle = (ImTextureID)nullptr; // 아이콘 핸들 추가
 };
 
 class ItemManager

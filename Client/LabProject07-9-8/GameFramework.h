@@ -67,11 +67,12 @@ public:
 	std::shared_ptr<Item> CreateDummyItem();
 	void AddDummyItem();
 	void AddItem(const std::string &name);
-	void LoadIconTextures();
+	ImTextureID LoadIconTexture(const std::wstring& filename);
 	void CreateIconDescriptorHeap();
 	void InitializeCraftItems();
 	bool CanCraftItem();
 	void CraftSelectedItem();
+	void InitializeItemIcons();
 	std::vector<CraftItem> m_vecCraftableItems;
 
 
@@ -112,6 +113,7 @@ private:
 	ID3D12Fence					*m_pd3dFence = NULL;
 	UINT64						m_nFenceValues[m_nSwapChainBuffers];
 	HANDLE						m_hFenceEvent;
+	int							m_nIconCount;
 
 
 	// ��� ����, ���̴� ���ҽ� ��ũ���� �� Scene���� �ű�
