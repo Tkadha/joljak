@@ -487,7 +487,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 				// 3. 스키닝 관련 CBV 바인딩 (Skinned 루트 서명 사용 시)
 		   // 현재 셰이더가 Skinned 인지 확인하는 로직이 있으면 더 좋음 (예: shader->GetType())
-				if (m_pSkinnedAnimationController && m_pMesh) {
+				if (m_pSkinnedAnimationController && m_pMesh && shaderType == "Skinned") {
 					CSkinnedMesh* pSkinnedMesh = dynamic_cast<CSkinnedMesh*>(m_pMesh);
 					if (pSkinnedMesh) {
 						// 3.1. 본 오프셋 버퍼 바인딩 (b7, 파라미터 인덱스 4)
@@ -1574,9 +1574,8 @@ CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	::fopen_s(&pInFile, "Model/FAE_Pine_A_LOD0.bin", "rb");
 	::rewind(pInFile);
 
-	// LoadFrameHierarchyFromFile 호출 시 pResourceManager 전달
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(
-		pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
+		pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework);
 	SetChild(pGameObject);
 
 	if (pInFile) fclose(pInFile); // 파일 닫기 추가
