@@ -181,4 +181,7 @@ public:
 
 	virtual void OnRootMotion(CGameObject* pRootGameObject) { }
 	virtual void OnAnimationIK(CGameObject* pRootGameObject) { }
+
+
+	void UpdateBoneTransformCBVContents();
 };

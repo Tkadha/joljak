@@ -230,6 +230,11 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	}
 
+
+	for (int i = 0; i < m_nHierarchicalGameObjects; ++i)
+		m_ppHierarchicalGameObjects[i]->PropagateAnimController(m_ppHierarchicalGameObjects[i]->m_pSkinnedAnimationController);
+
+
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
@@ -532,3 +537,4 @@ void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShade
 ShaderManager* CScene::GetShaderManager() const {
 	return m_pGameFramework ? m_pGameFramework->GetShaderManager() : nullptr;
 }
+

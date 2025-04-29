@@ -90,6 +90,11 @@ public:
 
 	CGameFramework* m_pGameFramework;
 
+	// 바뀐 구조에서 계층 구조 처리를 위해 필요
+	CAnimationController* m_pSharedAnimController = nullptr;
+	void PropagateAnimController(CAnimationController* controller); 
+
+
 	virtual void FSMUpdate() {}
 
 	void SetMesh(CMesh *pMesh);

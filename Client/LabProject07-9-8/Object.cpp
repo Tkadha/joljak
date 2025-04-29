@@ -496,10 +496,11 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 							pd3dCommandList->SetGraphicsRootConstantBufferView(4, pOffsetBuffer->GetGPUVirtualAddress());
 						}
 						// 3.2. 본 변환 버퍼 바인딩 (b8, 파라미터 인덱스 5)
-						if (m_pSkinnedAnimationController->m_ppd3dcbSkinningBoneTransforms &&
-							m_pSkinnedAnimationController->m_ppd3dcbSkinningBoneTransforms[0])
-						{
-							pd3dCommandList->SetGraphicsRootConstantBufferView(5, m_pSkinnedAnimationController->m_ppd3dcbSkinningBoneTransforms[0]->GetGPUVirtualAddress());
+						if (m_pSharedAnimController && m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms && m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]) {
+							pd3dCommandList->SetGraphicsRootConstantBufferView(5, m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]->GetGPUVirtualAddress());
+						}
+						else {
+							OutputDebugStringA("Warning: Skinned mesh rendering without valid Shared Animation Controller for Bone Transforms!\n");
 						}
 					}
 				}
@@ -1232,7 +1233,14 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
 	return(pGameObject);
 }
 
-
+ void CGameObject::PropagateAnimController(CAnimationController* controller) {
+     CAnimationController* controllerToUse = m_pSkinnedAnimationController ? m_pSkinnedAnimationController : controller; // 자신이 있으면 자신 우선
+     if (m_pMesh && dynamic_cast<CSkinnedMesh*>(m_pMesh)) {
+         m_pSharedAnimController = controllerToUse; // 스키드 메쉬면 컨트롤러 저장
+     }
+     if (m_pChild) m_pChild->PropagateAnimController(controllerToUse); // 자식에게 전파
+     if (m_pSibling) m_pSibling->PropagateAnimController(controller);    // 형제는 부모가 준 것 전파
+ }
 
 
 

@@ -359,7 +359,55 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 		pRootGameObject->UpdateTransform(NULL);
 
+		// CBV 내용 업데이트
+		UpdateBoneTransformCBVContents(); 
+
 		OnRootMotion(pRootGameObject);
 		OnAnimationIK(pRootGameObject);
+	}
+}
+
+
+void CAnimationController::UpdateBoneTransformCBVContents()
+{
+	// 필요한 멤버 변수 유효성 검사
+	if (!m_pAnimationSets || !m_pAnimationSets->m_ppBoneFrameCaches || !m_ppSkinnedMeshes || !m_ppcbxmf4x4MappedSkinningBoneTransforms)
+		return;
+
+	// 이 컨트롤러가 관리하는 각 스키닝 메쉬에 대해 반복 (CBV 버퍼 업데이트)
+	for (int i = 0; i < m_nSkinnedMeshes; ++i)
+	{
+		CSkinnedMesh* pSkinnedMesh = m_ppSkinnedMeshes[i];
+		XMFLOAT4X4* pMappedBuffer = m_ppcbxmf4x4MappedSkinningBoneTransforms[i]; // 해당 메쉬용 CBV 버퍼
+
+		if (!pSkinnedMesh || !pMappedBuffer || !pSkinnedMesh->m_ppSkinningBoneFrameCaches) continue;
+
+		// 이 메쉬에 영향을 주는 각 뼈에 대해 반복
+		for (int j = 0; j < pSkinnedMesh->m_nSkinningBones; ++j)
+		{
+			// 메쉬의 뼈 캐시에서 해당 뼈의 GameObject 노드 찾기
+			CGameObject* pBoneNode = pSkinnedMesh->m_ppSkinningBoneFrameCaches[j];
+			if (pBoneNode)
+			{
+				// 이 뼈의 최종 월드 변환 행렬 가져오기
+				XMFLOAT4X4 worldMatrix = pBoneNode->m_xmf4x4World;
+				XMFLOAT4X4 transposedWorld;
+
+				// --- 월드 행렬만 전치해서 복사 ---
+				XMStoreFloat4x4(&transposedWorld, XMMatrixTranspose(XMLoadFloat4x4(&worldMatrix)));
+
+				// 계산된 행렬을 CBV의 해당 본 인덱스 위치에 복사
+				if (j < SKINNED_ANIMATION_BONES) { // SKINNED_ANIMATION_BONES 정의 필요
+					pMappedBuffer[j] = transposedWorld;
+				}
+			}
+			else
+			{
+				// 뼈 노드 못찾음 오류 처리
+				if (j < SKINNED_ANIMATION_BONES) {
+					pMappedBuffer[j] = Matrix4x4::Identity(); // 예: Identity 행렬 넣기
+				}
+			}
+		}
 	}
 }
