@@ -530,17 +530,32 @@ void CGameFramework::AddDummyItem()
 	}
 }
 
-void CGameFramework::AddItem(const std::string &name)
+void CGameFramework::AddItem(const std::string& name)
 {
-	for (int i = 0; i < m_inventorySlots.size(); i++) {
-		if (m_inventorySlots[i].IsEmpty()) {
-			auto tempItem = ItemManager::GetItemByName(name);
-			m_inventorySlots[i].item = tempItem;
-			m_inventorySlots[i].quantity = 3;
-			break;
+	auto newItem = ItemManager::GetItemByName(name);
+	if (!newItem) return;
+
+	// 1. 이미 존재하는 아이템이면 수량 증가
+	for (auto& slot : m_inventorySlots) {
+		if (!slot.IsEmpty() && slot.item->GetName() == name) {
+			slot.quantity += 3;
+			return;
 		}
 	}
+
+	// 2. 빈 슬롯이 있으면 새로운 아이템 추가
+	for (auto& slot : m_inventorySlots) {
+		if (slot.IsEmpty()) {
+			slot.item = newItem;
+			slot.quantity = 3;
+			return;
+		}
+	}
+
+	// 3. 인벤토리가 가득 찼을 경우
+	OutputDebugStringA("인벤토리가 가득 찼습니다.\n");
 }
+
 
 ImTextureID CGameFramework::LoadIconTexture(const std::wstring& filename)
 {
@@ -1113,19 +1128,23 @@ void CGameFramework::FrameAdvance()
 
 					if (icon)
 					{
+						// 아이콘 슬롯 출력
 						ImGui::Image(icon, ImVec2(slotSize, slotSize));
 
-						// 🔥 수량 위치 조정
-						ImVec2 pos = ImGui::GetItemRectMin();
-						ImGui::SetCursorScreenPos(ImVec2(pos.x + 2, pos.y + 2)); // ← (아이콘 왼쪽 위에 가깝게)
+						// 슬롯 위치 계산
+						ImVec2 min = ImGui::GetItemRectMin();
+						ImVec2 max = ImGui::GetItemRectMax();
+						ImVec2 textPos = ImVec2(min.x + 2, max.y - 18); // ← 아이콘 왼쪽 아래 쪽에 수량
 
-						ImGui::Text("%d", m_inventorySlots[i].quantity);
+						// 수량 오버레이 출력
+						ImGui::GetWindowDrawList()->AddText(textPos, IM_COL32_WHITE,
+							std::to_string(m_inventorySlots[i].quantity).c_str());
 					}
 					else
 					{
-						// 아이콘이 없으면 이름 출력
-						std::string buttonLabel = m_inventorySlots[i].item->GetName() + " x" + std::to_string(m_inventorySlots[i].quantity);
-						ImGui::Button(buttonLabel.c_str(), ImVec2(slotSize, slotSize));
+						// 아이콘 없으면 이름 + 수량 텍스트 출력
+						std::string label = m_inventorySlots[i].item->GetName() + " x" + std::to_string(m_inventorySlots[i].quantity);
+						ImGui::Button(label.c_str(), ImVec2(slotSize, slotSize));
 					}
 				}
 				else
@@ -1506,17 +1525,28 @@ void CGameFramework::CraftSelectedItem()
 	}
 
 	// 2. 결과 아이템 추가
+	const std::string& itemName = selectedItem.ResultItemName;
+	std::shared_ptr<Item> newItem = ItemManager::GetItemByName(itemName);
+	if (!newItem) return;
+
+	// 먼저 동일한 아이템이 있는 슬롯 찾기 → 수량만 증가
+	for (InventorySlot& slot : m_inventorySlots)
+	{
+		if (!slot.IsEmpty() && slot.item->GetName() == itemName)
+		{
+			slot.quantity += selectedItem.ResultQuantity;
+			return;
+		}
+	}
+
+	// 없으면 새 슬롯에 추가
 	for (InventorySlot& slot : m_inventorySlots)
 	{
 		if (slot.IsEmpty())
 		{
-			std::shared_ptr<Item> newItem = ItemManager::GetItemByName(selectedItem.ResultItemName);
-			if (newItem)
-			{
-				slot.item = newItem; // shared_ptr에서 raw pointer 꺼내기
-				slot.quantity = selectedItem.ResultQuantity;
-			}
-			break;
+			slot.item = newItem;
+			slot.quantity = selectedItem.ResultQuantity;
+			return;
 		}
 	}
 }
@@ -1527,18 +1557,14 @@ void CGameFramework::InitializeItemIcons()
 
 	for (auto& item : items)
 	{
-		if (item->GetName() == "wood")
-		{
-			ImTextureID woodIcon = LoadIconTexture(L"wood.png");
-			item->SetIconHandle(woodIcon);
-		}
-		else
-		{
-			item->SetIconHandle((ImTextureID)nullptr);  // 나머지 아이템은 아이콘 없음
-		}
+		std::string itemName = item->GetName(); // ex: "wood"
+		std::wstring wItemName(itemName.begin(), itemName.end());
+		std::wstring iconPath = L"ICON/" + wItemName + L".png";
+
+		ImTextureID iconHandle = LoadIconTexture(iconPath.c_str());
+		item->SetIconHandle(iconHandle);
 	}
 }
-
 
 void CGameFramework::CreateCbvSrvDescriptorHeaps(int nConstantBufferViews, int nShaderResourceViews)
 {
