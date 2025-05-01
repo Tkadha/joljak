@@ -952,7 +952,16 @@ void CGameFramework::FrameAdvance()
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 #endif
-	if (m_pPlayer) m_pPlayer->Render(m_pd3dCommandList, obbRender, m_pCamera);
+	// 무적시간 체크해서 끝나면 무적 없애기
+	
+	if (m_pPlayer) {
+		auto endtime = std::chrono::system_clock::now();
+		auto exectime = endtime - m_pPlayer->starttime;
+		auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
+		if (exec_ms > 1000.f) // 무적시간이 1초가 경과되면 
+			m_pPlayer->SetInvincibility();	// 변경
+		m_pPlayer->Render(m_pd3dCommandList, obbRender, m_pCamera);
+	}
 
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplWin32_NewFrame();

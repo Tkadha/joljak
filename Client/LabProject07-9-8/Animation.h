@@ -119,7 +119,7 @@ public:
 
 public:
 	void SetAnimationSet(int nAnimationSet) { m_nAnimationSet = nAnimationSet; }
-
+	void SetAnimationType(int type) { m_nType = type; }
 	void SetEnable(bool bEnable) { m_bEnable = bEnable; }
 	void SetSpeed(float fSpeed) { m_fSpeed = fSpeed; }
 	void SetWeight(float fWeight) { m_fWeight = fWeight; }

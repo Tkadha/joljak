@@ -162,10 +162,10 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	// ������Ʈ ����
 	
 	int nCowObjects = 10;
+	int animate_count = 13;
 	for (int i = 0; i < nCowObjects; ++i)
 	{
 		CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Cow.bin", NULL, pResourceManager);
-		int animate_count = 10;
 		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCowModel, animate_count, pResourceManager);
 		gameobj->m_objectType = GameObjectType::Cow;
 		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
@@ -190,7 +190,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	for (int i = 0; i < nPigObjects; ++i)
 	{
 		CLoadedModelInfo* pPigModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Pig.bin", NULL, pResourceManager);
-		int animate_count = 10;
 		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pPigModel, animate_count, pResourceManager);
 		gameobj->m_objectType = GameObjectType::Pig;
 		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
@@ -216,7 +215,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	for (int i = 0; i < nSpiderObjects; ++i)
 	{
 		CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Spider.bin", NULL, pResourceManager);
-		int animate_count = 10;
 		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pSpiderModel, animate_count, pResourceManager);
 		gameobj->m_objectType = GameObjectType::Spider;
 		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
@@ -241,7 +239,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	for (int i = 0; i < nToadObjects; ++i)
 	{
 		CLoadedModelInfo* pToadModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Toad.bin", NULL, pResourceManager);
-		int animate_count = 10;
 		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pToadModel, animate_count, pResourceManager);
 		gameobj->m_objectType = GameObjectType::Toad;
 		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
@@ -266,9 +263,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	for (int i = 0; i < nWolfObjects; ++i)
 	{
 		CLoadedModelInfo* pWolfModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Wolf.bin", NULL, pResourceManager);
-		int animate_count = 10;
 		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pWolfModel, animate_count, pResourceManager);
-		gameobj->m_objectType = GameObjectType::Spider;
+		gameobj->m_objectType = GameObjectType::Wolf;
 		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 		for (int j = 1; j < animate_count; ++j) {
 			gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
@@ -280,7 +276,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		gameobj->Rotate(0.f, 180.f, 0.f);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
 		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		gameobj->SetScale(8.f, 8.f, 8.f);
+		gameobj->SetScale(10.f, 10.f, 10.f);
 		gameobj->SetTerraindata(m_pTerrain);
 		m_vGameObjects.emplace_back(gameobj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
@@ -294,6 +290,43 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		obj->SetOBBShader(shader);
 		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 		//obj->SetOBB(pd3dDevice, pd3dCommandList, shader);
+
+		switch (obj->m_objectType)
+		{
+		case GameObjectType::Wasp:
+		case GameObjectType::Snail:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[5].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[6].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Snake:
+		case GameObjectType::Spider:
+		case GameObjectType::Bat:
+		case GameObjectType::Turtle:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Wolf:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Toad:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Cow:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Pig:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		default:	// 잘못된 타입이다.
+			break;
+		}
+	
 	}
 
 
@@ -712,8 +745,6 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, 
 
 	for (auto obj : m_vGameObjects)
 	{
-		if (obj->m_objectType == GameObjectType::Cow) 
-			printf("");
 		if (obj->FSM_manager) obj->FSMUpdate();
 		if (obj->m_pSkinnedAnimationController) obj->Animate(m_fElapsedTime);
 		if (obj->isRender) obj->Render(pd3dCommandList, obbRender, pCamera);	
@@ -794,7 +825,16 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 					else obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCDieState>());
 				}
 			}
-
+			if (obj->m_objectType != GameObjectType::Unknown && obj->m_objectType != GameObjectType::Cow && obj->m_objectType != GameObjectType::Pig &&
+				obj->m_objectType != GameObjectType::Rock && obj->m_objectType != GameObjectType::Tree && obj->m_objectType != GameObjectType::Player) {
+				auto npc = dynamic_cast<CMonsterObject*>(obj);
+				npc->Decreasehp(pPlayer->PlayerAttack);
+				if (obj->FSM_manager) {
+					if (npc->Gethp() > 0) obj->FSM_manager->ChangeState(std::make_shared<AtkNPCHitState>());
+					else obj->FSM_manager->ChangeState(std::make_shared<AtkNPCDieState>());
+				}
+			}
+			
 		}
 	}
 }

@@ -89,3 +89,17 @@ public:
 
 	virtual void Exit(std::shared_ptr<CGameObject> npc);
 };
+
+class AtkNPCHitState : public FSMState<CGameObject>
+{
+	std::chrono::time_point<std::chrono::system_clock> starttime;
+	std::chrono::time_point<std::chrono::system_clock> endtime;
+	long long duration_time;
+public:
+
+	virtual void Enter(std::shared_ptr<CGameObject> npc);
+
+	virtual void Execute(std::shared_ptr<CGameObject> npc);
+
+	virtual void Exit(std::shared_ptr<CGameObject> npc);
+};

@@ -209,10 +209,12 @@ void NonAtkNPCDieState::Enter(std::shared_ptr<CGameObject> npc)
 	starttime = std::chrono::system_clock::now();
 	duration_time = 10 * 1000; // 10초간 죽어있음
 
-	if (npc->m_objectType == GameObjectType::Cow)
+	if (npc->m_objectType == GameObjectType::Cow) {
 		npc->m_pSkinnedAnimationController->SetTrackEnable(8, true);
-	else if (npc->m_objectType == GameObjectType::Pig)
+	}
+	else if (npc->m_objectType == GameObjectType::Pig) {
 		npc->m_pSkinnedAnimationController->SetTrackEnable(9, true);
+	}
 }
 
 void NonAtkNPCDieState::Execute(std::shared_ptr<CGameObject> npc)
@@ -230,10 +232,14 @@ void NonAtkNPCDieState::Execute(std::shared_ptr<CGameObject> npc)
 
 void NonAtkNPCDieState::Exit(std::shared_ptr<CGameObject> npc)
 {
-	if (npc->m_objectType == GameObjectType::Cow)
+	if (npc->m_objectType == GameObjectType::Cow) {
+		npc->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetPosition(-ANIMATION_CALLBACK_EPSILON);
 		npc->m_pSkinnedAnimationController->SetTrackEnable(8, false);
-	else if (npc->m_objectType == GameObjectType::Pig)
+	}
+	else if (npc->m_objectType == GameObjectType::Pig) {
+		npc->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetPosition(-ANIMATION_CALLBACK_EPSILON);
 		npc->m_pSkinnedAnimationController->SetTrackEnable(9, false);
+	}
 }
 //=====================================Respawn=================================================
 

@@ -48,9 +48,9 @@ enum class GameObjectType : int {
 	Bat,
 	Snake,
 	Turtle,
+	Snail,
 	Spider
 
-	// ... �ʿ��� ��ŭ �߰� ...
 };
 
 
@@ -243,8 +243,9 @@ public:
 
 class CMonsterObject : public CGameObject
 {
+	int _level = 0;
 	int _hp = 20;
-
+	int _atk = 3;
 public:
 	CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks, ResourceManager* pResourceManager);
 	virtual ~CMonsterObject();
@@ -260,6 +261,7 @@ public:
 	void Sethp(int hp) { _hp = hp; }
 	void Decreasehp(int num) { _hp -= num; }
 	int Gethp() { return _hp; }
+	int GetAtk() { return _atk; }
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

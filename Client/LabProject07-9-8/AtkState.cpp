@@ -84,7 +84,7 @@ void AtkNPCMoveState::Enter(std::shared_ptr<CGameObject> npc)
 	case GameObjectType::Toad:
 		npc->m_pSkinnedAnimationController->SetTrackEnable(1, true);
 		break;
-	defalut:	// 잘못된 타입이다.
+	default:	// 잘못된 타입이다.
 		break;
 	}
 }
@@ -159,7 +159,7 @@ void AtkNPCMoveState::Exit(std::shared_ptr<CGameObject> npc)
 	case GameObjectType::Toad:
 		npc->m_pSkinnedAnimationController->SetTrackEnable(1, false);
 		break;
-	defalut:	// 잘못된 타입이다.
+	default:	// 잘못된 타입이다.
 		break;
 	}
 }
@@ -181,7 +181,7 @@ void AtkNPCChaseState::Enter(std::shared_ptr<CGameObject> npc)
 	case GameObjectType::Toad:
 		npc->m_pSkinnedAnimationController->SetTrackEnable(1, true);
 		break;
-	defalut:	// 잘못된 타입이다.
+	default:	// 잘못된 타입이다.
 		break;
 	}
 }
@@ -220,8 +220,8 @@ void AtkNPCChaseState::Execute(std::shared_ptr<CGameObject> npc)
 			float distanceToPlayer = sqrt(pow(playerPos.x - npcPos.x, 2) + pow(playerPos.y - npcPos.y, 2) + pow(playerPos.z - npcPos.z, 2));
 			if (distanceToPlayer < attackRange)
 			{
-				//npc->FSM_manager->ChangeState(std::make_shared<AtkNPCAttackState>());
-				//return;
+				npc->FSM_manager->ChangeState(std::make_shared<AtkNPCAttackState>());
+				return;
 			}
 
 			// 추격 중 멈춤 조건 (예: 플레이어가 너무 멀리 벗어남)
@@ -250,7 +250,7 @@ void AtkNPCChaseState::Exit(std::shared_ptr<CGameObject> npc)
 	case GameObjectType::Toad:
 		npc->m_pSkinnedAnimationController->SetTrackEnable(1, false);
 		break;
-	defalut:	// 잘못된 타입이다.
+	default:	// 잘못된 타입이다.
 		break;
 	}
 }
@@ -261,14 +261,28 @@ void AtkNPCDieState::Enter(std::shared_ptr<CGameObject> npc)
 {
 	starttime = std::chrono::system_clock::now();
 	duration_time = 10 * 1000; // 10초간 죽어있음
-	if (npc->m_objectType == GameObjectType::Wolf)
-		npc->m_pSkinnedAnimationController->SetTrackEnable(8, true);
-	else if (npc->m_objectType == GameObjectType::Toad)
-		npc->m_pSkinnedAnimationController->SetTrackEnable(7, true);
-	else if (npc->m_objectType == GameObjectType::Wasp)
+
+	switch (npc->m_objectType)
+	{
+	case GameObjectType::Wasp:
+	case GameObjectType::Snail:
 		npc->m_pSkinnedAnimationController->SetTrackEnable(5, true);
-	else
+		break;
+	case GameObjectType::Snake:
+	case GameObjectType::Spider:
+	case GameObjectType::Bat:
+	case GameObjectType::Turtle:
 		npc->m_pSkinnedAnimationController->SetTrackEnable(9, true);
+		break;
+	case GameObjectType::Wolf:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(8, true);
+		break;
+	case GameObjectType::Toad:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(7, true);
+		break;
+	default:	// 잘못된 타입이다.
+		break;
+	}
 
 }
 
@@ -287,14 +301,31 @@ void AtkNPCDieState::Execute(std::shared_ptr<CGameObject> npc)
 
 void AtkNPCDieState::Exit(std::shared_ptr<CGameObject> npc)
 {
-	if (npc->m_objectType == GameObjectType::Wolf)
-		npc->m_pSkinnedAnimationController->SetTrackEnable(8, false);
-	else if (npc->m_objectType == GameObjectType::Toad)
-		npc->m_pSkinnedAnimationController->SetTrackEnable(7, false);
-	else if (npc->m_objectType == GameObjectType::Wasp)
+	switch (npc->m_objectType)
+	{
+	case GameObjectType::Wasp:
+	case GameObjectType::Snail:
+		npc->m_pSkinnedAnimationController->m_pAnimationTracks[5].SetPosition(-ANIMATION_CALLBACK_EPSILON);
 		npc->m_pSkinnedAnimationController->SetTrackEnable(5, false);
-	else
+		break;
+	case GameObjectType::Snake:
+	case GameObjectType::Spider:
+	case GameObjectType::Bat:
+	case GameObjectType::Turtle:
+		npc->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetPosition(-ANIMATION_CALLBACK_EPSILON);
 		npc->m_pSkinnedAnimationController->SetTrackEnable(9, false);
+		break;
+	case GameObjectType::Wolf:
+		npc->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetPosition(-ANIMATION_CALLBACK_EPSILON);
+		npc->m_pSkinnedAnimationController->SetTrackEnable(8, false);
+		break;
+	case GameObjectType::Toad:
+		npc->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetPosition(-ANIMATION_CALLBACK_EPSILON);
+		npc->m_pSkinnedAnimationController->SetTrackEnable(7, false);
+		break;
+	default:	// 잘못된 타입이다.
+		break;
+	}
 }
 
 
@@ -343,48 +374,154 @@ void AtkNPCAttackState::Enter(std::shared_ptr<CGameObject> npc)
 {
 	switch (npc->m_objectType)
 	{
-	case GameObjectType::Spider:
-		break;
 	case GameObjectType::Wasp:
-		break;
-	case GameObjectType::Wolf:
+	case GameObjectType::Snail:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(7, true);
 		break;
 	case GameObjectType::Snake:
-		break;
+	case GameObjectType::Spider:
 	case GameObjectType::Bat:
+	case GameObjectType::Turtle:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(11, true);
+		break;
+	case GameObjectType::Wolf:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(10, true);
 		break;
 	case GameObjectType::Toad:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(9, true);
 		break;
-	case GameObjectType::Turtle:
-		break;
-	defalut:	// 잘못된 타입이다.
+	default:	// 잘못된 타입이다.
 		break;
 	}
+	starttime = std::chrono::system_clock::now();
+	duration_time = 1.f * 1000; // 1초간
 }
 
 void AtkNPCAttackState::Execute(std::shared_ptr<CGameObject> npc)
 {
+	// 공격모션 시간 체크 후 다시 추적하게
+	endtime = std::chrono::system_clock::now();
+	auto exectime = endtime - starttime;
+	auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
+	if (exec_ms > duration_time) {
+		npc->FSM_manager->ChangeState(std::make_shared<AtkNPCChaseState>());
+		return;
+	}
+	// 천천히 도는게 아닌 바로 플레이어를 바라보도록 하고 싶음
+	if (exec_ms < 0.25 * 1000.f) {
+		npc->MoveForward(1.5f);
+	}
+	auto p_info = npc->m_pScene->GetPlayerInfo();
+	if (p_info) {
+		if (npc->m_pScene->CollisionCheck(npc.get(), p_info)) {
+			if (false == p_info->invincibility) {
+				auto obj = dynamic_cast<CMonsterObject*> (npc.get());
+				p_info->DecreaseHp(obj->GetAtk());
+				p_info->SetInvincibility();
+			}
+		}
+	}
 }
 
 void AtkNPCAttackState::Exit(std::shared_ptr<CGameObject> npc)
 {
 	switch (npc->m_objectType)
 	{
-	case GameObjectType::Spider:
-		break;
 	case GameObjectType::Wasp:
-		break;
-	case GameObjectType::Wolf:
+	case GameObjectType::Snail:
+		npc->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetPosition(-ANIMATION_CALLBACK_EPSILON);
+		npc->m_pSkinnedAnimationController->SetTrackEnable(7, false);
 		break;
 	case GameObjectType::Snake:
-		break;
+	case GameObjectType::Spider:
 	case GameObjectType::Bat:
+	case GameObjectType::Turtle:
+		npc->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetPosition(-ANIMATION_CALLBACK_EPSILON);
+		npc->m_pSkinnedAnimationController->SetTrackEnable(11, false);
+		break;
+	case GameObjectType::Wolf:
+		npc->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetPosition(-ANIMATION_CALLBACK_EPSILON);
+		npc->m_pSkinnedAnimationController->SetTrackEnable(10, false);
 		break;
 	case GameObjectType::Toad:
+		npc->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetPosition(-ANIMATION_CALLBACK_EPSILON);
+		npc->m_pSkinnedAnimationController->SetTrackEnable(9, false);
 		break;
+	default:	// 잘못된 타입이다.
+		break;
+	}
+}
+
+//=====================================Hit(맞았을 경우)=================================================
+
+void AtkNPCHitState::Enter(std::shared_ptr<CGameObject> npc)
+{
+	switch (npc->m_objectType)
+	{
+	case GameObjectType::Wasp:
+	case GameObjectType::Snail:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(6, true);
+		break;
+	case GameObjectType::Snake:
+	case GameObjectType::Spider:
+	case GameObjectType::Bat:
 	case GameObjectType::Turtle:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(10, true);
 		break;
-	defalut:	// 잘못된 타입이다.
+	case GameObjectType::Wolf:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(9, true);
+		break;
+	case GameObjectType::Toad:
+		npc->m_pSkinnedAnimationController->SetTrackEnable(8, true);
+		break;
+	default:	// 잘못된 타입이다.
+		break;
+	}
+	starttime = std::chrono::system_clock::now();
+	duration_time = 1.0 * 1000; // 1초간 진행
+}
+
+void AtkNPCHitState::Execute(std::shared_ptr<CGameObject> npc)
+{
+	endtime = std::chrono::system_clock::now();
+	auto exectime = endtime - starttime;
+	auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
+	if (exec_ms > duration_time) {
+		npc->FSM_manager->ChangeState(std::make_shared<AtkNPCChaseState>());
+		return;
+	}
+	if (exec_ms < 0.25 * 1000.f) {
+		npc->Rotate(0.f, 180.f, 0.f);
+		npc->MoveForward(1.5f);
+		npc->Rotate(0.f, 180.f, 0.f);
+	}
+}
+
+void AtkNPCHitState::Exit(std::shared_ptr<CGameObject> npc)
+{
+	switch (npc->m_objectType)
+	{
+	case GameObjectType::Wasp:
+	case GameObjectType::Snail:
+		npc->m_pSkinnedAnimationController->m_pAnimationTracks[6].SetPosition(-ANIMATION_CALLBACK_EPSILON);
+		npc->m_pSkinnedAnimationController->SetTrackEnable(6, false);
+		break;
+	case GameObjectType::Snake:
+	case GameObjectType::Spider:
+	case GameObjectType::Bat:
+	case GameObjectType::Turtle:
+		npc->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetPosition(-ANIMATION_CALLBACK_EPSILON);
+		npc->m_pSkinnedAnimationController->SetTrackEnable(10, false);
+		break;
+	case GameObjectType::Wolf:
+		npc->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetPosition(-ANIMATION_CALLBACK_EPSILON);
+		npc->m_pSkinnedAnimationController->SetTrackEnable(9, false);
+		break;
+	case GameObjectType::Toad:
+		npc->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetPosition(-ANIMATION_CALLBACK_EPSILON);
+		npc->m_pSkinnedAnimationController->SetTrackEnable(8, false);
+		break;
+	default:	// 잘못된 타입이다.
 		break;
 	}
 }
