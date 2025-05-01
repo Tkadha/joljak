@@ -81,8 +81,10 @@ float4 PSStandard2(VS_STANDARD_OUTPUT input) : SV_TARGET
         cAlbedoColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
     }
     // 알파 값 설정 (텍스처 또는 재질 값 사용)
-    cAlbedoColor.a = (gnTexturesMask & MATERIAL_ALBEDO_MAP) ? cAlbedoColor.a : gMaterialInfo.DiffuseColor.a;
-
+    //cAlbedoColor.a = (gnTexturesMask & MATERIAL_ALBEDO_MAP) ? cAlbedoColor.a : gMaterialInfo.DiffuseColor.a;
+    
+    // 알파 값을 1로 강제하여 보이도록 함
+    cAlbedoColor.a = 1.0f;
 
     // 2. 노멀 벡터 계산
     float3 normalW;
@@ -95,9 +97,10 @@ float4 PSStandard2(VS_STANDARD_OUTPUT input) : SV_TARGET
     }
     else
     {
-        normalW = normalize(input.normalW);
+       normalW = normalize(input.normalW);
     }
 
+    
     // --- 3. 조명 계산 (수정된 Lighting 함수 호출) ---
     // cbGameObjectInfo (b2) 에서 gMaterialInfo를 가져와 전달
     float4 cIlluminationColor = Lighting(gMaterialInfo, input.positionW, normalW);
@@ -120,4 +123,39 @@ float4 PSStandard2(VS_STANDARD_OUTPUT input) : SV_TARGET
     cIlluminationColor.a = cAlbedoColor.a; // 최종 알파 설정
 
     return cIlluminationColor;
+}
+
+
+float4 PSStandard3(VS_STANDARD_OUTPUT input) : SV_TARGET
+{
+    float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_ALBEDO_MAP)
+        cAlbedoColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
+    float4 cSpecularColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_SPECULAR_MAP)
+        cSpecularColor = gtxtSpecularTexture.Sample(gssWrap, input.uv);
+    float4 cNormalColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_NORMAL_MAP)
+        cNormalColor = gtxtNormalTexture.Sample(gssWrap, input.uv);
+    float4 cMetallicColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_METALLIC_MAP)
+        cMetallicColor = gtxtMetallicTexture.Sample(gssWrap, input.uv);
+    float4 cEmissionColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_EMISSION_MAP)
+        cEmissionColor = gtxtEmissionTexture.Sample(gssWrap, input.uv);
+
+    float3 normalW;
+    float4 cColor = cAlbedoColor + cSpecularColor + cMetallicColor + cEmissionColor;
+    if (gnTexturesMask & MATERIAL_NORMAL_MAP)
+    {
+        float3x3 TBN = float3x3(normalize(input.tangentW), normalize(input.bitangentW), normalize(input.normalW));
+        float3 vNormal = normalize(cNormalColor.rgb * 2.0f - 1.0f); //[0, 1] → [-1, 1]
+        normalW = normalize(mul(vNormal, TBN));
+    }
+    else
+    {
+        normalW = normalize(input.normalW);
+    }
+    float4 cIlluminationColor = Lighting(gMaterialInfo, input.positionW, normalW);
+    return (lerp(cColor, cIlluminationColor, 0.5f));
 }

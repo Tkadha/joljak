@@ -408,6 +408,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	// 이 객체가 직접 렌더링할 메쉬와 첫 번째 재질/셰이더를 가지고 있는지 확인
 	CMaterial* pPrimaryMaterial = GetMaterial(0); // 상태 설정 기준으로 첫 번째 재질 사용
 
+
 	if (m_pMesh && pPrimaryMaterial && pPrimaryMaterial->m_pShader)
 	{
 		pScene->SetGraphicsState(pd3dCommandList, pPrimaryMaterial->m_pShader);
@@ -428,7 +429,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			}
 		}
 
-		UpdateTransform(NULL); // 월드 행렬 업데이트 등
 
 		// 이 GameObject에 속한 모든 메쉬/재질 쌍에 대해 반복
 		for (int i = 0; i < m_nMaterials; i++)
@@ -447,7 +447,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 				// 1.2. 재질 정보 채우기
 				gameObjectInfo.gMaterialInfo.AmbientColor = pMaterial->m_xmf4AmbientColor;
-				gameObjectInfo.gMaterialInfo.DiffuseColor = pMaterial->m_xmf4AlbedoColor; // HLSL과 이름 맞춤 (Diffuse)
+				gameObjectInfo.gMaterialInfo.DiffuseColor = pMaterial->m_xmf4AlbedoColor;
 				gameObjectInfo.gMaterialInfo.SpecularColor = pMaterial->m_xmf4SpecularColor;
 				// 예: Specular Power를 Alpha에 저장했다면 gameObjectInfo.gMaterialInfo.SpecularColor.w = pMaterial->m_fGlossiness;
 				gameObjectInfo.gMaterialInfo.EmissiveColor = pMaterial->m_xmf4EmissiveColor;

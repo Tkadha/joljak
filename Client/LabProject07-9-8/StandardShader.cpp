@@ -25,5 +25,5 @@ D3D12_SHADER_BYTECODE CStandardShader::CreateVertexShader() {
 
 D3D12_SHADER_BYTECODE CStandardShader::CreatePixelShader() {
 	// "StandardShader.hlsl" 파일의 "PSStandard" 함수를 컴파일하도록 수정
-	return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "PSStandard", "ps_5_1", &m_pd3dPixelShaderBlob));
+	return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "PSStandard3", "ps_5_1", &m_pd3dPixelShaderBlob));
 }
