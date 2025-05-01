@@ -44,8 +44,9 @@ float4 DirectionalLight(int nIndex, MaterialInfo material, float3 vNormal, float
         // material.SpecularColor.a (Power) 사용
         if (material.SpecularColor.a != 0.0f)
         {
+            // Glossiness값 사용
             float3 vHalf = normalize(vToCamera + vToLight);
-            float fPower = material.Glossiness * 100.0f + 1.0f; // Glossiness 값(0~1 가정)을 적절한 지수 범위로 변환 (예시)
+            float fPower = material.Glossiness * 100.0f + 1.0f;  
             fSpecularFactor = (fPower > 1.0f) ? pow(saturate(dot(vHalf, vNormal)), fPower) : 0.0f;
             //fSpecularFactor = pow(saturate(dot(vHalf, vNormal)), material.SpecularColor.a); // saturate 추가
         }

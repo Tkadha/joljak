@@ -780,6 +780,10 @@ void CSkinnedMesh::LoadSkinInfoFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 
 				UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256占쏙옙 占쏙옙占?
 				m_pd3dcbBindPoseBoneOffsets = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+				if (!m_pd3dcbBindPoseBoneOffsets) {
+					OutputDebugString(L"!!!!!!!! ERROR: Failed to create m_pd3dcbBindPoseBoneOffsets! !!!!!!!!\n");
+					// 실패 시 이후 리소스 생성 중단 또는 다른 처리
+				}
 				m_pd3dcbBindPoseBoneOffsets->Map(0, NULL, (void **)&m_pcbxmf4x4MappedBindPoseBoneOffsets);
 
 				for (int i = 0; i < m_nSkinningBones; i++)
