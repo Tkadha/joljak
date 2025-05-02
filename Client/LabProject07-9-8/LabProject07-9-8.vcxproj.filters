@@ -269,6 +269,9 @@
     <ClInclude Include="RandomUtil.h">
       <Filter>소스 파일\Util</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Server\Global.h">
+      <Filter>소스 파일\Network</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Light.hlsl" />

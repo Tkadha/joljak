@@ -29,7 +29,16 @@ struct CraftItem
 	int ResultQuantity;                // 제작 결과 수량 (예: 2개 만들면 2)
 };
 
+
 #include <unordered_map>
+#include <queue>
+
+enum class E_PACKET;
+struct log_inout {
+	E_PACKET packetType;
+	ULONGLONG ID;
+};
+
 class CGameFramework
 {
 public:
@@ -182,7 +191,8 @@ public:
 
 	DWORD						beforeDirection = 0;
 
-	std::unordered_map<ULONGLONG, std::unique_ptr<CMonsterObject>> PlayerList;	// 오브젝트 수정해야함
 	ULONGLONG					_MyID = -1;
+
+	std::queue<log_inout> 	m_logQueue;
 };
 

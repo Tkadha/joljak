@@ -199,7 +199,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		}
 		gameobj->SetOwningScene(this);
 		gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
-
 		gameobj->Rotate(0.f, 180.f, 0.f);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
 		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
@@ -282,6 +281,31 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
 		if (pWolfModel) delete pWolfModel;
+	}
+	int nUserObjects = 10;
+	for (int i = 0; i < nUserObjects; ++i)
+	{
+		CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Hu_M_FullBody.bin", NULL, pResourceManager);
+		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pUserModel, animate_count, pResourceManager);
+		//CGameObject* gameobj = new UserObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pTerrain, pResourceManager);
+		gameobj->m_objectType = GameObjectType::Player;
+		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+		for (int j = 1; j < animate_count; ++j) {
+			gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+		}
+		gameobj->SetOwningScene(this);
+		//gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+		//gameobj->FSM_manager = nullptr;
+		auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 2500, 1800, 2500);
+		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		gameobj->Rotate(0.f, 180.f, 0.f);
+		gameobj->SetScale(10.f, 10.f, 10.f);
+		gameobj->SetTerraindata(m_pTerrain);
+		m_vGameObjects.emplace_back(gameobj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+		if (pUserModel) delete pUserModel;
 	}
 	for (auto obj : m_vGameObjects) {
 		obj->SetOBB();
@@ -630,11 +654,11 @@ void CScene::AnimateObjects(float fTimeElapsed)
 	}
 
 	//**/
-	static float fAngle = 0.0f;
-	fAngle += 1.50f;
+	//static float fAngle = 0.0f;
+	//fAngle += 1.50f;
 	//	XMFLOAT3 xmf3Position = XMFLOAT3(50.0f, 0.0f, 0.0f);
-	XMFLOAT4X4 xmf4x4Rotate = Matrix4x4::Rotate(0.0f, -fAngle, 0.0f);
-	XMFLOAT3 xmf3Position = Vector3::TransformCoord(XMFLOAT3(65.0f, 0.0f, 0.0f), xmf4x4Rotate);
+	//XMFLOAT4X4 xmf4x4Rotate = Matrix4x4::Rotate(0.0f, -fAngle, 0.0f);
+	//XMFLOAT3 xmf3Position = Vector3::TransformCoord(XMFLOAT3(65.0f, 0.0f, 0.0f), xmf4x4Rotate);
 	//	m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent._41 = m_xmf3RotatePosition.x + xmf3Position.x;
 	//	m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent._42 = m_xmf3RotatePosition.y + xmf3Position.y;
 	//	m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent._43 = m_xmf3RotatePosition.z + xmf3Position.z;
@@ -749,7 +773,10 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, 
 		if (obj->m_pSkinnedAnimationController) obj->Animate(m_fElapsedTime);
 		if (obj->isRender) obj->Render(pd3dCommandList, obbRender, pCamera);	
 	}
-	
+	for (auto& obj : PlayerList) {
+		if (obj.second->m_pSkinnedAnimationController) obj.second->Animate(m_fElapsedTime);
+		if (obj.second->isRender) obj.second->Render(pd3dCommandList, obbRender, pCamera);
+	}
 }
 
 

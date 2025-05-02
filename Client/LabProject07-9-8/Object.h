@@ -264,6 +264,15 @@ public:
 	int GetAtk() { return _atk; }
 };
 
+class UserObject : public CGameObject
+{
+public:
+	UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,LPVOID data,ResourceManager* pResourceManager);
+	virtual ~UserObject();
+
+	
+};
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 class CRootMotionCallbackHandler : public CAnimationCallbackHandler

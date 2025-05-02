@@ -143,7 +143,7 @@ void Logic_thread()
 {
 	g_timer.Start();
 	while (true) {
-		g_timer.Tick(60.f);
+		g_timer.Tick(120.f);
 		for(auto& cl: PlayerClient::PlayerClients) {
 			if (cl.second->GetDirection() != 0)
 			{
