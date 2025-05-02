@@ -247,7 +247,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Light.hlsl" />
     <FxCompile Include="Shaders.hlsl" />
     <FxCompile Include="Common.hlsl" />
     <FxCompile Include="StandardShaders.hlsl" />
@@ -256,5 +255,8 @@
     <FxCompile Include="SkyboxShaders.hlsl" />
     <FxCompile Include="OBBShader.hlsl" />
     <FxCompile Include="InstancingShaders.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Light.hlsl" />
   </ItemGroup>
 </Project>

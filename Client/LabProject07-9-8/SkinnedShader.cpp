@@ -29,5 +29,5 @@ D3D12_SHADER_BYTECODE CSkinnedAnimationStandardShader::CreateVertexShader() {
 
 D3D12_SHADER_BYTECODE CSkinnedAnimationStandardShader::CreatePixelShader() {
 	// Standard ÇÈ¼¿ ¼ÎÀÌ´õ Àç»ç¿ë
-	return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "PSStandard", "ps_5_1", &m_pd3dPixelShaderBlob));
+	return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "PSStandard3", "ps_5_1", &m_pd3dPixelShaderBlob));
 }

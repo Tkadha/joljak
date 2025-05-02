@@ -184,4 +184,5 @@ public:
 
 
 	void UpdateBoneTransformCBVContents();
+	void UpdateBoneLocalTransformCBV();
 };

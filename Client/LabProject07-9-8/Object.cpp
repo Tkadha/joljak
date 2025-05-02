@@ -403,8 +403,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	CScene* pScene = m_pGameFramework ? m_pGameFramework->GetScene() : nullptr;
 	if (!pScene) return; // 씬 없으면 렌더링 불가
 
-
-
 	// 이 객체가 직접 렌더링할 메쉬와 첫 번째 재질/셰이더를 가지고 있는지 확인
 	CMaterial* pPrimaryMaterial = GetMaterial(0); // 상태 설정 기준으로 첫 번째 재질 사용
 
@@ -487,20 +485,28 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 				// 3. 스키닝 관련 CBV 바인딩 (Skinned 루트 서명 사용 시)
 		   // 현재 셰이더가 Skinned 인지 확인하는 로직이 있으면 더 좋음 (예: shader->GetType())
-				if (m_pSkinnedAnimationController && m_pMesh && shaderType == "Skinned") {
+				 // --- 스키닝 CBV 바인딩 (셰이더 타입 "Skinned" 확인 후) ---
+				if (shaderType == "Skinned") {
 					CSkinnedMesh* pSkinnedMesh = dynamic_cast<CSkinnedMesh*>(m_pMesh);
 					if (pSkinnedMesh) {
 						// 3.1. 본 오프셋 버퍼 바인딩 (b7, 파라미터 인덱스 4)
 						ID3D12Resource* pOffsetBuffer = pSkinnedMesh->m_pd3dcbBindPoseBoneOffsets;
-						if (pOffsetBuffer) {
-							pd3dCommandList->SetGraphicsRootConstantBufferView(4, pOffsetBuffer->GetGPUVirtualAddress());
-						}
+                        if (pOffsetBuffer) {
+                            pd3dCommandList->SetGraphicsRootConstantBufferView(4, pOffsetBuffer->GetGPUVirtualAddress());
+                        }
 						// 3.2. 본 변환 버퍼 바인딩 (b8, 파라미터 인덱스 5)
-						if (m_pSharedAnimController && m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms && m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]) {
+						if (m_pSharedAnimController && // 이 노드에 저장된 컨트롤러 포인터 확인
+							m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms &&
+							m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]) {
 							pd3dCommandList->SetGraphicsRootConstantBufferView(5, m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]->GetGPUVirtualAddress());
 						}
 						else {
-							OutputDebugStringA("Warning: Skinned mesh rendering without valid Shared Animation Controller for Bone Transforms!\n");
+							// 로그 출력: 컨트롤러 포인터가 null 인지, 아니면 내부 버퍼가 null 인지 확인
+							OutputDebugStringW(L"!!! Render: Skinned - Failed to get valid Bone Transform buffer (b8) via m_pSharedAnimController!\n");
+							wchar_t dbgMsg[128];
+							swprintf_s(dbgMsg, L"    m_pSharedAnimController = %p\n", (void*)m_pSharedAnimController); // 포인터 값 로깅
+							OutputDebugStringW(dbgMsg);
+							// 필요시 m_pSharedAnimController 내부 포인터들도 확인하는 로그 추가
 						}
 					}
 				}
