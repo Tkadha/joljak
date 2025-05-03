@@ -959,6 +959,14 @@ void CGameFramework::FrameAdvance()
 				if (pUserModel) delete(pUserModel);
 			}
 			break;
+			case E_PACKET::E_P_LOGOUT:
+			{
+				if (m_pScene->PlayerList.find(log.ID) != m_pScene->PlayerList.end()) {
+					m_pScene->PlayerList[log.ID]->Release();
+					m_pScene->PlayerList.erase(log.ID);
+				}
+			}
+			break;
 			default:
 				break;
 			}

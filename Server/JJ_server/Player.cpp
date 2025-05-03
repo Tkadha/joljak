@@ -58,11 +58,19 @@ void PlayerClient::Update(float fTimeElapsed)
 	Move(xmf3Velocity, false);
 
 	if(m_pTerrain)
-	{
-		float fHeight = m_pTerrain->GetHeight(m_Position.x, m_Position.z);
-		if (m_Position.y < fHeight)
+	{		
+		XMFLOAT3 xmf3Scale = m_pTerrain->GetScale();
+		XMFLOAT3 xmf3PlayerPosition = GetPosition();
+		int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
+		bool bReverseQuad = ((z % 2) != 0);
+		float fHeight = m_pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
+		if (xmf3PlayerPosition.y < fHeight)
 		{
-			m_Position.y = fHeight;
+			XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
+			xmf3PlayerVelocity.y = 0.0f;
+			SetVelocity(xmf3PlayerVelocity);
+			xmf3PlayerPosition.y = fHeight;
+			SetPosition(xmf3PlayerPosition);
 		}
 	}
 

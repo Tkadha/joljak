@@ -73,6 +73,9 @@ public:
 	void Move(float fxOffset = 0.0f, float fyOffset = 0.0f, float fzOffset = 0.0f);
 
 	XMFLOAT3 GetPosition() const { return m_Position; }
+	const XMFLOAT3& GetVelocity() const { return(m_Velocity); }
+	void SetVelocity(const XMFLOAT3& Velocity) { m_Velocity = Velocity; }
+	void SetPosition(const XMFLOAT3& Position) { Move(XMFLOAT3(Position.x - m_Position.x, Position.y - m_Position.y, Position.z - m_Position.z), false); }
 
 	DWORD GetDirection() const { return m_direction; }
 	void SetDirection(DWORD nDirection) { m_direction = nDirection; }
