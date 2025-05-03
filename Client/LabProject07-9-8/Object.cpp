@@ -1373,22 +1373,13 @@ CStaticObject::CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	if (pInFile) fclose(pInFile); // 파일 닫기 추가
 }
 
-UserObject::UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPVOID data, ResourceManager* pResourceManager)
+UserObject::UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks, ResourceManager* pResourceManager)
 {
-	//CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList,
-	//	pd3dGraphicsRootSignature, "Model/SK_Hu_M_FullBody.bin", NULL, pResourceManager);
-	CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/SK_Cow.bin", NULL, pResourceManager);
+	CLoadedModelInfo* pUserModel = pModel;
+	if (!pUserModel) pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/SK_Hu_M_FullBody.bin", NULL, pResourceManager);
 
 	SetChild(pUserModel->m_pModelRootObject, true);
-	SetTerraindata(data);
-	int nAnimationTracks = 10; // 애니메이션 트랙 수 설정
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pUserModel);
-	m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	for (int i = 1; i < nAnimationTracks; ++i) {
-		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
-		m_pSkinnedAnimationController->SetTrackEnable(i, false);
-	}
-	delete(pUserModel); // 메모리 해제
 }
 
 UserObject::~UserObject()

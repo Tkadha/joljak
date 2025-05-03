@@ -4,6 +4,9 @@
 
 
 // client Á¤º¸
+
+class Terrain;
+
 class PlayerClient : public RemoteClient
 {
 public:
@@ -25,7 +28,7 @@ private:
 	DWORD						m_direction = 0;
 
 	LPVOID						m_pPlayerUpdatedContext = NULL;
-
+	std::shared_ptr<Terrain>	m_pTerrain = nullptr;
 public:
 	PlayerClient() : RemoteClient()
 	{
@@ -77,6 +80,7 @@ public:
 	void SetRight(const XMFLOAT3& xmf3Right) { m_Right = xmf3Right; }
 	void SetUp(const XMFLOAT3& xmf3Up) { m_Up = xmf3Up; }
 	void SetLook(const XMFLOAT3& xmf3Look) { m_Look = xmf3Look; }
+	void SetTerrain(std::shared_ptr<Terrain> pTerrain) { m_pTerrain = pTerrain; }
 	void Update(float fTimeElapsed);
 
 };

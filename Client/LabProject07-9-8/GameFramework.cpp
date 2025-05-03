@@ -44,7 +44,7 @@ void CGameFramework::ProcessPacket(char* packet)
 		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
 		if (recv_p->uid == _MyID) {
 			// 임시 코드
-			m_pPlayer->SetPosition(XMFLOAT3{ recv_p->position.x, m_pPlayer->GetPosition().y, recv_p->position.z});
+			m_pPlayer->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z});
 			//m_pPlayer->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z });
 		}
 		else if (m_pScene->PlayerList.find(recv_p->uid) != m_pScene->PlayerList.end()) {
@@ -946,7 +946,7 @@ void CGameFramework::FrameAdvance()
 			{
 				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), "Model/SK_Hu_M_FullBody.bin", NULL, m_pResourceManager.get());
 				int animate_count = 10;
-				m_pScene->PlayerList[log.ID] = std::make_unique<CMonsterObject>(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), pUserModel, animate_count, m_pResourceManager.get());
+				m_pScene->PlayerList[log.ID] = std::make_unique<UserObject>(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), pUserModel, animate_count, m_pResourceManager.get());
 				m_pScene->PlayerList[log.ID]->m_objectType = GameObjectType::Player;
 				m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 				for (int j = 1; j < animate_count; ++j) {
@@ -954,7 +954,7 @@ void CGameFramework::FrameAdvance()
 					m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController->SetTrackEnable(j, false);
 				}
 				m_pScene->PlayerList[log.ID]->SetPosition(XMFLOAT3{ 1500.f,m_pScene->m_pTerrain->GetHeight(1500,1500) ,1500.f });
-				m_pScene->PlayerList[log.ID]->SetScale(15.f, 15.f, 15.f);
+				m_pScene->PlayerList[log.ID]->SetScale(10.0f, 10.0f, 10.0f);
 				m_pScene->PlayerList[log.ID]->SetTerraindata(m_pScene->m_pTerrain);
 				if (pUserModel) delete(pUserModel);
 			}

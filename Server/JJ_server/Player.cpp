@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "Player.h"
+#include "Terrain.h"
+#include <iostream>
 
 #define DIR_FORWARD					0x01
 #define DIR_BACKWARD				0x02
@@ -55,9 +57,17 @@ void PlayerClient::Update(float fTimeElapsed)
 	XMFLOAT3 xmf3Velocity = Vector3::ScalarProduct(m_Velocity, fTimeElapsed, false);
 	Move(xmf3Velocity, false);
 
+	if(m_pTerrain)
+	{
+		float fHeight = m_pTerrain->GetHeight(m_Position.x, m_Position.z);
+		if (m_Position.y < fHeight)
+		{
+			m_Position.y = fHeight;
+		}
+	}
+
 	fLength = Vector3::Length(m_Velocity);
 	float fDeceleration = (m_fFriction * fTimeElapsed);
 	if (fDeceleration > fLength) fDeceleration = fLength;
 	m_Velocity = Vector3::Add(m_Velocity, Vector3::ScalarProduct(m_Velocity, -fDeceleration, true));
-
 }

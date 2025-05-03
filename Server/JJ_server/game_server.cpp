@@ -9,6 +9,7 @@
 #include "../Global.h"
 #include "Player.h"
 #include "Timer.h"
+#include "Terrain.h"
 
 using namespace std;
 
@@ -33,6 +34,7 @@ shared_ptr<thread> logic_thread;
 
 
 Timer g_timer;
+std::shared_ptr<Terrain> terrain = std::make_shared<Terrain>(_T("../../Client/LabProject07-9-8/Terrain/terrain_16.raw"), 2049, 2049, XMFLOAT3(5.f, 0.2f, 5.f));
 
 void ProcessClientLeave(shared_ptr<PlayerClient> remoteClient)
 {
@@ -265,6 +267,8 @@ void ProcessAccept()
 			PlayerClient::PlayerClients.insert({ remoteClient.get(), remoteClient });
 			cout << "Client joined. There are " << PlayerClient::PlayerClients.size() << " connections.\n";
 			cout <<" Client id: "<< remoteClient->m_id << endl;
+			remoteClient->SetTerrain(terrain);
+
 
 			LOGIN_PACKET s_packet;
 			s_packet.size = sizeof(LOGIN_PACKET);
@@ -272,6 +276,7 @@ void ProcessAccept()
 			s_packet.uid = remoteClient->m_id;
 			// 내 정보 보내기
 			remoteClient->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+
 
 			// 나에게 접속중인 플레이어 정보 보내기
 			for (auto& cl : PlayerClient::PlayerClients) {

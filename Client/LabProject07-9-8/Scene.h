@@ -121,7 +121,7 @@ public:
 	bool								checkTree = false;
 	bool								checkRock = false;
 
-	std::unordered_map<ULONGLONG, std::unique_ptr<CMonsterObject>> PlayerList;	// 오브젝트 수정해야함
+	std::unordered_map<ULONGLONG, std::unique_ptr<UserObject>> PlayerList;	// 오브젝트 수정해야함
 
 	CGameFramework* m_pGameFramework;
 };
