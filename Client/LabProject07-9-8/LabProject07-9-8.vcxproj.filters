@@ -60,6 +60,9 @@
     <Filter Include="소스 파일\Network">
       <UniqueIdentifier>{059782b4-6ff6-42cd-840c-e49c6e010703}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Construction">
+      <UniqueIdentifier>{f7a75d8c-ab06-4cf7-b187-f9bc3ccfc85d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LabProject07-9-8.rc">
@@ -168,6 +171,9 @@
     <ClCompile Include="NetworkManager.cpp">
       <Filter>소스 파일\Network</Filter>
     </ClCompile>
+    <ClCompile Include="ConstructionSystem.cpp">
+      <Filter>소스 파일\Construction</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FSMManager.h">
@@ -263,6 +269,9 @@
     </ClInclude>
     <ClInclude Include="NetworkManager.h">
       <Filter>소스 파일\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="ConstructionSystem.h">
+      <Filter>소스 파일\Construction</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

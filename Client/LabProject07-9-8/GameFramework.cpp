@@ -10,6 +10,7 @@
 #include "imgui_impl_dx12.h"
 #include "NetworkManager.h"
 
+
 void CGameFramework::NerworkThread()
 {
 	auto& nwManager = NetworkManager::GetInstance();
@@ -124,6 +125,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	m_hInstance = hInstance;
 	m_hWnd = hMainWnd;
 	m_nIconCount = 0;
+	
 
 	CreateDirect3DDevice();
 	CreateCommandQueueAndList();
@@ -133,6 +135,9 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	CreateDepthStencilView();
 
 	CoInitialize(NULL);
+
+	m_pConstructionSystem = new CConstructionSystem();
+	m_pConstructionSystem->Init(m_pd3dDevice, m_pd3dCommandList, m_pRootSignature, m_pResourceManager.get());
 
 	BuildObjects();
 	
@@ -447,20 +452,19 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			switch (wParam)
 			{
 			case VK_TAB:
-				if (ShowInventory == false)
-					ShowInventory = true;
-				else
-					ShowInventory = false;
-				
+				ShowInventory = !ShowInventory;
 				break;
 			case 'I':
-				AddDummyItem();
+				AddItem("pork");
 				break;
 			case 'O':
-				if (ShowCraftingUI == false)
-					ShowCraftingUI = true;
-				else
-					ShowCraftingUI = false;
+				ShowCraftingUI = !ShowCraftingUI;
+				break;
+			case 'B':
+				BuildMode = !BuildMode;
+				break;
+			case 'K':
+				ShowFurnaceUI = !ShowFurnaceUI;
 				break;
 			}
 			break;
@@ -934,7 +938,7 @@ void CGameFramework::FrameAdvance()
 	m_GameTimer.Tick(60.0f);
 	
 	ProcessInput();
-
+	UpdateFurnace(m_GameTimer.GetTimeElapsed());
     AnimateObjects();
 
 	HRESULT hResult = m_pd3dCommandAllocator->Reset();
@@ -1124,32 +1128,53 @@ void CGameFramework::FrameAdvance()
 
 				if (!m_inventorySlots[i].IsEmpty())
 				{
-					ImTextureID icon = m_inventorySlots[i].item->GetIconHandle();
+					Item* item = m_inventorySlots[i].item.get();
+					ImTextureID icon = item->GetIconHandle();
 
 					if (icon)
 					{
-						// 아이콘 슬롯 출력
 						ImGui::Image(icon, ImVec2(slotSize, slotSize));
 
-						// 슬롯 위치 계산
+						// 아이템 수량 표시
 						ImVec2 min = ImGui::GetItemRectMin();
 						ImVec2 max = ImGui::GetItemRectMax();
-						ImVec2 textPos = ImVec2(min.x + 2, max.y - 18); // ← 아이콘 왼쪽 아래 쪽에 수량
-
-						// 수량 오버레이 출력
+						ImVec2 textPos = ImVec2(min.x + 2, max.y - 18);
 						ImGui::GetWindowDrawList()->AddText(textPos, IM_COL32_WHITE,
 							std::to_string(m_inventorySlots[i].quantity).c_str());
 					}
 					else
 					{
-						// 아이콘 없으면 이름 + 수량 텍스트 출력
-						std::string label = m_inventorySlots[i].item->GetName() + " x" + std::to_string(m_inventorySlots[i].quantity);
+						std::string label = item->GetName() + " x" + std::to_string(m_inventorySlots[i].quantity);
 						ImGui::Button(label.c_str(), ImVec2(slotSize, slotSize));
+					}
+
+					// 🔽 화로창이 열려 있을 경우, 클릭 시 자동 배정
+					if (ShowFurnaceUI && ImGui::IsItemClicked())
+					{
+						std::string name = item->GetName();
+
+						if (name == "coal" || name == "wood") {
+							furnaceSlot.fuelAmount += 25.0f; // 연료 게이지 증가량
+							if (furnaceSlot.fuelAmount > 100.0f)
+								furnaceSlot.fuelAmount = 100.0f;
+							m_inventorySlots[i].quantity--;
+							if (m_inventorySlots[i].quantity <= 0)
+							{
+								m_inventorySlots[i].item = nullptr;
+							}
+						}
+						else if (name == "pork" || name == "iron_material") {
+							furnaceSlot.material = item;
+							m_inventorySlots[i].quantity--;
+							if (m_inventorySlots[i].quantity <= 0)
+							{
+								m_inventorySlots[i].item = nullptr;
+							}
+						}
 					}
 				}
 				else
 				{
-					// 빈 칸
 					ImGui::Button(" ", ImVec2(slotSize, slotSize));
 				}
 
@@ -1158,6 +1183,7 @@ void CGameFramework::FrameAdvance()
 				if ((i + 1) % inventoryCols != 0)
 					ImGui::SameLine(0.0f, spacing);
 			}
+
 		}
 
 		ImGui::NextColumn();
@@ -1279,7 +1305,136 @@ void CGameFramework::FrameAdvance()
 
 		ImGui::End();
 	}
-	//////////////////////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////////////////////// 건축 UI
+	if (BuildMode)
+	{
+		ImGui::SetNextWindowPos(ImVec2(100, 100));
+		ImGui::SetNextWindowSize(ImVec2(200, 300));
+		ImGui::Begin("건축 선택", nullptr,
+			ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
+
+		static int selected = -1;
+		const char* buildings[] = { "나무 벽", "나무 문", "나무 바닥", "계단" };
+
+		for (int i = 0; i < IM_ARRAYSIZE(buildings); i++)
+		{
+			if (ImGui::Selectable(buildings[i], selected == i))
+			{
+				selected = i;
+
+				// 1. 문자열 매핑
+				std::string buildingKey;
+				if (selected == 0) buildingKey = "pine";
+				else if (selected == 1) buildingKey = "door";
+				else if (selected == 2) buildingKey = "floor";
+				else if (selected == 3) buildingKey = "stair";
+
+
+				// 3. 미리보기 재생성
+				m_pConstructionSystem->EnterBuildMode();
+			}
+		}
+
+		if (ImGui::Button("건축 종료"))
+		{
+			BuildMode = false;
+			m_pConstructionSystem->ExitBuildMode();
+		}
+
+		ImGui::End();
+	}
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////
+	if (ShowFurnaceUI)
+	{
+		const float slotSize = 72.0f;
+		const ImVec2 slotVec = ImVec2(slotSize, slotSize);
+
+		ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+		ImVec2 windowSize = ImVec2(360, 330);
+		ImVec2 centerPos = ImVec2(
+			(displaySize.x - windowSize.x) * 0.5f,
+			(displaySize.y - windowSize.y) * 0.5f
+		);
+
+		ImGui::SetNextWindowPos(centerPos, ImGuiCond_Always);
+		ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
+
+		ImGui::Begin("Furnace", &ShowFurnaceUI, ImGuiWindowFlags_NoResize);
+
+		ImGui::Text("화로");
+		ImGui::Separator();
+
+		ImGui::SetCursorPos(ImVec2(60, 80));
+		ImGui::Button(" ", slotVec); // 항상 배경 존재
+
+		if (furnaceSlot.material)
+		{
+			ImTextureID matIcon = furnaceSlot.material->GetIconHandle();
+			ImVec2 pos = ImGui::GetItemRectMin();
+
+			ImGui::GetWindowDrawList()->AddImage(
+				matIcon,
+				pos,
+				ImVec2(pos.x + 70, pos.y + 70)
+			);
+		}
+
+		// 🔥 연료 아이콘
+		ImGui::SetCursorPos(ImVec2(60, 200));
+		ImGui::Text("연료");
+
+		ImGui::SetCursorPos(ImVec2(60, 220));
+		ImGui::ProgressBar(furnaceSlot.fuelAmount / 100.0f, ImVec2(150, 20));
+		
+		auto fireItem = ItemManager::GetItemByName("fire");
+		if (fireItem)
+		{
+			ImTextureID fireIcon = fireItem->GetIconHandle();
+			ImGui::SetCursorPos(ImVec2(72, 150)); // 중앙 위치
+			ImGui::GetWindowDrawList()->AddImage(
+				fireIcon,
+				ImGui::GetCursorScreenPos(),
+				ImVec2(ImGui::GetCursorScreenPos().x + 48, ImGui::GetCursorScreenPos().y + 48)
+			);
+		}
+
+		
+		auto directionItem = ItemManager::GetItemByName("direction");
+		if (directionItem)
+		{
+			ImTextureID arrowIcon = directionItem->GetIconHandle();
+			ImGui::SetCursorPos(ImVec2(190, 150)); 
+			ImGui::GetWindowDrawList()->AddImage(
+				arrowIcon,
+				ImGui::GetCursorScreenPos(),
+				ImVec2(ImGui::GetCursorScreenPos().x + 60, ImGui::GetCursorScreenPos().y + 60)
+			);
+		}
+
+		if (furnaceSlot.result)
+		{
+			ImTextureID resultIcon = furnaceSlot.result->GetIconHandle();
+			string resultitem = furnaceSlot.result->GetName();
+			ImGui::SetCursorPos(ImVec2(260, 150)); // 결과 슬롯 위치
+			ImGui::Image(resultIcon, slotVec);
+
+			if (ImGui::IsItemClicked())
+			{
+				AddItem(resultitem);
+				furnaceSlot.result = nullptr;
+			}
+		}
+		else
+		{
+			ImGui::SetCursorPos(ImVec2(260, 150));
+			ImGui::Button("결과", slotVec);
+		}
+
+		ImGui::End();
+	}
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////
 	ImGui::Render();
 	ID3D12DescriptorHeap* ppHeaps[] = { m_pd3dSrvDescriptorHeapForImGui };
 	m_pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
@@ -1563,6 +1718,39 @@ void CGameFramework::InitializeItemIcons()
 
 		ImTextureID iconHandle = LoadIconTexture(iconPath.c_str());
 		item->SetIconHandle(iconHandle);
+	}
+}
+
+void CGameFramework::UpdateFurnace(float deltaTime)
+{
+	// 재료가 없거나 연료가 0이면 리턴
+	if (!furnaceSlot.material || furnaceSlot.fuelAmount <= 0.0f)
+		return;
+
+	std::string mat = furnaceSlot.material->GetName();
+
+	// 제련 가능 재료인지 확인
+	if (mat != "pork" && mat != "iron_material") return;
+
+	// 🔥 연료 소모
+	furnaceSlot.fuelAmount -= deltaTime * 5.0f; // 연료 소모 속도 (초당 5 소비)
+	if (furnaceSlot.fuelAmount < 0.0f)
+		furnaceSlot.fuelAmount = 0.0f;
+
+	// ⏱ 제련 시간 누적
+	furnaceSlot.smeltTime += deltaTime;
+	const float requiredTime = 2.0f;
+
+	if (furnaceSlot.smeltTime >= requiredTime)
+	{
+		if (mat == "pork")
+			furnaceSlot.result = ItemManager::GetItemByName("grill_pork").get();
+		else if (mat == "iron_material")
+			furnaceSlot.result = ItemManager::GetItemByName("iron").get();
+
+		// ⏹ 완료 후 초기화
+		furnaceSlot.material = nullptr;
+		furnaceSlot.smeltTime = 0.0f;
 	}
 }
 

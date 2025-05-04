@@ -18,6 +18,7 @@ void ItemManager::Initialize()
     m_Items.push_back(std::make_shared<Item>(id++, std::string("stone")));
     m_Items.push_back(std::make_shared<Item>(id++, std::string("iron")));
     m_Items.push_back(std::make_shared<Item>(id++, std::string("coal")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("iron_material")));
 
     m_Items.push_back(std::make_shared<Item>(id++, std::string("wooden_pickaxe")));
     m_Items.push_back(std::make_shared<Item>(id++, std::string("wooden_axe")));
@@ -39,6 +40,14 @@ void ItemManager::Initialize()
     m_Items.push_back(std::make_shared<Item>(id++, std::string("bowl")));
     m_Items.push_back(std::make_shared<Item>(id++, std::string("torch")));
     m_Items.push_back(std::make_shared<Item>(id++, std::string("stick")));
+
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("fire")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("direction")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("pork")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("grill_pork")));
+
+
+
 
     /*m_Items.push_back(std::make_shared<Item>(id++, std::string("제작대")));
     m_Items.push_back(std::make_shared<Item>(id++, std::string("화로")));

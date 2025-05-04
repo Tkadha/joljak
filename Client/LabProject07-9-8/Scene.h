@@ -90,6 +90,8 @@ public:
 	float								m_fElapsedTime = 0.0f;
 
 	vector<CGameObject*>				m_vGameObjects{};
+	std::unordered_map<std::string, CGameObject*> m_mapBuildPrefabs;
+
 
 	int									m_nHierarchicalGameObjects = 0;
 	CGameObject							**m_ppHierarchicalGameObjects = NULL;

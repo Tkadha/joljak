@@ -142,6 +142,7 @@
     <ClCompile Include="Animation.cpp" />
     <ClCompile Include="AtkState.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="ConstructionSystem.cpp" />
     <ClCompile Include="DDSTextureLoader12.cpp" />
     <ClCompile Include="FSMManager.cpp" />
     <ClCompile Include="FSMState.cpp" />
@@ -175,6 +176,7 @@
     <ClInclude Include="Animation.h" />
     <ClInclude Include="AtkState.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="ConstructionSystem.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DDSTextureLoader12.h" />
     <ClInclude Include="FSMManager.h" />

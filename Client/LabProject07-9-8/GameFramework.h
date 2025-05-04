@@ -13,6 +13,7 @@
 #include <vector>
 #include <string>
 #include "ResourceManager.h"
+#include "ConstructionSystem.h"
 using namespace Microsoft::WRL; // 추가
 
 struct CraftMaterial
@@ -28,6 +29,17 @@ struct CraftItem
 	std::vector<CraftMaterial> Materials; // 필요한 재료 목록
 	int ResultQuantity;                // 제작 결과 수량 (예: 2개 만들면 2)
 };
+
+struct FurnaceSlot
+{
+	Item* material = nullptr;  // 재료
+	Item* fuel = nullptr;      // 연료
+	Item* result = nullptr;    // 결과
+	float fuelAmount = 0.0f;
+	float smeltTime = 0.0f;
+	bool isSmelting = false;
+};
+
 
 #include <unordered_map>
 class CGameFramework
@@ -73,6 +85,7 @@ public:
 	bool CanCraftItem();
 	void CraftSelectedItem();
 	void InitializeItemIcons();
+	void UpdateFurnace(float deltaTime);
 	std::vector<CraftItem> m_vecCraftableItems;
 
 
@@ -88,7 +101,12 @@ private:
 	int                         m_nSelectedHotbarIndex = 0;
 	bool						ShowInventory = false;
 	bool						ShowCraftingUI = false; // ����â ���� ����
-	int							selectedCraftItemIndex = -1; // ���� ������ ������ �ε���
+	bool						BuildMode = false;
+	bool						ShowFurnaceUI = false;
+	int							selectedCraftItemIndex = -1;
+	CPineObject*				m_pPreviewObject = nullptr;
+	FurnaceSlot					furnaceSlot;
+	// ���� ������ ������ �ε���
         
 	IDXGIFactory4				*m_pdxgiFactory = NULL;
 	IDXGISwapChain3				*m_pdxgiSwapChain = NULL;
@@ -109,6 +127,8 @@ private:
 	ID3D12CommandAllocator		*m_pd3dCommandAllocator = NULL;
 	ID3D12CommandQueue			*m_pd3dCommandQueue = NULL;
 	ID3D12GraphicsCommandList	*m_pd3dCommandList = NULL;
+	CConstructionSystem* m_pConstructionSystem = NULL;
+	ID3D12RootSignature* m_pRootSignature = nullptr;
 
 	ID3D12Fence					*m_pd3dFence = NULL;
 	UINT64						m_nFenceValues[m_nSwapChainBuffers];

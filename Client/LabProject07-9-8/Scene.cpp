@@ -98,8 +98,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 
-	int nPineObjects = 10;
-	for (int i = 0; i < nPineObjects; ++i) {
+
+	int nPineObjects = 11;
+	for (int i = 0; i < 10; ++i) {
 		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pResourceManager);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
