@@ -80,6 +80,8 @@ public:
 	void CheckPlayerInteraction(CPlayer* pPlayer);
 
 
+
+	CPlayer* GetPlayerInfo();
 	CPlayer								*m_pPlayer = NULL;
 	
 
@@ -93,8 +95,8 @@ public:
 	std::unordered_map<std::string, CGameObject*> m_mapBuildPrefabs;
 
 
-	int									m_nHierarchicalGameObjects = 0;
-	CGameObject							**m_ppHierarchicalGameObjects = NULL;
+	//int									m_nHierarchicalGameObjects = 0;
+	//CGameObject							**m_ppHierarchicalGameObjects = NULL;
 
 	XMFLOAT3							m_xmf3RotatePosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
@@ -121,6 +123,7 @@ public:
 	bool								checkTree = false;
 	bool								checkRock = false;
 
+	std::unordered_map<ULONGLONG, std::unique_ptr<UserObject>> PlayerList;	// 오브젝트 수정해야함
 
 	CGameFramework* m_pGameFramework;
 };

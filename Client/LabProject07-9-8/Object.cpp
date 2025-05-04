@@ -7,9 +7,6 @@
 #include "Shader.h"
 #include "Scene.h"
 #include "GameFramework.h"
-
-
-#include "NonAtkState.h"
 //>>>>>>> Bin_test
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -493,6 +490,26 @@ XMFLOAT3 CGameObject::GetRight()
 	return(Vector3::Normalize(XMFLOAT3(m_xmf4x4World._11, m_xmf4x4World._12, m_xmf4x4World._13)));
 }
 
+void CGameObject::SetLook(XMFLOAT3 xmf3Look)
+{
+	XMVECTOR vLook = XMLoadFloat3(&xmf3Look);
+	XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&m_xmf4x4ToParent._31), vLook);
+
+}
+
+void CGameObject::SetUp(XMFLOAT3 xmf3Up)
+{
+	XMVECTOR vUp = XMLoadFloat3(&xmf3Up);
+	XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&m_xmf4x4ToParent._21), vUp);
+
+}
+
+void CGameObject::SetRight(XMFLOAT3 xmf3Right)
+{
+	XMVECTOR vRight = XMLoadFloat3(&xmf3Right);
+	XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&m_xmf4x4ToParent._11), vRight);
+}
+
 void CGameObject::MoveStrafe(float fDistance)
 {
 	XMFLOAT3 xmf3Position = GetPosition();
@@ -518,12 +535,8 @@ void CGameObject::MoveForward(float fDistance)
 	XMFLOAT3 xmf3Scale = pTerrain->GetScale();
 	int z = (int)(xmf3Position.z / xmf3Scale.z);
 	bool bReverseQuad = ((z % 2) != 0);
-	float fHeight = pTerrain->GetHeight(xmf3Position.x*2, xmf3Position.z*2, bReverseQuad) + 0.0f;
-	fHeight /= 2;
-	if (xmf3Position.y < fHeight)
-	{
-		xmf3Position.y = fHeight;
-	}
+	float fHeight = pTerrain->GetHeight(xmf3Position.x, xmf3Position.z, bReverseQuad) + 0.0f;
+	xmf3Position.y = fHeight;
 	CGameObject::SetPosition(xmf3Position);
 
 }
@@ -1217,7 +1230,6 @@ CMonsterObject::CMonsterObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pMonsterModel);
 
 	FSM_manager = std::make_shared<FSMManager<CGameObject>>(this);
-	FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
 }
 
 CMonsterObject::~CMonsterObject()
@@ -1379,4 +1391,17 @@ CStaticObject::CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	SetChild(pGameObject);
 
 	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+}
+
+UserObject::UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks, ResourceManager* pResourceManager)
+{
+	CLoadedModelInfo* pUserModel = pModel;
+	if (!pUserModel) pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/SK_Hu_M_FullBody.bin", NULL, pResourceManager);
+
+	SetChild(pUserModel->m_pModelRootObject, true);
+	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pUserModel);
+}
+
+UserObject::~UserObject()
+{
 }

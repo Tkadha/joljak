@@ -9,8 +9,8 @@
 
 #include "Object.h"
 #include "Camera.h"
+#include <chrono>
 
-class CScene;
 
 class CPlayer : public CGameObject
 {
@@ -41,7 +41,6 @@ protected:
 
 	CCamera						*m_pCamera = NULL;
 
-	CScene* m_pScene = nullptr; // 자신을 소유한 Scene 포인터
 
 public:
 	CPlayer();
@@ -57,7 +56,10 @@ public:
 	int StatPoint = 5;
 	int PlayerAttack = 10;
 	int PlayerSpeed = 10;
+	bool invincibility = false;
+	std::chrono::time_point<std::chrono::system_clock> starttime; // 무적 시작시간
 
+	
 	XMFLOAT3 GetPosition() { return(m_xmf3Position); }
 	XMFLOAT3 GetLookVector() { return(m_xmf3Look); }
 	XMFLOAT3 GetUpVector() { return(m_xmf3Up); }
@@ -116,8 +118,16 @@ public:
 	CGameObject* FindFrame(char* framename);
 
 
-	void SetOwningScene(CScene* pScene) { m_pScene = pScene; };
 	void PerformActionInteractionCheck();
+
+	void SetInvincibility() {
+		if (invincibility) invincibility = false;
+		else {
+			invincibility = true;
+			starttime = std::chrono::system_clock::now();
+		}
+	}
+	void DecreaseHp(int value) { Playerhp -= value; }
 };
 
 class CAirplanePlayer : public CPlayer
@@ -167,5 +177,7 @@ public:
 	int nAni{};
 	BOOL bAction = false;
 	void keyInput(UCHAR* key);
+
+	
 };
 
