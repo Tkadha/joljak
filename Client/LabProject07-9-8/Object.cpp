@@ -490,6 +490,26 @@ XMFLOAT3 CGameObject::GetRight()
 	return(Vector3::Normalize(XMFLOAT3(m_xmf4x4World._11, m_xmf4x4World._12, m_xmf4x4World._13)));
 }
 
+void CGameObject::SetLook(XMFLOAT3 xmf3Look)
+{
+	XMVECTOR vLook = XMLoadFloat3(&xmf3Look);
+	XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&m_xmf4x4ToParent._31), vLook);
+
+}
+
+void CGameObject::SetUp(XMFLOAT3 xmf3Up)
+{
+	XMVECTOR vUp = XMLoadFloat3(&xmf3Up);
+	XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&m_xmf4x4ToParent._21), vUp);
+
+}
+
+void CGameObject::SetRight(XMFLOAT3 xmf3Right)
+{
+	XMVECTOR vRight = XMLoadFloat3(&xmf3Right);
+	XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&m_xmf4x4ToParent._11), vRight);
+}
+
 void CGameObject::MoveStrafe(float fDistance)
 {
 	XMFLOAT3 xmf3Position = GetPosition();

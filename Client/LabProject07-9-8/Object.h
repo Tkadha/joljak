@@ -144,6 +144,10 @@ public:
 	XMFLOAT3 GetLook();
 	XMFLOAT3 GetUp();
 	XMFLOAT3 GetRight();
+	void SetLook(XMFLOAT3 xmf3Look);
+	void SetUp(XMFLOAT3 xmf3Up);
+	void SetRight(XMFLOAT3 xmf3Right);
+
 
 	XMFLOAT3 GetToParentPosition();
 	void Move(XMFLOAT3 xmf3Offset);

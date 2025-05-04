@@ -72,6 +72,8 @@ void PlayerClient::Update(float fTimeElapsed)
 			xmf3PlayerPosition.y = fHeight;
 			SetPosition(xmf3PlayerPosition);
 		}
+		xmf3PlayerPosition.y = fHeight;
+		SetPosition(xmf3PlayerPosition);
 	}
 
 	fLength = Vector3::Length(m_Velocity);

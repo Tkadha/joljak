@@ -27,6 +27,7 @@ class FLOAT3
 public:
 	float x, y, z;
 	FLOAT3() = default;
+	FLOAT3(float x, float y, float z) : x(x), y(y), z(z) {}
 };
 
 class PACKET

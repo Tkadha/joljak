@@ -43,9 +43,7 @@ void CGameFramework::ProcessPacket(char* packet)
 	{
 		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
 		if (recv_p->uid == _MyID) {
-			// 임시 코드
 			m_pPlayer->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z});
-			//m_pPlayer->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z });
 		}
 		else if (m_pScene->PlayerList.find(recv_p->uid) != m_pScene->PlayerList.end()) {
 			m_pScene->PlayerList[recv_p->uid]->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z });
@@ -56,10 +54,10 @@ void CGameFramework::ProcessPacket(char* packet)
 	{
 		ROTATE_PACKET* recv_p = reinterpret_cast<ROTATE_PACKET*>(packet);
 		if (recv_p->uid != _MyID) {
-			FLOAT3 right;
-			FLOAT3 up;
-			FLOAT3 look;
-			//PlayerList[recv_p->uid]->
+			m_pScene->PlayerList[recv_p->uid]->SetLook(XMFLOAT3{ recv_p->look.x, recv_p->look.y, recv_p->look.z });
+			m_pScene->PlayerList[recv_p->uid]->SetUp(XMFLOAT3{ recv_p->up.x, recv_p->up.y, recv_p->up.z });
+			m_pScene->PlayerList[recv_p->uid]->SetRight(XMFLOAT3{ recv_p->right.x, recv_p->right.y, recv_p->right.z });
+			m_pScene->PlayerList[recv_p->uid]->SetScale(10.f, 10.f, 10.f);
 		}
 	}
 	break;
@@ -70,23 +68,6 @@ void CGameFramework::ProcessPacket(char* packet)
 		else if (m_pScene->PlayerList.find(recv_p->uid) == m_pScene->PlayerList.end()) {
 			
 			m_logQueue.push(log_inout{ E_PACKET::E_P_LOGIN ,recv_p->uid });
-
-			/*CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), "Model/SK_Hu_M_FullBody.bin", NULL, m_pResourceManager.get());
-			int animate_count = 10;
-			m_pScene->PlayerList[recv_p->uid] = std::make_unique<CMonsterObject>(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), pUserModel, animate_count, m_pResourceManager.get());
-			m_pScene->PlayerList[recv_p->uid]->m_objectType = GameObjectType::Player;
-			m_pScene->PlayerList[recv_p->uid]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-			for (int j = 1; j < animate_count; ++j) {
-				m_pScene->PlayerList[recv_p->uid]->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
-				m_pScene->PlayerList[recv_p->uid]->m_pSkinnedAnimationController->SetTrackEnable(j, false);
-			}
-			m_pScene->PlayerList[recv_p->uid]->SetPosition(XMFLOAT3{ 1500.f,m_pScene->m_pTerrain->GetHeight(1500,1500) ,1500.f });
-			m_pScene->PlayerList[recv_p->uid]->SetScale(15.f, 15.f, 15.f);
-			m_pScene->PlayerList[recv_p->uid]->SetTerraindata(m_pScene->m_pTerrain);
-
-			if(pUserModel) delete(pUserModel);
-
-			m_pScene->PlayerList[recv_p->uid]->ReleaseUploadBuffers();*/
 		}
 	}
 	break;
@@ -95,8 +76,6 @@ void CGameFramework::ProcessPacket(char* packet)
 	{
 		LOGOUT_PACKET* recv_p = reinterpret_cast<LOGOUT_PACKET*>(packet);
 		m_logQueue.push(log_inout{ E_PACKET::E_P_LOGOUT ,recv_p->uid });
-
-		//m_pScene->PlayerList.erase(recv_p->uid);
 	}
 	break;
 	default:
@@ -884,10 +863,10 @@ void CGameFramework::ProcessInput()
 					}
 
 				}
-				if (dwDirection)
-				{
-					m_pPlayer->Move(dwDirection, 12.25f, true);
-				}
+				//if (dwDirection)
+				//{
+				//	m_pPlayer->Move(dwDirection, 12.25f, true);
+				//}
 			}
 
 			if (dwDirection) m_pPlayer->Move(dwDirection, 12.25f, true);
@@ -1020,11 +999,13 @@ void CGameFramework::FrameAdvance()
 
 
 	if (m_pPlayer) {
-		auto endtime = std::chrono::system_clock::now();
-		auto exectime = endtime - m_pPlayer->starttime;
-		auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
-		if (exec_ms > 1000.f && m_pPlayer->invincibility) { // 무적시간이 1초가 경과되면
-			m_pPlayer->SetInvincibility();	// 변경
+		if (m_pPlayer->invincibility) {
+			auto endtime = std::chrono::system_clock::now();
+			auto exectime = endtime - m_pPlayer->starttime;
+			auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
+			if (exec_ms > 1000.f) { // 무적시간이 1초가 경과되면
+				m_pPlayer->SetInvincibility();	// 변경
+			}
 		}
 		m_pPlayer->Render(m_pd3dCommandList, obbRender, m_pCamera);
 	}
