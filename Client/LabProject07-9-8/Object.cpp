@@ -8,11 +8,6 @@
 #include "Scene.h"
 #include "GameFramework.h"
 
-
-#include "PigState.h"
-//>>>>>>> Bin_test
-//>>>>>>> Bin_test
-
 #include <algorithm>
 
 
@@ -1234,7 +1229,7 @@ CGameObject* CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, I
 	return(pGameObject);
 }
 
-CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* pstrFileName, CShader* pShader, CGameFramework* pGameFramework)
+CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* pstrFileName, CGameFramework* pGameFramework)
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, pstrFileName, "rb");
@@ -1413,14 +1408,16 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	}
 
 	SetMaterial(0, pSkyBoxMaterial);
-
+	
 }
+
 
 CSkyBox::~CSkyBox()
 {
 }
 
-
+void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
 	CScene* pScene = m_pGameFramework ? m_pGameFramework->GetScene() : nullptr;
 	if (!pScene || !pCamera) return;
 
@@ -1454,14 +1451,12 @@ CSkyBox::~CSkyBox()
 		m_pMesh->Render(pd3dCommandList, 0); // 메쉬 렌더링
 
 	}
-	// 스카이박스는 자식/형제 없음
 }
 
-}
 
-CMonsterObject::CMonsterObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CLoadedModelInfo *pModel, int nAnimationTracks, ResourceManager* pResourceManager)
-//
-CMonsterObject::CMonsterObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CLoadedModelInfo *pModel, int nAnimationTracks, ResourceManager* pResourceManager)
+
+
+CMonsterObject::CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CLoadedModelInfo* pModel, int nAnimationTracks, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	CLoadedModelInfo *pMonsterModel = pModel;
 	if (!pMonsterModel) pMonsterModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Monster.bin", pGameFramework);
@@ -1541,10 +1536,7 @@ CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, "Model/FAE_Pine_A_LOD0.bin", "rb");
-	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(
-		pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework);
-	// LoadFrameHierarchyFromFile 호출 시 pResourceManager 전달
-	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, NULL, pResourceManager); // 마지막 인자 추가
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
 	SetChild(pGameObject);
 
 	m_objectType = GameObjectType::Tree;
@@ -1640,10 +1632,10 @@ CStaticObject::CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	if (pInFile) fclose(pInFile); // 파일 닫기 추가
 }
 
-UserObject::UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks, ResourceManager* pResourceManager)
+UserObject::UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CLoadedModelInfo* pModel, int nAnimationTracks, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	CLoadedModelInfo* pUserModel = pModel;
-	if (!pUserModel) pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/SK_Hu_M_FullBody.bin", NULL, pResourceManager);
+	if (!pUserModel) pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Hu_M_FullBody.bin", pGameFramework);
 
 	SetChild(pUserModel->m_pModelRootObject, true);
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pUserModel);

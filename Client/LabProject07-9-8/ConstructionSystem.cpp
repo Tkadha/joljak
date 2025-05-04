@@ -1,11 +1,10 @@
 #include "ConstructionSystem.h"
 
-void CConstructionSystem::Init(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, ID3D12RootSignature* rootSig, ResourceManager* resMgr)
+void CConstructionSystem::Init(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* pGameFramework)
 {
     m_pd3dDevice = device;
     m_pd3dCommandList = cmdList;
-    m_pd3dRootSignature = rootSig;
-    m_pResourceManager = resMgr;
+    m_pGameFramework = pGameFramework;
 }
 
 void CConstructionSystem::EnterBuildMode()
@@ -19,10 +18,8 @@ void CConstructionSystem::EnterBuildMode()
     m_pPreviewObject = CGameObject::LoadGeometryFromFile(
         m_pd3dDevice,
         m_pd3dCommandList,
-        m_pd3dRootSignature,
         "Model/FAE_Pine_A_LOD0.bin", // 우선 소나무로 테스트
-        new CStandardShader(),
-        m_pResourceManager
+        m_pGameFramework
     );
 
     m_bBuildMode = true;
@@ -51,7 +48,7 @@ void CConstructionSystem::ConfirmPlacement(std::vector<CGameObject*>& sceneObjec
 {
     if (!m_pPreviewObject) return;
 
-    auto* newWall = new CPineObject(m_pd3dDevice, m_pd3dCommandList, m_pd3dRootSignature, m_pResourceManager);
+    auto* newWall = new CPineObject(m_pd3dDevice, m_pd3dCommandList, m_pGameFramework);
     newWall->SetPosition(m_pPreviewObject->GetPosition());
     sceneObjects.push_back(newWall);
 }

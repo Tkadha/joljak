@@ -7,7 +7,7 @@
 class CConstructionSystem
 {
 public:
-    void Init(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, ID3D12RootSignature* rootSig, ResourceManager* resMgr);
+    void Init(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* pGameFramework);
     void EnterBuildMode();
     void ExitBuildMode();
     void UpdatePreview(const XMFLOAT3& playerPos, const XMFLOAT3& forward);
@@ -25,6 +25,8 @@ private:
 
     ID3D12Device* m_pd3dDevice = nullptr;
     ID3D12GraphicsCommandList* m_pd3dCommandList = nullptr;
-    ID3D12RootSignature* m_pd3dRootSignature = nullptr;
-    ResourceManager* m_pResourceManager = nullptr;
+    //ID3D12RootSignature* m_pd3dRootSignature = nullptr;
+    //ResourceManager* m_pResourceManager = nullptr;
+
+    CGameFramework* m_pGameFramework = nullptr;
 };

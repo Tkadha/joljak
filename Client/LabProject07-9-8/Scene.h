@@ -10,6 +10,7 @@
 #include "Octree.h"
 #include "ResourceManager.h"
 #include "ShaderManager.h"
+#include <unordered_map>
 
 
 #define MAX_LIGHTS						16 
@@ -91,10 +92,7 @@ public:
 
 
 
-	CPlayer* GetPlayerInfo();
-	CPlayer								*m_pPlayer = NULL;
-	
-
+	CPlayer* GetPlayerInfo() { return m_pPlayer; };
 	CPlayer								*m_pPlayer = NULL;
 	
 public:

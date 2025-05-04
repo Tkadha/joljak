@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #define FRAME_BUFFER_WIDTH		640
 #define FRAME_BUFFER_HEIGHT		480
@@ -9,13 +9,11 @@
 #include "Item.h"
 #include "d3dx12.h"
 #include "WICTextureLoader12.h"
-#include <wrl.h> // 추가
+#include <wrl.h> 
 #include <vector>
 #include <string>
 #include "ResourceManager.h"
-<<<<<<< HEAD
 #include "ShaderManager.h"
-=======
 #include "ConstructionSystem.h"
 using namespace Microsoft::WRL; // 추가
 
@@ -24,9 +22,8 @@ struct CraftMaterial
 	std::string MaterialName; // 재료 이름
 	int Quantity;             // 재료 수량
 };
-#include "ShaderManager.h"
 
-// 제작 아이템 구조체
+// ?쒖옉 ?꾩씠??援ъ“泥?
 struct CraftItem
 {
 	std::string ResultItemName;        // 최종 제작 아이템 이름
@@ -112,13 +109,12 @@ private:
 	int							m_nWndClientHeight;
 	int                         m_nSelectedHotbarIndex = 0;
 	bool						ShowInventory = false;
-	bool						ShowCraftingUI = false; // ����â ���� ����
+	bool						ShowCraftingUI = false; 
 	bool						BuildMode = false;
 	bool						ShowFurnaceUI = false;
 	int							selectedCraftItemIndex = -1;
 	CPineObject*				m_pPreviewObject = nullptr;
 	FurnaceSlot					furnaceSlot;
-	// ���� ������ ������ �ε���
         
 	IDXGIFactory4				*m_pdxgiFactory = NULL;
 	IDXGISwapChain3				*m_pdxgiSwapChain = NULL;
@@ -146,12 +142,9 @@ private:
 	UINT64						m_nFenceValues[m_nSwapChainBuffers];
 	HANDLE						m_hFenceEvent;
 	int							m_nIconCount;
-
 	
 	// --- 종료 동기화용 펜스 값 추가 ---
 	UINT64                      m_nMasterFenceValue = 0;
-
-	// ��� ����, ���̴� ���ҽ� ��ũ���� �� Scene���� �ű�
 private:
 	ComPtr<ID3D12DescriptorHeap>	m_pd3dCbvSrvDescriptorHeap;
 	UINT							m_nCbvSrvDescriptorIncrementSize;
@@ -168,7 +161,6 @@ private:
 	UINT m_nTotalCbvDescriptors; // 생성 시 설정
 	UINT m_nTotalSrvDescriptors; // 생성 시 설정
 
-	// ���ҽ� �Ŵ��� �߰�
 	std::unique_ptr<ResourceManager> m_pResourceManager;
 	//std::unique_ptr<ShaderManager> m_pShaderManager;
 	ShaderManager* m_pShaderManager;

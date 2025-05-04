@@ -137,7 +137,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	CoInitialize(NULL);
 
 	m_pConstructionSystem = new CConstructionSystem();
-	m_pConstructionSystem->Init(m_pd3dDevice, m_pd3dCommandList, m_pRootSignature, m_pResourceManager.get());
+	m_pConstructionSystem->Init(m_pd3dDevice, m_pd3dCommandList, this);
 
 	BuildObjects();
 	
@@ -164,10 +164,10 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	ItemManager::Initialize();
 	InitializeItemIcons();
 
-	auto& nwManager = NetworkManager::GetInstance();
-	nwManager.Init();
-	std::thread t(&CGameFramework::NerworkThread, this);
-	t.detach();
+	//auto& nwManager = NetworkManager::GetInstance();
+	//nwManager.Init();
+	//std::thread t(&CGameFramework::NerworkThread, this);
+	//t.detach();
 
 	return(true);
 }
@@ -817,7 +817,7 @@ void CGameFramework::ProcessInput()
 			m_pPlayer->m_pStateMachine->HandleInput(inputData);
 		}
 
-		/*
+		
 		DWORD dwDirection = 0;
 		if (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0) dwDirection |= DIR_FORWARD;
 		if (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
@@ -826,7 +826,7 @@ void CGameFramework::ProcessInput()
 		if (pKeysBuffer[VK_SPACE] & 0xF0) dwDirection |= DIR_UP;
 		if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
 		else m_pPlayer->keyInput(pKeysBuffer);
-		*/
+		
 
 		// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
 		UCHAR toggleKeys[] = { 'R' /*, 다른 키들 */ };
@@ -921,9 +921,9 @@ void CGameFramework::ProcessInput()
 				//}
 			}
 
-			if (dwDirection) m_pPlayer->Move(dwDirection, 12.25f, true);
+			//if (dwDirection) m_pPlayer->Move(dwDirection, 12.25f, true);
 		}
-		m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
+		//m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 	}
 }
 
@@ -975,9 +975,9 @@ void CGameFramework::FrameAdvance()
 			{
 			case E_PACKET::E_P_LOGIN:
 			{
-				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), "Model/SK_Hu_M_FullBody.bin", NULL, m_pResourceManager.get());
+				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Hu_M_FullBody.bin", this);
 				int animate_count = 10;
-				m_pScene->PlayerList[log.ID] = std::make_unique<UserObject>(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), pUserModel, animate_count, m_pResourceManager.get());
+				m_pScene->PlayerList[log.ID] = std::make_unique<UserObject>(m_pd3dDevice, m_pd3dCommandList, pUserModel, animate_count, this);
 				m_pScene->PlayerList[log.ID]->m_objectType = GameObjectType::Player;
 				m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 				for (int j = 1; j < animate_count; ++j) {
@@ -1044,7 +1044,7 @@ void CGameFramework::FrameAdvance()
 
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
-	if (m_pScene) m_pScene->Render(m_pd3dCommandList, obbRender, m_pCamera);
+	if (m_pScene) m_pScene->Render(m_pd3dCommandList, m_pCamera);
 
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
@@ -1060,7 +1060,7 @@ void CGameFramework::FrameAdvance()
 				m_pPlayer->SetInvincibility();	// 변경
 			}
 		}
-		m_pPlayer->Render(m_pd3dCommandList, obbRender, m_pCamera);
+		m_pPlayer->Render(m_pd3dCommandList, m_pCamera);
 	}
 
 	ImGui_ImplDX12_NewFrame();
