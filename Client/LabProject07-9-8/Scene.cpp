@@ -282,31 +282,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		octree.insert(std::move(t_obj));
 		if (pWolfModel) delete pWolfModel;
 	}
-	int nUserObjects = 10;
-	for (int i = 0; i < nUserObjects; ++i)
-	{
-		CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/SK_Hu_M_FullBody.bin", NULL, pResourceManager);
-		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pUserModel, animate_count, pResourceManager);
-		//CGameObject* gameobj = new UserObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pTerrain, pResourceManager);
-		gameobj->m_objectType = GameObjectType::Player;
-		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-		for (int j = 1; j < animate_count; ++j) {
-			gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
-			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
-		}
-		gameobj->SetOwningScene(this);
-		//gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
-		//gameobj->FSM_manager = nullptr;
-		auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 2500, 1800, 2500);
-		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		gameobj->Rotate(0.f, 180.f, 0.f);
-		gameobj->SetScale(10.f, 10.f, 10.f);
-		gameobj->SetTerraindata(m_pTerrain);
-		m_vGameObjects.emplace_back(gameobj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-		if (pUserModel) delete pUserModel;
-	}
 	for (auto obj : m_vGameObjects) {
 		obj->SetOBB();
 		CShader* shader = new COBBShader();
