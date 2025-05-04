@@ -5,8 +5,10 @@
 
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN             // ���� ������ �ʴ� ������ Windows ������� �����մϴ�.
-// Windows ��� ����:
+#define WIN32_LEAN_AND_MEAN             // 거의 사용되지 않는 내용은 Windows 헤더에서 제외합니다.
+// Windows 헤더 파일:
+#define NOMINMAX
+
 #include <windows.h>
 
 // C�� ��Ÿ�� ��� �����Դϴ�.
@@ -22,8 +24,12 @@
 
 #include <fstream>
 #include <vector>
+#include <array>
+#include <map>
 
 using namespace std;
+
+#include "d3dx12.h"
 
 #include <d3d12.h>
 #include <dxgi1_4.h>
@@ -37,6 +43,7 @@ using namespace std;
 
 //
 #include <random>
+#include <algorithm>
 
 #ifdef _DEBUG
 #include <dxgidebug.h>

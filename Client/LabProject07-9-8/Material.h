@@ -15,11 +15,13 @@ class CShader;
 class CStandardShader;
 class CGameObject;
 class ResourceManager;
+class CGameFramework;
 
 class CMaterial
 {
 public:
-	CMaterial(int nTextures);
+	CMaterial(int nTextures, CGameFramework* pGameFramework);
+
 	virtual ~CMaterial();
 
 private:
@@ -32,17 +34,14 @@ public:
 public:
 	CShader* m_pShader = NULL;
 
-	XMFLOAT4						m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	XMFLOAT4						m_xmf4EmissiveColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	XMFLOAT4						m_xmf4SpecularColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	XMFLOAT4						m_xmf4AmbientColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	XMFLOAT4 m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); 
+	XMFLOAT4 m_xmf4EmissiveColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	XMFLOAT4 m_xmf4SpecularColor = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f); // 약간의 회색 반사광
+	XMFLOAT4 m_xmf4AmbientColor = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);  // 약간의 주변광 반응
 
 	void SetShader(CShader* pShader);
 	void SetMaterialType(UINT nType) { m_nType |= nType; }
-	void SetTexture(CTexture* pTexture, UINT nTexture = 0);
-
-	virtual void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList);
-
+	
 	virtual void ReleaseUploadBuffers();
 
 public:
@@ -57,17 +56,38 @@ public:
 public:
 	int 							m_nTextures = 0;
 	_TCHAR(*m_ppstrTextureNames)[64] = NULL;
-	CTexture** m_ppTextures = NULL; //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
+	std::vector<std::shared_ptr<CTexture>> m_vTextures; // shared_ptr 벡터 사용
 
-	void LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, CGameObject* pParent, FILE* pInFile, CShader* pShader, ResourceManager* pResourceManager);
+	// 텍스처 로딩 시 할당받은 SRV 블록의 시작 핸들 저장
+	D3D12_CPU_DESCRIPTOR_HANDLE m_d3dCpuSrvStartHandle = { 0 };
+	D3D12_GPU_DESCRIPTOR_HANDLE m_d3dSrvGpuStartHandle = { 0 };
 
-public:
-	static CShader* m_pStandardShader;
-	static CShader* m_pSkinnedAnimationShader;
+	// SRV 디스크립터 크기 (Framework 등에서 얻어와야 함)
+	UINT m_nCbvSrvDescriptorIncrementSize = 0;
 
-	static void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	CGameFramework* m_pGameFramework = nullptr;
 
-	void SetStandardShader() { CMaterial::SetShader(m_pStandardShader); }
-	void SetSkinnedAnimationShader() { CMaterial::SetShader(m_pSkinnedAnimationShader); }
+	
+	// 텍스처 테이블 시작 GPU 핸들 반환 함수
+	D3D12_GPU_DESCRIPTOR_HANDLE GetTextureTableGpuHandle() const { return m_d3dSrvGpuStartHandle; }
+
+	// 텍스처 포인터 배열 접근자 (필요시)
+	CTexture* GetTexture(int index) const;
+	int GetTextureCount() const { return m_nTextures; }
+
+	void LoadTextureFromFile(
+		ID3D12Device* pd3dDevice,
+		ID3D12GraphicsCommandList* pd3dCommandList,
+		UINT nTextureIndex,         // 이 텍스처가 저장될 인덱스 (0:Albedo, 1:Specular...)
+		UINT nTextureType,          // 이 텍스처의 타입 마스크 (MATERIAL_ALBEDO_MAP 등)
+		CGameObject* pParent,       // 중복 텍스처 찾기용 부모 포인터
+		FILE* pInFile,              // 파일 포인터
+		ResourceManager* pResourceManager // 리소스 매니저
+	);
+
+	// 텍스처 설정 및 SRV 생성 함수 추가
+	bool AssignTexture(UINT nTextureIndex, std::shared_ptr<CTexture> pTexture, ID3D12Device* pd3dDevice);
 };
+
+
 

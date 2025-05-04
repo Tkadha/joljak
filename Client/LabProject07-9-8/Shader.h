@@ -48,6 +48,17 @@ public:
 	virtual void AnimateObjects(float fTimeElapsed) { }
 	virtual void ReleaseObjects() { }
 
+	// --- 접근자 함수 추가 ---
+   // ShaderManager 또는 CreateShader 내부에서 루트 서명을 설정하기 위한 Setter
+	void SetRootSignature(ID3D12RootSignature* pRootSig) { m_pd3dGraphicsRootSignature = pRootSig; }
+	// CScene::Render 등에서 사용할 Getter
+	ID3D12RootSignature* GetRootSignature() const { return m_pd3dGraphicsRootSignature; }
+	ID3D12PipelineState* GetPipelineState() const { return m_pd3dPipelineState; }
+
+	// --- GetShaderType 가상 함수 추가 ---
+	// 이 함수는 각 파생 셰이더 클래스가 자신의 타입을 문자열로 반환하도록 강제합니다.
+	virtual std::string GetShaderType() const = 0; // 순수 가상 함수로 선언
+
 protected:
 	ID3DBlob							*m_pd3dVertexShaderBlob = NULL;
 	ID3DBlob							*m_pd3dPixelShaderBlob = NULL;
@@ -57,77 +68,7 @@ protected:
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC	m_d3dPipelineStateDesc;
 
 	float								m_fElapsedTime = 0.0f;
-};
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-class CTerrainShader : public CShader
-{
-public:
-	CTerrainShader();
-	virtual ~CTerrainShader();
-
-	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
-
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader();
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader();
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-class CSkyBoxShader : public CShader
-{
-public:
-	CSkyBoxShader();
-	virtual ~CSkyBoxShader();
-
-	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
-	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState();
-
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader();
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader();
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-class CStandardShader : public CShader
-{
-public:
-	CStandardShader();
-	virtual ~CStandardShader();
-
-	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
-
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader();
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader();
-};
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-class CSkinnedAnimationStandardShader : public CStandardShader
-{
-public:
-	CSkinnedAnimationStandardShader();
-	virtual ~CSkinnedAnimationStandardShader();
-
-	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader();
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-class COBBShader : public CStandardShader
-{
-public:
-	COBBShader();
-	virtual ~COBBShader();
-
-
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader();
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader();
-
-	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
-	
-	void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	// --- 루트 서명 포인터 멤버 추가 ---
+	ID3D12RootSignature* m_pd3dGraphicsRootSignature = nullptr;
 };

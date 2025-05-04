@@ -10,6 +10,7 @@
 #include "Object.h"
 #include "Camera.h"
 #include <chrono>
+#include "PlayerStateMachine.h" 
 
 
 class CPlayer : public CGameObject
@@ -43,7 +44,10 @@ protected:
 
 
 public:
-	CPlayer();
+	PlayerStateMachine* m_pStateMachine = nullptr;
+
+
+	CPlayer(CGameFramework* pGameFramework);
 	virtual ~CPlayer();
 	bool					    checkmove = false;
 	float PlayerHunger = 1.0f;
@@ -82,8 +86,8 @@ public:
 	CCamera *GetCamera() { return(m_pCamera); }
 	void SetCamera(CCamera *pCamera) { m_pCamera = pCamera; }
 
-	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false);
-	void Move(const XMFLOAT3& xmf3Shift, bool bVelocity = false);
+	virtual void Move(DWORD nDirection, float fDistance, bool bVelocity = false);
+	virtual void Move(const XMFLOAT3& xmf3Shift, bool bVelocity = false);
 	void Move(float fxOffset = 0.0f, float fyOffset = 0.0f, float fzOffset = 0.0f);
 	void Rotate(float x, float y, float z);
 
@@ -104,7 +108,7 @@ public:
 	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed) { return(NULL); }
 	virtual void OnPrepareRender();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, CCamera* pCamera = NULL);
+	//virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, CCamera* pCamera = NULL);
 
 	virtual void keyInput(UCHAR* key) {};
 
@@ -113,8 +117,8 @@ public:
 	void UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
 
 	// 장비
-	void AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname, ResourceManager* pResourceManager);
-	void AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* framename, char* modelname, ResourceManager* pResourceManager, XMFLOAT3 offset, XMFLOAT3 rotate, XMFLOAT3 scale);
+	void AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework);
+	void AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate, XMFLOAT3 scale);
 	CGameObject* FindFrame(char* framename);
 
 
@@ -128,12 +132,14 @@ public:
 		}
 	}
 	void DecreaseHp(int value) { Playerhp -= value; }
+
+	const PlayerInputData& GetStateMachineInput() const;
 };
 
 class CAirplanePlayer : public CPlayer
 {
 public:
-	CAirplanePlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext=NULL);
+	CAirplanePlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CGameFramework* pGameFramework, void *pContext=NULL);
 	virtual ~CAirplanePlayer();
 
 	CGameObject					*m_pMainRotorFrame = NULL;
@@ -161,7 +167,7 @@ public:
 class CTerrainPlayer : public CPlayer
 {
 public:
-	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext, ResourceManager* pResourceManager);
+	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pContext, CGameFramework* pGameFramework);
 	virtual ~CTerrainPlayer();
 
 public:
@@ -170,8 +176,8 @@ public:
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
 	virtual void OnCameraUpdateCallback(float fTimeElapsed);
 
-	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false);
-
+	//virtual void Move(DWORD nDirection, float fDistance, bool bVelocity = false);
+	
 	virtual void Update(float fTimeElapsed);
 
 	int nAni{};

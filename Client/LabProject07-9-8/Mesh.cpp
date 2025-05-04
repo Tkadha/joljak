@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// File: CGameObject.cpp
+// File: Mesh.cpp
 //-----------------------------------------------------------------------------
 
 #include "stdafx.h"
@@ -54,7 +54,7 @@ void CMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pConte
 
 void CMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet)
 {
-	UpdateShaderVariables(pd3dCommandList);
+	//UpdateShaderVariables(pd3dCommandList);
 
 	OnPreRender(pd3dCommandList, NULL);
 
@@ -780,7 +780,11 @@ void CSkinnedMesh::LoadSkinInfoFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 
 				UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256ï¿½ï¿½ ï¿½ï¿½ï¿?
 				m_pd3dcbBindPoseBoneOffsets = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-				m_pd3dcbBindPoseBoneOffsets->Map(0, NULL, (void**)&m_pcbxmf4x4MappedBindPoseBoneOffsets);
+				if (!m_pd3dcbBindPoseBoneOffsets) {
+					OutputDebugString(L"!!!!!!!! ERROR: Failed to create m_pd3dcbBindPoseBoneOffsets! !!!!!!!!\n");
+					// ½ÇÆÐ ½Ã ÀÌÈÄ ¸®¼Ò½º »ý¼º Áß´Ü ¶Ç´Â ´Ù¸¥ Ã³¸®
+				}
+				m_pd3dcbBindPoseBoneOffsets->Map(0, NULL, (void **)&m_pcbxmf4x4MappedBindPoseBoneOffsets);
 
 				for (int i = 0; i < m_nSkinningBones; i++)
 				{

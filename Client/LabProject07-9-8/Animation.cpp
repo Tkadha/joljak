@@ -1,6 +1,10 @@
 ﻿#include "Animation.h"
 #include "Object.h"
 
+// 로그 확인용(나중에 제거)
+#include <sstream>     // std::wstringstream 사용
+#include <iomanip>     // std::hex, std::setw, std::setfill 사용
+#include <windows.h>   // OutputDebugStringW 사용
 
 CLoadedModelInfo::~CLoadedModelInfo()
 {
@@ -229,8 +233,42 @@ CAnimationController::CAnimationController(ID3D12Device* pd3dDevice, ID3D12Graph
 	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256의 배수
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
-		m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-		m_ppd3dcbSkinningBoneTransforms[i]->Map(0, NULL, (void**)&m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
+		m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
+		if (m_ppd3dcbSkinningBoneTransforms[i] == nullptr)
+		{
+			// 실패 로그 (HRESULT 없이)
+			OutputDebugStringW(L"[AnimCtrl CBV Check] CreateBufferResource returned NULL for CBV index ");
+			OutputDebugStringW(std::to_wstring(i).c_str());
+			OutputDebugStringW(L".\n");
+
+			// --- 실패 시 Device Removed Reason 확인 (중요!) ---
+			HRESULT removedReason = pd3dDevice->GetDeviceRemovedReason();
+			
+			// 로그 확인용
+			auto FormatHRESULT = [](HRESULT hr) -> std::wstring {
+				std::wstringstream ss;
+				ss << L"0x" << std::hex << std::uppercase << std::setw(8) << std::setfill(L'0') << hr;
+				return ss.str();
+				}; 
+			std::wstring reasonMsg = L"[AnimCtrl CBV Check]   Device Removed Reason after NULL return: " + FormatHRESULT(removedReason) + L"\n";
+			OutputDebugStringW(reasonMsg.c_str());
+			// -----------------------------------------
+
+			m_ppcbxmf4x4MappedSkinningBoneTransforms[i] = nullptr; // 맵핑 포인터도 null 처리
+			// 여기서 중단점(breakpoint)을 설정하고 디버거로 상태를 확인하는 것이 유용합니다.
+			// __debugbreak(); // 필요시 중단점 설정
+		}
+		else
+		{
+			// 성공 시 맵핑 시도 (맵핑 실패 로그는 여전히 유용)
+			HRESULT mapHr = m_ppd3dcbSkinningBoneTransforms[i]->Map(0, NULL, (void**)&m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
+			if (FAILED(mapHr))
+			{
+				// 맵핑 실패 로그
+				// ...
+				m_ppcbxmf4x4MappedSkinningBoneTransforms[i] = nullptr;
+			}
+		}
 	}
 }
 
@@ -289,6 +327,11 @@ void CAnimationController::SetTrackSpeed(int nAnimationTrack, float fSpeed)
 void CAnimationController::SetTrackWeight(int nAnimationTrack, float fWeight)
 {
 	if (m_pAnimationTracks) m_pAnimationTracks[nAnimationTrack].SetWeight(fWeight);
+}
+
+void CAnimationController::SetTrackType(int nAnimationTrack, int type)
+{
+	if (m_pAnimationTracks) m_pAnimationTracks[nAnimationTrack].SetType(type);
 }
 
 void CAnimationController::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
@@ -361,7 +404,105 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 		pRootGameObject->UpdateTransform(NULL);
 
+		// CBV 내용 업데이트
+		UpdateBoneTransformCBVContents();
+
 		OnRootMotion(pRootGameObject);
 		OnAnimationIK(pRootGameObject);
+	}
+}
+
+
+void CAnimationController::UpdateBoneTransformCBVContents()
+{
+	// 필요한 멤버 변수 유효성 검사
+	if (!m_pAnimationSets || !m_pAnimationSets->m_ppBoneFrameCaches || !m_ppSkinnedMeshes || !m_ppcbxmf4x4MappedSkinningBoneTransforms)
+		return;
+
+	// 이 컨트롤러가 관리하는 각 스키닝 메쉬에 대해 반복 (CBV 버퍼 업데이트)
+	for (int i = 0; i < m_nSkinnedMeshes; ++i)
+	{
+		CSkinnedMesh* pSkinnedMesh = m_ppSkinnedMeshes[i];
+		XMFLOAT4X4* pMappedBuffer = m_ppcbxmf4x4MappedSkinningBoneTransforms[i]; // 해당 메쉬용 CBV 버퍼
+
+		if (!pSkinnedMesh || !pMappedBuffer || !pSkinnedMesh->m_ppSkinningBoneFrameCaches) continue;
+
+		// 이 메쉬에 영향을 주는 각 뼈에 대해 반복
+		for (int j = 0; j < pSkinnedMesh->m_nSkinningBones; ++j)
+		{
+			// 메쉬의 뼈 캐시에서 해당 뼈의 GameObject 노드 찾기
+			CGameObject* pBoneNode = pSkinnedMesh->m_ppSkinningBoneFrameCaches[j];
+			if (pBoneNode)
+			{
+				// 이 뼈의 최종 월드 변환 행렬 가져오기
+				XMFLOAT4X4 worldMatrix = pBoneNode->m_xmf4x4World;
+				XMFLOAT4X4 transposedWorld;
+
+				// --- 월드 행렬만 전치해서 복사 ---
+				XMStoreFloat4x4(&transposedWorld, XMMatrixTranspose(XMLoadFloat4x4(&worldMatrix)));
+
+				// 계산된 행렬을 CBV의 해당 본 인덱스 위치에 복사
+				if (j < SKINNED_ANIMATION_BONES) { // SKINNED_ANIMATION_BONES 정의 필요
+					pMappedBuffer[j] = transposedWorld;
+				}
+			}
+			else
+			{
+				// 뼈 노드 못찾음 오류 처리
+				if (j < SKINNED_ANIMATION_BONES) {
+					pMappedBuffer[j] = Matrix4x4::Identity(); // 예: Identity 행렬 넣기
+				}
+			}
+		}
+		m_ppd3dcbSkinningBoneTransforms[i]->Unmap(0, nullptr);
+	}
+}
+
+// 예: void CAnimationController::UpdateBoneLocalTransformCBV()
+void CAnimationController::UpdateBoneLocalTransformCBV()
+{
+	// 필요한 멤버 변수 유효성 검사
+	if (!m_pAnimationSets || !m_ppSkinnedMeshes || !m_ppcbxmf4x4MappedSkinningBoneTransforms)
+		return;
+
+	// 이 컨트롤러가 관리하는 각 스키닝 메쉬에 대해 반복 (CBV 버퍼 업데이트)
+	for (int i = 0; i < m_nSkinnedMeshes; ++i)
+	{
+		CSkinnedMesh* pSkinnedMesh = m_ppSkinnedMeshes[i];
+		XMFLOAT4X4* pMappedBuffer = m_ppcbxmf4x4MappedSkinningBoneTransforms[i]; // 해당 메쉬용 CBV 버퍼
+
+		// 메쉬 및 해당 뼈 캐시 유효성 검사
+		if (!pSkinnedMesh || !pMappedBuffer || !pSkinnedMesh->m_ppSkinningBoneFrameCaches) {
+			continue;
+		}
+
+		// 이 메쉬에 영향을 주는 각 뼈에 대해 반복
+		for (int j = 0; j < pSkinnedMesh->m_nSkinningBones; ++j)
+		{
+			// 메쉬의 뼈 캐시에서 해당 뼈의 GameObject 노드 찾기
+			CGameObject* pBoneNode = pSkinnedMesh->m_ppSkinningBoneFrameCaches[j];
+			if (pBoneNode)
+			{
+				// --- 이 뼈의 애니메이션 적용된 '로컬' 변환 행렬 가져오기 ---
+				XMFLOAT4X4 localMatrix = pBoneNode->m_xmf4x4ToParent; // 월드 행렬 대신 로컬 행렬 사용!
+				XMFLOAT4X4 transposedLocal;
+
+				// --- 로컬 행렬 전치해서 복사 ---
+				XMStoreFloat4x4(&transposedLocal, XMMatrixTranspose(XMLoadFloat4x4(&localMatrix)));
+
+				// 계산된 행렬을 CBV의 해당 본 인덱스 위치에 복사
+				if (j < SKINNED_ANIMATION_BONES) { // SKINNED_ANIMATION_BONES 정의 필요
+					pMappedBuffer[j] = transposedLocal; // 전치된 '로컬' 행렬 복사
+				}
+			}
+			else
+			{
+				// 뼈 노드 못찾음 오류 처리
+				if (j < SKINNED_ANIMATION_BONES) {
+					pMappedBuffer[j] = Matrix4x4::Identity();
+				}
+				// 로그 추가 권장
+			}
+		}
 	}
 }

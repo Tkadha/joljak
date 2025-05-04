@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #define FRAME_BUFFER_WIDTH		640
 #define FRAME_BUFFER_HEIGHT		480
@@ -9,10 +9,12 @@
 #include "Item.h"
 #include "d3dx12.h"
 #include "WICTextureLoader12.h"
-#include <wrl.h> // 추가
+#include <wrl.h> 
 #include <vector>
 #include <string>
 #include "ResourceManager.h"
+#include "ShaderManager.h"
+#include "ConstructionSystem.h"
 using namespace Microsoft::WRL; // 추가
 
 struct CraftMaterial
@@ -21,12 +23,22 @@ struct CraftMaterial
 	int Quantity;             // 재료 수량
 };
 
-// 제작 아이템 구조체
+// ?쒖옉 ?꾩씠??援ъ“泥?
 struct CraftItem
 {
 	std::string ResultItemName;        // 최종 제작 아이템 이름
 	std::vector<CraftMaterial> Materials; // 필요한 재료 목록
 	int ResultQuantity;                // 제작 결과 수량 (예: 2개 만들면 2)
+};
+
+struct FurnaceSlot
+{
+	Item* material = nullptr;  // 재료
+	Item* fuel = nullptr;      // 연료
+	Item* result = nullptr;    // 결과
+	float fuelAmount = 0.0f;
+	float smeltTime = 0.0f;
+	bool isSmelting = false;
 };
 
 
@@ -82,6 +94,7 @@ public:
 	bool CanCraftItem();
 	void CraftSelectedItem();
 	void InitializeItemIcons();
+	void UpdateFurnace(float deltaTime);
 	std::vector<CraftItem> m_vecCraftableItems;
 
 
@@ -96,8 +109,12 @@ private:
 	int							m_nWndClientHeight;
 	int                         m_nSelectedHotbarIndex = 0;
 	bool						ShowInventory = false;
-	bool						ShowCraftingUI = false; // ����â ���� ����
-	int							selectedCraftItemIndex = -1; // ���� ������ ������ �ε���
+	bool						ShowCraftingUI = false; 
+	bool						BuildMode = false;
+	bool						ShowFurnaceUI = false;
+	int							selectedCraftItemIndex = -1;
+	CPineObject*				m_pPreviewObject = nullptr;
+	FurnaceSlot					furnaceSlot;
         
 	IDXGIFactory4				*m_pdxgiFactory = NULL;
 	IDXGISwapChain3				*m_pdxgiSwapChain = NULL;
@@ -118,14 +135,16 @@ private:
 	ID3D12CommandAllocator		*m_pd3dCommandAllocator = NULL;
 	ID3D12CommandQueue			*m_pd3dCommandQueue = NULL;
 	ID3D12GraphicsCommandList	*m_pd3dCommandList = NULL;
+	CConstructionSystem* m_pConstructionSystem = NULL;
+	ID3D12RootSignature* m_pRootSignature = nullptr;
 
 	ID3D12Fence					*m_pd3dFence = NULL;
 	UINT64						m_nFenceValues[m_nSwapChainBuffers];
 	HANDLE						m_hFenceEvent;
 	int							m_nIconCount;
-
-
-	// ��� ����, ���̴� ���ҽ� ��ũ���� �� Scene���� �ű�
+	
+	// --- 종료 동기화용 펜스 값 추가 ---
+	UINT64                      m_nMasterFenceValue = 0;
 private:
 	ComPtr<ID3D12DescriptorHeap>	m_pd3dCbvSrvDescriptorHeap;
 	UINT							m_nCbvSrvDescriptorIncrementSize;
@@ -134,13 +153,17 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCpuHandleStart;
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dSrvGpuHandleStart;
 
-	UINT m_nNextCbvOffset = 0; // CBV ���� �� ���� ������
-	UINT m_nNextSrvOffset = 0; // SRV ���� �� ���� ������ (CBV ���� ���� ����)
-	UINT m_nTotalCbvDescriptors; // ���� �� ����
-	UINT m_nTotalSrvDescriptors; // ���� �� ����
+	// 샘플러 힙 크기도 필요할 수 있음
+	UINT m_nSamplerDescriptorIncrementSize = 0; 
 
-	// ���ҽ� �Ŵ��� �߰�
+	UINT m_nNextCbvOffset = 0; // CBV 영역 내 다음 오프셋
+	UINT m_nNextSrvOffset = 0; // SRV 영역 내 다음 오프셋 (CBV 영역 이후 시작)
+	UINT m_nTotalCbvDescriptors; // 생성 시 설정
+	UINT m_nTotalSrvDescriptors; // 생성 시 설정
+
 	std::unique_ptr<ResourceManager> m_pResourceManager;
+	//std::unique_ptr<ShaderManager> m_pShaderManager;
+	ShaderManager* m_pShaderManager;
 
 public:
 	// CBV ���� �Ҵ� ��û (nDescriptors�� �Ҵ� �� ���� �ڵ� ��ȯ)
@@ -154,11 +177,18 @@ public:
 
 	void CreateCbvSrvDescriptorHeaps(int nConstantBufferViews, int nShaderResourceViews);
 	D3D12_GPU_DESCRIPTOR_HANDLE CreateConstantBufferViews(int nConstantBufferViews, ID3D12Resource* pd3dConstantBuffers, UINT nStride);
-	void CreateShaderResourceViews(CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex);
+	
+	// --- 디스크립터 크기 반환 함수 추가 ---
+	UINT GetSamplerDescriptorIncrementSize() const { return m_nSamplerDescriptorIncrementSize; }
 
 
 	ID3D12Device* GetDevice() { return m_pd3dDevice; }
 	ResourceManager* GetResourceManager() { return m_pResourceManager.get(); };
+	ShaderManager* GetShaderManager() { return m_pShaderManager; };
+
+	CScene* GetScene() { return m_pScene; }
+
+	void WaitForGpu(); // GPU 대기 함수 추가
 
 	ID3D12DescriptorHeap* m_pd3dSrvDescriptorHeapForImGui = nullptr;
 	ID3D12DescriptorHeap* m_pd3dSrvDescriptorHeapForIcons = nullptr;

@@ -4,10 +4,14 @@
 
 #pragma once
 
+#include "d3dx12.h"
 #include "Shader.h"
 #include "Player.h"
 #include "Octree.h"
 #include "ResourceManager.h"
+#include "ShaderManager.h"
+#include <unordered_map>
+
 
 #define MAX_LIGHTS						16 
 
@@ -63,16 +67,23 @@ public:
 	void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	void ReleaseObjects();
 
-	ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
-	ID3D12RootSignature *GetGraphicsRootSignature() { return(m_pd3dGraphicsRootSignature); }
-
 	bool ProcessInput(UCHAR *pKeysBuffer);
     void AnimateObjects(float fTimeElapsed);
 	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
-	void Render(ID3D12GraphicsCommandList *pd3dCommandList,bool obbRender, CCamera *pCamera=NULL);
+	//void Render(ID3D12GraphicsCommandList *pd3dCommandList,bool obbRender, CCamera *pCamera=NULL);
 
 	void ReleaseUploadBuffers();
 
+	void SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader);
+
+	// 조명 버퍼 접근자 
+	ID3D12Resource* GetLightsConstantBuffer() const { return m_pd3dcbLights; }
+
+	// ShaderManager 접근자 
+	ShaderManager* GetShaderManager() const; // 구현 필요 (m_pGameFramework 통해)
+
+	// CGameFramework 접근자 
+	CGameFramework* GetGameFramework() const { return m_pGameFramework; }
 	bool CollisionCheck(CGameObject* a, CGameObject* b);
 	void CollectHierarchyObjects(CGameObject* node, std::vector<BoundingOrientedBox>& obbList);
 	
@@ -81,23 +92,20 @@ public:
 
 
 
-	CPlayer* GetPlayerInfo();
+	CPlayer* GetPlayerInfo() { return m_pPlayer; };
 	CPlayer								*m_pPlayer = NULL;
 	
-
-protected:
-	ID3D12RootSignature					*m_pd3dGraphicsRootSignature = NULL;
-
 public:
 	float								m_fElapsedTime = 0.0f;
 
 	vector<CGameObject*>				m_vGameObjects{};
+	std::unordered_map<std::string, CGameObject*> m_mapBuildPrefabs;
+
 
 	//int									m_nHierarchicalGameObjects = 0;
 	//CGameObject							**m_ppHierarchicalGameObjects = NULL;
 
 	XMFLOAT3							m_xmf3RotatePosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
-
 
 	CSkyBox								*m_pSkyBox = NULL;
 	CHeightMapTerrain					*m_pTerrain = NULL;
@@ -110,7 +118,7 @@ public:
 	ID3D12Resource						*m_pd3dcbLights = NULL;
 	LIGHTS								*m_pcbMappedLights = NULL;
 
-	// �ν��Ͻ�
+	// 인스턴싱
 	ID3D12Resource* m_pd3dcbGameObjects = NULL;
 	VS_VB_INSTANCE* m_pcbMappedGameObjects = NULL;
 
@@ -124,4 +132,10 @@ public:
 	std::unordered_map<ULONGLONG, std::unique_ptr<UserObject>> PlayerList;	// 오브젝트 수정해야함
 
 	CGameFramework* m_pGameFramework;
+
+
+
+	ID3D12RootSignature* m_pCurrentRootSignature = nullptr;
+	ID3D12PipelineState* m_pCurrentPSO = nullptr;
+	CShader* m_pCurrentShader = nullptr;
 };

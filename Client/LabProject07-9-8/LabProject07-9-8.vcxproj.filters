@@ -55,13 +55,32 @@
       <UniqueIdentifier>{0aa10127-1162-4757-9bda-d05014381c40}</UniqueIdentifier>
     </Filter>
     <Filter Include="소스 파일\ResourceManager">
+    <Filter Include="소스 파일\Manager">
+      <UniqueIdentifier>{cdb652f0-b379-4c45-b0c5-d0573e157ef0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Manager\ResourceManager">
       <UniqueIdentifier>{956b5884-de85-4aa8-8403-f845341d00bc}</UniqueIdentifier>
     </Filter>
-    <Filter Include="소스 파일\Network">
-      <UniqueIdentifier>{059782b4-6ff6-42cd-840c-e49c6e010703}</UniqueIdentifier>
+    <Filter Include="소스 파일\Manager\ShaderManager">
+      <UniqueIdentifier>{73fd3200-38a3-4c57-8710-96405d53d65d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="소스 파일\Util">
-      <UniqueIdentifier>{bbe8cb24-eb18-44ad-a7ed-76328cc46b13}</UniqueIdentifier>
+    <Filter Include="소스 파일\Shader\StandardShader">
+      <UniqueIdentifier>{ea58d607-523c-4fc1-811b-3fdf498559ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\SkinnedShader">
+      <UniqueIdentifier>{a5fc94a1-27ea-482c-afa0-fe59607532e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\TerrainShader">
+      <UniqueIdentifier>{8d55978a-2973-4038-9e0f-d8b01d1c7e38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\SkyBoxShader">
+      <UniqueIdentifier>{058b8d1b-6837-49ac-ba59-2b3d7e0019e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\OBBShader">
+      <UniqueIdentifier>{8e626803-5bc9-451f-91ab-28f2b59cc93c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Object\Player\PlayerStateMachine">
+      <UniqueIdentifier>{b468b9b6-15c6-4e72-ad25-76ecdd26a8f9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -160,7 +179,28 @@
       <Filter>소스 파일\ITEM</Filter>
     </ClCompile>
     <ClCompile Include="ResourceManager.cpp">
-      <Filter>소스 파일\ResourceManager</Filter>
+      <Filter>소스 파일\Manager\ResourceManager</Filter>
+    </ClCompile>
+    <ClCompile Include="ShaderManager.cpp">
+      <Filter>소스 파일\Manager\ShaderManager</Filter>
+    </ClCompile>
+    <ClCompile Include="StandardShader.cpp">
+      <Filter>소스 파일\Shader\StandardShader</Filter>
+    </ClCompile>
+    <ClCompile Include="SkinnedShader.cpp">
+      <Filter>소스 파일\Shader\SkinnedShader</Filter>
+    </ClCompile>
+    <ClCompile Include="TerrainShader.cpp">
+      <Filter>소스 파일\Shader\TerrainShader</Filter>
+    </ClCompile>
+    <ClCompile Include="SkyBoxShader.cpp">
+      <Filter>소스 파일\Shader\SkyBoxShader</Filter>
+    </ClCompile>
+    <ClCompile Include="OBBShader.cpp">
+      <Filter>소스 파일\Shader\OBBShader</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerStateMachine.cpp">
+      <Filter>소스 파일\Object\Player\PlayerStateMachine</Filter>
     </ClCompile>
     <ClCompile Include="AtkState.cpp">
       <Filter>소스 파일\FSM</Filter>
@@ -168,8 +208,8 @@
     <ClCompile Include="NetworkManager.cpp">
       <Filter>소스 파일\Network</Filter>
     </ClCompile>
-    <ClCompile Include="RandomUtil.cpp">
-      <Filter>소스 파일\Util</Filter>
+    <ClCompile Include="ConstructionSystem.cpp">
+      <Filter>소스 파일\Construction</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -258,7 +298,31 @@
       <Filter>소스 파일\ITEM</Filter>
     </ClInclude>
     <ClInclude Include="ResourceManager.h">
-      <Filter>소스 파일\ResourceManager</Filter>
+      <Filter>소스 파일\Manager\ResourceManager</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderManager.h">
+      <Filter>소스 파일\Manager\ShaderManager</Filter>
+    </ClInclude>
+    <ClInclude Include="StandardShader.h">
+      <Filter>소스 파일\Shader\StandardShader</Filter>
+    </ClInclude>
+    <ClInclude Include="SkinnedShader.h">
+      <Filter>소스 파일\Shader\SkinnedShader</Filter>
+    </ClInclude>
+    <ClInclude Include="TerrainShader.h">
+      <Filter>소스 파일\Shader\TerrainShader</Filter>
+    </ClInclude>
+    <ClInclude Include="SkyBoxShader.h">
+      <Filter>소스 파일\Shader\SkyBoxShader</Filter>
+    </ClInclude>
+    <ClInclude Include="OBBShader.h">
+      <Filter>소스 파일\Shader\OBBShader</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerStateDefs.h">
+      <Filter>소스 파일\Object\Player\PlayerStateMachine</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerStateMachine.h">
+      <Filter>소스 파일\Object\Player\PlayerStateMachine</Filter>
     </ClInclude>
     <ClInclude Include="AtkState.h">
       <Filter>소스 파일\FSM</Filter>
@@ -266,15 +330,21 @@
     <ClInclude Include="NetworkManager.h">
       <Filter>소스 파일\Network</Filter>
     </ClInclude>
-    <ClInclude Include="RandomUtil.h">
-      <Filter>소스 파일\Util</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Server\Global.h">
-      <Filter>소스 파일\Network</Filter>
+    <ClInclude Include="ConstructionSystem.h">
+      <Filter>소스 파일\Construction</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Light.hlsl" />
     <FxCompile Include="Shaders.hlsl" />
+    <FxCompile Include="Common.hlsl" />
+    <FxCompile Include="StandardShaders.hlsl" />
+    <FxCompile Include="SkinnedShaders.hlsl" />
+    <FxCompile Include="TerrainShaders.hlsl" />
+    <FxCompile Include="SkyboxShaders.hlsl" />
+    <FxCompile Include="OBBShader.hlsl" />
+    <FxCompile Include="InstancingShaders.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Light.hlsl" />
   </ItemGroup>
 </Project>

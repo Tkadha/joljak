@@ -4,8 +4,8 @@
 
 #define FIRST_PERSON_CAMERA			0x01
 #define SPACESHIP_CAMERA			0x02
-#define THIRD_PERSON_CAMERA			0x04
-#define TOP_VIEW_CAMERA 0x03
+#define THIRD_PERSON_CAMERA			0x03
+#define TOP_VIEW_CAMERA 0x04
 
 struct VS_CB_CAMERA_INFO
 {
@@ -101,6 +101,8 @@ public:
 	virtual void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f) { }
 	virtual void Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed) { }
 	virtual void SetLookAt(XMFLOAT3& xmf3LookAt) { }
+
+	ID3D12Resource* GetCameraConstantBuffer() const { return m_pd3dcbCamera; } // 버퍼 접근자 추가
 };
 
 class CSpaceShipCamera : public CCamera
