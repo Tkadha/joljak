@@ -80,6 +80,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	BuildDefaultLightsAndMaterials();
 
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
 	if (!pResourceManager) {
 		// 리소스 매니저가 없다면 로딩 불가! 오류 처리
 		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
@@ -98,7 +99,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 
-
 	int nPineObjects = 10;
 	for (int i = 0; i < nPineObjects; ++i) {
 		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
@@ -106,6 +106,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen, 2, 6, 2, 10);
 		gameObj->SetScale(w, h, w);
+		
 		m_vGameObjects.emplace_back(gameObj);
 	}
 	{
@@ -163,8 +164,12 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	m_ppHierarchicalGameObjects[0] = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(1, 1);
+	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackEnable(1, false);
+	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(2, 2);
+	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackEnable(2, false);
 	m_ppHierarchicalGameObjects[0]->Rotate(0.f, 180.f, 0.f);
-	m_ppHierarchicalGameObjects[0]->SetPosition(1000.f, m_pTerrain->GetHeight(1000.0f, 1500.0f), 1500.f);
+	m_ppHierarchicalGameObjects[0]->SetPosition(1000.f/2, m_pTerrain->GetHeight(1000.0f, 1500.0f)/2, 1500.f/2);
 	m_ppHierarchicalGameObjects[0]->SetScale(8.0f, 8.0f, 8.0f);
 	
 	tree_objects.emplace_back(0, m_ppHierarchicalGameObjects[0]->m_worldOBB.Center);
@@ -172,33 +177,43 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	
 	m_ppHierarchicalGameObjects[1] = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(1, 1);
+	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackEnable(1, false);
+	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(2, 2);
+	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackEnable(2, false);
+
 	m_ppHierarchicalGameObjects[1]->SetScale(8.0f, 8.0f, 8.0f);
 	m_ppHierarchicalGameObjects[1]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[1]->SetPosition(800.0f / 2, m_pTerrain->GetHeight(800.0f, 1400.0f) / 2, 1400.0f / 2);
+	m_ppHierarchicalGameObjects[1]->SetTerraindata(m_pTerrain);
 
 	m_ppHierarchicalGameObjects[2] = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
 	m_ppHierarchicalGameObjects[2]->SetScale(10.0f, 10.0f, 10.0f);
 	m_ppHierarchicalGameObjects[2]->Rotate(0.f, 0.f, 0.f);
 	m_ppHierarchicalGameObjects[2]->SetPosition(500.0f/2, m_pTerrain->GetHeight(500.0f, 800.0f)/2, 800.0f/2);
+	m_ppHierarchicalGameObjects[2]->SetTerraindata(m_pTerrain);
 
 	m_ppHierarchicalGameObjects[3] = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[3]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
 	m_ppHierarchicalGameObjects[3]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[3]->SetPosition(100.0f / 2, m_pTerrain->GetHeight(100.0f, 1400.0f) / 2, 1400.0f / 2);
 	m_ppHierarchicalGameObjects[3]->SetScale(10.0f, 10.0f, 10.0f);
+	m_ppHierarchicalGameObjects[3]->SetTerraindata(m_pTerrain);
 
 	m_ppHierarchicalGameObjects[4] = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[4]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 3);
 	m_ppHierarchicalGameObjects[4]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[4]->SetPosition(200.0f /2 , m_pTerrain->GetHeight(200.0f, 500.0f)/2, 500.0f / 2);
 	m_ppHierarchicalGameObjects[4]->SetScale(8.0f, 8.0f, 8.0f);
+	m_ppHierarchicalGameObjects[4]->SetTerraindata(m_pTerrain);
 
 	m_ppHierarchicalGameObjects[5] = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, 1, m_pGameFramework);
 	m_ppHierarchicalGameObjects[5]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_ppHierarchicalGameObjects[5]->Rotate(0.f, 180.f, 0.f);
 	m_ppHierarchicalGameObjects[5]->SetPosition(1000.f / 2, m_pTerrain->GetHeight(1000.0f, 1500.0f) / 2, 1500.f / 2);
 	m_ppHierarchicalGameObjects[5]->SetScale(8.0f, 8.0f, 8.0f);
+	m_ppHierarchicalGameObjects[5]->SetTerraindata(m_pTerrain);
 	if (pCowModel) delete pCowModel;
 	
 
@@ -224,10 +239,23 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 void CScene::ReleaseObjects()
 {
+	if (m_pd3dGraphicsRootSignature) m_pd3dGraphicsRootSignature->Release();
+
 	if (m_ppGameObjects)
 	{
 		for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Release();
 		delete[] m_ppGameObjects;
+	}
+
+	if (m_ppShaders)
+	{
+		for (int i = 0; i < m_nShaders; i++)
+		{
+			m_ppShaders[i]->ReleaseShaderVariables();
+			m_ppShaders[i]->ReleaseObjects();
+			m_ppShaders[i]->Release();
+		}
+		delete[] m_ppShaders;
 	}
 
 	if (m_pTerrain) delete m_pTerrain;
@@ -298,7 +326,6 @@ void CScene::ReleaseUploadBuffers()
 	if (m_pSkyBox) m_pSkyBox->ReleaseUploadBuffers();
 	if (m_pTerrain) m_pTerrain->ReleaseUploadBuffers();
 
-	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->ReleaseUploadBuffers();
 	for (int i = 0; i < m_nHierarchicalGameObjects; i++) m_ppHierarchicalGameObjects[i]->ReleaseUploadBuffers();
 }
 
@@ -329,8 +356,6 @@ void CScene::AnimateObjects(float fTimeElapsed)
 {
 	m_fElapsedTime = fTimeElapsed;
 
-	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Animate(fTimeElapsed);
-	
 	if (m_pLights)
 	{
 		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
@@ -370,6 +395,31 @@ void CScene::AnimateObjects(float fTimeElapsed)
 	//printf("%f %f %f\n", m_ppHierarchicalGameObjects[0]->m_xmf4x4World._41, m_ppHierarchicalGameObjects[0]->m_xmf4x4World._42, m_ppHierarchicalGameObjects[0]->m_xmf4x4World._43);
 	//printf("%f %f %f\n", m_ppHierarchicalGameObjects[0]->m_pChild->m_pChild->m_pChild->m_xmf4x4World._11, m_ppHierarchicalGameObjects[0]->m_pChild->m_pChild->m_pChild->m_xmf4x4World._12, m_ppHierarchicalGameObjects[0]->m_pChild->m_pChild->m_pChild->m_xmf4x4World._13);
 #endif // !1
+
+
+	//----------------------충돌체크------------------------------------
+
+	// Player <-> Object
+	//for (auto& obj : m_vGameObjects) {
+	//	if (CollisionCheck(m_pPlayer, obj)) {
+	//		if (!obj->isRender)	continue;
+	//		// 나무 충돌처리
+	//		if (obj->m_objectType == GameObjectType::Tree) {
+	//			//auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
+	//			//obj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+	//			//auto [w, h] = genRandom::generateRandomXZ(gen, 2, 6, 2, 10);
+	//			//obj->SetScale(w, h, w);
+	//			obj->isRender = false;
+	//		}
+
+	//		// 돌 충돌처리
+	//		if (obj->m_objectType == GameObjectType::Rock) {
+	//			printf("[Rock 충돌 확인])\n");
+	//			obj->isRender = false;
+	//		}
+
+	//	}
+	//}
 
 	if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[0])) {
 		printf("[충돌 확인])\n");
@@ -471,10 +521,10 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 				if (obj /*&& obj->ShouldRenderOBB()*/) {
 					// RenderOBB 내부에서는 OBB용 CBV만 바인딩
 					obj->RenderOBB(pd3dCommandList, pCamera);
-				}
+			pOBBShader->Release();
 			}
 			for (int i = 0; i < m_nHierarchicalGameObjects; ++i) {
-				if (m_ppHierarchicalGameObjects[i] /*&& ... */) {
+	*/
 					m_ppHierarchicalGameObjects[i]->RenderOBB(pd3dCommandList, pCamera);
 				}
 			}
@@ -487,6 +537,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			pOBBShader->Release();
 		}
 	}
+	*/
 
 
 }
@@ -522,3 +573,87 @@ ShaderManager* CScene::GetShaderManager() const {
 	return m_pGameFramework ? m_pGameFramework->GetShaderManager() : nullptr;
 }
 
+	for (auto obj : m_vGameObjects)
+	{
+		if (obj->isRender) obj->Render(pd3dCommandList, obbRender,pCamera);
+	}
+	for (int i = 0; i < 3; i++)
+	{
+		if (m_ppHierarchicalGameObjects[i] && m_ppHierarchicalGameObjects[i]->isRender == true)
+		{
+			m_ppHierarchicalGameObjects[i]->Animate(m_fElapsedTime);
+			if (!m_ppHierarchicalGameObjects[i]->m_pSkinnedAnimationController) m_ppHierarchicalGameObjects[i]->UpdateTransform(NULL);
+			m_ppHierarchicalGameObjects[i]->Render(pd3dCommandList, obbRender, pCamera);
+		}
+	}
+}
+
+
+bool CScene::CollisionCheck(CGameObject* a, CGameObject* b)
+{
+	if (!a || !b) {
+		return false;
+	}
+
+	// a 모든 OBB 수집
+	std::vector<DirectX::BoundingOrientedBox> obbListA;
+	CollectHierarchyObjects(a, obbListA);
+
+	//b 모든 OBB 수집
+	std::vector<DirectX::BoundingOrientedBox> obbListB;
+	CollectHierarchyObjects(b, obbListB);
+
+	// 충돌 검사
+	for (const auto& obbA : obbListA) { 
+		for (const auto& obbB : obbListB) {
+			if (obbA.Intersects(obbB)) {
+				return true; // 충돌 시 즉시 true 반환
+			}
+		}
+	}
+
+	// 충돌 없으면 false 반환
+	return false;
+
+}
+
+void CScene::CollectHierarchyObjects(CGameObject* obj, std::vector<BoundingOrientedBox>& obbList) {
+	if (!obj) {
+		return; // 재귀 탈출 조건
+	}
+
+	if(obj->m_pMesh)
+		obbList.push_back(obj->m_worldOBB);
+
+	// 재귀 호출
+	CGameObject* currentChild = obj->m_pChild;
+	while (currentChild) {
+		CollectHierarchyObjects(currentChild, obbList); // 자식 노드에 대해 
+		currentChild = currentChild->m_pSibling;        // 다음 형제 자식
+	}
+}
+
+
+void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
+	if (!pPlayer) return;
+
+	// Player <-> Object
+	for (auto& obj : m_vGameObjects) {
+		if (CollisionCheck(m_pPlayer, obj)) {
+			if (!obj->isRender)	continue;
+			// 나무 충돌처리
+			if (obj->m_objectType == GameObjectType::Tree) {
+				obj->isRender = false;
+				m_pGameFramework->AddItem("wood");
+			}
+
+			// 돌 충돌처리
+			if (obj->m_objectType == GameObjectType::Rock) {
+				printf("[Rock 충돌 확인])\n");
+				obj->isRender = false;
+				m_pGameFramework->AddItem("stone");
+			}
+
+		}
+	}
+}

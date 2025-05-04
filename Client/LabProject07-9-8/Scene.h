@@ -83,18 +83,29 @@ public:
 
 	// CGameFramework 접근자 
 	CGameFramework* GetGameFramework() const { return m_pGameFramework; }
+	bool CollisionCheck(CGameObject* a, CGameObject* b);
+	void CollectHierarchyObjects(CGameObject* node, std::vector<BoundingOrientedBox>& obbList);
+	
+	// 플레이어의 'F' 키 상호작용 요청을 처리하는 함수
+	void CheckPlayerInteraction(CPlayer* pPlayer);
+
+
+
+	CPlayer* GetPlayerInfo();
+	CPlayer								*m_pPlayer = NULL;
+	
 
 	CPlayer								*m_pPlayer = NULL;
 	
 public:
 	float								m_fElapsedTime = 0.0f;
 
-	int									m_nGameObjects = 0;
-	CGameObject							**m_ppGameObjects = NULL;
-	vector<CGameObject*>					m_vGameObjects{};
+	vector<CGameObject*>				m_vGameObjects{};
+	std::unordered_map<std::string, CGameObject*> m_mapBuildPrefabs;
 
-	int									m_nHierarchicalGameObjects = 0;
-	CGameObject							**m_ppHierarchicalGameObjects = NULL;
+
+	//int									m_nHierarchicalGameObjects = 0;
+	//CGameObject							**m_ppHierarchicalGameObjects = NULL;
 
 	XMFLOAT3							m_xmf3RotatePosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
@@ -117,7 +128,10 @@ public:
 
 	std::vector<tree_obj>				tree_objects;
 	Octree								octree{ XMFLOAT3 {0,0,0}, XMFLOAT3{10200,4000,10200} };
+	bool								checkTree = false;
+	bool								checkRock = false;
 
+	std::unordered_map<ULONGLONG, std::unique_ptr<UserObject>> PlayerList;	// 오브젝트 수정해야함
 
 	CGameFramework* m_pGameFramework;
 

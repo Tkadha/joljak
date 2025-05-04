@@ -45,6 +45,16 @@
     <Filter Include="소스 파일\Timer">
       <UniqueIdentifier>{cdde645c-aa52-4745-86ff-71fa21b3503c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\IMGUI">
+      <UniqueIdentifier>{135af955-6971-42b0-8853-ad3bcf43f3c9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\BackEnd">
+      <UniqueIdentifier>{25d1ca23-351c-464a-bcab-04ee6aacf332}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\ITEM">
+      <UniqueIdentifier>{0aa10127-1162-4757-9bda-d05014381c40}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\ResourceManager">
     <Filter Include="소스 파일\Manager">
       <UniqueIdentifier>{cdb652f0-b379-4c45-b0c5-d0573e157ef0}</UniqueIdentifier>
     </Filter>
@@ -99,7 +109,7 @@
     <ClCompile Include="FSMState.cpp">
       <Filter>소스 파일\FSM</Filter>
     </ClCompile>
-    <ClCompile Include="PigState.cpp">
+    <ClCompile Include="NonAtkState.cpp">
       <Filter>소스 파일\FSM</Filter>
     </ClCompile>
     <ClCompile Include="Player.cpp">
@@ -144,6 +154,30 @@
     <ClCompile Include="Timer.cpp">
       <Filter>소스 파일\Timer</Filter>
     </ClCompile>
+    <ClCompile Include="imgui.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_demo.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_draw.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_tables.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_widgets.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_dx12.cpp">
+      <Filter>소스 파일\BackEnd</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_win32.cpp">
+      <Filter>소스 파일\BackEnd</Filter>
+    </ClCompile>
+    <ClCompile Include="Item.cpp">
+      <Filter>소스 파일\ITEM</Filter>
+    </ClCompile>
     <ClCompile Include="ResourceManager.cpp">
       <Filter>소스 파일\Manager\ResourceManager</Filter>
     </ClCompile>
@@ -168,6 +202,15 @@
     <ClCompile Include="PlayerStateMachine.cpp">
       <Filter>소스 파일\Object\Player\PlayerStateMachine</Filter>
     </ClCompile>
+    <ClCompile Include="AtkState.cpp">
+      <Filter>소스 파일\FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkManager.cpp">
+      <Filter>소스 파일\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="ConstructionSystem.cpp">
+      <Filter>소스 파일\Construction</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FSMManager.h">
@@ -176,7 +219,7 @@
     <ClInclude Include="FSMState.h">
       <Filter>소스 파일\FSM</Filter>
     </ClInclude>
-    <ClInclude Include="PigState.h">
+    <ClInclude Include="NonAtkState.h">
       <Filter>소스 파일\FSM</Filter>
     </ClInclude>
     <ClInclude Include="Player.h">
@@ -230,6 +273,30 @@
     <ClInclude Include="stdafx.h">
       <Filter>소스 파일</Filter>
     </ClInclude>
+    <ClInclude Include="imgui.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_internal.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_rectpack.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_textedit.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_truetype.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_dx12.h">
+      <Filter>소스 파일\BackEnd</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_win32.h">
+      <Filter>소스 파일\BackEnd</Filter>
+    </ClInclude>
+    <ClInclude Include="Item.h">
+      <Filter>소스 파일\ITEM</Filter>
+    </ClInclude>
     <ClInclude Include="ResourceManager.h">
       <Filter>소스 파일\Manager\ResourceManager</Filter>
     </ClInclude>
@@ -256,6 +323,15 @@
     </ClInclude>
     <ClInclude Include="PlayerStateMachine.h">
       <Filter>소스 파일\Object\Player\PlayerStateMachine</Filter>
+    </ClInclude>
+    <ClInclude Include="AtkState.h">
+      <Filter>소스 파일\FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkManager.h">
+      <Filter>소스 파일\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="ConstructionSystem.h">
+      <Filter>소스 파일\Construction</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -9,15 +9,17 @@
 #include "../Global.h"
 using namespace std;
 
-#define PORT 9000
+#define PORT 8999
+#define GAME_PORT 9000
+#define DB_PORT 9001
 
-//-----------------------------------------------
+char gameserver_addr[] = "127.0.0.1";
+char dbserver_addr[] = "127.0.0.1";
+//------------------------------------
 // 
-//				game server
+//			Lobby Server
 // 
-//-----------------------------------------------
-
-
+//------------------------------------
 #define IOCPCOUNT 1
 
 Iocp iocp(IOCPCOUNT); // 본 예제는 스레드를 딱 하나만 쓴다. 따라서 여기도 1이 들어간다.
@@ -25,6 +27,37 @@ shared_ptr<Socket> g_l_socket; // listensocket
 shared_ptr<Socket> g_c_socket; // clientsocket
 shared_ptr<RemoteClient>remoteClientCandidate;
 vector<shared_ptr<thread>> worker_threads;
+
+shared_ptr<Socket> g_db_socket;
+
+char g_isDBConnected;
+
+void connectDBserver()
+{
+	try
+	{
+		g_db_socket = make_shared<Socket>(SocketType::Tcp);
+		g_db_socket->Connect(Endpoint(dbserver_addr, DB_PORT));
+		iocp.Add(*g_db_socket, g_db_socket.get());
+		g_db_socket->ReceiveOverlapped();
+
+		if (g_db_socket->ReceiveOverlapped() != 0
+			&& WSAGetLastError() != ERROR_IO_PENDING)
+		{
+			// 에러. 소켓을 정리하자. 그리고 그냥 버리자.
+			g_db_socket->Close();
+		}
+		else
+		{
+			// I/O를 걸었다. 완료를 대기하는 중 상태로 바꾸자.
+			g_db_socket->m_isReadOverlapped = true;
+		}
+	}
+	catch (Exception& e)
+	{
+		cout << "DB connect failed! " << e.what() << endl;
+	}
+}
 
 void ProcessClientLeave(shared_ptr<RemoteClient> remoteClient)
 {
@@ -36,6 +69,7 @@ void ProcessClientLeave(shared_ptr<RemoteClient> remoteClient)
 	cout << "Client left. There are " << RemoteClient::remoteClients.size() << " connections.\n";
 }
 void ProcessPacket(shared_ptr<RemoteClient>& client, char* packet);
+void DBProcessPacket(char* packet);
 void ProcessAccept();
 void worker_thread()
 {
@@ -43,7 +77,7 @@ void worker_thread()
 		while (1)
 		{
 			// I/O 완료 이벤트가 있을 때까지 기다립니다.
-			IocpEvents readEvents;
+			LobbyIocpEvents readEvents;
 			iocp.Wait(readEvents, 100);
 
 			// 받은 이벤트 각각을 처리합니다.
@@ -62,6 +96,47 @@ void worker_thread()
 				if (readEvent.lpCompletionKey == (ULONG_PTR)g_l_socket.get()) // 리슨소켓이면
 				{
 					ProcessAccept();
+				}
+				else if (readEvent.lpCompletionKey == (ULONG_PTR)g_db_socket.get()) // DB소켓이면
+				{
+					g_db_socket->m_isReadOverlapped = false;
+					int ec = readEvent.dwNumberOfBytesTransferred;
+
+					if (ec <= 0)
+					{
+						// 읽은 결과가 0 즉 TCP 연결이 끝났다...
+						// 혹은 음수 즉 뭔가 에러가 난 상태이다...
+						g_db_socket->Close();
+					}
+					else
+					{
+						char* recv_buf = g_db_socket->m_recv_over.send_buf;
+						int recv_buf_length = ec;
+
+						// 패킷 재조립
+						int remain_data = recv_buf_length + g_db_socket->m_prev_remain;
+						u_char packet_size = recv_buf[0];
+						while (remain_data > 0 && packet_size <= remain_data) {
+							DBProcessPacket(recv_buf);
+							recv_buf += packet_size;
+							remain_data -= packet_size;
+						}
+						g_db_socket->m_prev_remain = remain_data;
+						if (remain_data > 0)
+							memcpy(g_db_socket->m_recv_over.send_buf, recv_buf, remain_data);
+
+						// 다시 수신을 받으려면 overlapped I/O를 걸어야 한다.
+						if (g_db_socket->ReceiveOverlapped() != 0
+							&& WSAGetLastError() != ERROR_IO_PENDING)
+						{
+							g_db_socket->Close();
+						}
+						else
+						{
+							// I/O를 걸었다. 완료를 대기하는 중 상태로 바꾸자.
+							g_db_socket->m_isReadOverlapped = true;
+						}
+					}
 				}
 				else  // TCP 연결 소켓이면
 				{
@@ -121,20 +196,22 @@ void worker_thread()
 	}
 }
 
-
-
 int main(int argc, char* argv[])
 {
-	SetConsoleTitle(L"GameServer");
+	SetConsoleTitle(L"LobbyServer");
 	try
 	{
 		g_l_socket = make_shared<Socket>(SocketType::Tcp);
 		g_l_socket->Bind(Endpoint("0.0.0.0", PORT));
 		g_l_socket->Listen();
 
-
 		iocp.Add(*g_l_socket, g_l_socket.get());
 
+		std::cout<<"DB server connect? (y/n) : ";
+		std::cin >> g_isDBConnected;
+
+		if (g_isDBConnected == 'y' || g_isDBConnected == 'Y') connectDBserver(); // DB서버와 연결한다. (연결이 안되면 그냥 넘어간다.)
+		
 		remoteClientCandidate = make_shared<RemoteClient>(SocketType::Tcp);
 
 		string errorText;
@@ -148,6 +225,8 @@ int main(int argc, char* argv[])
 			worker_threads.emplace_back(make_shared<thread>(worker_thread));
 
 		for (auto& th : worker_threads) th->join();
+
+		g_l_socket->Close();
 
 	}
 	catch (Exception& e)
@@ -163,14 +242,12 @@ void ProcessPacket(shared_ptr<RemoteClient>& client, char* packet)
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
-	case E_PACKET::E_P_CHAT:
+	case E_PACKET::E_P_INGAME:
 	{
-		CHAT_PACKET* r_packet = reinterpret_cast<CHAT_PACKET*>(packet);
-		cout << client->m_id << " " << r_packet->chat << endl;
-		CHAT_PACKET s_packet;
-		s_packet.size = sizeof(CHAT_PACKET);
-		s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_CHAT);
-		strcpy(s_packet.chat, r_packet->chat);
+		INGAME_PACKET* r_packet = reinterpret_cast<INGAME_PACKET*>(packet);
+		CHANGEPORT_PACKET s_packet;
+		s_packet.port = GAME_PORT;
+		strcpy(s_packet.addr, gameserver_addr);
 		for (auto cl : RemoteClient::remoteClients) {
 			if (cl.second != client) cl.second->tcpConnection.m_isReadOverlapped = false;
 			cout << "Send: " << client->m_id << " to " << cl.second->m_id << endl;
@@ -179,6 +256,57 @@ void ProcessPacket(shared_ptr<RemoteClient>& client, char* packet)
 		}
 		break;
 	}
+	case E_PACKET::E_DB_LOGIN:
+	{
+		DB_LOGIN_PACKET* r_packet = (DB_LOGIN_PACKET*)packet;
+		if (g_isDBConnected) {
+			r_packet->uid = client->m_id;
+			cout << "DB_LOGIN_PACKET: " << r_packet->id << " " << r_packet->pw << endl;
+			cout << "u_id: " << r_packet->uid << endl;
+			g_db_socket->SendOverlapped(reinterpret_cast<char*>(r_packet));
+		}
+		break;
+	}
+	case E_PACKET::E_DB_REGISTER:
+	{
+		DB_REGISTER_PACKET* r_packet = (DB_REGISTER_PACKET*)packet;
+		if (g_isDBConnected) {
+			r_packet->uid = client->m_id;
+			cout << "DB_REGISTER_PACKET: " << r_packet->id << " " << r_packet->pw << endl;
+			cout << "u_id: " << r_packet->uid << endl;
+			g_db_socket->SendOverlapped(reinterpret_cast<char*>(r_packet));
+		}
+		break;
+	}
+	case E_PACKET::E_DB_SUCCESS_FAIL:
+	{
+		DB_SUCCESS_FAIL_PACKET* r_packet = (DB_SUCCESS_FAIL_PACKET*)packet;
+		for (auto cl : RemoteClient::remoteClients)
+		{
+			if (cl.second->m_id != r_packet->uid) continue;
+			cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(r_packet));
+		}
+	}
+		break;
+	default:
+		break;
+	}
+}
+void DBProcessPacket(char* packet)
+{
+	E_PACKET type = static_cast<E_PACKET>(packet[1]);
+	switch (type)
+	{
+	case E_PACKET::E_DB_SUCCESS_FAIL:
+	{
+		DB_SUCCESS_FAIL_PACKET* r_packet = (DB_SUCCESS_FAIL_PACKET*)packet;
+		for (auto cl : RemoteClient::remoteClients)
+		{
+			if (cl.second->m_id != r_packet->uid) continue;
+			cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(r_packet));
+		}
+	}
+	break;
 	default:
 		break;
 	}

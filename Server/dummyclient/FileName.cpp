@@ -2,8 +2,8 @@
 
 #include <iostream>
 #include <string>
-#include <WS2tcpip.h>
 #include <conio.h> // for _kbhit() and _getch()
+#include <WS2tcpip.h>
 #pragma comment (lib, "WS2_32.LIB")
 #include "../Global.h"
 #include "../ServerLib/ServerHeader.h"
@@ -42,13 +42,33 @@ void Process_Packet(char* packet)
 		CHAT_PACKET* recv_p = reinterpret_cast<CHAT_PACKET*>(packet);
 		cout << "Received: " << recv_p->chat << endl;
 	}
-		break;
+						   break;
 	case E_PACKET::E_P_CHANGEPORT: {
 		CHANGEPORT_PACKET* recv_p = reinterpret_cast<CHANGEPORT_PACKET*>(packet);
 		cout << "Changing server to " << recv_p->addr << ":" << recv_p->port << endl;
 		ReconnectToNewServer(recv_p->addr, recv_p->port);
 		if (recv_p->port = 9000) s_type = SERVER_TYPE::E_GAME;
 		else s_type = SERVER_TYPE::E_LOBBY;
+	}
+								 break;
+	case E_PACKET::E_DB_SUCCESS_FAIL: {
+		DB_SUCCESS_FAIL_PACKET* recv_p = reinterpret_cast<DB_SUCCESS_FAIL_PACKET*>(packet);
+		if (static_cast<E_PACKET>(recv_p->kind) == E_PACKET::E_DB_REGISTER) {
+			if (recv_p->result == 1) {
+				cout << "Register Success" << endl;
+			}
+			else {
+				cout << "Register Fail" << endl;
+			}
+		}
+		else if (static_cast<E_PACKET>(recv_p->kind) == E_PACKET::E_DB_LOGIN) {
+			if (recv_p->result == 1) {
+				cout << "Login Success" << endl;
+			}
+			else {
+				cout << "Login Fail" << endl;
+			}
+		}
 	}
 		break;
 	}
@@ -77,6 +97,27 @@ void send_message()
 		WSASend(server_s->m_fd, &send_over->wsabuf, 1, nullptr, 0, &send_over->over, send_callback);
 	}
 }
+void send_login()
+{
+	if (s_type == SERVER_TYPE::E_GAME)
+		return;
+
+	std::cout << "Enter id: ";
+	string id;
+	cin >> id;
+	std::cout << "Enter password: ";
+	string pw;
+	cin >> pw;
+
+	DB_LOGIN_PACKET p;
+	strcpy(p.id, id.c_str());
+	strcpy(p.pw, pw.c_str());
+	p.size = sizeof(DB_LOGIN_PACKET);
+	p.type = static_cast<char>(E_PACKET::E_DB_LOGIN);
+	OVER_EXP* send_over = new OVER_EXP(reinterpret_cast<char*>(&p), p.size);
+	WSASend(server_s->m_fd, &send_over->wsabuf, 1, nullptr, 0, &send_over->over, send_callback);
+}
+
 
 void CALLBACK recv_callback(DWORD err, DWORD recv_size,
 	LPWSAOVERLAPPED recv_over, DWORD sendflag)
@@ -149,6 +190,12 @@ int main()
 			char ch = _getch();
 			if (ch == 'k' || ch == 'K') {
 				send_message();
+			}
+			else if (ch == 't' || ch == 'T') {
+				send_login();
+			}
+			else if (ch == 'q' || ch == 'Q') {
+				bshutdown = true;
 			}
 		}
 		SleepEx(0, TRUE); // 비동기 작업 수행

@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "Player.h"
 #include "Shader.h"
+#include "Scene.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CPlayer
@@ -66,8 +67,9 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
 		if (dwDirection & DIR_LEFT) xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Right, -fDistance);
 		if (dwDirection & DIR_UP) xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Up, fDistance);
 		if (dwDirection & DIR_DOWN) xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Up, -fDistance);
-
-		
+		if (Playerstamina > 0) {
+			Playerstamina -= 2;
+		}
 		Move(xmf3Shift, bUpdateVelocity);
 		if (checkmove == true) {
 			checkmove = false;
@@ -144,6 +146,12 @@ void CPlayer::Rotate(float x, float y, float z)
 			if (m_fRoll < -20.0f) { z -= (m_fRoll + 20.0f); m_fRoll = -20.0f; }
 		}
 		m_pCamera->Rotate(x, y, z);
+		if (y != 0.0f)
+		{
+			XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3Up), XMConvertToRadians(y));
+			m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
+			m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
+		}
 	}
 	else if (nCurrentCameraMode == SPACESHIP_CAMERA)
 	{
@@ -204,6 +212,9 @@ void CPlayer::Update(float fTimeElapsed)
 	float fDeceleration = (m_fFriction * fTimeElapsed);
 	if (fDeceleration > fLength) fDeceleration = fLength;
 	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Velocity, -fDeceleration, true));
+	if (Playerstamina < Maxstamina) {
+		Playerstamina += 1;
+	}
 }
 
 CCamera *CPlayer::OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode)
@@ -396,10 +407,10 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pStateMachine = new PlayerStateMachine(this, m_pSkinnedAnimationController);
 
 	CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)pContext;
-	SetPosition(XMFLOAT3(800.0f, pTerrain->GetHeight(800.0f, 800.0f), 800.0f));
+	SetPosition(XMFLOAT3(1500.0f, pTerrain->GetHeight(1500.0f, 1500.0f), 1500.0f));
 	SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
 
-	m_pCamera->Move(XMFLOAT3(310.0f, pTerrain->GetHeight(310.0f, 590.0f) + 20.0f, 590.0f));
+	m_pCamera->Move(XMFLOAT3(1500.0f, pTerrain->GetHeight(1500.0f, 1500.0f) + 20.0f, 1500.0f));
 	if (pAngrybotModel) delete pAngrybotModel;
 }
 
@@ -413,14 +424,14 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 	if (nCurrentCameraMode == nNewCameraMode) return(m_pCamera);
 	switch (nNewCameraMode)
 	{
-		case FIRST_PERSON_CAMERA:  // 자유 시점 카메라
+		case FIRST_PERSON_CAMERA:  // ���� ���� ī�޶�
 			SetFriction(250.0f);
 			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
 			SetMaxVelocityXZ(300.0f);
 			SetMaxVelocityY(400.0f);
 			m_pCamera = OnChangeCamera(FIRST_PERSON_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.0f);
-			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, 0.0f));  // 플레이어 머리 높이
+			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, 0.0f));  // �÷��̾� �Ӹ� ����
 			m_pCamera->GenerateProjectionMatrix(1.01f, 5000.0f, ASPECT_RATIO, 60.0f);
 			m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
@@ -449,14 +460,14 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 			m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
 			break;
-		case TOP_VIEW_CAMERA:  // 탑뷰 카메라
+		case TOP_VIEW_CAMERA:  // ž�� ī�޶�
 			SetFriction(250.0f);
-			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));  // 중력 없음
+			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));  // �߷� ����
 			SetMaxVelocityXZ(300.0f);
 			SetMaxVelocityY(400.0f);
 			m_pCamera = OnChangeCamera(TOP_VIEW_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.0f);
-			m_pCamera->SetOffset(XMFLOAT3(0.0f, 100.0f, 0.0f));  // 플레이어 위 100 유닛
+			m_pCamera->SetOffset(XMFLOAT3(0.0f, 100.0f, 0.0f));  // �÷��̾� �� 100 ����
 			m_pCamera->GenerateProjectionMatrix(1.01f, 5000.0f, ASPECT_RATIO, 60.0f);
 			m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
@@ -616,21 +627,50 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 	}
 }
 
-void CTerrainPlayer::keyInput(UCHAR* key)
-{
-	m_pSkinnedAnimationController->SetTrackEnable(nAni, false);
-	if (key['F'] & 0xF0) {
-		nAni = 5;
-		bAction = true;
+void CTerrainPlayer::keyInput(UCHAR* key) {
+	// --- 애니메이션 로직 (기존 로직을 바탕으로 약간 수정) ---
+	bool fKeyPressed = (key['F'] & 0xF0);
+	bool spacePressed = (key[VK_SPACE] & 0xF0);
+	bool actionTriggered = false; // 이번 프레임에 액션이 시작되었는지 여부
+
+	if (fKeyPressed) {
+		if (nAni != 5) { // F 액션이 이미 실행 중이 아니라면
+			m_pSkinnedAnimationController->SetTrackEnable(nAni, false); // 이전 애니메이션 트랙 비활성화
+			nAni = 5; // F 액션 애니메이션 인덱스
+			bAction = true;
+			m_pSkinnedAnimationController->SetTrackEnable(nAni, true); // F 액션 트랙 활성화
+			actionTriggered = true;
+
+			PerformActionInteractionCheck();
+		}
 	}
-	if (key[VK_SPACE] & 0xF0) {
-		nAni = 6;
-		bAction = true;
+	else if (spacePressed) {
+		if (nAni != 6) { // 점프 액션이 이미 실행 중이 아니라면
+			m_pSkinnedAnimationController->SetTrackEnable(nAni, false);
+			nAni = 6; // 점프 애니메이션 인덱스
+			bAction = true;
+			m_pSkinnedAnimationController->SetTrackEnable(nAni, true);
+			actionTriggered = true;
+			// 점프 관련 로직 (물리 적용 등) 추가 가능
+		}
 	}
-	else if (!(key[VK_SPACE] & 0xF0) && !(key['F'] & 0xF0)) {
-		bAction = false;
+	else {
+		// F키나 스페이스바가 눌리지 않았을 때
+		if (bAction) { // 이전에 액션(F 또는 점프) 중이었다면
+			bAction = false; // 액션 상태 해제
+		}
 	}
-	m_pSkinnedAnimationController->SetTrackEnable(nAni, true);
+
+}
+
+// 'F' 키 액션 시 호출될 충돌/상호작용 검사 함수
+void CPlayer::PerformActionInteractionCheck() {
+	if (!m_pScene) {
+		return;
+	}
+
+	m_pScene->CheckPlayerInteraction(this);
+
 }
 
 

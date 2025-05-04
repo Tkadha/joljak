@@ -39,7 +39,7 @@ struct tree_obj {
 class Octree {
 public:
     XMFLOAT3 minBound, maxBound; // 현재 노드의 경계
-    std::vector<tree_obj*> objects; // 현재 노드에 포함된 객체들
+    std::vector<std::unique_ptr<tree_obj>> objects; // 현재 노드에 포함된 객체들
     Octree* children[8] = { nullptr }; // 8개의 하위 노드
     int maxObjects = 6; // 노드가 분할되기 전 허용되는 최대 객체 수
     int maxDepth = 5;   // 최대 분할 깊이
@@ -48,13 +48,12 @@ public:
         : minBound(min), maxBound(max), depth(depth) {
         maxObjects = 6 * (depth + 1);
         objects.reserve(maxObjects);
-        std::fill(std::begin(children), std::end(children), nullptr);
     }
     ~Octree();
 
-    void insert(tree_obj* obj);
-    void remove(tree_obj* obj);
-    void update(tree_obj* obj, const XMFLOAT3& newpos);
+    void insert(std::unique_ptr<tree_obj> obj);
+    bool remove(char id);
+    void update(char id, const XMFLOAT3& newpos);
     // 특정 범위 내 객체 검색
     void query(const tree_obj& obj, const XMFLOAT3& distance, std::vector<tree_obj*>& results);
 

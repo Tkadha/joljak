@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="lobby_server.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.cpp">

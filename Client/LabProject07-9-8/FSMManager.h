@@ -28,6 +28,6 @@ public:
 		Currentstate->Enter(Owner);
 	}
 
-	std::shared_ptr<FSMState<entity_type>> CurrentState()  const { return Currentstate; }
+	std::shared_ptr<FSMState<entity_type>> GetCurrentState()  const { return Currentstate; }
 };
 

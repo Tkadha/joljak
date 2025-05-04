@@ -9,7 +9,9 @@
 
 #include "Object.h"
 #include "Camera.h"
+#include <chrono>
 #include "PlayerStateMachine.h" 
+
 
 class CPlayer : public CGameObject
 {
@@ -40,6 +42,7 @@ protected:
 
 	CCamera						*m_pCamera = NULL;
 
+
 public:
 	PlayerStateMachine* m_pStateMachine = nullptr;
 
@@ -47,7 +50,20 @@ public:
 	CPlayer(CGameFramework* pGameFramework);
 	virtual ~CPlayer();
 	bool					    checkmove = false;
+	float PlayerHunger = 1.0f;
+	float PlayerThirst = 1.0f;
+	int PlayerLevel = 1;
+	int Playerhp = 300;
+	int Maxhp = 300;
+	int Playerstamina = 150;
+	int Maxstamina = 150;
+	int StatPoint = 5;
+	int PlayerAttack = 10;
+	int PlayerSpeed = 10;
+	bool invincibility = false;
+	std::chrono::time_point<std::chrono::system_clock> starttime; // 무적 시작시간
 
+	
 	XMFLOAT3 GetPosition() { return(m_xmf3Position); }
 	XMFLOAT3 GetLookVector() { return(m_xmf3Look); }
 	XMFLOAT3 GetUpVector() { return(m_xmf3Up); }
@@ -106,6 +122,17 @@ public:
 	CGameObject* FindFrame(char* framename);
 
 
+	void PerformActionInteractionCheck();
+
+	void SetInvincibility() {
+		if (invincibility) invincibility = false;
+		else {
+			invincibility = true;
+			starttime = std::chrono::system_clock::now();
+		}
+	}
+	void DecreaseHp(int value) { Playerhp -= value; }
+
 	const PlayerInputData& GetStateMachineInput() const;
 };
 
@@ -156,5 +183,7 @@ public:
 	int nAni{};
 	BOOL bAction = false;
 	void keyInput(UCHAR* key);
+
+	
 };
 

@@ -22,7 +22,7 @@
 class CShader;
 class CStandardShader;
 class COBBShader;
-
+class CScene;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 #define RESOURCE_TEXTURE2D			0x01
@@ -31,6 +31,28 @@ class COBBShader;
 #define RESOURCE_TEXTURE_CUBE		0x04
 #define RESOURCE_BUFFER				0x05
 
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+enum class GameObjectType : int {
+	Unknown,
+	Rock,
+	Tree,
+	Cliff,
+	Cow,
+	Pig,
+	Player,
+	Terrain,
+	Toad,
+	Wasp,
+	Wolf,
+	Bat,
+	Snake,
+	Turtle,
+	Snail,
+	Spider
+
+};
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -70,9 +92,9 @@ public:
 	ID3D12Resource* m_pOBBIndexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW m_OBBVertexBufferView;
 	D3D12_INDEX_BUFFER_VIEW m_OBBIndexBufferView;
-	// OBB ∫Ø»Ø «‡∑ƒøÎ ªÛºˆ πˆ∆€
+	// OBB Î≥ÄÌôò ÌñâÎ†¨Ïö© ÏÉÅÏàò Î≤ÑÌçº
 	ID3D12Resource* m_pd3dcbOBBTransform = nullptr;
-	XMFLOAT4X4* m_pcbMappedOBBTransform = nullptr; // ∏ «Œµ» ∆˜¿Œ≈Õ
+	XMFLOAT4X4* m_pcbMappedOBBTransform = nullptr; // ÎßµÌïëÎêú Ìè¨Ïù∏ÌÑ∞
 
 	CMaterial* m_OBBMaterial = NULL;
 	//COBBShader m_OBBShader;
@@ -86,14 +108,18 @@ public:
 
 	CAnimationController*			m_pSkinnedAnimationController = NULL;
 
-	FSMManager<CGameObject>*		FSM_manager = NULL;
+	std::shared_ptr<FSMManager<CGameObject>> FSM_manager = NULL;
+	LPVOID									terraindata = NULL;
 
 	CGameFramework* m_pGameFramework;
 
-	// πŸ≤Ô ±∏¡∂ø°º≠ ∞Ë√˛ ±∏¡∂ √≥∏Æ∏¶ ¿ß«ÿ « ø‰
+	// Î∞îÎÄê Íµ¨Ï°∞ÏóêÏÑú Í≥ÑÏ∏µ Íµ¨Ï°∞ Ï≤òÎ¶¨Î•º ÏúÑÌï¥ ÌïÑÏöî
 	CAnimationController* m_pSharedAnimController = nullptr;
 	void PropagateAnimController(CAnimationController* controller); 
 
+
+	CScene* m_pScene = nullptr; // ÏûêÏã†ÏùÑ ÏÜåÏú†Ìïú Scene Ìè¨Ïù∏ÌÑ∞
+	GameObjectType m_objectType = GameObjectType::Unknown;
 
 	virtual void FSMUpdate() {}
 
@@ -129,6 +155,10 @@ public:
 	XMFLOAT3 GetLook();
 	XMFLOAT3 GetUp();
 	XMFLOAT3 GetRight();
+	void SetLook(XMFLOAT3 xmf3Look);
+	void SetUp(XMFLOAT3 xmf3Up);
+	void SetRight(XMFLOAT3 xmf3Right);
+
 
 	XMFLOAT3 GetToParentPosition();
 	void Move(XMFLOAT3 xmf3Offset);
@@ -160,18 +190,21 @@ public:
 	void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList);
 	void InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
-	// --- ¿Á¡˙ ¡¢±Ÿ¿⁄ √ﬂ∞° ---
+	// --- Ïû¨Ïßà Ï†ëÍ∑ºÏûê Ï∂îÍ∞Ä ---
 	CMaterial* GetMaterial(int nIndex = 0) const {
-		// ¿Œµ¶Ω∫ π¸¿ß π◊ ∆˜¿Œ≈Õ ¿Ø»øº∫ ∞ÀªÁ
+		// Ïù∏Îç±Ïä§ Î≤îÏúÑ Î∞è Ìè¨Ïù∏ÌÑ∞ Ïú†Ìö®ÏÑ± Í≤ÄÏÇ¨
 		if (nIndex >= 0 && nIndex < m_nMaterials && m_ppMaterials) {
 			return m_ppMaterials[nIndex];
 		}
-		return nullptr; // ¿Ø»ø«œ¡ˆ æ ¿∏∏È nullptr π›»Ø
+		return nullptr; // Ïú†Ìö®ÌïòÏßÄ ÏïäÏúºÎ©¥ nullptr Î∞òÌôò
 	}
 	int GetMaterialCount() const { return m_nMaterials; }
 
-	// --- OBB ∑ª¥ı∏µ «‘ºˆ º±æ ---
+	// --- OBB Î†åÎçîÎßÅ Ìï®Ïàò ÏÑ†Ïñ∏ ---
 	virtual void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+	void SetTerraindata(LPVOID pContext) {terraindata = pContext;}
+	void SetOwningScene(CScene* pScene) { m_pScene = pScene; };
 
 public:
 	void FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnSkinnedMesh);
@@ -237,23 +270,12 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL) override;
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-class CAngrybotAnimationController : public CAnimationController
-{
-public:
-	CAngrybotAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, CLoadedModelInfo* pModel);
-	~CAngrybotAnimationController();
-
-	virtual void OnRootMotion(CGameObject* pRootGameObject);
-};
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
 
 class CMonsterObject : public CGameObject
 {
-	
-
+	int _level = 0;
+	int _hp = 20;
+	int _atk = 3;
 public:
 	CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CLoadedModelInfo* pModel, int nAnimationTracks, CGameFramework* pGameFramework);
 	virtual ~CMonsterObject();
@@ -266,6 +288,18 @@ public:
 	{
 		FSM_manager->ChangeState(newstate);
 	}
+	void Sethp(int hp) { _hp = hp; }
+	void Decreasehp(int num) { _hp -= num; }
+	int Gethp() { return _hp; }
+	int GetAtk() { return _atk; }
+};
+
+class UserObject : public CGameObject
+{
+public:
+	UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks, ResourceManager* pResourceManager);
+	virtual ~UserObject();
+	
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -280,14 +314,6 @@ public:
 	virtual void HandleCallback(void* pCallbackData, float fTrackPosition);
 };
 
-class CEthanAnimationController : public CAnimationController
-{
-public:
-	CEthanAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, CLoadedModelInfo* pModel);
-	~CEthanAnimationController();
-
-	virtual void OnRootMotion(CGameObject* pRootGameObject);
-};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

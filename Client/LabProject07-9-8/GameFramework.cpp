@@ -3,12 +3,88 @@
 //-----------------------------------------------------------------------------
 
 #include "stdafx.h"
+#include <thread>
 #include "GameFramework.h"
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+#include "imgui_impl_dx12.h"
+#include "NetworkManager.h"
 #include "PlayerStateDefs.h"
 #include "Player.h"
 
 
+void CGameFramework::NerworkThread()
+{
+	auto& nwManager = NetworkManager::GetInstance();
+	nwManager.do_recv();
+	while (true)
+	{
 
+		while (!nwManager.send_queue.empty())
+		{
+			auto packet = nwManager.PopSendQueue();
+
+			nwManager.do_send(packet.first.get(), packet.second);
+			SleepEx(1, TRUE);
+		}
+
+		while (!nwManager.recv_queue.empty())
+		{
+			auto packet = nwManager.PopRecvQueue();
+			ProcessPacket(packet.first.get());
+
+		}
+		SleepEx(100, TRUE);
+	}
+}
+void CGameFramework::ProcessPacket(char* packet)
+{
+	E_PACKET type = static_cast<E_PACKET>(packet[1]);
+	switch (type)
+	{
+	case E_PACKET::E_P_POSITION:
+	{
+		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
+		if (recv_p->uid == _MyID) {
+			m_pPlayer->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z});
+		}
+		else if (m_pScene->PlayerList.find(recv_p->uid) != m_pScene->PlayerList.end()) {
+			m_pScene->PlayerList[recv_p->uid]->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z });
+		}
+	}
+	break;
+	case E_PACKET::E_P_ROTATE:
+	{
+		ROTATE_PACKET* recv_p = reinterpret_cast<ROTATE_PACKET*>(packet);
+		if (recv_p->uid != _MyID) {
+			m_pScene->PlayerList[recv_p->uid]->SetLook(XMFLOAT3{ recv_p->look.x, recv_p->look.y, recv_p->look.z });
+			m_pScene->PlayerList[recv_p->uid]->SetUp(XMFLOAT3{ recv_p->up.x, recv_p->up.y, recv_p->up.z });
+			m_pScene->PlayerList[recv_p->uid]->SetRight(XMFLOAT3{ recv_p->right.x, recv_p->right.y, recv_p->right.z });
+			m_pScene->PlayerList[recv_p->uid]->SetScale(10.f, 10.f, 10.f);
+		}
+	}
+	break;
+	case E_PACKET::E_P_LOGIN:
+	{
+		LOGIN_PACKET* recv_p = reinterpret_cast<LOGIN_PACKET*>(packet);
+		if (_MyID == -1) _MyID = recv_p->uid;
+		else if (m_pScene->PlayerList.find(recv_p->uid) == m_pScene->PlayerList.end()) {
+			
+			m_logQueue.push(log_inout{ E_PACKET::E_P_LOGIN ,recv_p->uid });
+		}
+	}
+	break;
+
+	case E_PACKET::E_P_LOGOUT:
+	{
+		LOGOUT_PACKET* recv_p = reinterpret_cast<LOGOUT_PACKET*>(packet);
+		m_logQueue.push(log_inout{ E_PACKET::E_P_LOGOUT ,recv_p->uid });
+	}
+	break;
+	default:
+		break;
+	}
+}
 CGameFramework::CGameFramework()
 {
 	m_pdxgiFactory = NULL;
@@ -34,18 +110,22 @@ CGameFramework::CGameFramework()
 
 	m_pScene = NULL;
 	m_pPlayer = NULL;
-
+	m_inventorySlots.resize(25);
+	_MyID = -1;
 	_tcscpy_s(m_pszFrameRate, _T("LabProject ("));
 }
 
 CGameFramework::~CGameFramework()
 {
+	
 }
 
 bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 {
 	m_hInstance = hInstance;
 	m_hWnd = hMainWnd;
+	m_nIconCount = 0;
+	
 
 	CreateDirect3DDevice();
 	CreateCommandQueueAndList();
@@ -56,7 +136,38 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
+	m_pConstructionSystem = new CConstructionSystem();
+	m_pConstructionSystem->Init(m_pd3dDevice, m_pd3dCommandList, m_pRootSignature, m_pResourceManager.get());
+
 	BuildObjects();
+	
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	io.Fonts->AddFontFromFileTTF("Paperlogy-4Regular.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesKorean());
+	io.Fonts->Build();
+	ImGui::StyleColorsDark();
+
+	CreateCbvSrvDescriptorHeap();
+	CreateIconDescriptorHeap();
+	ImGui_ImplWin32_Init(m_hWnd);
+	ImGui_ImplDX12_Init(
+		m_pd3dDevice,
+		m_nSwapChainBuffers,
+		DXGI_FORMAT_R8G8B8A8_UNORM,
+		m_pd3dSrvDescriptorHeapForImGui,
+		m_pd3dSrvDescriptorHeapForImGui->GetCPUDescriptorHandleForHeapStart(),
+		m_pd3dSrvDescriptorHeapForImGui->GetGPUDescriptorHandleForHeapStart()
+	);
+	InitializeCraftItems();
+	ItemManager::Initialize();
+	InitializeItemIcons();
+
+	auto& nwManager = NetworkManager::GetInstance();
+	nwManager.Init();
+	std::thread t(&CGameFramework::NerworkThread, this);
+	t.detach();
 
 	return(true);
 }
@@ -350,6 +461,26 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					break;
 			}
 			break;
+		case WM_KEYDOWN:
+			switch (wParam)
+			{
+			case VK_TAB:
+				ShowInventory = !ShowInventory;
+				break;
+			case 'I':
+				AddItem("pork");
+				break;
+			case 'O':
+				ShowCraftingUI = !ShowCraftingUI;
+				break;
+			case 'B':
+				BuildMode = !BuildMode;
+				break;
+			case 'K':
+				ShowFurnaceUI = !ShowFurnaceUI;
+				break;
+			}
+			break;
 		default:
 			break;
 	}
@@ -357,6 +488,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 
 LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
+	if (ImGui_ImplWin32_WndProcHandler(hWnd, nMessageID, wParam, lParam)) return true;
 	switch (nMessageID)
 	{
 		case WM_ACTIVATE:
@@ -384,6 +516,180 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 	return(0);
 }
 
+std::shared_ptr<Item> CGameFramework::CreateDummyItem()
+{
+	return std::make_shared<Item>(g_itemIDCounter++, "더미아이템");
+}
+
+void CGameFramework::AddDummyItem()
+{
+	if (m_inventorySlots.size() >= 5) // 인벤토리 5칸 이상이면
+	{
+		if (m_inventorySlots[0].IsEmpty())
+		{
+			auto tempItem = ItemManager::GetItemByName("wood");
+			if (tempItem)
+			{
+				m_inventorySlots[0].item = tempItem;
+				m_inventorySlots[0].quantity = 5;
+			}
+		}
+
+		if (m_inventorySlots[1].IsEmpty())
+		{
+			auto tempItem2 = ItemManager::GetItemByName("stone");
+			if (tempItem2)
+			{
+				m_inventorySlots[1].item = tempItem2;
+				m_inventorySlots[1].quantity = 3;
+			}
+		}
+	}
+}
+
+void CGameFramework::AddItem(const std::string& name)
+{
+	auto newItem = ItemManager::GetItemByName(name);
+	if (!newItem) return;
+
+	// 1. 이미 존재하는 아이템이면 수량 증가
+	for (auto& slot : m_inventorySlots) {
+		if (!slot.IsEmpty() && slot.item->GetName() == name) {
+			slot.quantity += 3;
+			return;
+		}
+	}
+
+	// 2. 빈 슬롯이 있으면 새로운 아이템 추가
+	for (auto& slot : m_inventorySlots) {
+		if (slot.IsEmpty()) {
+			slot.item = newItem;
+			slot.quantity = 3;
+			return;
+		}
+	}
+
+	// 3. 인벤토리가 가득 찼을 경우
+	OutputDebugStringA("인벤토리가 가득 찼습니다.\n");
+}
+
+
+ImTextureID CGameFramework::LoadIconTexture(const std::wstring& filename)
+{
+	ID3D12Resource* pTexture = nullptr;
+	std::unique_ptr<uint8_t[]> decodedData;
+	D3D12_SUBRESOURCE_DATA subresourceData = {};
+
+	HRESULT hr = LoadWICTextureFromFile(
+		m_pd3dDevice,
+		filename.c_str(),
+		&pTexture,
+		decodedData,
+		subresourceData
+	);
+
+	if (FAILED(hr))
+	{
+		MessageBox(NULL, L"LoadWICTextureFromFile 실패!", L"Error", MB_OK);
+		return (ImTextureID)nullptr;
+	}
+
+	// ⭐⭐ CommandList Reset ⭐⭐
+	m_pd3dCommandAllocator->Reset();
+	m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
+
+	// 📦 업로드용 임시 버퍼 생성
+	D3D12_RESOURCE_DESC textureDesc = pTexture->GetDesc();
+	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(pTexture, 0, 1);
+
+	D3D12_HEAP_PROPERTIES heapProps = {};
+	heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+
+	D3D12_RESOURCE_DESC bufferDesc = {};
+	bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	bufferDesc.Width = uploadBufferSize;
+	bufferDesc.Height = 1;
+	bufferDesc.DepthOrArraySize = 1;
+	bufferDesc.MipLevels = 1;
+	bufferDesc.SampleDesc.Count = 1;
+	bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	ID3D12Resource* pUploadBuffer = nullptr;
+	hr = m_pd3dDevice->CreateCommittedResource(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&bufferDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&pUploadBuffer)
+	);
+
+	if (FAILED(hr))
+	{
+		MessageBox(NULL, L"UploadBuffer 생성 실패!", L"Error", MB_OK);
+		return (ImTextureID)nullptr;
+	}
+
+	// 📦 서브리소스 업데이트
+	UpdateSubresources(m_pd3dCommandList, pTexture, pUploadBuffer, 0, 0, 1, &subresourceData);
+
+	// 📦 텍스처 barrier
+	D3D12_RESOURCE_BARRIER barrier = {};
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	barrier.Transition.pResource = pTexture;
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+	m_pd3dCommandList->ResourceBarrier(1, &barrier);
+
+	// ⭐⭐ CommandList Close + Execute ⭐⭐
+	m_pd3dCommandList->Close();
+	ID3D12CommandList* ppCommandLists[] = { m_pd3dCommandList };
+	m_pd3dCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+	// ⭐⭐ GPU 작업 기다리기
+	WaitForGpuComplete();
+
+	// ➡️ SRV 만들기
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = textureDesc.Format;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_pd3dSrvDescriptorHeapForIcons->GetCPUDescriptorHandleForHeapStart();
+	cpuHandle.ptr += (m_nIconCount * m_nCbvSrvDescriptorIncrementSize);
+
+	m_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, cpuHandle);
+
+	// ➡️ 텍스처 핸들 리턴
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = m_pd3dSrvDescriptorHeapForIcons->GetGPUDescriptorHandleForHeapStart();
+	gpuHandle.ptr += (m_nIconCount * m_nCbvSrvDescriptorIncrementSize);
+
+	m_nIconCount++;
+
+	return reinterpret_cast<ImTextureID>(reinterpret_cast<void*>(gpuHandle.ptr));
+}
+
+
+
+
+
+
+void CGameFramework::CreateIconDescriptorHeap()
+{
+	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+	desc.NumDescriptors = 32; // 예를 들어 아이콘 32개쯤? (원하는 수)
+	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+	HRESULT hr = m_pd3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_pd3dSrvDescriptorHeapForIcons));
+	if (FAILED(hr))
+	{
+		MessageBox(NULL, L"Failed to create Icon SRV Descriptor Heap!", L"Error", MB_OK);
+	}
+}
 void CGameFramework::OnDestroy()
 {
 	WaitForGpu();
@@ -432,6 +738,8 @@ void CGameFramework::BuildObjects()
 	m_pScene = new CScene(this);
 	if (m_pScene) m_pScene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
 
+	
+
 #ifdef _WITH_TERRAIN_PLAYER
 	CTerrainPlayer *pPlayer = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pTerrain, this);
 #else
@@ -441,6 +749,7 @@ void CGameFramework::BuildObjects()
 
 	m_pScene->m_pPlayer = m_pPlayer = pPlayer;
 	m_pCamera = m_pPlayer->GetCamera();
+	m_pPlayer->SetOwningScene(m_pScene);
 
 	pPlayer->SetOBB();
 	pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
@@ -461,7 +770,10 @@ void CGameFramework::BuildObjects()
 void CGameFramework::ReleaseObjects()
 {
 	if (m_pPlayer) m_pPlayer->Release();
-
+	//for( auto& player : PlayerList)
+	//{
+	//	player.second->Release();
+	//}
 	if (m_pScene) m_pScene->ReleaseObjects();
 	if (m_pScene) delete m_pScene;
 }
@@ -541,34 +853,77 @@ void CGameFramework::ProcessInput()
 		}
 
 		// 카메라 모드에 따른 입력 처리 (기존 코드와 동일)
-		if (m_pCamera) // m_pCamera 유효성 검사
+		if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
 		{
-			if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
-			{
-				if (pKeysBuffer['Q'] & 0xF0)
-				{
-					XMFLOAT3 offset = m_pCamera->GetOffset();
-					offset.y = max(20.0f, offset.y - 10.0f);
-					m_pCamera->SetOffset(offset);
-				}
-				if (pKeysBuffer['E'] & 0xF0)
-				{
-					XMFLOAT3 offset = m_pCamera->GetOffset();
-					offset.y = min(200.0f, offset.y + 10.0f);
-					m_pCamera->SetOffset(offset);
-				}
+			// 탑뷰: 마우스 휠로 줌인/줌아웃
+			// 실제로는 마우스 휠 이벤트를 처리하려면 별도의 메시지 처리가 필요할 수 있음
+			// 여기서는 예시로 키 입력으로 대체 (Q: 줌인, E: 줌아웃)
+			if (pKeysBuffer['Q'] & 0xF0) {
+				XMFLOAT3 offset = m_pCamera->GetOffset();
+				offset.y = max(20.0f, offset.y - 10.0f);
+				m_pCamera->SetOffset(offset);
 			}
-			else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA || m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
+			if (pKeysBuffer['E'] & 0xF0) {
+				XMFLOAT3 offset = m_pCamera->GetOffset();
+				offset.y = min(200.0f, offset.y + 10.0f);  // 줌아웃, 최대 높이 200
+				m_pCamera->SetOffset(offset);
+			}
+		}
+		else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA || m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
+		{
+			// 자유 시점: 마우스로 회전
+			if (beforeDirection != dwDirection)
 			{
+				beforeDirection = dwDirection;
+				auto& nwManager = NetworkManager::GetInstance();
+				INPUT_PACKET p;
+				p.direction = dwDirection;
+				printf("Direction: %d\n", dwDirection);
+				p.size = sizeof(INPUT_PACKET);
+				p.type = static_cast<char>(E_PACKET::E_P_INPUT);
+				nwManager.PushSendQueue(p, p.size);
+			}
+
+			if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
+			{
+				auto& nwManager = NetworkManager::GetInstance();
+
 				if (cxDelta || cyDelta)
 				{
 					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
 						m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
 					else
 						m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+					{
+						ROTATE_PACKET p;
+						auto& lookv = m_pPlayer->GetLookVector();
+						p.look.x = lookv.x;
+						p.look.y = lookv.y;
+						p.look.z = lookv.z;
+						auto& rightv = m_pPlayer->GetRightVector();
+						p.right.x = rightv.x;
+						p.right.y = rightv.y;
+						p.right.z = rightv.z;
+						auto& upv = m_pPlayer->GetUpVector();
+						p.up.x = upv.x;
+						p.up.y = upv.y;
+						p.up.z = upv.z;
+						p.size = sizeof(ROTATE_PACKET);
+						p.type = static_cast<char>(E_PACKET::E_P_ROTATE);
+
+						nwManager.PushSendQueue(p, p.size);
+					}
+
 				}
+				//if (dwDirection)
+				//{
+				//	m_pPlayer->Move(dwDirection, 12.25f, true);
+				//}
 			}
+
+			if (dwDirection) m_pPlayer->Move(dwDirection, 12.25f, true);
 		}
+		m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 	}
 }
 
@@ -611,10 +966,57 @@ void CGameFramework::MoveToNextFrame()
 
 void CGameFramework::FrameAdvance()
 {    
-	m_GameTimer.Tick(60.0f);
-	
-	ProcessInput();
+	if (m_logQueue.size() > 0) {
+		m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
+		while (m_logQueue.size() > 0) {
+			auto log = m_logQueue.front();
+			m_logQueue.pop();
+			switch (log.packetType)
+			{
+			case E_PACKET::E_P_LOGIN:
+			{
+				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), "Model/SK_Hu_M_FullBody.bin", NULL, m_pResourceManager.get());
+				int animate_count = 10;
+				m_pScene->PlayerList[log.ID] = std::make_unique<UserObject>(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), pUserModel, animate_count, m_pResourceManager.get());
+				m_pScene->PlayerList[log.ID]->m_objectType = GameObjectType::Player;
+				m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+				for (int j = 1; j < animate_count; ++j) {
+					m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+					m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+				}
+				m_pScene->PlayerList[log.ID]->SetPosition(XMFLOAT3{ 1500.f,m_pScene->m_pTerrain->GetHeight(1500,1500) ,1500.f });
+				m_pScene->PlayerList[log.ID]->SetScale(10.0f, 10.0f, 10.0f);
+				m_pScene->PlayerList[log.ID]->SetTerraindata(m_pScene->m_pTerrain);
+				if (pUserModel) delete(pUserModel);
+			}
+			break;
+			case E_PACKET::E_P_LOGOUT:
+			{
+				if (m_pScene->PlayerList.find(log.ID) != m_pScene->PlayerList.end()) {
+					m_pScene->PlayerList[log.ID]->Release();
+					m_pScene->PlayerList.erase(log.ID);
+				}
+			}
+			break;
+			default:
+				break;
+			}
+		}
+		m_pd3dCommandList->Close();
+		ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList };
+		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
+		WaitForGpuComplete();
+		for(auto& player : m_pScene->PlayerList)
+		{
+			player.second->ReleaseUploadBuffers();
+		}
+	}
+
+	m_GameTimer.Tick(60.0f);
+
+	ProcessInput();
+	UpdateFurnace(m_GameTimer.GetTimeElapsed());
     AnimateObjects();
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 
@@ -642,13 +1044,494 @@ void CGameFramework::FrameAdvance()
 
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
-
-	if (m_pScene) m_pScene->Render(m_pd3dCommandList, m_pCamera);
+	if (m_pScene) m_pScene->Render(m_pd3dCommandList, obbRender, m_pCamera);
 
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
-#endif
-	//if (m_pPlayer) m_pPlayer->Render(m_pd3dCommandList, m_pCamera);
+#endif	
+
+
+	if (m_pPlayer) {
+		if (m_pPlayer->invincibility) {
+			auto endtime = std::chrono::system_clock::now();
+			auto exectime = endtime - m_pPlayer->starttime;
+			auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
+			if (exec_ms > 1000.f) { // 무적시간이 1초가 경과되면
+				m_pPlayer->SetInvincibility();	// 변경
+			}
+		}
+		m_pPlayer->Render(m_pd3dCommandList, obbRender, m_pCamera);
+	}
+
+	ImGui_ImplDX12_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+	
+	///////////////////////////////////////////////////////////// 아이템 핫바
+	const int HotbarCount = 5;
+	const float SlotSize = 54.0f;
+	const float SlotSpacing = 6.0f;
+	const float ExtraPadding = 18.0f;
+
+	const float TotalWidth = (SlotSize * HotbarCount) + (SlotSpacing * (HotbarCount - 1));
+	const float WindowWidth = TotalWidth + ExtraPadding;
+
+	ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+	ImVec2 hotbarPos = ImVec2(30.0f, displaySize.y - 80.0f);
+
+	ImGui::SetNextWindowPos(hotbarPos);
+	ImGui::SetNextWindowSize(ImVec2(WindowWidth, 65));
+	ImGui::Begin("Hotbar", nullptr,
+		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+		ImGuiWindowFlags_NoBackground);
+
+	ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+
+	for (int i = 0; i < HotbarCount; ++i)
+	{
+		if (i > 0) ImGui::SameLine();
+
+		ImGui::PushID(i);
+
+		if (!m_inventorySlots[i].IsEmpty())
+		{
+			// 버튼 먼저 생성 (테두리 유지)
+			ImVec2 pos = ImGui::GetCursorScreenPos();
+			ImGui::Button(" ", ImVec2(SlotSize, SlotSize));
+
+			// 버튼 위에 아이콘을 따로 그리기
+			ImTextureID icon = m_inventorySlots[i].item->GetIconHandle();
+			if (icon)
+			{
+				ImGui::GetWindowDrawList()->AddImage(
+					icon,
+					pos,
+					ImVec2(pos.x + SlotSize, pos.y + SlotSize)
+				);
+			}
+		}
+		else
+		{
+			ImGui::Button(" ", ImVec2(SlotSize, SlotSize)); // 빈 슬롯은 그냥 테두리만
+		}
+
+		ImGui::PopID();
+	}
+
+
+	ImGui::PopStyleVar();
+	ImGui::End();
+
+
+
+	//////////////////////////////////////////////////플레이어 UI
+
+	const float hudWidth = 300.0f;
+	const float hudHeight = 100.0f;
+	const float barWidth = 100.0f;
+	const float barHeight = 15.0f;
+
+	ImVec2 hudPos = ImVec2(displaySize.x - hudWidth+10.0f, displaySize.y - hudHeight);
+
+	ImGui::SetNextWindowPos(hudPos);
+	ImGui::SetNextWindowSize(ImVec2(hudWidth, hudHeight));
+	ImGui::Begin("StatusBars", nullptr,
+		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+		ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoCollapse);
+
+	
+	ImGui::BeginGroup();
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("🟥"); // 체력 
+	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+	ImGui::ProgressBar(
+		(float)m_pPlayer->Playerhp / (float)m_pPlayer->Maxhp,
+		ImVec2(barWidth, barHeight),
+		std::to_string(m_pPlayer->Playerhp).c_str()
+	);
+	ImGui::PopStyleColor();
+	ImGui::EndGroup();
+
+	ImGui::SameLine(0.0f, 50.0f); 
+	ImGui::BeginGroup();
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("🟦"); // 스태미너
+	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.5f, 1.0f, 1.0f));
+	ImGui::ProgressBar(
+		(float)m_pPlayer->Playerstamina / (float)m_pPlayer->Maxstamina,
+		ImVec2(barWidth, barHeight),
+		std::to_string(m_pPlayer->Playerstamina).c_str()
+	);
+	ImGui::PopStyleColor();
+	ImGui::EndGroup();
+
+	
+	ImGui::BeginGroup();
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("🟨"); // 허기
+	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
+	ImGui::ProgressBar(m_pPlayer->PlayerHunger, ImVec2(barWidth, barHeight));
+	ImGui::PopStyleColor();
+	ImGui::EndGroup();
+
+	ImGui::SameLine(0.0f, 50.0f);
+
+	ImGui::BeginGroup();
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("🟪"); // 갈증
+	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 0.2f, 1.0f, 1.0f));
+	ImGui::ProgressBar(m_pPlayer->PlayerThirst, ImVec2(barWidth, barHeight));
+	ImGui::PopStyleColor();
+	ImGui::EndGroup();
+
+	ImGui::End();
+	//////////////////////////////////////////////////////// 인벤토리
+	if (ShowInventory)
+	{
+		const int inventoryCols = 5;
+		const int inventoryRows = 5;
+		const float slotSize = 50.0f;
+		const float spacing = 5.0f;
+		ImVec2 invSize = ImVec2(600.0f, 360.0f);
+
+		ImVec2 invPos = ImVec2(
+			displaySize.x * 0.5f - invSize.x * 0.5f,
+			displaySize.y * 0.5f - invSize.y * 0.5f
+		);
+
+		ImGui::SetNextWindowPos(invPos);
+		ImGui::SetNextWindowSize(invSize);
+		ImGui::Begin("Inventory", nullptr,
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoCollapse);
+
+		// ▶ 2열로 나누기
+		ImGui::Columns(2, nullptr, false);
+
+		// 왼쪽: 인벤토리 슬롯
+		{
+			for (int i = 0; i < m_inventorySlots.size(); ++i)
+			{
+				ImGui::PushID(i);
+
+				if (!m_inventorySlots[i].IsEmpty())
+				{
+					Item* item = m_inventorySlots[i].item.get();
+					ImTextureID icon = item->GetIconHandle();
+
+					if (icon)
+					{
+						ImGui::Image(icon, ImVec2(slotSize, slotSize));
+
+						// 아이템 수량 표시
+						ImVec2 min = ImGui::GetItemRectMin();
+						ImVec2 max = ImGui::GetItemRectMax();
+						ImVec2 textPos = ImVec2(min.x + 2, max.y - 18);
+						ImGui::GetWindowDrawList()->AddText(textPos, IM_COL32_WHITE,
+							std::to_string(m_inventorySlots[i].quantity).c_str());
+					}
+					else
+					{
+						std::string label = item->GetName() + " x" + std::to_string(m_inventorySlots[i].quantity);
+						ImGui::Button(label.c_str(), ImVec2(slotSize, slotSize));
+					}
+
+					// 🔽 화로창이 열려 있을 경우, 클릭 시 자동 배정
+					if (ShowFurnaceUI && ImGui::IsItemClicked())
+					{
+						std::string name = item->GetName();
+
+						if (name == "coal" || name == "wood") {
+							furnaceSlot.fuelAmount += 25.0f; // 연료 게이지 증가량
+							if (furnaceSlot.fuelAmount > 100.0f)
+								furnaceSlot.fuelAmount = 100.0f;
+							m_inventorySlots[i].quantity--;
+							if (m_inventorySlots[i].quantity <= 0)
+							{
+								m_inventorySlots[i].item = nullptr;
+							}
+						}
+						else if (name == "pork" || name == "iron_material") {
+							furnaceSlot.material = item;
+							m_inventorySlots[i].quantity--;
+							if (m_inventorySlots[i].quantity <= 0)
+							{
+								m_inventorySlots[i].item = nullptr;
+							}
+						}
+					}
+				}
+				else
+				{
+					ImGui::Button(" ", ImVec2(slotSize, slotSize));
+				}
+
+				ImGui::PopID();
+
+				if ((i + 1) % inventoryCols != 0)
+					ImGui::SameLine(0.0f, spacing);
+			}
+
+		}
+
+		ImGui::NextColumn();
+
+		// 오른쪽: 플레이어 스탯
+		{
+			ImGui::Text("플레이어 레벨: %d", m_pPlayer->PlayerLevel);
+			ImGui::Text("스테이터스:");
+
+			ImGui::BulletText("체력: %d / %d", m_pPlayer->Playerhp, m_pPlayer->Maxhp);
+			ImGui::SameLine();
+			if (m_pPlayer->StatPoint > 0) {
+				if (ImGui::Button("+##hp")) { m_pPlayer->Maxhp += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerhp += 10; }
+			}
+			else {
+				ImGui::BeginDisabled(); ImGui::Button("+##hp"); ImGui::EndDisabled();
+			}
+
+			ImGui::BulletText("스태미너: %d / %d", m_pPlayer->Playerstamina, m_pPlayer->Maxstamina);
+			ImGui::SameLine();
+			if (m_pPlayer->StatPoint > 0) {
+				if (ImGui::Button("+##stamina")) { m_pPlayer->Maxstamina += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerstamina += 10; }
+			}
+			else {
+				ImGui::BeginDisabled(); ImGui::Button("+##stamina"); ImGui::EndDisabled();
+			}
+
+			ImGui::BulletText("공격력: %d", m_pPlayer->PlayerAttack);
+			ImGui::SameLine();
+			if (m_pPlayer->StatPoint > 0) {
+				if (ImGui::Button("+##atk")) { m_pPlayer->PlayerAttack += 1; m_pPlayer->StatPoint--; }
+			}
+			else {
+				ImGui::BeginDisabled(); ImGui::Button("+##atk"); ImGui::EndDisabled();
+			}
+
+			ImGui::BulletText("이동속도: %d", m_pPlayer->PlayerSpeed);
+			ImGui::SameLine();
+			if (m_pPlayer->StatPoint > 0) {
+				if (ImGui::Button("+##speed")) { m_pPlayer->PlayerSpeed += 0.2f; m_pPlayer->StatPoint--; }
+			}
+			else {
+				ImGui::BeginDisabled(); ImGui::Button("+##speed"); ImGui::EndDisabled();
+			}
+
+			ImGui::Spacing();
+			ImGui::Separator();
+			ImGui::Text("보유 포인트: %d", m_pPlayer->StatPoint);
+		}
+
+		ImGui::Columns(1); // 열 정리
+		ImGui::End();
+	}
+	////////////////////////////////////////////////////////////////////////////////////// 조합창
+	if (ShowCraftingUI) 
+	{
+		const float windowWidth = 600.0f;
+		const float windowHeight = 450.0f;
+
+		ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+		ImVec2 craftingPos = ImVec2(
+			displaySize.x * 0.5f - windowWidth * 0.5f,
+			displaySize.y * 0.5f - windowHeight * 0.5f
+		);
+
+		ImGui::SetNextWindowPos(craftingPos);
+		ImGui::SetNextWindowSize(ImVec2(windowWidth, windowHeight));
+
+		ImGui::Begin("조합 화면", nullptr,
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoCollapse);
+
+		
+		ImGui::Columns(2, nullptr, false);
+
+		// 조합 가능한 아이템 리스트
+		ImGui::Text("제작 아이템");
+		ImGui::Separator();
+
+		for (int i = 0; i < m_vecCraftableItems.size(); ++i)
+		{
+			const CraftItem& item = m_vecCraftableItems[i];
+
+			if (ImGui::Selectable(item.ResultItemName.c_str(), selectedCraftItemIndex == i))
+			{
+				selectedCraftItemIndex = i; // 아이템 선택
+			}
+		}
+
+		ImGui::NextColumn();
+
+		// ▶ 오른쪽: 필요한 재료 출력
+		ImGui::Text("필요 재료");
+		ImGui::Separator();
+
+		if (selectedCraftItemIndex >= 0 && selectedCraftItemIndex < m_vecCraftableItems.size())
+		{
+			const CraftItem& selectedItem = m_vecCraftableItems[selectedCraftItemIndex];
+
+			for (const CraftMaterial& mat : selectedItem.Materials)
+			{
+				ImGui::Text("%s x%d", mat.MaterialName.c_str(), mat.Quantity);
+			}
+
+			ImGui::Spacing();
+			ImGui::Separator();
+			ImGui::Spacing();
+
+			if (ImGui::Button("조합하기", ImVec2(200, 50)))
+			{
+				if (CanCraftItem())
+				{
+					CraftSelectedItem();
+				}
+			}
+		}
+
+		ImGui::Columns(1);
+
+		ImGui::End();
+	}
+	////////////////////////////////////////////////////////////////////////////////////////////////////// 건축 UI
+	if (BuildMode)
+	{
+		ImGui::SetNextWindowPos(ImVec2(100, 100));
+		ImGui::SetNextWindowSize(ImVec2(200, 300));
+		ImGui::Begin("건축 선택", nullptr,
+			ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
+
+		static int selected = -1;
+		const char* buildings[] = { "나무 벽", "나무 문", "나무 바닥", "계단" };
+
+		for (int i = 0; i < IM_ARRAYSIZE(buildings); i++)
+		{
+			if (ImGui::Selectable(buildings[i], selected == i))
+			{
+				selected = i;
+
+				// 1. 문자열 매핑
+				std::string buildingKey;
+				if (selected == 0) buildingKey = "pine";
+				else if (selected == 1) buildingKey = "door";
+				else if (selected == 2) buildingKey = "floor";
+				else if (selected == 3) buildingKey = "stair";
+
+
+				// 3. 미리보기 재생성
+				m_pConstructionSystem->EnterBuildMode();
+			}
+		}
+
+		if (ImGui::Button("건축 종료"))
+		{
+			BuildMode = false;
+			m_pConstructionSystem->ExitBuildMode();
+		}
+
+		ImGui::End();
+	}
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////
+	if (ShowFurnaceUI)
+	{
+		const float slotSize = 72.0f;
+		const ImVec2 slotVec = ImVec2(slotSize, slotSize);
+
+		ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+		ImVec2 windowSize = ImVec2(360, 330);
+		ImVec2 centerPos = ImVec2(
+			(displaySize.x - windowSize.x) * 0.5f,
+			(displaySize.y - windowSize.y) * 0.5f
+		);
+
+		ImGui::SetNextWindowPos(centerPos, ImGuiCond_Always);
+		ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
+
+		ImGui::Begin("Furnace", &ShowFurnaceUI, ImGuiWindowFlags_NoResize);
+
+		ImGui::Text("화로");
+		ImGui::Separator();
+
+		ImGui::SetCursorPos(ImVec2(60, 80));
+		ImGui::Button(" ", slotVec); // 항상 배경 존재
+
+		if (furnaceSlot.material)
+		{
+			ImTextureID matIcon = furnaceSlot.material->GetIconHandle();
+			ImVec2 pos = ImGui::GetItemRectMin();
+
+			ImGui::GetWindowDrawList()->AddImage(
+				matIcon,
+				pos,
+				ImVec2(pos.x + 70, pos.y + 70)
+			);
+		}
+
+		// 🔥 연료 아이콘
+		ImGui::SetCursorPos(ImVec2(60, 200));
+		ImGui::Text("연료");
+
+		ImGui::SetCursorPos(ImVec2(60, 220));
+		ImGui::ProgressBar(furnaceSlot.fuelAmount / 100.0f, ImVec2(150, 20));
+		
+		auto fireItem = ItemManager::GetItemByName("fire");
+		if (fireItem)
+		{
+			ImTextureID fireIcon = fireItem->GetIconHandle();
+			ImGui::SetCursorPos(ImVec2(72, 150)); // 중앙 위치
+			ImGui::GetWindowDrawList()->AddImage(
+				fireIcon,
+				ImGui::GetCursorScreenPos(),
+				ImVec2(ImGui::GetCursorScreenPos().x + 48, ImGui::GetCursorScreenPos().y + 48)
+			);
+		}
+
+		
+		auto directionItem = ItemManager::GetItemByName("direction");
+		if (directionItem)
+		{
+			ImTextureID arrowIcon = directionItem->GetIconHandle();
+			ImGui::SetCursorPos(ImVec2(190, 150)); 
+			ImGui::GetWindowDrawList()->AddImage(
+				arrowIcon,
+				ImGui::GetCursorScreenPos(),
+				ImVec2(ImGui::GetCursorScreenPos().x + 60, ImGui::GetCursorScreenPos().y + 60)
+			);
+		}
+
+		if (furnaceSlot.result)
+		{
+			ImTextureID resultIcon = furnaceSlot.result->GetIconHandle();
+			string resultitem = furnaceSlot.result->GetName();
+			ImGui::SetCursorPos(ImVec2(260, 150)); // 결과 슬롯 위치
+			ImGui::Image(resultIcon, slotVec);
+
+			if (ImGui::IsItemClicked())
+			{
+				AddItem(resultitem);
+				furnaceSlot.result = nullptr;
+			}
+		}
+		else
+		{
+			ImGui::SetCursorPos(ImVec2(260, 150));
+			ImGui::Button("결과", slotVec);
+		}
+
+		ImGui::End();
+	}
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	ImGui::Render();
+	ID3D12DescriptorHeap* ppHeaps[] = { m_pd3dSrvDescriptorHeapForImGui };
+	m_pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_pd3dCommandList);
+
+
+
 
 	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
@@ -685,10 +1568,278 @@ void CGameFramework::FrameAdvance()
 	_stprintf_s(m_pszFrameRate + nLength, 70 - nLength, _T("(%4f, %4f, %4f)"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
 	::SetWindowText(m_hWnd, m_pszFrameRate);
 }
+void CGameFramework::CreateCbvSrvDescriptorHeap()
+{
+	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+	srvHeapDesc.NumDescriptors = 2; // ImGui만 쓸 거면 1개면 충분
+	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
+	HRESULT hr = m_pd3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_pd3dSrvDescriptorHeapForImGui));
+	if (FAILED(hr))
+		::MessageBox(NULL, _T("Failed to create SRV Descriptor Heap for ImGui"), _T("Error"), MB_OK);
+}
+void CGameFramework::InitializeCraftItems()
+{
+	m_vecCraftableItems.clear();
 
+	// 막대기
+	m_vecCraftableItems.push_back({
+		"stick",
+		{ {"wood", 2} },
+		2
+		});
 
+	// 제작대
+	m_vecCraftableItems.push_back({
+		"crafting_table",
+		{ {"wood", 4} },
+		1
+		});
 
+	// 화로
+	m_vecCraftableItems.push_back({
+		"furance",
+		{ {"stone", 8} },
+		1
+		});
+
+	// 그릇
+	m_vecCraftableItems.push_back({
+		"bowl",
+		{ {"wood", 1} },
+		1
+		});
+
+	// 횃불
+	m_vecCraftableItems.push_back({
+		"torch",
+		{ {"stick", 1}, {"coal", 1} },
+		2
+		});
+
+	// 나무 곡괭이
+	m_vecCraftableItems.push_back({
+		"wooden_pickaxe",
+		{ {"stick", 2}, {"wood", 3} },
+		1
+		});
+
+	// 나무 도끼
+	m_vecCraftableItems.push_back({
+		"wooden_axe",
+		{ {"stick", 2}, {"wood", 3} },
+		1
+		});
+
+	// 나무 검
+	m_vecCraftableItems.push_back({
+		"wooden_sword",
+		{ {"stick", 1}, {"wood", 2} },
+		1
+		});
+
+	// 나무 망치
+	m_vecCraftableItems.push_back({
+		"wooden_hammer",
+		{ {"stick", 2}, {"wood", 3} },
+		1
+		});
+
+	// 돌 곡괭이
+	m_vecCraftableItems.push_back({
+		"stone_pickaxe",
+		{ {"stick", 2}, {"stone", 3} },
+		1
+		});
+
+	// 돌 도끼
+	m_vecCraftableItems.push_back({
+		"stone_axe",
+		{ {"stick", 2}, {"stone", 3} },
+		1
+		});
+
+	// 돌 검
+	m_vecCraftableItems.push_back({
+		"stone_sword",
+		{ {"stick", 1}, {"stone", 2} },
+		1
+		});
+
+	// 돌 망치
+	m_vecCraftableItems.push_back({
+		"stone_hammer",
+		{ {"stick", 2}, {"stone", 3} },
+		1
+		});
+
+	// 철 곡괭이
+	m_vecCraftableItems.push_back({
+		"iron_pickaxe",
+		{ {"stick", 2}, {"iron", 3} },
+		1
+		});
+
+	// 철 도끼
+	m_vecCraftableItems.push_back({
+		"iron_axe",
+		{ {"stick", 2}, {"iron", 3} },
+		1
+		});
+
+	// 철 검
+	m_vecCraftableItems.push_back({
+		"iron_sword",
+		{ {"stick", 1}, {"iron", 2} },
+		1
+		});
+
+	// 철 망치
+	m_vecCraftableItems.push_back({
+		"iron_hammer",
+		{ {"stick", 2}, {"iron", 3} },
+		1
+		});
+}
+bool CGameFramework::CanCraftItem()
+{
+	if (selectedCraftItemIndex < 0 || selectedCraftItemIndex >= m_vecCraftableItems.size())
+		return false; // 잘못된 인덱스
+
+	const CraftItem& selectedItem = m_vecCraftableItems[selectedCraftItemIndex];
+
+	// 필요한 재료들 다 검사
+	for (const CraftMaterial& material : selectedItem.Materials)
+	{
+		int requiredQuantity = material.Quantity;
+		int playerQuantity = 0;
+
+		// 인벤토리를 돌면서 같은 재료 찾기
+		for (const InventorySlot& slot : m_inventorySlots)
+		{
+			if (!slot.IsEmpty() && slot.item->GetName() == material.MaterialName)
+			{
+				playerQuantity += slot.quantity;
+			}
+		}
+
+		// 한 가지라도 부족하면 바로 실패
+		if (playerQuantity < requiredQuantity)
+			return false;
+	}
+
+	// 모든 재료가 충분하면 성공
+	return true;
+}
+
+void CGameFramework::CraftSelectedItem()
+{
+	if (selectedCraftItemIndex < 0 || selectedCraftItemIndex >= m_vecCraftableItems.size())
+		return;
+
+	const CraftItem& selectedItem = m_vecCraftableItems[selectedCraftItemIndex];
+
+	// 1. 필요한 재료 차감
+	for (const CraftMaterial& material : selectedItem.Materials)
+	{
+		int remaining = material.Quantity;
+
+		for (InventorySlot& slot : m_inventorySlots)
+		{
+			if (!slot.IsEmpty() && slot.item->GetName() == material.MaterialName)
+			{
+				if (slot.quantity >= remaining)
+				{
+					slot.quantity -= remaining;
+					if (slot.quantity == 0)
+						slot.item = nullptr;
+					break;
+				}
+				else
+				{
+					remaining -= slot.quantity;
+					slot.item = nullptr;
+					slot.quantity = 0;
+				}
+			}
+		}
+	}
+
+	// 2. 결과 아이템 추가
+	const std::string& itemName = selectedItem.ResultItemName;
+	std::shared_ptr<Item> newItem = ItemManager::GetItemByName(itemName);
+	if (!newItem) return;
+
+	// 먼저 동일한 아이템이 있는 슬롯 찾기 → 수량만 증가
+	for (InventorySlot& slot : m_inventorySlots)
+	{
+		if (!slot.IsEmpty() && slot.item->GetName() == itemName)
+		{
+			slot.quantity += selectedItem.ResultQuantity;
+			return;
+		}
+	}
+
+	// 없으면 새 슬롯에 추가
+	for (InventorySlot& slot : m_inventorySlots)
+	{
+		if (slot.IsEmpty())
+		{
+			slot.item = newItem;
+			slot.quantity = selectedItem.ResultQuantity;
+			return;
+		}
+	}
+}
+
+void CGameFramework::InitializeItemIcons()
+{
+	auto& items = ItemManager::GetItems();
+
+	for (auto& item : items)
+	{
+		std::string itemName = item->GetName(); // ex: "wood"
+		std::wstring wItemName(itemName.begin(), itemName.end());
+		std::wstring iconPath = L"ICON/" + wItemName + L".png";
+
+		ImTextureID iconHandle = LoadIconTexture(iconPath.c_str());
+		item->SetIconHandle(iconHandle);
+	}
+}
+
+void CGameFramework::UpdateFurnace(float deltaTime)
+{
+	// 재료가 없거나 연료가 0이면 리턴
+	if (!furnaceSlot.material || furnaceSlot.fuelAmount <= 0.0f)
+		return;
+
+	std::string mat = furnaceSlot.material->GetName();
+
+	// 제련 가능 재료인지 확인
+	if (mat != "pork" && mat != "iron_material") return;
+
+	// 🔥 연료 소모
+	furnaceSlot.fuelAmount -= deltaTime * 5.0f; // 연료 소모 속도 (초당 5 소비)
+	if (furnaceSlot.fuelAmount < 0.0f)
+		furnaceSlot.fuelAmount = 0.0f;
+
+	// ⏱ 제련 시간 누적
+	furnaceSlot.smeltTime += deltaTime;
+	const float requiredTime = 2.0f;
+
+	if (furnaceSlot.smeltTime >= requiredTime)
+	{
+		if (mat == "pork")
+			furnaceSlot.result = ItemManager::GetItemByName("grill_pork").get();
+		else if (mat == "iron_material")
+			furnaceSlot.result = ItemManager::GetItemByName("iron").get();
+
+		// ⏹ 완료 후 초기화
+		furnaceSlot.material = nullptr;
+		furnaceSlot.smeltTime = 0.0f;
+	}
+}
 
 void CGameFramework::CreateCbvSrvDescriptorHeaps(int nConstantBufferViews, int nShaderResourceViews)
 {

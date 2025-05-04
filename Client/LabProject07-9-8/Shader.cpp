@@ -269,6 +269,171 @@ void CShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
+	return(d3dInputLayoutDesc);
+}
+
+D3D12_DEPTH_STENCIL_DESC CSkyBoxShader::CreateDepthStencilState()
+{
+	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
+	d3dDepthStencilDesc.DepthEnable = FALSE;
+	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_NEVER;
+	d3dDepthStencilDesc.StencilEnable = FALSE;
+	d3dDepthStencilDesc.StencilReadMask = 0xff;
+	d3dDepthStencilDesc.StencilWriteMask = 0xff;
+	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_INCR;
+	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_DECR;
+	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+
+	return(d3dDepthStencilDesc);
+}
+
+D3D12_SHADER_BYTECODE CSkyBoxShader::CreateVertexShader()
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSSkyBox", "vs_5_1", &m_pd3dVertexShaderBlob));
+}
+
+D3D12_SHADER_BYTECODE CSkyBoxShader::CreatePixelShader()
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSSkyBox", "ps_5_1", &m_pd3dPixelShaderBlob));
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+CStandardShader::CStandardShader()
+{
+}
+
+CStandardShader::~CStandardShader()
+{
+}
+
+D3D12_INPUT_LAYOUT_DESC CStandardShader::CreateInputLayout()
+{
+	UINT nInputElementDescs = 5;
+	D3D12_INPUT_ELEMENT_DESC *pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+
+	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[2] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[3] = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 3, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[4] = { "BITANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 4, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+
+	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
+	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
+	d3dInputLayoutDesc.NumElements = nInputElementDescs;
+
+	return(d3dInputLayoutDesc);
+}
+
+D3D12_SHADER_BYTECODE CStandardShader::CreateVertexShader()
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSStandard", "vs_5_1", &m_pd3dVertexShaderBlob));
+}
+
+D3D12_SHADER_BYTECODE CStandardShader::CreatePixelShader()
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSStandard", "ps_5_1", &m_pd3dPixelShaderBlob));
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+CSkinnedAnimationStandardShader::CSkinnedAnimationStandardShader()
+{
+}
+
+CSkinnedAnimationStandardShader::~CSkinnedAnimationStandardShader()
+{
+}
+
+D3D12_INPUT_LAYOUT_DESC CSkinnedAnimationStandardShader::CreateInputLayout()
+{
+	UINT nInputElementDescs = 7;
+	D3D12_INPUT_ELEMENT_DESC *pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+
+	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[2] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[3] = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 3, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[4] = { "BITANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 4, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[5] = { "BONEINDEX", 0, DXGI_FORMAT_R32G32B32A32_SINT, 5, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[6] = { "BONEWEIGHT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 6, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+
+	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
+	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
+	d3dInputLayoutDesc.NumElements = nInputElementDescs;
+
+	return(d3dInputLayoutDesc);
+}
+
+D3D12_SHADER_BYTECODE CSkinnedAnimationStandardShader::CreateVertexShader()
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSSkinnedAnimationStandard", "vs_5_1", &m_pd3dVertexShaderBlob));
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+CStandardObjectsShader::CStandardObjectsShader()
+{
+}
+
+CStandardObjectsShader::~CStandardObjectsShader()
+{
+}
+
+void CStandardObjectsShader::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CLoadedModelInfo *pModel, void *pContext)
+{
+}
+
+void CStandardObjectsShader::ReleaseObjects()
+{
+	if (m_ppObjects)
+	{
+		for (int j = 0; j < m_nObjects; j++) if (m_ppObjects[j]) m_ppObjects[j]->Release();
+		delete[] m_ppObjects;
+	}
+}
+
+void CStandardObjectsShader::AnimateObjects(float fTimeElapsed)
+{
+	m_fElapsedTime = fTimeElapsed;
+}
+
+void CStandardObjectsShader::ReleaseUploadBuffers()
+{
+	for (int j = 0; j < m_nObjects; j++) if (m_ppObjects[j]) m_ppObjects[j]->ReleaseUploadBuffers();
+}
+
+void CStandardObjectsShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+{
+	CStandardShader::Render(pd3dCommandList, pCamera);
+
+	for (int j = 0; j < m_nObjects; j++)
+	{
+		if (m_ppObjects[j])
+		{
+			m_ppObjects[j]->Animate(m_fElapsedTime);
+			m_ppObjects[j]->UpdateTransform(NULL);
+			m_ppObjects[j]->Render(pd3dCommandList, pCamera);
+		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+CHellicopterObjectsShader::CHellicopterObjectsShader()
+{
+}
+
+CHellicopterObjectsShader::~CHellicopterObjectsShader()
+{
+}
+
 float Random(float fMin, float fMax)
 {
 	float fRandomValue = (float)rand();
