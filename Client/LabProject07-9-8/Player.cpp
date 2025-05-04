@@ -355,7 +355,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 
 	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList,
-	"Model/SK_Pig.bin", pGameFramework);
+	"Model/SK_Hu_M_FullBody.bin", pGameFramework);
 	SetChild(pAngrybotModel->m_pModelRootObject, true);
 
 	AddObject(pd3dDevice, pd3dCommandList, "thumb_02_r", "Model/Sword_01.bin", pGameFramework, XMFLOAT3(0.05, 0.00, -0.05));
@@ -364,7 +364,6 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, XMFLOAT3(-0.25, 0.1, 0), XMFLOAT3(90, 0, 90));
 	//AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_03", "Model/Torso_Peasant_03_Armor.bin", XMFLOAT3(0, 0, 0), XMFLOAT3(90, 0, 90));
 
-	
 
 	int nAnimation{10};
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimation, pAngrybotModel);
@@ -373,6 +372,8 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 		m_pSkinnedAnimationController->SetTrackEnable(i, false);
 	}
+
+	PropagateAnimController(m_pSkinnedAnimationController);
 
 	m_pSkinnedAnimationController->SetCallbackKeys(2, 2);
 #ifdef _WITH_SOUND_RESOURCE
@@ -391,6 +392,8 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	
 	SetPlayerUpdatedContext(pContext);
 	SetCameraUpdatedContext(pContext);
+
+	m_pStateMachine = new PlayerStateMachine(this, m_pSkinnedAnimationController);
 
 	CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)pContext;
 	SetPosition(XMFLOAT3(800.0f, pTerrain->GetHeight(800.0f, 800.0f), 800.0f));
@@ -470,16 +473,19 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 void CTerrainPlayer::OnPlayerUpdateCallback(float fTimeElapsed)
 {
 	CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)m_pPlayerUpdatedContext;
+
 	XMFLOAT3 xmf3Scale = pTerrain->GetScale();
 	XMFLOAT3 xmf3PlayerPosition = GetPosition();
+
 	int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
 	bool bReverseQuad = ((z % 2) != 0);
 	float fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
+	
 	if (xmf3PlayerPosition.y < fHeight)
 	{
-		XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
-		xmf3PlayerVelocity.y = 0.0f;
-		SetVelocity(xmf3PlayerVelocity);
+		//XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
+		//xmf3PlayerVelocity.y = 0.0f;
+		//SetVelocity(xmf3PlayerVelocity);
 		xmf3PlayerPosition.y = fHeight;
 		SetPosition(xmf3PlayerPosition);
 	}
@@ -505,48 +511,108 @@ void CTerrainPlayer::OnCameraUpdateCallback(float fTimeElapsed)
 	}
 }
 
-void CTerrainPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
-{
-	if (dwDirection) {
-		m_pSkinnedAnimationController->SetTrackEnable(nAni, false);
-		bAction = false;
-	}
-	if (dwDirection == DIR_FORWARD)
-	{
-		nAni = 1;
-	}
-	else if (dwDirection == DIR_LEFT)
-	{
-		nAni = 2;
-	}
-	else if (dwDirection == DIR_RIGHT)
-	{
-		nAni = 3;
-	}
-	else if (dwDirection == DIR_BACKWARD)
-	{
-		nAni = 4;
-	}
-	m_pSkinnedAnimationController->SetTrackEnable(nAni, true);
-
-
-	CPlayer::Move(dwDirection, fDistance, bUpdateVelocity);
-}
+//void CTerrainPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
+//{
+//	if (dwDirection) {
+//		m_pSkinnedAnimationController->SetTrackEnable(nAni, false);
+//		bAction = false;
+//	}
+//	if (dwDirection == DIR_FORWARD)
+//	{
+//		nAni = 1;
+//	}
+//	else if (dwDirection == DIR_LEFT)
+//	{
+//		nAni = 2;
+//	}
+//	else if (dwDirection == DIR_RIGHT)
+//	{
+//		nAni = 3;
+//	}
+//	else if (dwDirection == DIR_BACKWARD)
+//	{
+//		nAni = 4;
+//	}
+//	m_pSkinnedAnimationController->SetTrackEnable(nAni, true);
+//
+//
+//	CPlayer::Move(dwDirection, fDistance, bUpdateVelocity);
+//}
 
 void CTerrainPlayer::Update(float fTimeElapsed)
 {
-	CPlayer::Update(fTimeElapsed);
+	//CPlayer::Update(fTimeElapsed);
 
-	if (m_pSkinnedAnimationController)
-	{
-		float fLength = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
-		if (::IsZero(fLength) && nAni && !bAction)
-		{
-			m_pSkinnedAnimationController->SetTrackEnable(0, true);
-			m_pSkinnedAnimationController->SetTrackEnable(nAni, false);
-			m_pSkinnedAnimationController->SetTrackPosition(nAni, 0.0f);
-			nAni = 0;
-		}
+	// --- 1. 상태 머신 업데이트 ---
+	// 상태 머신이 상태 전환, 애니메이션 제어, 상태별 로직(이동 속도 설정 등)을 처리합니다.
+	if (m_pStateMachine) {
+		m_pStateMachine->Update(fTimeElapsed);
+	}
+
+	// --- 2. 물리 업데이트 (중력, 속도 제한 등) ---
+	// 상태 머신이 설정한 속도(m_xmf3Velocity)에 중력을 적용하고 속도를 제한합니다.
+	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, m_xmf3Gravity); // 중력 적용
+
+	// XZ 평면 속도 제한
+	float fLengthXZ = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
+	float fMaxVelocityXZ = m_fMaxVelocityXZ;
+	if (fLengthXZ > m_fMaxVelocityXZ) {
+		float fRatio = fMaxVelocityXZ / fLengthXZ;
+		m_xmf3Velocity.x *= fRatio;
+		m_xmf3Velocity.z *= fRatio;
+	}
+
+	// Y축 속도 제한
+	float fLengthY = fabsf(m_xmf3Velocity.y); // 절대값으로 비교
+	float fMaxVelocityY = m_fMaxVelocityY;
+	if (fLengthY > m_fMaxVelocityY) {
+		m_xmf3Velocity.y *= (fMaxVelocityY / fLengthY);
+	}
+
+	// --- 3. 최종 이동 적용 ---
+	// 계산된 최종 속도를 기반으로 플레이어 위치를 이동시킵니다.
+	XMFLOAT3 xmf3VelocityDelta = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
+	Move(xmf3VelocityDelta, false); // Move 함수는 위치(m_xmf3Position)를 직접 변경
+
+	// --- 4. 지형 충돌/높이 보정 (콜백) ---
+	// 플레이어 위치가 지형 아래로 내려가지 않도록 조정합니다.
+	if (m_pPlayerUpdatedContext) OnPlayerUpdateCallback(fTimeElapsed);
+	// OnPlayerUpdateCallback 내부에서 SetPosition, SetVelocity 등을 호출하여 위치/속도를 보정할 수 있습니다.
+
+	// --- 5. 카메라 업데이트 ---
+	// 플레이어 위치를 기반으로 카메라 위치/방향을 업데이트합니다.
+	DWORD nCurrentCameraMode = m_pCamera->GetMode();
+	if (nCurrentCameraMode == THIRD_PERSON_CAMERA) {
+		// 상태 머신에서 카메라 로직을 제어할 수도 있지만, 일단 기존 방식 유지
+		m_pCamera->Update(m_xmf3Position, fTimeElapsed);
+		// 카메라가 땅 아래로 내려가지 않도록 보정 (콜백)
+		if (m_pCameraUpdatedContext) OnCameraUpdateCallback(fTimeElapsed);
+
+		// 플레이어를 바라보도록 설정 (기존 코드 약간 수정)
+		XMFLOAT3 lookAtPos = m_xmf3Position;
+		lookAtPos.y += 15.0f; // 플레이어 머리 위
+		m_pCamera->SetLookAt(lookAtPos);
+	}
+	else if (nCurrentCameraMode == FIRST_PERSON_CAMERA) {
+		// 1인칭 카메라는 플레이어 위치와 동일하게 업데이트
+		m_pCamera->SetPosition(m_xmf3Position); // 필요시 오프셋 적용
+		if (m_pCameraUpdatedContext) OnCameraUpdateCallback(fTimeElapsed); // 땅 밑 체크 등
+	}
+	m_pCamera->RegenerateViewMatrix(); // 최종 뷰 행렬 계산
+
+	// --- 6. 마찰 적용 ---
+	// 속도를 점진적으로 감소시킵니다. (Y축 속도에는 마찰 적용 안 함 가정)
+	float fFriction = m_fFriction;
+	float fSpeedXZ = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
+	if (fSpeedXZ > 0.0f) {
+		float fDeceleration = fFriction * fTimeElapsed;
+		if (fDeceleration > fSpeedXZ) fDeceleration = fSpeedXZ; // 현재 속도보다 더 많이 감속할 수 없음
+
+		XMFLOAT3 xmf3ReverseVelocityXZ = Vector3::Normalize(XMFLOAT3(m_xmf3Velocity.x, 0.0f, m_xmf3Velocity.z));
+		xmf3ReverseVelocityXZ = Vector3::ScalarProduct(xmf3ReverseVelocityXZ, -fDeceleration, false);
+
+		m_xmf3Velocity.x += xmf3ReverseVelocityXZ.x;
+		m_xmf3Velocity.z += xmf3ReverseVelocityXZ.z;
 	}
 }
 
@@ -568,6 +634,17 @@ void CTerrainPlayer::keyInput(UCHAR* key)
 }
 
 
+
+const PlayerInputData& CPlayer::GetStateMachineInput() const {
+	if (m_pStateMachine) {
+		if (m_pStateMachine) {
+			// 임시로 m_LastInput 직접 접근 (friend 클래스 또는 public getter 필요)
+			return m_pStateMachine->GetLastInput();
+		}
+	}
+	static PlayerInputData defaultInput;
+	return defaultInput;
+}
 
 
 

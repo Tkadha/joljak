@@ -156,6 +156,7 @@
     <ClCompile Include="Octree.cpp" />
     <ClCompile Include="PigState.cpp" />
     <ClCompile Include="Player.cpp" />
+    <ClCompile Include="PlayerStateMachine.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Shader.cpp" />
@@ -185,6 +186,8 @@
     <ClInclude Include="Octree.h" />
     <ClInclude Include="PigState.h" />
     <ClInclude Include="Player.h" />
+    <ClInclude Include="PlayerStateDefs.h" />
+    <ClInclude Include="PlayerStateMachine.h" />
     <ClInclude Include="ResourceManager.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Shader.h" />

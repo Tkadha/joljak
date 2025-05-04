@@ -9,6 +9,7 @@
 
 #include "Object.h"
 #include "Camera.h"
+#include "PlayerStateMachine.h" 
 
 class CPlayer : public CGameObject
 {
@@ -40,6 +41,9 @@ protected:
 	CCamera						*m_pCamera = NULL;
 
 public:
+	PlayerStateMachine* m_pStateMachine = nullptr;
+
+
 	CPlayer(CGameFramework* pGameFramework);
 	virtual ~CPlayer();
 	bool					    checkmove = false;
@@ -66,8 +70,8 @@ public:
 	CCamera *GetCamera() { return(m_pCamera); }
 	void SetCamera(CCamera *pCamera) { m_pCamera = pCamera; }
 
-	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false);
-	void Move(const XMFLOAT3& xmf3Shift, bool bVelocity = false);
+	virtual void Move(DWORD nDirection, float fDistance, bool bVelocity = false);
+	virtual void Move(const XMFLOAT3& xmf3Shift, bool bVelocity = false);
 	void Move(float fxOffset = 0.0f, float fyOffset = 0.0f, float fzOffset = 0.0f);
 	void Rotate(float x, float y, float z);
 
@@ -101,6 +105,8 @@ public:
 	void AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate, XMFLOAT3 scale);
 	CGameObject* FindFrame(char* framename);
 
+
+	const PlayerInputData& GetStateMachineInput() const;
 };
 
 class CAirplanePlayer : public CPlayer
@@ -143,8 +149,8 @@ public:
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
 	virtual void OnCameraUpdateCallback(float fTimeElapsed);
 
-	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false);
-
+	//virtual void Move(DWORD nDirection, float fDistance, bool bVelocity = false);
+	
 	virtual void Update(float fTimeElapsed);
 
 	int nAni{};

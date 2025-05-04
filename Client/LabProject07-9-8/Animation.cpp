@@ -329,6 +329,11 @@ void CAnimationController::SetTrackWeight(int nAnimationTrack, float fWeight)
 	if (m_pAnimationTracks) m_pAnimationTracks[nAnimationTrack].SetWeight(fWeight);
 }
 
+void CAnimationController::SetTrackType(int nAnimationTrack, int type)
+{
+	if (m_pAnimationTracks) m_pAnimationTracks[nAnimationTrack].SetType(type);
+}
+
 void CAnimationController::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	for (int i = 0; i < m_nSkinnedMeshes; i++)

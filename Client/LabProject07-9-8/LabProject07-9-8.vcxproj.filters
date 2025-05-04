@@ -69,6 +69,9 @@
     <Filter Include="소스 파일\Shader\OBBShader">
       <UniqueIdentifier>{8e626803-5bc9-451f-91ab-28f2b59cc93c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Object\Player\PlayerStateMachine">
+      <UniqueIdentifier>{b468b9b6-15c6-4e72-ad25-76ecdd26a8f9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LabProject07-9-8.rc">
@@ -162,6 +165,9 @@
     <ClCompile Include="OBBShader.cpp">
       <Filter>소스 파일\Shader\OBBShader</Filter>
     </ClCompile>
+    <ClCompile Include="PlayerStateMachine.cpp">
+      <Filter>소스 파일\Object\Player\PlayerStateMachine</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FSMManager.h">
@@ -244,6 +250,12 @@
     </ClInclude>
     <ClInclude Include="OBBShader.h">
       <Filter>소스 파일\Shader\OBBShader</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerStateDefs.h">
+      <Filter>소스 파일\Object\Player\PlayerStateMachine</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerStateMachine.h">
+      <Filter>소스 파일\Object\Player\PlayerStateMachine</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -456,7 +456,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// 5.5. 플레이어 렌더링
 	if (m_pPlayer)
 	{
-		//m_pPlayer->Render(pd3dCommandList, pCamera); // Player::Render (GameObject::Render 상속) 내부에서 상태 설정 및 렌더링
+		m_pPlayer->Render(pd3dCommandList, pCamera); // Player::Render (GameObject::Render 상속) 내부에서 상태 설정 및 렌더링
 	}
 
 	// 5.5. OBB 렌더링 (선택적)

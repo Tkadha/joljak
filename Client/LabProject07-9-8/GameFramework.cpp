@@ -4,6 +4,10 @@
 
 #include "stdafx.h"
 #include "GameFramework.h"
+#include "PlayerStateDefs.h"
+#include "Player.h"
+
+
 
 CGameFramework::CGameFramework()
 {
@@ -472,7 +476,7 @@ void CGameFramework::ProcessInput()
 	bool bProcessedByScene = false;
 
 	if (GetKeyboardState(pKeysBuffer) && m_pScene) bProcessedByScene = m_pScene->ProcessInput(pKeysBuffer);
-	if (!bProcessedByScene)
+	if (!bProcessedByScene && m_pPlayer)
 	{
 		float cxDelta = 0.0f, cyDelta = 0.0f;
 		POINT ptCursorPos;
@@ -485,6 +489,23 @@ void CGameFramework::ProcessInput()
 			SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
 		}
 
+		PlayerInputData inputData;
+
+		inputData.MoveForward = (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0);
+		inputData.MoveBackward = (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0);
+		inputData.WalkLeft = (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0);
+		inputData.WalkRight = (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0);
+		inputData.Jump = (pKeysBuffer[VK_SPACE] & 0xF0);
+		inputData.Attack = (pKeysBuffer['F'] & 0xF0); // 'F' 키를 Attack 으로 매핑 (예시)
+		// inputData.Interact = (pKeysBuffer['E'] & 0xF0); // 'E' 키를 Interact 로 매핑 (필요시)
+		inputData.Run = (pKeysBuffer[VK_SHIFT] & 0xF0); // Shift 키를 Run 으로 매핑
+
+		if (m_pPlayer && m_pPlayer->m_pStateMachine) // 플레이어와 상태머신 유효성 검사
+		{
+			m_pPlayer->m_pStateMachine->HandleInput(inputData);
+		}
+
+		/*
 		DWORD dwDirection = 0;
 		if (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0) dwDirection |= DIR_FORWARD;
 		if (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
@@ -493,6 +514,7 @@ void CGameFramework::ProcessInput()
 		if (pKeysBuffer[VK_SPACE] & 0xF0) dwDirection |= DIR_UP;
 		if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
 		else m_pPlayer->keyInput(pKeysBuffer);
+		*/
 
 		// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
 		UCHAR toggleKeys[] = { 'R' /*, 다른 키들 */ };
@@ -519,35 +541,35 @@ void CGameFramework::ProcessInput()
 		}
 
 		// 카메라 모드에 따른 입력 처리 (기존 코드와 동일)
-		if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
+		if (m_pCamera) // m_pCamera 유효성 검사
 		{
-			if (pKeysBuffer['Q'] & 0xF0)
+			if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
 			{
-				XMFLOAT3 offset = m_pCamera->GetOffset();
-				offset.y = max(20.0f, offset.y - 10.0f);
-				m_pCamera->SetOffset(offset);
+				if (pKeysBuffer['Q'] & 0xF0)
+				{
+					XMFLOAT3 offset = m_pCamera->GetOffset();
+					offset.y = max(20.0f, offset.y - 10.0f);
+					m_pCamera->SetOffset(offset);
+				}
+				if (pKeysBuffer['E'] & 0xF0)
+				{
+					XMFLOAT3 offset = m_pCamera->GetOffset();
+					offset.y = min(200.0f, offset.y + 10.0f);
+					m_pCamera->SetOffset(offset);
+				}
 			}
-			if (pKeysBuffer['E'] & 0xF0)
+			else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA || m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
 			{
-				XMFLOAT3 offset = m_pCamera->GetOffset();
-				offset.y = min(200.0f, offset.y + 10.0f);
-				m_pCamera->SetOffset(offset);
+				if (cxDelta || cyDelta)
+				{
+					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+						m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+					else
+						m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+				}
 			}
 		}
-		else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA || m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
-		{
-			if (cxDelta || cyDelta)
-			{
-				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-					m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-				else
-					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
-			}
-		}
-
-		if (dwDirection) m_pPlayer->Move(dwDirection, 12.25f, true);
 	}
-	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 }
 
 void CGameFramework::AnimateObjects()
@@ -594,6 +616,7 @@ void CGameFramework::FrameAdvance()
 	ProcessInput();
 
     AnimateObjects();
+	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 
 	HRESULT hResult = m_pd3dCommandAllocator->Reset();
 	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
