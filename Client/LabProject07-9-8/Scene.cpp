@@ -113,6 +113,29 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		
 		m_vGameObjects.emplace_back(gameObj);
 	}
+
+	/*for (int i = 0; i < nPineObjects; ++i) {
+		CGameObject* gameObj = new CBirchObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, 2, 6, 2, 10);
+		gameObj->SetScale(w, h, w);
+
+		m_vGameObjects.emplace_back(gameObj);
+	}*/
+
+	for (int i = 0; i < nPineObjects; ++i) {
+		CGameObject* gameObj = new CWillowObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, 2, 6, 2, 10);
+		gameObj->SetScale(w, h, w);
+
+		m_vGameObjects.emplace_back(gameObj);
+	}
+
+
+
 	{
 		CGameObject* gameObj = new CSwordObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);

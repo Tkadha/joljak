@@ -805,8 +805,8 @@ void CGameFramework::ProcessInput()
 
 		inputData.MoveForward = (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0);
 		inputData.MoveBackward = (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0);
-		inputData.WalkLeft = (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0);
-		inputData.WalkRight = (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0);
+		inputData.MoveLeft = (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0);
+		inputData.MoveRight = (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0);
 		inputData.Jump = (pKeysBuffer[VK_SPACE] & 0xF0);
 		inputData.Attack = (pKeysBuffer['F'] & 0xF0); // 'F' 키를 Attack 으로 매핑 (예시)
 		// inputData.Interact = (pKeysBuffer['E'] & 0xF0); // 'E' 키를 Interact 로 매핑 (필요시)
@@ -814,6 +814,14 @@ void CGameFramework::ProcessInput()
 
 		if (m_pPlayer && m_pPlayer->m_pStateMachine) // 플레이어와 상태머신 유효성 검사
 		{
+			auto& nwManager = NetworkManager::GetInstance();
+			INPUT2_PACKET p;
+			//p.inputData = inputData;
+			//printf("Direction: %d\n", dwDirection);
+			p.size = sizeof(INPUT2_PACKET);
+			p.type = static_cast<char>(E_PACKET::E_P_INPUT);
+			nwManager.PushSendQueue(p, p.size);
+
 			m_pPlayer->m_pStateMachine->HandleInput(inputData);
 		}
 

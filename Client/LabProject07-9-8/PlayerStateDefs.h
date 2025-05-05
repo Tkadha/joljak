@@ -8,8 +8,8 @@ enum class PlayerStateID {
     Idle,
     WalkForward,
     WalkBackward,
-    WalkLeft,
-    WalkRight,
+    MoveLeft,
+    MoveRight,
     RunForward,
     AttackMelee1,
     JumpStart,
@@ -45,14 +45,14 @@ namespace AnimIndices {
 
 // --- 상태 머신으로 전달될 입력 정보 ---
 struct PlayerInputData {
-    bool MoveForward = false;
-    bool MoveBackward = false;
-    bool WalkLeft = false;
-    bool WalkRight = false;
-    bool Jump = false;
-    bool Attack = false; // 예: F키 또는 마우스 클릭
-    bool Interact = false; // 예: E키
-    bool Run = false; // 예: Shift 키
+    char MoveForward = false;
+    char MoveBackward = false;
+    char MoveLeft = false;
+    char MoveRight = false;
+    char Jump = false;
+    char Attack = false; // 예: F키 또는 마우스 클릭
+    char Interact = false; // 예: E키
+    char Run = false; // 예: Shift 키
     // 필요시 다른 키나 마우스 입력 추가
 };
 
