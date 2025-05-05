@@ -56,7 +56,7 @@ void CGameFramework::ProcessPacket(char* packet)
 	case E_PACKET::E_P_ROTATE:
 	{
 		ROTATE_PACKET* recv_p = reinterpret_cast<ROTATE_PACKET*>(packet);
-		if (recv_p->uid != _MyID) {
+		if (m_pScene->PlayerList.find(recv_p->uid) != m_pScene->PlayerList.end()) {
 			m_pScene->PlayerList[recv_p->uid]->SetLook(XMFLOAT3{ recv_p->look.x, recv_p->look.y, recv_p->look.z });
 			m_pScene->PlayerList[recv_p->uid]->SetUp(XMFLOAT3{ recv_p->up.x, recv_p->up.y, recv_p->up.z });
 			m_pScene->PlayerList[recv_p->uid]->SetRight(XMFLOAT3{ recv_p->right.x, recv_p->right.y, recv_p->right.z });
@@ -64,6 +64,14 @@ void CGameFramework::ProcessPacket(char* packet)
 		}
 	}
 	break;
+	case E_PACKET::E_P_INPUT:
+	{
+		INPUT_PACKET* recv_p = reinterpret_cast<INPUT_PACKET*>(packet);
+		if (m_pScene->PlayerList.find(recv_p->uid) != m_pScene->PlayerList.end()) {
+			m_pScene->PlayerList[recv_p->uid]->ChangeAnimation(recv_p->direction);
+		}
+	}
+		break;
 	case E_PACKET::E_P_LOGIN:
 	{
 		LOGIN_PACKET* recv_p = reinterpret_cast<LOGIN_PACKET*>(packet);
@@ -163,10 +171,12 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	ItemManager::Initialize();
 	InitializeItemIcons();
 
-	auto& nwManager = NetworkManager::GetInstance();
+	/*auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
 	std::thread t(&CGameFramework::NerworkThread, this);
-	t.detach();
+	t.detach();*/
+
+	//ChangeSwapChainState();
 
 	return(true);
 }

@@ -1644,3 +1644,8 @@ UserObject::UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3d
 UserObject::~UserObject()
 {
 }
+
+void UserObject::ChangeAnimation(DWORD direction)
+{
+
+}

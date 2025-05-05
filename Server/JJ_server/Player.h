@@ -40,7 +40,7 @@ public:
 
 		m_Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		m_Gravity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		m_fMaxVelocityXZ = 300.0f;
+		m_fMaxVelocityXZ = 100.0f;
 		m_fMaxVelocityY = 400.0f;
 		m_fFriction = 250.0f;
 

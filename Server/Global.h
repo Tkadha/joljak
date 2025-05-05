@@ -72,6 +72,7 @@ class INPUT_PACKET : public PACKET
 {
 public:
 	DWORD direction;	
+	ULONGLONG uid;
 	INPUT_PACKET() {
 		size = sizeof(INPUT_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_INPUT);
