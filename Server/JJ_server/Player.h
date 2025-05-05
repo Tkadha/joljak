@@ -2,6 +2,7 @@
 #include "../ServerLib/RemoteClient.h"
 #include "stdafx.h"
 
+#include "../Global.h"
 
 // client 정보
 
@@ -29,6 +30,10 @@ private:
 
 	LPVOID						m_pPlayerUpdatedContext = NULL;
 	std::shared_ptr<Terrain>	m_pTerrain = nullptr;
+
+	float m_walkSpeed = 50.0f;
+	float m_runSpeed = 80.0f;
+
 public:
 	PlayerClient() : RemoteClient()
 	{
@@ -85,6 +90,23 @@ public:
 	void SetLook(const XMFLOAT3& xmf3Look) { m_Look = xmf3Look; }
 	void SetTerrain(std::shared_ptr<Terrain> pTerrain) { m_pTerrain = pTerrain; }
 	void Update(float fTimeElapsed);
+	
+	// 상태머신 적용 업데이트 테스트
+	void Update_test(float deltaTime);
+	bool CheckIfGrounded();
+	void SnapToGround();
+
+
+
+
+	PlayerInputData m_lastReceivedInput; // 마지막으로 받은 입력 상태 저장
+	ServerPlayerState m_currentState = ServerPlayerState::Idle; // 서버 측 플레이어 상태 (ServerPlayerState enum 정의 필요)
+
+	void processInput(PlayerInputData input);
+
+	XMFLOAT3 GetLookVector() { return(m_Look); }
+	XMFLOAT3 GetUpVector() { return(m_Up); }
+	XMFLOAT3 GetRightVector() { return(m_Right); }
 
 };
 
