@@ -11,7 +11,7 @@
 #include "ResourceManager.h"
 #include "ShaderManager.h"
 #include <unordered_map>
-
+#include <mutex>
 
 #define MAX_LIGHTS						16 
 
@@ -20,6 +20,7 @@
 #define DIRECTIONAL_LIGHT				3
 
 class CGameFramework;
+
 
 struct LIGHT
 {

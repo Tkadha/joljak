@@ -54,7 +54,6 @@
     <Filter Include="소스 파일\ITEM">
       <UniqueIdentifier>{0aa10127-1162-4757-9bda-d05014381c40}</UniqueIdentifier>
     </Filter>
-    <Filter Include="소스 파일\ResourceManager">
     <Filter Include="소스 파일\Manager">
       <UniqueIdentifier>{cdb652f0-b379-4c45-b0c5-d0573e157ef0}</UniqueIdentifier>
     </Filter>

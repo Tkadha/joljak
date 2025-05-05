@@ -150,7 +150,7 @@ void Logic_thread()
 		for(auto& cl: PlayerClient::PlayerClients) {
 			if (cl.second->GetDirection() != 0)
 			{
-				cl.second->Move(cl.second->GetDirection(), 12.25f, true);
+				cl.second->Move(cl.second->GetDirection(), 100.f, true);
 			}
 			auto& beforepos = cl.second->GetPosition();
 			cl.second->Update(g_timer.GetTimeElapsed());
@@ -287,6 +287,36 @@ void ProcessAccept()
 				s_a_packet.type = static_cast<unsigned char>(E_PACKET::E_P_LOGIN);
 				s_a_packet.uid = cl.second->m_id;
 				remoteClient->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_a_packet));
+
+				// 위치도 전송하자
+				POSITION_PACKET s_p_packet;
+				s_p_packet.size = sizeof(POSITION_PACKET);
+				s_p_packet.type = static_cast<unsigned char>(E_PACKET::E_P_POSITION);
+				s_p_packet.uid = cl.second->m_id;
+				auto& pos = cl.second->GetPosition();
+				s_p_packet.position.x = pos.x;
+				s_p_packet.position.y = pos.y;
+				s_p_packet.position.z = pos.z;
+				remoteClient->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_p_packet));
+
+				// 회전 정보도 전송하자
+				ROTATE_PACKET s_r_packet;
+				s_r_packet.size = sizeof(ROTATE_PACKET);
+				s_r_packet.type = static_cast<unsigned char>(E_PACKET::E_P_ROTATE);
+				s_r_packet.uid = cl.second->m_id;
+				auto& right = cl.second->GetRight();
+				auto& up = cl.second->GetUp();
+				auto& look = cl.second->GetLook();
+				s_r_packet.right.x = right.x;
+				s_r_packet.right.y = right.y;
+				s_r_packet.right.z = right.z;
+				s_r_packet.up.x = up.x;
+				s_r_packet.up.y = up.y;
+				s_r_packet.up.z = up.z;
+				s_r_packet.look.x = look.x;
+				s_r_packet.look.y = look.y;
+				s_r_packet.look.z = look.z;
+				remoteClient->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_r_packet));
 			}
 
 			// 나의 정보 보내기

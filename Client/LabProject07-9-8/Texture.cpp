@@ -37,6 +37,7 @@ bool CTexture::LoadBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	m_vTextures[nIndex] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pData, nElements * nStride, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ, &uploadBuffer);
 	// 업로드 버퍼 저장
 	if (uploadBuffer) m_vTextureUploadBuffers[nIndex] = uploadBuffer;
+	return true;
 }
 
 

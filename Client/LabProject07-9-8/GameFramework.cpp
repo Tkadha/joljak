@@ -34,7 +34,7 @@ void CGameFramework::NerworkThread()
 			ProcessPacket(packet.first.get());
 
 		}
-		SleepEx(100, TRUE);
+		SleepEx(10, TRUE);
 	}
 }
 void CGameFramework::ProcessPacket(char* packet)
@@ -68,8 +68,7 @@ void CGameFramework::ProcessPacket(char* packet)
 	{
 		LOGIN_PACKET* recv_p = reinterpret_cast<LOGIN_PACKET*>(packet);
 		if (_MyID == -1) _MyID = recv_p->uid;
-		else if (m_pScene->PlayerList.find(recv_p->uid) == m_pScene->PlayerList.end()) {
-			
+		else if (m_pScene->PlayerList.find(recv_p->uid) == m_pScene->PlayerList.end()) {		
 			m_logQueue.push(log_inout{ E_PACKET::E_P_LOGIN ,recv_p->uid });
 		}
 	}
@@ -129,7 +128,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CreateDirect3DDevice();
 	CreateCommandQueueAndList();
-	CreateCbvSrvDescriptorHeaps(200, 1024);
+	CreateCbvSrvDescriptorHeaps(200, 4096);
 	CreateRtvAndDsvDescriptorHeaps();
 	CreateSwapChain();
 	CreateDepthStencilView();
@@ -164,10 +163,10 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	ItemManager::Initialize();
 	InitializeItemIcons();
 
-	//auto& nwManager = NetworkManager::GetInstance();
-	//nwManager.Init();
-	//std::thread t(&CGameFramework::NerworkThread, this);
-	//t.detach();
+	auto& nwManager = NetworkManager::GetInstance();
+	nwManager.Init();
+	std::thread t(&CGameFramework::NerworkThread, this);
+	t.detach();
 
 	return(true);
 }
@@ -915,15 +914,8 @@ void CGameFramework::ProcessInput()
 					}
 
 				}
-				//if (dwDirection)
-				//{
-				//	m_pPlayer->Move(dwDirection, 12.25f, true);
-				//}
 			}
-
-			//if (dwDirection) m_pPlayer->Move(dwDirection, 12.25f, true);
 		}
-		//m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 	}
 }
 
@@ -976,7 +968,7 @@ void CGameFramework::FrameAdvance()
 			case E_PACKET::E_P_LOGIN:
 			{
 				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Hu_M_FullBody.bin", this);
-				int animate_count = 10;
+				int animate_count = 15;
 				m_pScene->PlayerList[log.ID] = std::make_unique<UserObject>(m_pd3dDevice, m_pd3dCommandList, pUserModel, animate_count, this);
 				m_pScene->PlayerList[log.ID]->m_objectType = GameObjectType::Player;
 				m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
@@ -987,13 +979,14 @@ void CGameFramework::FrameAdvance()
 				m_pScene->PlayerList[log.ID]->SetPosition(XMFLOAT3{ 1500.f,m_pScene->m_pTerrain->GetHeight(1500,1500) ,1500.f });
 				m_pScene->PlayerList[log.ID]->SetScale(10.0f, 10.0f, 10.0f);
 				m_pScene->PlayerList[log.ID]->SetTerraindata(m_pScene->m_pTerrain);
+				if (m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController) m_pScene->PlayerList[log.ID]->PropagateAnimController(m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController);
 				if (pUserModel) delete(pUserModel);
 			}
 			break;
 			case E_PACKET::E_P_LOGOUT:
 			{
 				if (m_pScene->PlayerList.find(log.ID) != m_pScene->PlayerList.end()) {
-					m_pScene->PlayerList[log.ID]->Release();
+					//m_pScene->PlayerList[log.ID]->Release();
 					m_pScene->PlayerList.erase(log.ID);
 				}
 			}
@@ -1007,9 +1000,10 @@ void CGameFramework::FrameAdvance()
 		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
 		WaitForGpuComplete();
+
 		for(auto& player : m_pScene->PlayerList)
 		{
-			player.second->ReleaseUploadBuffers();
+			if (player.second) player.second->ReleaseUploadBuffers();
 		}
 	}
 
@@ -1049,19 +1043,6 @@ void CGameFramework::FrameAdvance()
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 #endif	
-
-
-	if (m_pPlayer) {
-		if (m_pPlayer->invincibility) {
-			auto endtime = std::chrono::system_clock::now();
-			auto exectime = endtime - m_pPlayer->starttime;
-			auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
-			if (exec_ms > 1000.f) { // 무적시간이 1초가 경과되면
-				m_pPlayer->SetInvincibility();	// 변경
-			}
-		}
-		m_pPlayer->Render(m_pd3dCommandList, m_pCamera);
-	}
 
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplWin32_NewFrame();

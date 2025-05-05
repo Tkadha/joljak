@@ -57,8 +57,8 @@ public:
 		m_Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
 		m_Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		m_Gravity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		m_fMaxVelocityXZ = 300.0f;
+		m_Gravity = XMFLOAT3(0.0f, -250.0f, 0.0f);
+		m_fMaxVelocityXZ = 100.f;
 		m_fMaxVelocityY = 400.0f;
 		m_fFriction = 250.0f;
 
@@ -83,6 +83,13 @@ public:
 	void SetRight(const XMFLOAT3& xmf3Right) { m_Right = xmf3Right; }
 	void SetUp(const XMFLOAT3& xmf3Up) { m_Up = xmf3Up; }
 	void SetLook(const XMFLOAT3& xmf3Look) { m_Look = xmf3Look; }
+
+	XMFLOAT3 GetRight() const { return m_Right; }
+	XMFLOAT3 GetUp() const { return m_Up; }
+	XMFLOAT3 GetLook() const { return m_Look; }
+
+
+
 	void SetTerrain(std::shared_ptr<Terrain> pTerrain) { m_pTerrain = pTerrain; }
 	void Update(float fTimeElapsed);
 
