@@ -347,12 +347,30 @@ public:
 	virtual ~CHairObject() {};
 };
 
+
+// ------------------ 나무 ----------------------------
+class CBirchObject : public CGameObject
+{
+public:
+	CBirchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
+	virtual ~CBirchObject() {}
+};
+
+class CWillowObject : public CGameObject
+{
+public:
+	CWillowObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
+	virtual ~CWillowObject() {}
+};
+
+
 class CPineObject : public CGameObject
 {
 public:
 	CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CPineObject() {}
 };
+
 
 class CRockClusterAObject : public CGameObject
 {
