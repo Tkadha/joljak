@@ -147,14 +147,19 @@ void Logic_thread()
 	g_timer.Start();
 	while (true) {
 		g_timer.Tick(120.f);
+		float deltaTime = g_timer.GetTimeElapsed(); // 매 틱 동일한 deltaTime 사용
+
 		for(auto& cl: PlayerClient::PlayerClients) {
-			if (cl.second->GetDirection() != 0)
-			{
-				cl.second->Move(cl.second->GetDirection(), 100.f, true);
-			}
+			//if (cl.second->GetDirection() != 0)
+			//{
+			//	cl.second->Move(cl.second->GetDirection(), 12.25f, true);
+			//}
 			auto& beforepos = cl.second->GetPosition();
+
 			cl.second->Update(g_timer.GetTimeElapsed());
+
 			auto& pos = cl.second->GetPosition();
+
 			if (beforepos.x != pos.x || beforepos.y != pos.y || beforepos.z != pos.z)
 			{
 				POSITION_PACKET s_packet;
@@ -219,6 +224,7 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		break;
 	case E_PACKET::E_P_INPUT:
 	{
+		/*
 		INPUT_PACKET* r_packet = reinterpret_cast<INPUT_PACKET*>(packet);
 		client->SetDirection(r_packet->direction);
 		cout<< client->m_id << " " << r_packet->direction << endl;
@@ -228,11 +234,16 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		s_packet.size = sizeof(INPUT_PACKET);
 		s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_INPUT);
 		s_packet.direction = r_packet->direction;
-		s_packet.uid = client->m_id;
-		for (auto& cl : PlayerClient::PlayerClients) {
-			if (cl.second.get() == client.get()) continue; // 나 자신은 제외한다.
-			cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
-		}
+		*/
+		INPUT2_PACKET* r_packet = reinterpret_cast<INPUT2_PACKET*>(packet);
+		client->processInput(r_packet->inputData);
+		auto& pos = client->GetPosition();
+		cout << client->m_id << " " << pos.x << " " << pos.y << " " << pos.z << endl;
+		INPUT2_PACKET s_packet;
+		s_packet.size = sizeof(INPUT2_PACKET);
+		s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_INPUT);
+		s_packet.inputData = r_packet->inputData;
+
 	}
 	break;
 	default:

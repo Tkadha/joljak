@@ -56,3 +56,23 @@
 
 6. death
 7. dodge
+
+//////////////////////////
+플레이어
+
+IDLE = 0;
+WALK_FORWARD = 1;
+WALK_BACKWARD = 2; 
+WALK_LEFT = 3;
+WALK_RIGHT = 4;
+RUN_FORWARD = 5;
+RUN_BACKWARD = 6;
+RUN_LEFT = 7;
+RUN_RIGHT = 8;
+JUMP_START = 9; 
+JUMP_LOOP = 10;  
+JUMP_END = 11;    
+ATTACK_MELEE1 = 12;
+ATTACK_AXE = 13;
+ATTACK_PICK = 14;
+HIT_REACTION = 15;

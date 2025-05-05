@@ -1535,7 +1535,31 @@ CHairObject::CHairObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/FAE_Pine_A_LOD0.bin", "rb");
+	::fopen_s(&pInFile, "Model/tree/FAE_Pine_A_LOD0.bin", "rb");
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
+	SetChild(pGameObject);
+
+	m_objectType = GameObjectType::Tree;
+
+	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+}
+
+CBirchObject::CBirchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
+{
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, "Model/tree/FAE_Birch_A_LOD0.bin", "rb");
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
+	SetChild(pGameObject);
+
+	m_objectType = GameObjectType::Tree;
+
+	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+}
+
+CWillowObject::CWillowObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
+{
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, "Model/tree/FAE_Willow_A_LOD0.bin", "rb");
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
 	SetChild(pGameObject);
 
