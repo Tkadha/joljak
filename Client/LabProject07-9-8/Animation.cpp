@@ -454,7 +454,7 @@ void CAnimationController::UpdateBoneTransformCBVContents()
 				}
 			}
 		}
-		m_ppd3dcbSkinningBoneTransforms[i]->Unmap(0, nullptr);
+		//m_ppd3dcbSkinningBoneTransforms[i]->Unmap(0, nullptr);
 	}
 }
 
