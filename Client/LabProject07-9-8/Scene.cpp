@@ -591,6 +591,7 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 				m_pGameFramework->AddItem("stone");
 			}
 
+
 		}
 	}
 }
