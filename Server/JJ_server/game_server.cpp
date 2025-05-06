@@ -251,7 +251,7 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		INPUT2_PACKET s_packet;
 		s_packet.size = sizeof(INPUT2_PACKET);
 		s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_INPUT);
-		s_packet.inputData = r_packet->inputData;
+		//s_packet.inputData = r_packet->inputData;
 
 	}
 	break;

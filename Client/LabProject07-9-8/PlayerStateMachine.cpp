@@ -24,8 +24,8 @@ public:
         // 이동 입력 체크
         if (input.MoveForward) return PlayerStateID::WalkForward;
         if (input.MoveBackward) return PlayerStateID::WalkBackward;
-        if (input.MoveLeft) return PlayerStateID::WalkLeft;
-        if (input.MoveRight) return PlayerStateID::WalkRight;
+        if (input.MoveLeft) return PlayerStateID::MoveLeft;
+        if (input.MoveRight) return PlayerStateID::MoveRight;
         // 기타 입력 (공격, 점프 등)
         if (input.Attack) return PlayerStateID::AttackMelee1;
         if (input.Jump) return PlayerStateID::JumpStart;
@@ -104,8 +104,8 @@ public:
         // 현재 상태 유지 조건 결정 (예: 어떤 이동키든 눌려 있으면 해당 주 방향 상태 유지)
         if (input.MoveForward) return PlayerStateID::WalkForward; // 주 방향 우선
         if (input.MoveBackward) return PlayerStateID::WalkBackward;
-        if (input.MoveLeft) return PlayerStateID::WalkLeft;
-        if (input.MoveRight) return PlayerStateID::WalkRight;
+        if (input.MoveLeft) return PlayerStateID::MoveLeft;
+        if (input.MoveRight) return PlayerStateID::MoveRight;
 
         // 여기까지 오면 안되지만, 만약을 위해 Idle 반환
         return PlayerStateID::Idle;
@@ -168,8 +168,8 @@ public:
 
         if (input.MoveForward) return PlayerStateID::WalkForward;
         if (input.MoveBackward) return PlayerStateID::WalkBackward;
-        if (input.MoveLeft) return PlayerStateID::WalkLeft;
-        if (input.MoveRight) return PlayerStateID::WalkRight;
+        if (input.MoveLeft) return PlayerStateID::MoveLeft;
+        if (input.MoveRight) return PlayerStateID::MoveRight;
 
         // 여기까지 오면 안 되지만, 안전을 위해 Idle 반환
         return PlayerStateID::Idle;
@@ -181,7 +181,7 @@ public:
 };
 class WalkLeftState : public IPlayerState {
 public:
-    PlayerStateID GetID() const override { return PlayerStateID::WalkLeft; }
+    PlayerStateID GetID() const override { return PlayerStateID::MoveLeft; }
 
     void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
     }
@@ -229,8 +229,8 @@ public:
 
         if (input.MoveForward) return PlayerStateID::WalkForward;
         if (input.MoveBackward) return PlayerStateID::WalkBackward;
-        if (input.MoveLeft) return PlayerStateID::WalkLeft;
-        if (input.MoveRight) return PlayerStateID::WalkRight;
+        if (input.MoveLeft) return PlayerStateID::MoveLeft;
+        if (input.MoveRight) return PlayerStateID::MoveRight;
 
         return PlayerStateID::Idle;
     }
@@ -241,7 +241,7 @@ public:
 };
 class WalkRightState : public IPlayerState {
 public:
-    PlayerStateID GetID() const override { return PlayerStateID::WalkRight; }
+    PlayerStateID GetID() const override { return PlayerStateID::MoveRight; }
 
     void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
     }
@@ -290,8 +290,8 @@ public:
 
         if (input.MoveForward) return PlayerStateID::WalkForward;
         if (input.MoveBackward) return PlayerStateID::WalkBackward;
-        if (input.MoveLeft) return PlayerStateID::WalkLeft;
-        if (input.MoveRight) return PlayerStateID::WalkRight;
+        if (input.MoveLeft) return PlayerStateID::MoveLeft;
+        if (input.MoveRight) return PlayerStateID::MoveRight;
 
         return PlayerStateID::Idle;
     }
@@ -584,11 +584,11 @@ void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool force
             animIndex = AnimIndices::WALK_BACKWARD;
             trackType = ANIMATION_TYPE_LOOP;
             break;
-        case PlayerStateID::WalkLeft: 
+        case PlayerStateID::MoveLeft: 
             animIndex = AnimIndices::WALK_LEFT;  
             trackType = ANIMATION_TYPE_LOOP;
             break;
-        case PlayerStateID::WalkRight: 
+        case PlayerStateID::MoveRight: 
             animIndex = AnimIndices::WALK_RIGHT; 
             trackType = ANIMATION_TYPE_LOOP;
             break;
@@ -656,11 +656,11 @@ void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool force
             animIndex = AnimIndices::WALK_BACKWARD;
             trackType = ANIMATION_TYPE_LOOP;
             break;
-        case PlayerStateID::WalkLeft:
+        case PlayerStateID::MoveLeft:
             animIndex = AnimIndices::WALK_LEFT;
             trackType = ANIMATION_TYPE_LOOP;
             break;
-        case PlayerStateID::WalkRight:
+        case PlayerStateID::MoveRight:
             animIndex = AnimIndices::WALK_RIGHT;
             trackType = ANIMATION_TYPE_LOOP;
             break;

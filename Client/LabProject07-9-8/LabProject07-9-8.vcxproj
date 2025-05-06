@@ -142,6 +142,10 @@
     <Image Include="small.ico" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\d3d12book\Common\d3dUtil.cpp" />
+    <ClCompile Include="..\..\..\d3d12book\Common\DDSTextureLoader.cpp" />
+    <ClCompile Include="..\..\..\d3d12book\Common\GameTimer.cpp" />
+    <ClCompile Include="..\..\..\d3d12book\Common\MathHelper.cpp" />
     <ClCompile Include="Animation.cpp" />
     <ClCompile Include="AtkState.cpp" />
     <ClCompile Include="Camera.cpp" />
@@ -183,6 +187,10 @@
     <ClCompile Include="WICTextureLoader12.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\d3d12book\Common\d3dUtil.h" />
+    <ClInclude Include="..\..\..\d3d12book\Common\DDSTextureLoader.h" />
+    <ClInclude Include="..\..\..\d3d12book\Common\GameTimer.h" />
+    <ClInclude Include="..\..\..\d3d12book\Common\MathHelper.h" />
     <ClInclude Include="..\..\Server\Global.h" />
     <ClInclude Include="Animation.h" />
     <ClInclude Include="AtkState.h" />

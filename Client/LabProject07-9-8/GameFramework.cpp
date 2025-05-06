@@ -136,7 +136,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CreateDirect3DDevice();
 	CreateCommandQueueAndList();
-	CreateCbvSrvDescriptorHeaps(200, 4096);
+	CreateCbvSrvDescriptorHeaps(200, 15000);
 	CreateRtvAndDsvDescriptorHeaps();
 	CreateSwapChain();
 	CreateDepthStencilView();
@@ -171,10 +171,10 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	ItemManager::Initialize();
 	InitializeItemIcons();
 
-	/*auto& nwManager = NetworkManager::GetInstance();
+	auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
 	std::thread t(&CGameFramework::NerworkThread, this);
-	t.detach();*/
+	t.detach();
 
 	//ChangeSwapChainState();
 
@@ -823,6 +823,14 @@ void CGameFramework::ProcessInput()
 
 		if (m_pPlayer && m_pPlayer->m_pStateMachine) // 플레이어와 상태머신 유효성 검사
 		{
+			auto& nwManager = NetworkManager::GetInstance();
+			INPUT2_PACKET p;
+			//p.inputData = inputData;
+			//printf("Direction: %d\n", dwDirection);
+			p.size = sizeof(INPUT2_PACKET);
+			p.type = static_cast<char>(E_PACKET::E_P_INPUT);
+			nwManager.PushSendQueue(p, p.size);
+
 			m_pPlayer->m_pStateMachine->HandleInput(inputData);
 		}
 
