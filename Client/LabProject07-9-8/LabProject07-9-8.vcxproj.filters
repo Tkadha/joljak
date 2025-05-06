@@ -1,30 +1,86 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <FxCompile Include="InstancingShaders.hlsl">
-      <Filter>hlsl</Filter>
-    </FxCompile>
-    <FxCompile Include="OBBShader.hlsl">
-      <Filter>hlsl</Filter>
-    </FxCompile>
-    <FxCompile Include="Common.hlsl">
-      <Filter>hlsl</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders.hlsl">
-      <Filter>hlsl</Filter>
-    </FxCompile>
-    <FxCompile Include="SkinnedShaders.hlsl">
-      <Filter>hlsl</Filter>
-    </FxCompile>
-    <FxCompile Include="StandardShaders.hlsl">
-      <Filter>hlsl</Filter>
-    </FxCompile>
-    <FxCompile Include="SkyboxShaders.hlsl">
-      <Filter>hlsl</Filter>
-    </FxCompile>
-    <FxCompile Include="TerrainShaders.hlsl">
-      <Filter>hlsl</Filter>
-    </FxCompile>
+    <Filter Include="소스 파일">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="소스 파일\FSM">
+      <UniqueIdentifier>{06d19572-37e7-4ba2-b6cd-68738e177fa8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Object">
+      <UniqueIdentifier>{e3c0bad3-1031-4226-83bf-b57861da07fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Object\Player">
+      <UniqueIdentifier>{4d5c5ff8-1762-472a-a732-b31f93d01efa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Object\Base">
+      <UniqueIdentifier>{023b5c1c-ca2c-4564-8dcb-d0c832cc0dea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Object\Texture">
+      <UniqueIdentifier>{ea7a0c51-4de8-491c-8cf0-9e457b4902a5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Object\Animation">
+      <UniqueIdentifier>{f8e600d0-982f-4a8d-a956-55f9c1ac35d1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Camera">
+      <UniqueIdentifier>{09d0e3d4-dcf5-44f7-8e54-d98b8d84e98e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Octree">
+      <UniqueIdentifier>{2748c4bd-9fe5-439b-9e8e-40ffb65333e5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader">
+      <UniqueIdentifier>{f4b49b24-d064-42c5-bcfb-01c8ff3abed0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Scene">
+      <UniqueIdentifier>{6849f290-003e-4f32-8dad-ea48fa511f09}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Framework">
+      <UniqueIdentifier>{4dd3d1fd-b6a7-4ee6-a3df-3c1c10e8860d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Timer">
+      <UniqueIdentifier>{cdde645c-aa52-4745-86ff-71fa21b3503c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\IMGUI">
+      <UniqueIdentifier>{135af955-6971-42b0-8853-ad3bcf43f3c9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\BackEnd">
+      <UniqueIdentifier>{25d1ca23-351c-464a-bcab-04ee6aacf332}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\ITEM">
+      <UniqueIdentifier>{0aa10127-1162-4757-9bda-d05014381c40}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Manager">
+      <UniqueIdentifier>{cdb652f0-b379-4c45-b0c5-d0573e157ef0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Manager\ResourceManager">
+      <UniqueIdentifier>{956b5884-de85-4aa8-8403-f845341d00bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Manager\ShaderManager">
+      <UniqueIdentifier>{73fd3200-38a3-4c57-8710-96405d53d65d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\StandardShader">
+      <UniqueIdentifier>{ea58d607-523c-4fc1-811b-3fdf498559ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\SkinnedShader">
+      <UniqueIdentifier>{a5fc94a1-27ea-482c-afa0-fe59607532e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\TerrainShader">
+      <UniqueIdentifier>{8d55978a-2973-4038-9e0f-d8b01d1c7e38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\SkyBoxShader">
+      <UniqueIdentifier>{058b8d1b-6837-49ac-ba59-2b3d7e0019e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\OBBShader">
+      <UniqueIdentifier>{8e626803-5bc9-451f-91ab-28f2b59cc93c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Object\Player\PlayerStateMachine">
+      <UniqueIdentifier>{b468b9b6-15c6-4e72-ad25-76ecdd26a8f9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Animation.cpp" />

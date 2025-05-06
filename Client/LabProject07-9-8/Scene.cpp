@@ -114,6 +114,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		gameObj->SetScale(w, h, w);
 		
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 	for (int i = 0; i < nPineObjects; ++i) {
 		CGameObject* gameObj = new CBirchObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
@@ -132,6 +134,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		gameObj->SetScale(w, h, w);
 
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 
 
@@ -151,6 +155,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 	for (int i = 0; i < nRockObjects; ++i) {
 		CGameObject* gameObj = new CRockClusterCObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
@@ -222,6 +228,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 
 	for (int i = 0; i < nVegetationObject; ++i) {
@@ -455,6 +463,9 @@ void CScene::ReleaseUploadBuffers()
 {
 	if (m_pSkyBox) m_pSkyBox->ReleaseUploadBuffers();
 	if (m_pTerrain) m_pTerrain->ReleaseUploadBuffers();
+	for(auto& obj : m_vGameObjects) {
+		if (obj) obj->ReleaseUploadBuffers();
+	}
 }
 
 
@@ -489,85 +500,6 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
-
-	//**/
-	static float fAngle = 0.0f;
-	fAngle += 1.50f;
-	//	XMFLOAT3 xmf3Position = XMFLOAT3(50.0f, 0.0f, 0.0f);
-	XMFLOAT4X4 xmf4x4Rotate = Matrix4x4::Rotate(0.0f, -fAngle, 0.0f);
-	XMFLOAT3 xmf3Position = Vector3::TransformCoord(XMFLOAT3(65.0f, 0.0f, 0.0f), xmf4x4Rotate);
-	//	m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent._41 = m_xmf3RotatePosition.x + xmf3Position.x;
-	//	m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent._42 = m_xmf3RotatePosition.y + xmf3Position.y;
-	//	m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent._43 = m_xmf3RotatePosition.z + xmf3Position.z;
-
-		//m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent = Matrix4x4::AffineTransformation(XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, -fAngle, 0.0f), Vector3::Add(m_xmf3RotatePosition, xmf3Position));
-		//m_ppHierarchicalGameObjects[11]->Rotate(0.0f, -1.5f, 0.0f);
-
-	//**/
-	//AllocConsole(); // 콘솔 생성
-	//freopen("CONOUT$", "w", stdout); // 표준 출력 리다이렉트
-	//SetConsoleTitle(L"Debug Console"); // 콘솔 제목 (선택사항)
-
-#ifndef test
-#define test
-	//m_pPlayer->PrintFrameInfo(m_pPlayer, NULL);
-
-	//printf("Center{%f %f %f} ", m_pPlayer->m_worldOBB.Center.x, m_pPlayer->m_worldOBB.Center.y, m_pPlayer->m_worldOBB.Center.z);
-	//printf("Extents{%f %f %f} ", m_pPlayer->m_worldOBB.Extents.x, m_pPlayer->m_worldOBB.Extents.y, m_pPlayer->m_worldOBB.Extents.z);
-	//printf("Orientation{%f %f %f}\n", m_pPlayer->m_worldOBB.Orientation.x, m_pPlayer->m_worldOBB.Orientation.y, m_pPlayer->m_worldOBB.Orientation.z);
-	//printf("Center{%f %f %f} ", m_ppHierarchicalGameObjects[0]->m_worldOBB.Center.x, m_ppHierarchicalGameObjects[0]->m_worldOBB.Center.y, m_ppHierarchicalGameObjects[0]->m_worldOBB.Center.z);
-	//printf("Extents{%f %f %f} ", m_ppHierarchicalGameObjects[0]->m_worldOBB.Extents.x, m_ppHierarchicalGameObjects[0]->m_worldOBB.Extents.y, m_ppHierarchicalGameObjects[0]->m_worldOBB.Extents.z);
-	//printf("Orientation{%f %f %f}\n", m_ppHierarchicalGameObjects[0]->m_worldOBB.Orientation.x, m_ppHierarchicalGameObjects[0]->m_worldOBB.Orientation.y, m_ppHierarchicalGameObjects[0]->m_worldOBB.Orientation.z);
-	//printf("%f %f %f\n", m_ppHierarchicalGameObjects[0]->m_localOBB.Center.x, m_ppHierarchicalGameObjects[0]->m_localOBB.Center.y, m_ppHierarchicalGameObjects[0]->m_localOBB.Center.z);
-	//printf("%f %f %f\n", m_ppHierarchicalGameObjects[0]->m_xmf4x4World._11, m_ppHierarchicalGameObjects[0]->m_xmf4x4World._12, m_ppHierarchicalGameObjects[0]->m_xmf4x4World._13);
-	//printf("%f %f %f\n", m_ppHierarchicalGameObjects[0]->m_xmf4x4World._41, m_ppHierarchicalGameObjects[0]->m_xmf4x4World._42, m_ppHierarchicalGameObjects[0]->m_xmf4x4World._43);
-	//printf("%f %f %f\n", m_ppHierarchicalGameObjects[0]->m_pChild->m_pChild->m_pChild->m_xmf4x4World._11, m_ppHierarchicalGameObjects[0]->m_pChild->m_pChild->m_pChild->m_xmf4x4World._12, m_ppHierarchicalGameObjects[0]->m_pChild->m_pChild->m_pChild->m_xmf4x4World._13);
-#endif // !1
-
-
-	//----------------------충돌체크------------------------------------
-
-	// Player <-> Object
-	//for (auto& obj : m_vGameObjects) {
-	//	if (CollisionCheck(m_pPlayer, obj)) {
-	//		if (!obj->isRender)	continue;
-	//		// 나무 충돌처리
-	//		if (obj->m_objectType == GameObjectType::Tree) {
-	//			//auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
-	//			//obj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-	//			//auto [w, h] = genRandom::generateRandomXZ(gen, 2, 6, 2, 10);
-	//			//obj->SetScale(w, h, w);
-	//			obj->isRender = false;
-	//		}
-
-	//		// 돌 충돌처리
-	//		if (obj->m_objectType == GameObjectType::Rock) {
-	//			printf("[Rock 충돌 확인])\n");
-	//			obj->isRender = false;
-	//		}
-
-	//	}
-	//}
-
-	/*if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[0])) {
-		printf("[충돌 확인])\n");
-		m_pPlayer->checkmove = true;
-
-	}
-	if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[1])) {
-
-		m_ppHierarchicalGameObjects[1]->isRender = false;
-	}
-
-	std::vector<tree_obj*> results;
-
-	tree_obj p(-1, m_pPlayer->GetPosition());
-	octree.query(p, XMFLOAT3(200, 200, 200), results);
-	for (auto& obj : results) {
-		if (m_pPlayer->CheckCollisionOBB(m_ppHierarchicalGameObjects[obj->u_id])) {
-			printf("contect!\n");
-		}
-	}*/
 }
 
 
@@ -618,39 +550,48 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			if (obj->FSM_manager) obj->FSMUpdate();
 			if (obj->m_pSkinnedAnimationController) obj->Animate(m_fElapsedTime);
 			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
-			//obj->Render(pd3dCommandList, pCamera);
-		}
+		}	
+		// 5.5. OBB 렌더링 (선택적)
+		//bool bRenderOBBs = true; // OBB 렌더링 여부 플래그 (예시)
+		//if (bRenderOBBs) {
+		//	CShader* pOBBShader = pShaderManager->GetShader("OBB", pd3dCommandList);
+		//	if (pOBBShader) {
+		//		// OBB 렌더링 시작 전에 상태 설정
+		//		SetGraphicsState(pd3dCommandList, pOBBShader); // CScene의 멤버 함수 호출
+		//
+		//		for (auto& obj : m_vGameObjects) {
+		//			if (obj /*&& obj->ShouldRenderOBB()*/) {
+		//				// RenderOBB 내부에서는 OBB용 CBV만 바인딩
+		//				obj->RenderOBB(pd3dCommandList, pCamera);
+		//				pOBBShader->Release();
+		//			}
+		//
+		//			// 플레이어 OBB 렌더링 등
+		//			if (m_pPlayer) {
+		//				m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
+		//			}
+		//
+		//			pOBBShader->Release();
+		//		}
+		//	}
+		//}
+	}
 
-		// 5.5. 플레이어 렌더링
-		if (m_pPlayer)
-		{
-			m_pPlayer->Render(pd3dCommandList, pCamera); // Player::Render (GameObject::Render 상속) 내부에서 상태 설정 및 렌더링
+	// 5.5. 플레이어 렌더링
+	if (m_pPlayer) {
+		if (m_pPlayer->invincibility) {
+			auto endtime = std::chrono::system_clock::now();
+			auto exectime = endtime - m_pPlayer->starttime;
+			auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
+			if (exec_ms > 1000.f) { // 무적시간이 1초가 경과되면
+				m_pPlayer->SetInvincibility();	// 변경
+			}
 		}
-
-	//	 5.5. OBB 렌더링 (선택적)
-	//	bool bRenderOBBs = true; // OBB 렌더링 여부 플래그 (예시)
-	//	if (bRenderOBBs) {
-	//		CShader* pOBBShader = pShaderManager->GetShader("OBB", pd3dCommandList);
-	//		if (pOBBShader) {
-	//			// OBB 렌더링 시작 전에 상태 설정
-	//			SetGraphicsState(pd3dCommandList, pOBBShader); // CScene의 멤버 함수 호출
-	//	
-	//			for (auto& obj : m_vGameObjects) {
-	//				if (obj /*&& obj->ShouldRenderOBB()*/) {
-	//					// RenderOBB 내부에서는 OBB용 CBV만 바인딩
-	//					obj->RenderOBB(pd3dCommandList, pCamera);
-	//					pOBBShader->Release();
-	//				}
-	//	
-	//				// 플레이어 OBB 렌더링 등
-	//				//if (m_pPlayer) {
-	//				//	m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
-	//				//}
-	//	
-	//				pOBBShader->Release();
-	//			}
-	//		}
-	//	}
+		m_pPlayer->Render(pd3dCommandList, pCamera);
+	}
+	for (auto& p : PlayerList) {
+		if (p.second->m_pSkinnedAnimationController) p.second->Animate(m_fElapsedTime);
+		if (p.second->isRender) p.second->Render(pd3dCommandList, pCamera);
 	}
 }
 
@@ -750,6 +691,7 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 				obj->isRender = false;
 				m_pGameFramework->AddItem("stone");
 			}
+
 
 		}
 	}

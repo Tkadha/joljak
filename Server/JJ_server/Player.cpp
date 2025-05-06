@@ -19,8 +19,10 @@ void PlayerClient::Move(ULONG dwDirection, float fDistance, bool bUpdateVelocity
 		XMFLOAT3 xmf3Shift = XMFLOAT3(0, 0, 0);
 		if (dwDirection & DIR_FORWARD) xmf3Shift = Vector3::Add(xmf3Shift, m_Look, fDistance);
 		if (dwDirection & DIR_BACKWARD) xmf3Shift = Vector3::Add(xmf3Shift, m_Look, -fDistance);
+
 		if (dwDirection & DIR_RIGHT) xmf3Shift = Vector3::Add(xmf3Shift, m_Right, fDistance);
 		if (dwDirection & DIR_LEFT) xmf3Shift = Vector3::Add(xmf3Shift, m_Right, -fDistance);
+
 		if (dwDirection & DIR_UP) xmf3Shift = Vector3::Add(xmf3Shift, m_Up, fDistance);
 		if (dwDirection & DIR_DOWN) xmf3Shift = Vector3::Add(xmf3Shift, m_Up, -fDistance);
 
@@ -82,19 +84,14 @@ void PlayerClient::Update(float fTimeElapsed)
 	m_Velocity = Vector3::Add(m_Velocity, Vector3::ScalarProduct(m_Velocity, -fDeceleration, true));
 }
 
-void PlayerClient::processInput(PlayerInputData input)
+void PlayerClient::processInput(PlayerInput input)
 {
 	m_lastReceivedInput = input;
 }
 
 void PlayerClient::Update_test(float deltaTime)
 {
-    PlayerInputData currentInput;
-    {
-        currentInput = m_lastReceivedInput;
-    }
-
-
+    PlayerInput currentInput = m_lastReceivedInput;
     // 공격 상태 처리
     static float attackTimer = 0.0f; // 실제로는 멤버 변수로 관리
     if (m_currentState == ServerPlayerState::Attacking) {
@@ -104,7 +101,7 @@ void PlayerClient::Update_test(float deltaTime)
         }
     }
 
-    // 입력 처리
+    // 상태전환
     bool isGrounded = CheckIfGrounded();
     if (m_currentState != ServerPlayerState::Attacking) { // 공격 중 아닐 때만
         if (currentInput.Attack) {
@@ -195,10 +192,10 @@ void PlayerClient::Update_test(float deltaTime)
 
 
     // 이동 및 충돌 처리
-    XMFLOAT3 deltaPos = Vector3::ScalarProduct(m_Velocity, deltaTime);
+    //XMFLOAT3 deltaPos = Vector3::ScalarProduct(m_Velocity, deltaTime);
+    XMFLOAT3 deltaPos = Vector3::ScalarProduct(m_Velocity, 1.f);
     /* 충돌 처리*/
     XMFLOAT3 finalDeltaPos = deltaPos; // 충돌 처리 적용
-
     // 위치 업데이트
     m_Position = Vector3::Add(m_Position, finalDeltaPos);
 
@@ -213,7 +210,7 @@ bool PlayerClient::CheckIfGrounded()
     int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
     bool bReverseQuad = ((z % 2) != 0);
     float fHeight = m_pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
-    if (xmf3PlayerPosition.y < fHeight) return true;
+    if (xmf3PlayerPosition.y <= fHeight) return true;
     
     return false;
 }

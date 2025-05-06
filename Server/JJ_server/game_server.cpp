@@ -24,8 +24,9 @@ using namespace std;
 
 
 #define IOCPCOUNT 1
+const int iocpcount = std::thread::hardware_concurrency() - 1; // CPU 코어 수 - 1
 
-Iocp iocp(IOCPCOUNT); // 본 예제는 스레드를 딱 하나만 쓴다. 따라서 여기도 1이 들어간다.
+Iocp iocp(iocpcount); // 본 예제는 스레드를 딱 하나만 쓴다. 따라서 여기도 1이 들어간다.
 shared_ptr<Socket> g_l_socket; // listensocket
 shared_ptr<Socket> g_c_socket; // clientsocket
 shared_ptr<PlayerClient>remoteClientCandidate;
@@ -155,8 +156,8 @@ void Logic_thread()
 			//}
 			auto& beforepos = cl.second->GetPosition();
 
-			cl.second->Update(g_timer.GetTimeElapsed());
-
+			//cl.second->Update(g_timer.GetTimeElapsed());
+			cl.second->Update_test(deltaTime);
 			auto& pos = cl.second->GetPosition();
 
 			if (beforepos.x != pos.x || beforepos.y != pos.y || beforepos.z != pos.z)
@@ -185,22 +186,6 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
-	case E_PACKET::E_P_CHAT:
-	{
-		CHAT_PACKET* r_packet = reinterpret_cast<CHAT_PACKET*>(packet);
-		cout << client->m_id << " " << r_packet->chat << endl;
-		CHAT_PACKET s_packet;
-		s_packet.size = sizeof(CHAT_PACKET);
-		s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_CHAT);
-		strcpy(s_packet.chat, r_packet->chat);
-		//for (auto cl : RemoteClient::remoteClients) {
-		//	if (cl.second != client) cl.second->tcpConnection.m_isReadOverlapped = false;
-		//	cout << "Send: " << client->m_id << " to " << cl.second->m_id << endl;
-		//	cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
-		//	if (cl.second != client) cl.second->tcpConnection.m_isReadOverlapped = true;
-		//}
-		break;
-	}
 	case E_PACKET::E_P_ROTATE:
 	{
 		ROTATE_PACKET* r_packet = reinterpret_cast<ROTATE_PACKET*>(packet);
@@ -216,6 +201,7 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		s_packet.look = r_packet->look;
 		s_packet.uid = client->m_id;
 		for(auto& cl : PlayerClient::PlayerClients) {
+			if (cl.second.get() == client.get()) continue; // 나 자신은 제외한다.
 			cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 		}
 	}
@@ -234,7 +220,32 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		s_packet.direction = r_packet->direction;
 		*/
 		INPUT2_PACKET* r_packet = reinterpret_cast<INPUT2_PACKET*>(packet);
-		//client->processInput(r_packet->inputData);
+		client->processInput(r_packet->inputData);
+		/*if (client->m_lastReceivedInput.Attack) {
+			cout << client->m_id << " Attack!" << endl;
+		}
+		if (client->m_lastReceivedInput.Jump) {
+			cout << client->m_id << " Jump!" << endl;
+		}
+		if (client->m_lastReceivedInput.MoveForward) {
+			cout << client->m_id << " MoveForward!" << endl;
+		}
+		if (client->m_lastReceivedInput.MoveBackward) {
+			cout << client->m_id << " MoveBackward!" << endl;
+		}
+		if (client->m_lastReceivedInput.MoveLeft) {
+			cout << client->m_id << " MoveLeft!" << endl;
+		}
+		if (client->m_lastReceivedInput.MoveRight) {
+			cout << client->m_id << " MoveRight!" << endl;
+		}
+		if (client->m_lastReceivedInput.Run) {
+			cout << client->m_id << " Run!" << endl;
+		}
+		if (client->m_lastReceivedInput.Interact) {
+			cout << client->m_id << " Interact!" << endl;
+		}*/
+
 		auto& pos = client->GetPosition();
 		cout << client->m_id << " " << pos.x << " " << pos.y << " " << pos.z << endl;
 		INPUT2_PACKET s_packet;
@@ -302,6 +313,36 @@ void ProcessAccept()
 				s_a_packet.type = static_cast<unsigned char>(E_PACKET::E_P_LOGIN);
 				s_a_packet.uid = cl.second->m_id;
 				remoteClient->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_a_packet));
+
+				//// 위치도 전송하자
+				//POSITION_PACKET s_p_packet;
+				//s_p_packet.size = sizeof(POSITION_PACKET);
+				//s_p_packet.type = static_cast<unsigned char>(E_PACKET::E_P_POSITION);
+				//s_p_packet.uid = cl.second->m_id;
+				//auto& pos = cl.second->GetPosition();
+				//s_p_packet.position.x = pos.x;
+				//s_p_packet.position.y = pos.y;
+				//s_p_packet.position.z = pos.z;
+				//remoteClient->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_p_packet));
+
+				//// 회전 정보도 전송하자
+				//ROTATE_PACKET s_r_packet;
+				//s_r_packet.size = sizeof(ROTATE_PACKET);
+				//s_r_packet.type = static_cast<unsigned char>(E_PACKET::E_P_ROTATE);
+				//s_r_packet.uid = cl.second->m_id;
+				//auto& right = cl.second->GetRight();
+				//auto& up = cl.second->GetUp();
+				//auto& look = cl.second->GetLook();
+				//s_r_packet.right.x = right.x;
+				//s_r_packet.right.y = right.y;
+				//s_r_packet.right.z = right.z;
+				//s_r_packet.up.x = up.x;
+				//s_r_packet.up.y = up.y;
+				//s_r_packet.up.z = up.z;
+				//s_r_packet.look.x = look.x;
+				//s_r_packet.look.y = look.y;
+				//s_r_packet.look.z = look.z;
+				//remoteClient->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_r_packet));
 			}
 
 			// 나의 정보 보내기

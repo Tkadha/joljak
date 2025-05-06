@@ -45,15 +45,26 @@ namespace AnimIndices {
 
 // --- 상태 머신으로 전달될 입력 정보 ---
 struct PlayerInputData {
-    char MoveForward = false;
-    char MoveBackward = false;
-    char MoveLeft = false;
-    char MoveRight = false;
-    char Jump = false;
-    char Attack = false; // 예: F키 또는 마우스 클릭
-    char Interact = false; // 예: E키
-    char Run = false; // 예: Shift 키
+    bool MoveForward = false;
+    bool MoveBackward = false;
+    bool MoveLeft = false;
+    bool MoveRight = false;
+    bool Jump = false;
+    bool Attack = false; // 예: F키 또는 마우스 클릭
+    bool Interact = false; // 예: E키
+    bool Run = false; // 예: Shift 키
     // 필요시 다른 키나 마우스 입력 추가
+
+    bool operator!=(const PlayerInputData& other) const {
+        return MoveForward != other.MoveForward ||
+            MoveBackward != other.MoveBackward ||
+            MoveLeft != other.MoveLeft ||
+            MoveRight != other.MoveRight ||
+            Jump != other.Jump ||
+            Attack != other.Attack ||
+            Interact != other.Interact ||
+            Run != other.Run;
+    }
 };
 
 // --- 블렌딩 설정 ---

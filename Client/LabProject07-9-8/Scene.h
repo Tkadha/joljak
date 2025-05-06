@@ -11,7 +11,7 @@
 #include "ResourceManager.h"
 #include "ShaderManager.h"
 #include <unordered_map>
-
+#include <mutex>
 
 #define MAX_LIGHTS						16 
 
@@ -20,6 +20,7 @@
 #define DIRECTIONAL_LIGHT				3
 
 class CGameFramework;
+
 
 struct LIGHT
 {
@@ -128,6 +129,7 @@ public:
 	Octree								octree{ XMFLOAT3 {0,0,0}, XMFLOAT3{10200,4000,10200} };
 	bool								checkTree = false;
 	bool								checkRock = false;
+
 
 	std::unordered_map<ULONGLONG, std::unique_ptr<UserObject>> PlayerList;	// 오브젝트 수정해야함
 
