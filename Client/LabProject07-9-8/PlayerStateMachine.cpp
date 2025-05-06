@@ -24,8 +24,8 @@ public:
         // 이동 입력 체크
         if (input.MoveForward) return PlayerStateID::WalkForward;
         if (input.MoveBackward) return PlayerStateID::WalkBackward;
-        if (input.WalkLeft) return PlayerStateID::WalkLeft;
-        if (input.WalkRight) return PlayerStateID::WalkRight;
+        if (input.MoveLeft) return PlayerStateID::WalkLeft;
+        if (input.MoveRight) return PlayerStateID::WalkRight;
         // 기타 입력 (공격, 점프 등)
         if (input.Attack) return PlayerStateID::AttackMelee1;
         if (input.Jump) return PlayerStateID::JumpStart;
@@ -70,11 +70,11 @@ public:
             moveVector = Vector3::Add(moveVector, look, -1.0f);
             isMoving = true; // 뒤로 가는 키도 눌렸음
         }
-        if (input.WalkLeft) {
+        if (input.MoveLeft) {
             moveVector = Vector3::Add(moveVector, right, -1.0f);
             isMoving = true;
         }
-        if (input.WalkRight) {
+        if (input.MoveRight) {
             moveVector = Vector3::Add(moveVector, right);
             isMoving = true;
         }
@@ -92,7 +92,7 @@ public:
             return PlayerStateID::Idle;
         }
         // 입력에 따른 상태 전환 체크
-        if (input.Run && input.MoveForward && !input.WalkLeft && !input.WalkRight && !input.MoveBackward) {
+        if (input.Run && input.MoveForward && !input.MoveLeft && !input.MoveRight && !input.MoveBackward) {
             // 앞 + 달리기만 눌렸을 때 RunForward 상태로 (필요시)
             // return PlayerStateID::RunForward;
         }
@@ -104,8 +104,8 @@ public:
         // 현재 상태 유지 조건 결정 (예: 어떤 이동키든 눌려 있으면 해당 주 방향 상태 유지)
         if (input.MoveForward) return PlayerStateID::WalkForward; // 주 방향 우선
         if (input.MoveBackward) return PlayerStateID::WalkBackward;
-        if (input.WalkLeft) return PlayerStateID::WalkLeft;
-        if (input.WalkRight) return PlayerStateID::WalkRight;
+        if (input.MoveLeft) return PlayerStateID::WalkLeft;
+        if (input.MoveRight) return PlayerStateID::WalkRight;
 
         // 여기까지 오면 안되지만, 만약을 위해 Idle 반환
         return PlayerStateID::Idle;
@@ -139,11 +139,11 @@ public:
             moveVector = Vector3::Add(moveVector, look, -1.0f);
             isMoving = true;
         }
-        if (input.WalkLeft) { // PlayerInputData 멤버 이름에 맞게 수정 (WalkLeft -> StrafeLeft)
+        if (input.MoveLeft) { // PlayerInputData 멤버 이름에 맞게 수정 (WalkLeft -> StrafeLeft)
             moveVector = Vector3::Add(moveVector, right, -1.0f);
             isMoving = true;
         }
-        if (input.WalkRight) { // PlayerInputData 멤버 이름에 맞게 수정 (WalkRight -> StrafeRight)
+        if (input.MoveRight) { // PlayerInputData 멤버 이름에 맞게 수정 (WalkRight -> StrafeRight)
             moveVector = Vector3::Add(moveVector, right);
             isMoving = true;
         }
@@ -151,7 +151,7 @@ public:
         if (isMoving) {
             moveVector = Vector3::Normalize(moveVector); // 대각선 이동 속도 보정
             // 달리기 키(Shift)는 앞으로 갈 때만 적용되도록 제한 (선택적)
-            float currentSpeed = (input.Run && input.MoveForward && !input.MoveBackward && !input.WalkLeft && !input.WalkRight) ? 80.0f : 50.0f; // 예시 속도
+            float currentSpeed = (input.Run && input.MoveForward && !input.MoveBackward && !input.MoveLeft && !input.MoveRight) ? 80.0f : 50.0f; // 예시 속도
             XMFLOAT3 currentVel = player->GetVelocity();
             XMFLOAT3 targetVel = Vector3::ScalarProduct(moveVector, currentSpeed, false);
             targetVel.y = currentVel.y; // Y축 속도 유지
@@ -168,8 +168,8 @@ public:
 
         if (input.MoveForward) return PlayerStateID::WalkForward;
         if (input.MoveBackward) return PlayerStateID::WalkBackward;
-        if (input.WalkLeft) return PlayerStateID::WalkLeft;
-        if (input.WalkRight) return PlayerStateID::WalkRight;
+        if (input.MoveLeft) return PlayerStateID::WalkLeft;
+        if (input.MoveRight) return PlayerStateID::WalkRight;
 
         // 여기까지 오면 안 되지만, 안전을 위해 Idle 반환
         return PlayerStateID::Idle;
@@ -202,18 +202,18 @@ public:
             moveVector = Vector3::Add(moveVector, look, -1.0f);
             isMoving = true;
         }
-        if (input.WalkLeft) {
+        if (input.MoveLeft) {
             moveVector = Vector3::Add(moveVector, right, -1.0f);
             isMoving = true;
         }
-        if (input.WalkRight) {
+        if (input.MoveRight) {
             moveVector = Vector3::Add(moveVector, right);
             isMoving = true;
         }
 
         if (isMoving) {
             moveVector = Vector3::Normalize(moveVector);
-            float currentSpeed = (input.Run && input.MoveForward && !input.MoveBackward && !input.WalkLeft && !input.WalkRight) ? 80.0f : 50.0f;
+            float currentSpeed = (input.Run && input.MoveForward && !input.MoveBackward && !input.MoveLeft && !input.MoveRight) ? 80.0f : 50.0f;
             XMFLOAT3 currentVel = player->GetVelocity();
             XMFLOAT3 targetVel = Vector3::ScalarProduct(moveVector, currentSpeed, false);
             targetVel.y = currentVel.y;
@@ -229,8 +229,8 @@ public:
 
         if (input.MoveForward) return PlayerStateID::WalkForward;
         if (input.MoveBackward) return PlayerStateID::WalkBackward;
-        if (input.WalkLeft) return PlayerStateID::WalkLeft;
-        if (input.WalkRight) return PlayerStateID::WalkRight;
+        if (input.MoveLeft) return PlayerStateID::WalkLeft;
+        if (input.MoveRight) return PlayerStateID::WalkRight;
 
         return PlayerStateID::Idle;
     }
@@ -262,11 +262,11 @@ public:
             moveVector = Vector3::Add(moveVector, look, -1.0f);
             isMoving = true;
         }
-        if (input.WalkLeft) {
+        if (input.MoveLeft) {
             moveVector = Vector3::Add(moveVector, right, -1.0f);
             isMoving = true;
         }
-        if (input.WalkRight) {
+        if (input.MoveRight) {
             moveVector = Vector3::Add(moveVector, right);
             isMoving = true;
         }
@@ -274,7 +274,7 @@ public:
         // --- 속도 적용 ---
         if (isMoving) {
             moveVector = Vector3::Normalize(moveVector);
-            float currentSpeed = (input.Run && input.MoveForward && !input.MoveBackward && !input.WalkLeft && !input.WalkRight) ? 80.0f : 50.0f;
+            float currentSpeed = (input.Run && input.MoveForward && !input.MoveBackward && !input.MoveLeft && !input.MoveRight) ? 80.0f : 50.0f;
             XMFLOAT3 currentVel = player->GetVelocity();
             XMFLOAT3 targetVel = Vector3::ScalarProduct(moveVector, currentSpeed, false);
             targetVel.y = currentVel.y;
@@ -290,8 +290,8 @@ public:
 
         if (input.MoveForward) return PlayerStateID::WalkForward;
         if (input.MoveBackward) return PlayerStateID::WalkBackward;
-        if (input.WalkLeft) return PlayerStateID::WalkLeft;
-        if (input.WalkRight) return PlayerStateID::WalkRight;
+        if (input.MoveLeft) return PlayerStateID::WalkLeft;
+        if (input.MoveRight) return PlayerStateID::WalkRight;
 
         return PlayerStateID::Idle;
     }
@@ -405,10 +405,10 @@ public:
         XMFLOAT3 currentVel = player->GetVelocity();
         XMFLOAT3 right = player->GetRightVector();
 
-        if (input.WalkLeft) {
+        if (input.MoveLeft) {
             currentVel = Vector3::Add(currentVel, right, -50.0f * airControlFactor);
         }
-        if (input.WalkRight) {
+        if (input.MoveRight) {
             currentVel = Vector3::Add(currentVel, right, 50.0f * airControlFactor);
         }
         // 필요하다면 앞뒤 이동도 약간 허용

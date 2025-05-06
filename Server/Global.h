@@ -18,34 +18,28 @@ enum class E_PACKET
 	E_DB_SUCCESS_FAIL = 102,
 };
 
-//struct PlayerInputData {
-//	char MoveForward = false;
-//	char MoveBackward = false;
-//	char MoveLeft = false;
-//	char MoveRight = false;
-//	char Jump = false;
-//	char Attack = false; // 예: F키 또는 마우스 클릭
-//	char Interact = false; // 예: E키
-//	char Run = false; // 예: Shift 키
-//	// 필요시 다른 키나 마우스 입력 추가
-//};
 
 
-enum class ServerPlayerState {
-	Idle,
-	Walking,
-	Running,
-	Jumping,
-	Falling, // 점프 후 하강 또는 그냥 떨어질 때
-	Attacking
-	// 필요한 상태 추가
-};
 
 
 const int MAX_BUF_SIZE = 1024; // 버퍼 최대 크기
 
 
 #pragma pack(push, 1) // 1byte alignment
+
+struct PlayerInput {
+	char MoveForward = false;
+	char MoveBackward = false;
+	char MoveLeft = false;
+	char MoveRight = false;
+	char Jump = false;
+	char Attack = false; // 예: F키 또는 마우스 클릭
+	char Interact = false; // 예: E키
+	char Run = false; // 예: Shift 키
+	// 필요시 다른 키나 마우스 입력 추가
+
+	
+};
 
 class FLOAT3
 {
@@ -108,7 +102,8 @@ public:
 class INPUT2_PACKET : public PACKET
 {
 public:
-	//PlayerInputData inputData;
+	PlayerInput inputData;
+	ULONGLONG uid;
 	INPUT2_PACKET() {
 		size = sizeof(INPUT2_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_INPUT);

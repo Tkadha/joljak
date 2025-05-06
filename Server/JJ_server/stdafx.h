@@ -148,3 +148,14 @@ namespace Vector3
 
 
 // TODO: reference additional headers your program requires here
+
+
+enum class ServerPlayerState {
+	Idle,
+	Walking,
+	Running,
+	Jumping,
+	Falling, // 점프 후 하강 또는 그냥 떨어질 때
+	Attacking
+	// 필요한 상태 추가
+};
