@@ -83,118 +83,234 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Animation.cpp" />
-    <ClCompile Include="AtkState.cpp" />
-    <ClCompile Include="Camera.cpp" />
     <ClCompile Include="ConstructionSystem.cpp" />
-    <ClCompile Include="FSMManager.cpp" />
-    <ClCompile Include="FSMState.cpp" />
-    <ClCompile Include="GameFramework.cpp" />
-    <ClCompile Include="imgui.cpp" />
-    <ClCompile Include="imgui_demo.cpp" />
-    <ClCompile Include="imgui_draw.cpp" />
-    <ClCompile Include="imgui_impl_dx12.cpp" />
-    <ClCompile Include="imgui_impl_win32.cpp" />
-    <ClCompile Include="imgui_tables.cpp" />
-    <ClCompile Include="imgui_widgets.cpp" />
-    <ClCompile Include="Item.cpp" />
     <ClCompile Include="LabProject07-9-8.cpp" />
-    <ClCompile Include="Material.cpp" />
-    <ClCompile Include="Mesh.cpp" />
-    <ClCompile Include="OBBShader.cpp" />
-    <ClCompile Include="NetworkManager.cpp" />
-    <ClCompile Include="Object.cpp" />
-    <ClCompile Include="NonAtkState.cpp" />
-    <ClCompile Include="Octree.cpp" />
-    <ClCompile Include="Player.cpp" />
-    <ClCompile Include="PlayerStateMachine.cpp" />
-    <ClCompile Include="ResourceManager.cpp" />
-    <ClCompile Include="RandomUtil.cpp" />
-    <ClCompile Include="Scene.cpp" />
-    <ClCompile Include="Shader.cpp" />
-    <ClCompile Include="ShaderManager.cpp" />
-    <ClCompile Include="SkinnedShader.cpp" />
-    <ClCompile Include="SkyBoxShader.cpp" />
-    <ClCompile Include="StandardShader.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="TerrainShader.cpp" />
-    <ClCompile Include="Texture.cpp" />
-    <ClCompile Include="Timer.cpp" />
-    <ClCompile Include="WICTextureLoader12.cpp" />
     <ClCompile Include="DDSTextureLoader12.cpp">
       <Filter>Utility</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\d3d12book\Common\d3dUtil.cpp">
+    <ClCompile Include="Animation.cpp">
+      <Filter>소스 파일\Object\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="AtkState.cpp">
+      <Filter>소스 파일\FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="FSMManager.cpp">
+      <Filter>소스 파일\FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="FSMState.cpp">
+      <Filter>소스 파일\FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="NonAtkState.cpp">
+      <Filter>소스 파일\FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_demo.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_draw.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_dx12.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_win32.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_tables.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_widgets.cpp">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Octree.cpp">
+      <Filter>소스 파일\Octree</Filter>
+    </ClCompile>
+    <ClCompile Include="Player.cpp">
+      <Filter>소스 파일\Object\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerStateMachine.cpp">
+      <Filter>소스 파일\Object\Player\PlayerStateMachine</Filter>
+    </ClCompile>
+    <ClCompile Include="Object.cpp">
+      <Filter>소스 파일\Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Material.cpp">
+      <Filter>소스 파일\Object\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="Mesh.cpp">
+      <Filter>소스 파일\Object\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="Texture.cpp">
+      <Filter>소스 파일\Object\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkManager.cpp">
+      <Filter>소스 파일\Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="ShaderManager.cpp">
+      <Filter>소스 파일\Manager\ShaderManager</Filter>
+    </ClCompile>
+    <ClCompile Include="ResourceManager.cpp">
+      <Filter>소스 파일\Manager\ResourceManager</Filter>
+    </ClCompile>
+    <ClCompile Include="Shader.cpp">
+      <Filter>소스 파일\Shader</Filter>
+    </ClCompile>
+    <ClCompile Include="SkinnedShader.cpp">
+      <Filter>소스 파일\Shader\SkinnedShader</Filter>
+    </ClCompile>
+    <ClCompile Include="SkyBoxShader.cpp">
+      <Filter>소스 파일\Shader\SkyBoxShader</Filter>
+    </ClCompile>
+    <ClCompile Include="StandardShader.cpp">
+      <Filter>소스 파일\Shader\StandardShader</Filter>
+    </ClCompile>
+    <ClCompile Include="TerrainShader.cpp">
+      <Filter>소스 파일\Shader\TerrainShader</Filter>
+    </ClCompile>
+    <ClCompile Include="OBBShader.cpp">
+      <Filter>소스 파일\Shader\OBBShader</Filter>
+    </ClCompile>
+    <ClCompile Include="WICTextureLoader12.cpp">
+      <Filter>소스 파일\Object\Base</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene.cpp">
+      <Filter>소스 파일\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Timer.cpp">
+      <Filter>소스 파일\Timer</Filter>
+    </ClCompile>
+    <ClCompile Include="Item.cpp">
+      <Filter>소스 파일\ITEM</Filter>
+    </ClCompile>
+    <ClCompile Include="GameFramework.cpp">
+      <Filter>소스 파일\Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="RandomUtil.cpp">
       <Filter>Utility</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\d3d12book\Common\DDSTextureLoader.cpp">
-      <Filter>Utility</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\d3d12book\Common\GameTimer.cpp">
-      <Filter>Utility</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\d3d12book\Common\MathHelper.cpp">
-      <Filter>Utility</Filter>
+    <ClCompile Include="Camera.cpp">
+      <Filter>소스 파일\Camera</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Server\Global.h" />
-    <ClInclude Include="Animation.h" />
-    <ClInclude Include="AtkState.h" />
-    <ClInclude Include="Camera.h" />
     <ClInclude Include="ConstructionSystem.h" />
-    <ClInclude Include="FSMManager.h" />
-    <ClInclude Include="FSMState.h" />
-    <ClInclude Include="GameFramework.h" />
-    <ClInclude Include="imgui.h" />
-    <ClInclude Include="imgui_impl_dx12.h" />
-    <ClInclude Include="imgui_impl_win32.h" />
-    <ClInclude Include="imgui_internal.h" />
-    <ClInclude Include="imstb_rectpack.h" />
-    <ClInclude Include="imstb_textedit.h" />
-    <ClInclude Include="imstb_truetype.h" />
-    <ClInclude Include="Item.h" />
     <ClInclude Include="LabProject07-9-8.h" />
-    <ClInclude Include="Material.h" />
-    <ClInclude Include="Mesh.h" />
-    <ClInclude Include="OBBShader.h" />
-    <ClInclude Include="NetworkManager.h" />
-    <ClInclude Include="Object.h" />
-    <ClInclude Include="NonAtkState.h" />
-    <ClInclude Include="Octree.h" />
-    <ClInclude Include="Player.h" />
-    <ClInclude Include="PlayerStateDefs.h" />
-    <ClInclude Include="PlayerStateMachine.h" />
-    <ClInclude Include="RandomUtil.h" />
-    <ClInclude Include="ResourceManager.h" />
     <ClInclude Include="Scene.h" />
-    <ClInclude Include="Shader.h" />
-    <ClInclude Include="ShaderManager.h" />
-    <ClInclude Include="SkinnedShader.h" />
-    <ClInclude Include="SkyBoxShader.h" />
-    <ClInclude Include="StandardShader.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="TerrainShader.h" />
-    <ClInclude Include="Texture.h" />
-    <ClInclude Include="Timer.h" />
-    <ClInclude Include="WICTextureLoader12.h" />
     <ClInclude Include="d3dx12.h">
       <Filter>Utility</Filter>
     </ClInclude>
     <ClInclude Include="DDSTextureLoader12.h">
       <Filter>Utility</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\d3d12book\Common\d3dUtil.h">
+    <ClInclude Include="Animation.h">
+      <Filter>소스 파일\Object\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="AtkState.h">
+      <Filter>소스 파일\FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="FSMManager.h">
+      <Filter>소스 파일\FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="FSMState.h">
+      <Filter>소스 파일\FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="NonAtkState.h">
+      <Filter>소스 파일\FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_truetype.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_dx12.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_win32.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_internal.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_rectpack.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_textedit.h">
+      <Filter>소스 파일\IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Octree.h">
+      <Filter>소스 파일\Octree</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerStateDefs.h">
+      <Filter>소스 파일\Object\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.h">
+      <Filter>소스 파일\Object\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerStateMachine.h">
+      <Filter>소스 파일\Object\Player\PlayerStateMachine</Filter>
+    </ClInclude>
+    <ClInclude Include="Object.h">
+      <Filter>소스 파일\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Material.h">
+      <Filter>소스 파일\Object\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Mesh.h">
+      <Filter>소스 파일\Object\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Texture.h">
+      <Filter>소스 파일\Object\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkManager.h">
+      <Filter>소스 파일\Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderManager.h">
+      <Filter>소스 파일\Manager\ShaderManager</Filter>
+    </ClInclude>
+    <ClInclude Include="ResourceManager.h">
+      <Filter>소스 파일\Manager\ResourceManager</Filter>
+    </ClInclude>
+    <ClInclude Include="Shader.h">
+      <Filter>소스 파일\Shader</Filter>
+    </ClInclude>
+    <ClInclude Include="SkinnedShader.h">
+      <Filter>소스 파일\Shader\SkinnedShader</Filter>
+    </ClInclude>
+    <ClInclude Include="SkyBoxShader.h">
+      <Filter>소스 파일\Shader\SkyBoxShader</Filter>
+    </ClInclude>
+    <ClInclude Include="StandardShader.h">
+      <Filter>소스 파일\Shader\StandardShader</Filter>
+    </ClInclude>
+    <ClInclude Include="TerrainShader.h">
+      <Filter>소스 파일\Shader\TerrainShader</Filter>
+    </ClInclude>
+    <ClInclude Include="OBBShader.h">
+      <Filter>소스 파일\Shader\OBBShader</Filter>
+    </ClInclude>
+    <ClInclude Include="WICTextureLoader12.h">
+      <Filter>소스 파일\Object\Base</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer.h">
+      <Filter>소스 파일\Timer</Filter>
+    </ClInclude>
+    <ClInclude Include="Item.h">
+      <Filter>소스 파일\ITEM</Filter>
+    </ClInclude>
+    <ClInclude Include="GameFramework.h">
+      <Filter>소스 파일\Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="RandomUtil.h">
       <Filter>Utility</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\d3d12book\Common\DDSTextureLoader.h">
-      <Filter>Utility</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\d3d12book\Common\GameTimer.h">
-      <Filter>Utility</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\d3d12book\Common\MathHelper.h">
-      <Filter>Utility</Filter>
+    <ClInclude Include="Camera.h">
+      <Filter>소스 파일\Camera</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -216,5 +332,27 @@
     <None Include="Light.hlsl">
       <Filter>hlsl</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Common.hlsl" />
+    <FxCompile Include="InstancingShaders.hlsl" />
+    <FxCompile Include="Shaders.hlsl">
+      <Filter>소스 파일\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="SkinnedShaders.hlsl">
+      <Filter>소스 파일\Shader\SkinnedShader</Filter>
+    </FxCompile>
+    <FxCompile Include="SkyboxShaders.hlsl">
+      <Filter>소스 파일\Shader\SkyBoxShader</Filter>
+    </FxCompile>
+    <FxCompile Include="StandardShaders.hlsl">
+      <Filter>소스 파일\Shader\StandardShader</Filter>
+    </FxCompile>
+    <FxCompile Include="TerrainShaders.hlsl">
+      <Filter>소스 파일\Shader\TerrainShader</Filter>
+    </FxCompile>
+    <FxCompile Include="OBBShader.hlsl">
+      <Filter>소스 파일\Shader\OBBShader</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

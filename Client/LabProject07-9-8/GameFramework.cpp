@@ -823,14 +823,6 @@ void CGameFramework::ProcessInput()
 
 		if (m_pPlayer && m_pPlayer->m_pStateMachine) // 플레이어와 상태머신 유효성 검사
 		{
-			auto& nwManager = NetworkManager::GetInstance();
-			INPUT2_PACKET p;
-			//p.inputData = inputData;
-			//printf("Direction: %d\n", dwDirection);
-			p.size = sizeof(INPUT2_PACKET);
-			p.type = static_cast<char>(E_PACKET::E_P_INPUT);
-			nwManager.PushSendQueue(p, p.size);
-
 			m_pPlayer->m_pStateMachine->HandleInput(inputData);
 		}
 
@@ -903,7 +895,6 @@ void CGameFramework::ProcessInput()
 				p.inputData.MoveRight = inputData.MoveRight;
 				p.inputData.Run = inputData.Run;
 				p.inputData.Interact = inputData.Interact;
-				//printf("Direction: %d\n", dwDirection);
 				p.size = sizeof(INPUT2_PACKET);
 				p.type = static_cast<char>(E_PACKET::E_P_INPUT);
 				nwManager.PushSendQueue(p, p.size);
