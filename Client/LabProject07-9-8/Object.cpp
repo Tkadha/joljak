@@ -34,14 +34,21 @@ struct cbGameObjectInfo {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+CGameObject::CGameObject()
+{
+	m_xmf4x4ToParent = Matrix4x4::Identity();
+	m_xmf4x4World = Matrix4x4::Identity();
+
+	m_OBBMaterial = new CMaterial(1);
+}
+
+
 CGameObject::CGameObject(CGameFramework* pGameFramework) : m_pGameFramework(pGameFramework)
 {
 	m_xmf4x4ToParent = Matrix4x4::Identity();
 	m_xmf4x4World = Matrix4x4::Identity();
 
 	m_OBBMaterial = new CMaterial(1, pGameFramework);
-
-
 }
 
 CGameObject::CGameObject(int nMaterials, CGameFramework* pGameFramework) : CGameObject(pGameFramework)
@@ -1532,10 +1539,11 @@ CHairObject::CHairObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 }
 
 
+// ------------------ 나무 ------------------
 CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/tree/FAE_Pine_A_LOD0.bin", "rb");
+	::fopen_s(&pInFile, "Model/Tree/FAE_Pine_A_LOD0.bin", "rb");
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
 	SetChild(pGameObject);
 
@@ -1547,7 +1555,7 @@ CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 CBirchObject::CBirchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/tree/FAE_Birch_A_LOD0.bin", "rb");
+	::fopen_s(&pInFile, "Model/Tree/FAE_Birch_A_LOD0.bin", "rb");
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
 	SetChild(pGameObject);
 
@@ -1559,7 +1567,7 @@ CBirchObject::CBirchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 CWillowObject::CWillowObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/tree/FAE_Willow_A_LOD0.bin", "rb");
+	::fopen_s(&pInFile, "Model/Tree/FAE_Willow_A_LOD0.bin", "rb");
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
 	SetChild(pGameObject);
 
@@ -1583,6 +1591,7 @@ CRockClusterAObject::CRockClusterAObject(ID3D12Device* pd3dDevice, ID3D12Graphic
 	if (pInFile) fclose(pInFile); // 파일 닫기 추가
 }
 
+// ------------------ 돌 ------------------
 CRockClusterBObject::CRockClusterBObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
@@ -1627,6 +1636,22 @@ CCliffFObject::CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 	if (pInFile) fclose(pInFile); // 파일 닫기 추가
 }
+
+
+// ------------------ 꽃, 풀 ------------------
+CBushAObject::CBushAObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
+{
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, "Model/Vegetation/Bush_A_LOD0.bin", "rb");
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
+	SetChild(pGameObject);
+
+	m_objectType = GameObjectType::Vegetation;
+
+	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+}
+
+
 
 CSwordObject::CSwordObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {

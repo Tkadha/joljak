@@ -129,7 +129,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CreateDirect3DDevice();
 	CreateCommandQueueAndList();
-	CreateCbvSrvDescriptorHeaps(200, 4096);
+	CreateCbvSrvDescriptorHeaps(200, 15000);
 	CreateRtvAndDsvDescriptorHeaps();
 	CreateSwapChain();
 	CreateDepthStencilView();
@@ -164,10 +164,10 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	ItemManager::Initialize();
 	InitializeItemIcons();
 
-	//auto& nwManager = NetworkManager::GetInstance();
-	//nwManager.Init();
-	//std::thread t(&CGameFramework::NerworkThread, this);
-	//t.detach();
+	auto& nwManager = NetworkManager::GetInstance();
+	nwManager.Init();
+	std::thread t(&CGameFramework::NerworkThread, this);
+	t.detach();
 
 	return(true);
 }

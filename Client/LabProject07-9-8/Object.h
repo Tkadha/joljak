@@ -39,6 +39,7 @@ enum class GameObjectType : int {
 	Rock,
 	Tree,
 	Cliff,
+	Vegetation,
 	Cow,
 	Pig,
 	Player,
@@ -67,6 +68,7 @@ public:
 	void Release();
 
 public:
+	CGameObject();
 	CGameObject(CGameFramework* pGameFramework);
 	CGameObject(int nMaterials, CGameFramework* pGameFramework);
 	virtual ~CGameObject();
@@ -348,15 +350,25 @@ public:
 };
 
 
-// ------------------ 나무 ----------------------------
-class CBirchObject : public CGameObject
+// ------------------ 나무 ------------------
+class CTreeObject : virtual public CGameObject
+{
+	int hp{ 3 };
+public:
+	CTreeObject() { m_objectType = GameObjectType::Tree; };
+	CTreeObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) {};
+	virtual ~CTreeObject() {};
+};
+
+
+class CBirchObject : public CTreeObject
 {
 public:
 	CBirchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CBirchObject() {}
 };
 
-class CWillowObject : public CGameObject
+class CWillowObject : public CTreeObject
 {
 public:
 	CWillowObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
@@ -364,7 +376,7 @@ public:
 };
 
 
-class CPineObject : public CGameObject
+class CPineObject : public CTreeObject
 {
 public:
 	CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
@@ -372,21 +384,31 @@ public:
 };
 
 
-class CRockClusterAObject : public CGameObject
+// ------------------ 돌 ------------------
+class CRockObject : virtual public CGameObject
+{
+	int hp{ 3 };
+public:
+	CRockObject() { m_objectType = GameObjectType::Rock; };
+	CRockObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) {};
+	virtual ~CRockObject() {};
+};
+
+class CRockClusterAObject : public CRockObject
 {
 public:
 	CRockClusterAObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CRockClusterAObject() {}
 };
 
-class CRockClusterBObject : public CGameObject
+class CRockClusterBObject : public CRockObject
 {
 public:
 	CRockClusterBObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CRockClusterBObject() {}
 };
 
-class CRockClusterCObject : public CGameObject
+class CRockClusterCObject : public CRockObject
 {
 public:
 	CRockClusterCObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
@@ -398,6 +420,23 @@ class CCliffFObject : public CGameObject
 public:
 	CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CCliffFObject() {}
+};
+
+
+// ------------------ 꽃, 풀 ------------------
+class VegetationObject : virtual public CGameObject
+{
+public:
+	VegetationObject() {};
+	VegetationObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) {};
+	virtual ~VegetationObject() {};
+};
+
+class CBushAObject : public VegetationObject
+{
+public:
+	CBushAObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
+	virtual ~CBushAObject() {}
 };
 
 

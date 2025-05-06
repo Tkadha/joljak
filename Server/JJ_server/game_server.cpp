@@ -234,13 +234,13 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		s_packet.direction = r_packet->direction;
 		*/
 		INPUT2_PACKET* r_packet = reinterpret_cast<INPUT2_PACKET*>(packet);
-		client->processInput(r_packet->inputData);
+		//client->processInput(r_packet->inputData);
 		auto& pos = client->GetPosition();
 		cout << client->m_id << " " << pos.x << " " << pos.y << " " << pos.z << endl;
 		INPUT2_PACKET s_packet;
 		s_packet.size = sizeof(INPUT2_PACKET);
 		s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_INPUT);
-		s_packet.inputData = r_packet->inputData;
+		//s_packet.inputData = r_packet->inputData;
 
 	}
 	break;

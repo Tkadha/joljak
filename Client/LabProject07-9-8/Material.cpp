@@ -4,6 +4,11 @@
 #include "GameFramework.h"
 #include "ResourceManager.h"
 
+CMaterial::CMaterial(int nTextures): m_nTextures(nTextures), m_pShader(nullptr),
+m_d3dCpuSrvStartHandle({ 0 }), m_d3dSrvGpuStartHandle({ 0 }), m_nCbvSrvDescriptorIncrementSize(0)
+{
+
+}
 
 CMaterial::CMaterial(int nTextures, CGameFramework* pGameFramework)
 	: m_nTextures(nTextures), m_pShader(nullptr), m_pGameFramework(pGameFramework),
@@ -26,16 +31,9 @@ CMaterial::CMaterial(int nTextures, CGameFramework* pGameFramework)
 
         if (!bAllocated)
         {
-            OutputDebugString(L"Error: Failed to allocate SRV descriptors for Material! (CMaterial Constructor)\n");
             m_d3dCpuSrvStartHandle = { 0 };
             m_d3dSrvGpuStartHandle = { 0 };
         }
-        // --- 핸들 값 로그 추가 ---
-        wchar_t buffer[128];
-        swprintf_s(buffer, L"CMaterial Constructor: SRV Allocation Result=%d, GPU Handle Ptr=0x%llX\n",
-            bAllocated, m_d3dSrvGpuStartHandle.ptr);
-        OutputDebugStringW(buffer);
-        // --- 로그 추가 ---
     }
     else {
         m_ppstrTextureNames = nullptr; // 텍스처 없으면 이름 배열도 null
