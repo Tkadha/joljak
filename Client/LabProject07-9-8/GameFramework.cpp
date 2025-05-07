@@ -171,11 +171,12 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	ItemManager::Initialize();
 	InitializeItemIcons();
 
+	/*
 	auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
 	std::thread t(&CGameFramework::NerworkThread, this);
 	t.detach();
-
+	*/
 	//ChangeSwapChainState();
 
 	return(true);
@@ -477,7 +478,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				ShowInventory = !ShowInventory;
 				break;
 			case 'I':
-				AddItem("pork");
+				
 				break;
 			case 'O':
 				ShowCraftingUI = !ShowCraftingUI;
@@ -556,7 +557,7 @@ void CGameFramework::AddDummyItem()
 	}
 }
 
-void CGameFramework::AddItem(const std::string& name)
+void CGameFramework::AddItem(const std::string& name, int quantity)
 {
 	auto newItem = ItemManager::GetItemByName(name);
 	if (!newItem) return;
@@ -573,7 +574,7 @@ void CGameFramework::AddItem(const std::string& name)
 	for (auto& slot : m_inventorySlots) {
 		if (slot.IsEmpty()) {
 			slot.item = newItem;
-			slot.quantity = 3;
+			slot.quantity = quantity;
 			return;
 		}
 	}
@@ -1509,7 +1510,7 @@ void CGameFramework::FrameAdvance()
 
 			if (ImGui::IsItemClicked())
 			{
-				AddItem(resultitem);
+				AddItem(resultitem, 1);
 				furnaceSlot.result = nullptr;
 			}
 		}
