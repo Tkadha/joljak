@@ -161,20 +161,14 @@ float4 PSStandard3(VS_STANDARD_OUTPUT input) : SV_TARGET
     float4 cIlluminationColor = Lighting(gMaterialInfo, input.positionW, normalW);
     
     
-// --- 안개 계산 시작 ---
-// 카메라 위치는 cbCameraInfo (b1) 에서 가져옴 (gvCameraPosition)
+    // 안개
     float distToEye = distance(input.positionW, gvCameraPosition.xyz);
 
-// 선형 안개 계수 계산 (Frank Luna 방식)
-// FogStart 에서 안개 시작, FogStart + FogRange 에서 안개 최대
     float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);
-// 또는 일반적인 (FogEnd - dist) / (FogEnd - FogStart) 방식:
-// float fogEnd = gFogStart + gFogRange;
-// float fogFactor = saturate((fogEnd - distToEye) / (fogEnd - gFogStart));
 
     float4 litColor = lerp(cColor, cIlluminationColor, 0.5f);
     
-    litColor.rgb = lerp(gFogColor.rgb, litColor.rgb, fogFactor);
+    litColor.rgb = lerp(gFogColor.rgb, cColor.rgb, fogFactor);
 
     return (litColor);
 }

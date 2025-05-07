@@ -30,6 +30,7 @@ struct VS_TERRAIN_OUTPUT
     float4 color : COLOR;
     float2 uv0 : TEXCOORD0;
     float2 uv1 : TEXCOORD1;
+    float3 positionW : POSITION0; // 월드 공간 위치 (픽셀 셰이더 전달용)
 };
 
 // --- Vertex Shader ---
@@ -37,10 +38,14 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 {
     VS_TERRAIN_OUTPUT output;
 
-    // 클립 공간 변환
-    output.position = mul(float4(input.position, 1.0f), gmtxGameObject);
-    output.position = mul(output.position, gmtxView);
-    output.position = mul(output.position, gmtxProjection);
+   // 1. 모델 로컬 좌표를 월드 공간으로 변환
+    float4 worldPos_H = mul(float4(input.position, 1.0f), gmtxGameObject);
+    output.positionW = worldPos_H.xyz; // 픽셀 셰이더로 전달할 월드 위치
+
+    // 2. 월드 공간 위치를 뷰 및 투영 변환하여 클립 공간 위치 계산
+    float4 viewPos_H = mul(worldPos_H, gmtxView);
+    output.position = mul(viewPos_H, gmtxProjection); // SV_POSITION은 클립 공간 좌표
+
 
     output.color = input.color; // 정점 색상 전달
     output.uv0 = input.uv0; // UV 좌표 전달
@@ -58,22 +63,13 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
 
     // 색상 조합 (예: 블렌딩)
     // float4 cColor = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f)); // 단순 평균
-    float4 cColor = input.color * lerp(cBaseTexColor, cDetailTexColor, 0.5); // 예: 정점 색상과 블렌딩
+    //float4 cColor = input.color * lerp(cBaseTexColor, cDetailTexColor, 0.5); // 예: 정점 색상과 블렌딩
     
-    // --- 안개 계산 시작 ---
-// 카메라 위치는 cbCameraInfo (b1) 에서 가져옴 (gvCameraPosition)
-    float distToEye = distance(input.position.xyz, gvCameraPosition.xyz);
-
-// 선형 안개 계수 계산 (Frank Luna 방식)
-// FogStart 에서 안개 시작, FogStart + FogRange 에서 안개 최대
-    float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);
-// 또는 일반적인 (FogEnd - dist) / (FogEnd - FogStart) 방식:
-// float fogEnd = gFogStart + gFogRange;
-// float fogFactor = saturate((fogEnd - distToEye) / (fogEnd - gFogStart));
+//안개
+   // float distToEye = distance(input.positionW, gvCameraPosition.xyz);
+    //float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);    
     
-    
-    cColor.rgb = lerp(gFogColor.rgb, cColor.rgb, fogFactor);
-
-
+    //cColor.rgb = lerp(gFogColor.rgb, cColor.rgb, fogFactor);
+    float4 cColor = input.color * lerp(cBaseTexColor, cDetailTexColor, 0.5);
     return cColor;
 }

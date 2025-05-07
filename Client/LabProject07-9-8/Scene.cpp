@@ -96,6 +96,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	XMFLOAT4 xmf4Color(0.0f, 0.0f, 0.0f, 0.0f);
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color, m_pGameFramework);
 	m_pTerrain->m_xmf4x4World = Matrix4x4::Identity();
+	m_pTerrain->m_xmf4x4ToParent = Matrix4x4::Identity();
 
 	// 랜덤 엔진
 	std::random_device rd;

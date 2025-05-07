@@ -826,7 +826,7 @@ void CGameFramework::ProcessInput()
 			m_pPlayer->m_pStateMachine->HandleInput(inputData);
 		}
 
-		
+		/*
 		DWORD dwDirection = 0;
 		if (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0) dwDirection |= DIR_FORWARD;
 		if (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
@@ -834,7 +834,7 @@ void CGameFramework::ProcessInput()
 		if (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
 		if (pKeysBuffer[VK_SPACE] & 0xF0) dwDirection |= DIR_UP;
 		if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
-		else m_pPlayer->keyInput(pKeysBuffer);
+		else m_pPlayer->keyInput(pKeysBuffer);*/
 		
 
 		// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
@@ -900,7 +900,7 @@ void CGameFramework::ProcessInput()
 				nwManager.PushSendQueue(p, p.size);
 			}
 
-			if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
+			if ( (cxDelta != 0.0f) || (cyDelta != 0.0f))
 			{
 				auto& nwManager = NetworkManager::GetInstance();
 

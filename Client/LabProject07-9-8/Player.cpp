@@ -366,7 +366,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 
 	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList,
-	"Model/SK_Hu_M_FullBody_test.bin", pGameFramework);
+	"Model/SK_Hu_M_FullBody.bin", pGameFramework);
 	SetChild(pAngrybotModel->m_pModelRootObject, true);
 
 	AddObject(pd3dDevice, pd3dCommandList, "thumb_02_r", "Model/Sword_01.bin", pGameFramework, XMFLOAT3(0.05, 0.00, -0.05));
