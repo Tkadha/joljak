@@ -20,6 +20,7 @@ class CGameFramework;
 class CMaterial
 {
 public:
+	CMaterial(int nTextures);
 	CMaterial(int nTextures, CGameFramework* pGameFramework);
 
 	virtual ~CMaterial();

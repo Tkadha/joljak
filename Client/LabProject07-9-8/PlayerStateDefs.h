@@ -8,8 +8,8 @@ enum class PlayerStateID {
     Idle,
     WalkForward,
     WalkBackward,
-    WalkLeft,
-    WalkRight,
+    MoveLeft,
+    MoveRight,
     RunForward,
     AttackMelee1,
     JumpStart,
@@ -47,13 +47,24 @@ namespace AnimIndices {
 struct PlayerInputData {
     bool MoveForward = false;
     bool MoveBackward = false;
-    bool WalkLeft = false;
-    bool WalkRight = false;
+    bool MoveLeft = false;
+    bool MoveRight = false;
     bool Jump = false;
     bool Attack = false; // 예: F키 또는 마우스 클릭
     bool Interact = false; // 예: E키
     bool Run = false; // 예: Shift 키
     // 필요시 다른 키나 마우스 입력 추가
+
+    bool operator!=(const PlayerInputData& other) const {
+        return MoveForward != other.MoveForward ||
+            MoveBackward != other.MoveBackward ||
+            MoveLeft != other.MoveLeft ||
+            MoveRight != other.MoveRight ||
+            Jump != other.Jump ||
+            Attack != other.Attack ||
+            Interact != other.Interact ||
+            Run != other.Run;
+    }
 };
 
 // --- 블렌딩 설정 ---

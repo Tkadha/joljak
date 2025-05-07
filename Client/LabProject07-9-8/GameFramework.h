@@ -219,8 +219,7 @@ public:
 
 	BOOL obbRender = TRUE;
 
-	DWORD						beforeDirection = 0;
-
+	PlayerInputData						beforeInput{};
 	ULONGLONG					_MyID = -1;
 
 	std::queue<log_inout> 	m_logQueue;

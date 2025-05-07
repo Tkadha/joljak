@@ -156,8 +156,8 @@ void Logic_thread()
 			//}
 			auto& beforepos = cl.second->GetPosition();
 
-			cl.second->Update(g_timer.GetTimeElapsed());
-
+			//cl.second->Update(g_timer.GetTimeElapsed());
+			cl.second->Update_test(deltaTime);
 			auto& pos = cl.second->GetPosition();
 
 			if (beforepos.x != pos.x || beforepos.y != pos.y || beforepos.z != pos.z)
@@ -186,22 +186,6 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
-	case E_PACKET::E_P_CHAT:
-	{
-		CHAT_PACKET* r_packet = reinterpret_cast<CHAT_PACKET*>(packet);
-		cout << client->m_id << " " << r_packet->chat << endl;
-		CHAT_PACKET s_packet;
-		s_packet.size = sizeof(CHAT_PACKET);
-		s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_CHAT);
-		strcpy(s_packet.chat, r_packet->chat);
-		//for (auto cl : RemoteClient::remoteClients) {
-		//	if (cl.second != client) cl.second->tcpConnection.m_isReadOverlapped = false;
-		//	cout << "Send: " << client->m_id << " to " << cl.second->m_id << endl;
-		//	cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
-		//	if (cl.second != client) cl.second->tcpConnection.m_isReadOverlapped = true;
-		//}
-		break;
-	}
 	case E_PACKET::E_P_ROTATE:
 	{
 		ROTATE_PACKET* r_packet = reinterpret_cast<ROTATE_PACKET*>(packet);
@@ -237,12 +221,37 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		*/
 		INPUT2_PACKET* r_packet = reinterpret_cast<INPUT2_PACKET*>(packet);
 		client->processInput(r_packet->inputData);
+		/*if (client->m_lastReceivedInput.Attack) {
+			cout << client->m_id << " Attack!" << endl;
+		}
+		if (client->m_lastReceivedInput.Jump) {
+			cout << client->m_id << " Jump!" << endl;
+		}
+		if (client->m_lastReceivedInput.MoveForward) {
+			cout << client->m_id << " MoveForward!" << endl;
+		}
+		if (client->m_lastReceivedInput.MoveBackward) {
+			cout << client->m_id << " MoveBackward!" << endl;
+		}
+		if (client->m_lastReceivedInput.MoveLeft) {
+			cout << client->m_id << " MoveLeft!" << endl;
+		}
+		if (client->m_lastReceivedInput.MoveRight) {
+			cout << client->m_id << " MoveRight!" << endl;
+		}
+		if (client->m_lastReceivedInput.Run) {
+			cout << client->m_id << " Run!" << endl;
+		}
+		if (client->m_lastReceivedInput.Interact) {
+			cout << client->m_id << " Interact!" << endl;
+		}*/
+
 		auto& pos = client->GetPosition();
 		cout << client->m_id << " " << pos.x << " " << pos.y << " " << pos.z << endl;
 		INPUT2_PACKET s_packet;
 		s_packet.size = sizeof(INPUT2_PACKET);
 		s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_INPUT);
-		s_packet.inputData = r_packet->inputData;
+		//s_packet.inputData = r_packet->inputData;
 
 	}
 	break;

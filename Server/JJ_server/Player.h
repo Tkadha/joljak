@@ -27,6 +27,8 @@ private:
 	float           			m_fFriction = 0.0f;
 
 	DWORD						m_direction = 0;
+	PlayerInput					m_lastReceivedInput{}; // 마지막으로 받은 입력 상태 저장
+	ServerPlayerState			m_currentState = ServerPlayerState::Idle; // 서버 측 플레이어 상태 (ServerPlayerState enum 정의 필요)
 
 	LPVOID						m_pPlayerUpdatedContext = NULL;
 	std::shared_ptr<Terrain>	m_pTerrain = nullptr;
@@ -50,7 +52,7 @@ public:
 		m_fFriction = 250.0f;
 
 		m_direction = 0;
-
+		m_currentState = ServerPlayerState::Idle;
 		m_pPlayerUpdatedContext = NULL;
 	}
 	PlayerClient(SocketType socketType) :RemoteClient(socketType) 
@@ -68,7 +70,7 @@ public:
 		m_fFriction = 250.0f;
 
 		m_direction = 0;
-
+		m_currentState = ServerPlayerState::Idle;
 		m_pPlayerUpdatedContext = NULL;
 	}
 	~PlayerClient() = default;
@@ -106,10 +108,8 @@ public:
 
 
 
-	PlayerInputData m_lastReceivedInput; // 마지막으로 받은 입력 상태 저장
-	ServerPlayerState m_currentState = ServerPlayerState::Idle; // 서버 측 플레이어 상태 (ServerPlayerState enum 정의 필요)
 
-	void processInput(PlayerInputData input);
+	void processInput(PlayerInput input);
 
 	XMFLOAT3 GetLookVector() { return(m_Look); }
 	XMFLOAT3 GetUpVector() { return(m_Up); }

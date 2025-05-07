@@ -136,7 +136,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CreateDirect3DDevice();
 	CreateCommandQueueAndList();
-	CreateCbvSrvDescriptorHeaps(200, 4096);
+	CreateCbvSrvDescriptorHeaps(200, 15000);
 	CreateRtvAndDsvDescriptorHeaps();
 	CreateSwapChain();
 	CreateDepthStencilView();
@@ -171,10 +171,10 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	ItemManager::Initialize();
 	InitializeItemIcons();
 
-	/*auto& nwManager = NetworkManager::GetInstance();
+	auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
 	std::thread t(&CGameFramework::NerworkThread, this);
-	t.detach();*/
+	t.detach();
 
 	//ChangeSwapChainState();
 
@@ -814,8 +814,8 @@ void CGameFramework::ProcessInput()
 
 		inputData.MoveForward = (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0);
 		inputData.MoveBackward = (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0);
-		inputData.WalkLeft = (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0);
-		inputData.WalkRight = (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0);
+		inputData.MoveLeft = (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0);
+		inputData.MoveRight = (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0);
 		inputData.Jump = (pKeysBuffer[VK_SPACE] & 0xF0);
 		inputData.Attack = (pKeysBuffer['F'] & 0xF0); // 'F' 키를 Attack 으로 매핑 (예시)
 		// inputData.Interact = (pKeysBuffer['E'] & 0xF0); // 'E' 키를 Interact 로 매핑 (필요시)
@@ -881,14 +881,21 @@ void CGameFramework::ProcessInput()
 		else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA || m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
 		{
 			// 자유 시점: 마우스로 회전
-			if (beforeDirection != dwDirection)
+			if (beforeInput != inputData)
 			{
-				beforeDirection = dwDirection;
+				beforeInput = inputData;
 				auto& nwManager = NetworkManager::GetInstance();
-				INPUT_PACKET p;
-				p.direction = dwDirection;
-				printf("Direction: %d\n", dwDirection);
-				p.size = sizeof(INPUT_PACKET);
+				INPUT2_PACKET p;
+				// 변경
+				p.inputData.Attack = inputData.Attack;
+				p.inputData.Jump = inputData.Jump;
+				p.inputData.MoveBackward = inputData.MoveBackward;
+				p.inputData.MoveForward = inputData.MoveForward;
+				p.inputData.MoveLeft = inputData.MoveLeft;
+				p.inputData.MoveRight = inputData.MoveRight;
+				p.inputData.Run = inputData.Run;
+				p.inputData.Interact = inputData.Interact;
+				p.size = sizeof(INPUT2_PACKET);
 				p.type = static_cast<char>(E_PACKET::E_P_INPUT);
 				nwManager.PushSendQueue(p, p.size);
 			}

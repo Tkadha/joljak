@@ -34,14 +34,21 @@ struct cbGameObjectInfo {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+CGameObject::CGameObject()
+{
+	m_xmf4x4ToParent = Matrix4x4::Identity();
+	m_xmf4x4World = Matrix4x4::Identity();
+
+	m_OBBMaterial = new CMaterial(1);
+}
+
+
 CGameObject::CGameObject(CGameFramework* pGameFramework) : m_pGameFramework(pGameFramework)
 {
 	m_xmf4x4ToParent = Matrix4x4::Identity();
 	m_xmf4x4World = Matrix4x4::Identity();
 
 	m_OBBMaterial = new CMaterial(1, pGameFramework);
-
-
 }
 
 CGameObject::CGameObject(int nMaterials, CGameFramework* pGameFramework) : CGameObject(pGameFramework)
@@ -1532,10 +1539,11 @@ CHairObject::CHairObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 }
 
 
+// ------------------ 나무 ------------------
 CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/tree/FAE_Pine_A_LOD0.bin", "rb");
+	::fopen_s(&pInFile, "Model/Tree/FAE_Pine_A_LOD0.bin", "rb");
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
 	SetChild(pGameObject);
 
@@ -1547,7 +1555,7 @@ CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 CBirchObject::CBirchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/tree/FAE_Birch_A_LOD0.bin", "rb");
+	::fopen_s(&pInFile, "Model/Tree/FAE_Birch_A_LOD0.bin", "rb");
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
 	SetChild(pGameObject);
 
@@ -1559,7 +1567,7 @@ CBirchObject::CBirchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 CWillowObject::CWillowObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/tree/FAE_Willow_A_LOD0.bin", "rb");
+	::fopen_s(&pInFile, "Model/Tree/FAE_Willow_A_LOD0.bin", "rb");
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
 	SetChild(pGameObject);
 
@@ -1583,6 +1591,7 @@ CRockClusterAObject::CRockClusterAObject(ID3D12Device* pd3dDevice, ID3D12Graphic
 	if (pInFile) fclose(pInFile); // 파일 닫기 추가
 }
 
+// ------------------ 돌 ------------------
 CRockClusterBObject::CRockClusterBObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
@@ -1628,6 +1637,22 @@ CCliffFObject::CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	if (pInFile) fclose(pInFile); // 파일 닫기 추가
 }
 
+
+// ------------------ 꽃, 풀 ------------------
+CBushAObject::CBushAObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
+{
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, "Model/Vegetation/Bush_A_LOD0.bin", "rb");
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
+	SetChild(pGameObject);
+
+	m_objectType = GameObjectType::Vegetation;
+
+	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+}
+
+
+
 CSwordObject::CSwordObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
@@ -1660,13 +1685,59 @@ UserObject::UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3d
 {
 	CLoadedModelInfo* pUserModel = pModel;
 	if (!pUserModel) pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Hu_M_FullBody.bin", pGameFramework);
-
 	SetChild(pUserModel->m_pModelRootObject, true);
+
+	AddObject(pd3dDevice, pd3dCommandList, "thumb_02_r", "Model/Sword_01.bin", pGameFramework, XMFLOAT3(0.05, 0.00, -0.05), XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
+	AddObject(pd3dDevice, pd3dCommandList, "Helmet", "Model/Hair_01.bin", pGameFramework, XMFLOAT3(0, 0.1, 0), XMFLOAT3(0,0,0), XMFLOAT3(1, 1, 1));
+	//AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Boots_Peasant_Armor", "Model/Boots_Peasant_Armor.bin");
+	AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, XMFLOAT3(-0.25, 0.1, 0), XMFLOAT3(90, 0, 90), XMFLOAT3(1, 1, 1));
+
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pUserModel);
 }
 
 UserObject::~UserObject()
 {
+}
+
+void UserObject::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework)
+{
+	CGameObject* handFrame = FindFrame(framename);
+	if (handFrame) {
+		CGameObject* weapon = new CStaticObject(pd3dDevice, pd3dCommandList, modelname, pGameFramework);
+		weapon->SetPosition(0, 0, 0);
+		weapon->SetScale(1, 1, 1);
+		weapon->Rotate(0.0f, 0.0f, 0.0f);
+
+		handFrame->SetChild(weapon);
+		UpdateTransform(nullptr); // 변환 행렬 즉시 갱신
+	}
+}
+void UserObject::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate = { 0,0,0 }, XMFLOAT3 scale = { 1,1,1 })
+{
+	CGameObject* handFrame = FindFrame(framename);
+	if (handFrame) {
+		CGameObject* weapon = new CStaticObject(pd3dDevice, pd3dCommandList, modelname, pGameFramework);
+		weapon->SetPosition(offset);
+		weapon->SetScale(scale.x, scale.y, scale.z);
+		weapon->Rotate(rotate.x, rotate.y, rotate.z);
+
+		handFrame->SetChild(weapon);
+		UpdateTransform(nullptr); // 변환 행렬 즉시 갱신
+	}
+}
+
+CGameObject* UserObject::FindFrame(char* framename)
+{
+	if (strcmp(m_pstrFrameName, framename) == 0) return this;
+	if (m_pChild) {
+		CGameObject* found = m_pChild->FindFrame(framename);
+		if (found) return found;
+	}
+	if (m_pSibling) {
+		CGameObject* found = m_pSibling->FindFrame(framename);
+		if (found) return found;
+	}
+	return nullptr;
 }
 
 void UserObject::ChangeAnimation(DWORD direction)
