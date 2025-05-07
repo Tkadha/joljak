@@ -577,20 +577,37 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 	// Player <-> Object
 	for (auto& obj : m_vGameObjects) {
 		if (CollisionCheck(m_pPlayer, obj)) {
-			if (!obj->isRender)	continue;
+			if (!obj->isRender)   continue;
 			// 나무 충돌처리
 			if (obj->m_objectType == GameObjectType::Tree) {
 				obj->isRender = false;
 				m_pGameFramework->AddItem("wood");
 			}
-
 			// 돌 충돌처리
 			if (obj->m_objectType == GameObjectType::Rock) {
 				printf("[Rock 충돌 확인])\n");
 				obj->isRender = false;
 				m_pGameFramework->AddItem("stone");
 			}
+			if (obj->m_objectType == GameObjectType::Cow || obj->m_objectType == GameObjectType::Pig) {
+				auto npc = dynamic_cast<CMonsterObject*>(obj);
+				npc->Decreasehp(pPlayer->PlayerAttack);
+				if (obj->FSM_manager) {
+					if (npc->Gethp() > 0) obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCRunAwayState>());
+					else obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCDieState>());
+				}
+			}
+			if (obj->m_objectType != GameObjectType::Unknown && obj->m_objectType != GameObjectType::Cow && obj->m_objectType != GameObjectType::Pig &&
+				obj->m_objectType != GameObjectType::Rock && obj->m_objectType != GameObjectType::Tree && obj->m_objectType != GameObjectType::Player) {
+				auto npc = dynamic_cast<CMonsterObject*>(obj);
+				npc->Decreasehp(pPlayer->PlayerAttack);
+				if (obj->FSM_manager) {
+					if (npc->Gethp() > 0) obj->FSM_manager->ChangeState(std::make_shared<AtkNPCHitState>());
+					else obj->FSM_manager->ChangeState(std::make_shared<AtkNPCDieState>());
+				}
+			}
 
 		}
 	}
 }
+
