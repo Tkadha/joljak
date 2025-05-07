@@ -59,6 +59,21 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     // 색상 조합 (예: 블렌딩)
     // float4 cColor = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f)); // 단순 평균
     float4 cColor = input.color * lerp(cBaseTexColor, cDetailTexColor, 0.5); // 예: 정점 색상과 블렌딩
+    
+    // --- 안개 계산 시작 ---
+// 카메라 위치는 cbCameraInfo (b1) 에서 가져옴 (gvCameraPosition)
+    float distToEye = distance(input.position.xyz, gvCameraPosition.xyz);
+
+// 선형 안개 계수 계산 (Frank Luna 방식)
+// FogStart 에서 안개 시작, FogStart + FogRange 에서 안개 최대
+    float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);
+// 또는 일반적인 (FogEnd - dist) / (FogEnd - FogStart) 방식:
+// float fogEnd = gFogStart + gFogRange;
+// float fogFactor = saturate((fogEnd - distToEye) / (fogEnd - gFogStart));
+    
+    
+    cColor.rgb = lerp(gFogColor.rgb, cColor.rgb, fogFactor);
+
 
     return cColor;
 }

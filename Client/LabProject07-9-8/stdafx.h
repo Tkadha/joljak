@@ -49,6 +49,13 @@ using namespace std;
 #include <dxgidebug.h>
 #endif
 
+// d3d12book
+#include "d3dUtil.h"
+#include "DDSTextureLoader.h"
+#include "GameTimer.h"
+#include "MathHelper.h"
+#include "UploadBuffer.h"
+
 using namespace DirectX;
 using namespace DirectX::PackedVector;
 

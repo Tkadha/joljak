@@ -12,6 +12,10 @@ struct VS_CB_CAMERA_INFO
 	XMFLOAT4X4						m_xmf4x4View;
 	XMFLOAT4X4						m_xmf4x4Projection;
 	XMFLOAT3						m_xmf3Position;
+	DirectX::XMFLOAT4 FogColor;    // 안개 색상
+	float FogStart;                // 안개 시작 거리
+	float FogRange;                // 안개 범위
+
 };
 
 class CPlayer;
@@ -44,6 +48,10 @@ protected:
 
 	ID3D12Resource					*m_pd3dcbCamera = NULL;
 	VS_CB_CAMERA_INFO				*m_pcbMappedCamera = NULL;
+
+	DirectX::XMFLOAT4 m_xmf4FogColor = DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f); // 기본 회색 안개
+	float m_fFogStart = 2000.0f;
+	float m_fFogRange = 3000.0f;
 
 public:
 	CCamera();
