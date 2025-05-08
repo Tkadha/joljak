@@ -87,7 +87,7 @@ public:
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	std::shared_ptr<Item> CreateDummyItem();
 	void AddDummyItem();
-	void AddItem(const std::string &name);
+	void AddItem(const std::string &name, int quantity);
 	ImTextureID LoadIconTexture(const std::wstring& filename);
 	void CreateIconDescriptorHeap();
 	void InitializeCraftItems();

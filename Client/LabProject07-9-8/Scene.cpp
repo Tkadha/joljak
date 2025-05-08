@@ -101,6 +101,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	}
 
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	srand((unsigned int)time(NULL));
 
 	XMFLOAT3 xmf3Scale(5.f, 0.2f, 5.f);
 	XMFLOAT4 xmf4Color(0.0f, 0.0f, 0.0f, 0.0f);
@@ -691,18 +692,27 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 	// Player <-> Object
 	for (auto& obj : m_vGameObjects) {
 		if (CollisionCheck(m_pPlayer, obj)) {
-			if (!obj->isRender)	continue;
+			if (!obj->isRender)   continue;
 			// 나무 충돌처리
 			if (obj->m_objectType == GameObjectType::Tree) {
 				obj->isRender = false;
-				m_pGameFramework->AddItem("wood");
+				m_pGameFramework->AddItem("wood", 3);
 			}
-
 			// 돌 충돌처리
 			if (obj->m_objectType == GameObjectType::Rock) {
 				printf("[Rock 충돌 확인])\n");
 				obj->isRender = false;
-				m_pGameFramework->AddItem("stone");
+
+				int randValue = rand() % 100; // 0 ~ 99
+				if (randValue < 50) {
+					m_pGameFramework->AddItem("stone",3);
+				}
+				else if (randValue < 75) {
+					m_pGameFramework->AddItem("coal",1);
+				}
+				else {
+					m_pGameFramework->AddItem("iron_material",1);
+				}
 			}
 			if (obj->m_objectType == GameObjectType::Cow || obj->m_objectType == GameObjectType::Pig) {
 				auto npc = dynamic_cast<CMonsterObject*>(obj);
@@ -716,6 +726,9 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 				obj->m_objectType != GameObjectType::Rock && obj->m_objectType != GameObjectType::Tree && obj->m_objectType != GameObjectType::Player) {
 				auto npc = dynamic_cast<CMonsterObject*>(obj);
 				npc->Decreasehp(pPlayer->PlayerAttack);
+				if (npc->Gethp() <= 0) {
+					m_pGameFramework->AddItem("pork", 2);
+				}
 				if (obj->FSM_manager) {
 					if (npc->Gethp() > 0) obj->FSM_manager->ChangeState(std::make_shared<AtkNPCHitState>());
 					else obj->FSM_manager->ChangeState(std::make_shared<AtkNPCDieState>());
@@ -725,3 +738,4 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 		}
 	}
 }
+

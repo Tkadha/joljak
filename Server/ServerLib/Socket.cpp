@@ -16,12 +16,12 @@ using namespace std;
 
 std::string GetLastErrorAsString();
 
-// ¼ÒÄÏÀ» »ý¼ºÇÏ´Â »ý¼ºÀÚ.
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
 Socket::Socket(SocketType socketType)
 {
 	g_socketInit.Touch();
 
-	// overlapped I/O¸¦ ¾²·Á¸é socket() ¸»°í WSASocketÀ» ½á¾ß ÇÕ´Ï´Ù.
+	// overlapped I/Oï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ socket() ï¿½ï¿½ï¿½ï¿½ WSASocketï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½Õ´Ï´ï¿½.
 	if(socketType==SocketType::Tcp)
 	{
 #ifdef _WIN32
@@ -44,7 +44,7 @@ Socket::Socket(SocketType socketType)
 #endif
 }
 
-// ¿ÜºÎ ¼ÒÄÏ ÇÚµéÀ» ¹Þ´Â »ý¼ºÀÚ.
+// ï¿½Üºï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ï¿½ï¿½ ï¿½Þ´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
 Socket::Socket(SOCKET fd)
 {
 	g_socketInit.Touch();
@@ -55,7 +55,7 @@ Socket::Socket(SOCKET fd)
 #endif
 }
 
-// ¼ÒÄÏÀ» »ý¼ºÇÏÁö´Â ¾Ê´Â´Ù.
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê´Â´ï¿½.
 Socket::Socket()
 {
 #ifdef _WIN32
@@ -84,7 +84,7 @@ void Socket::Bind(const Endpoint& endpoint)
 	}
 }
 
-// endpoint°¡ °¡¸®Å°´Â ÁÖ¼Ò·ÎÀÇ Á¢¼ÓÀ» ÇÕ´Ï´Ù.
+// endpointï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Å°ï¿½ï¿½ ï¿½Ö¼Ò·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Õ´Ï´ï¿½.
 void Socket::Connect(const Endpoint& endpoint)
 {
 	if (connect(m_fd, (sockaddr*)&endpoint.m_ipv4Endpoint, sizeof(endpoint.m_ipv4Endpoint)) < 0)
@@ -95,7 +95,7 @@ void Socket::Connect(const Endpoint& endpoint)
 	}
 }
 
-// ¼Û½ÅÀ» ÇÕ´Ï´Ù.
+// ï¿½Û½ï¿½ï¿½ï¿½ ï¿½Õ´Ï´ï¿½.
 int Socket::Send(const char* data, int length)
 {
 	return ::send(m_fd, data, length, 0);
@@ -121,9 +121,9 @@ void Socket::Listen()
 	listen(m_fd, SOMAXCONN);
 }
 
-// ¼º°øÇÏ¸é 0, ½ÇÆÐÇÏ¸é ´Ù¸¥ °ªÀ» ¸®ÅÏÇÕ´Ï´Ù.
-// errorText¿¡´Â ½ÇÆÐ½Ã ¿¡·¯³»¿ëÀÌ ÅØ½ºÆ®·Î  Ã¤¿öÁý´Ï´Ù.
-// acceptedSocket¿¡´Â acceptµÈ ¼ÒÄÏ ÇÚµéÀÌ µé¾î°©´Ï´Ù.
+// ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ 0, ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ ï¿½Ù¸ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
+// errorTextï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ð½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ø½ï¿½Æ®ï¿½ï¿½  Ã¤ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½.
+// acceptedSocketï¿½ï¿½ï¿½ï¿½ acceptï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ï¿½ï¿½ ï¿½ï¿½î°©ï¿½Ï´ï¿½.
 int Socket::Accept(Socket& acceptedSocket, string& errorText)
 {
 	acceptedSocket.m_fd = accept(m_fd, NULL, 0);
@@ -138,16 +138,16 @@ int Socket::Accept(Socket& acceptedSocket, string& errorText)
 
 #ifdef _WIN32
 
-// ¼º°øÇÏ¸é true, ½ÇÆÐÇÏ¸é false¸¦ ¸®ÅÏÇÕ´Ï´Ù.
-// errorText¿¡´Â ½ÇÆÐ½Ã ¿¡·¯³»¿ëÀÌ ÅØ½ºÆ®·Î  Ã¤¿öÁý´Ï´Ù.
-// acceptCandidateSocket¿¡´Â ÀÌ¹Ì ¸¸µé¾îÁø ¼ÒÄÏ ÇÚµéÀÌ µé¾î°¡¸ç, acceptÀÌ µÇ°í ³ª¸é ÀÌ ¼ÒÄÏ ÇÚµéÀº TCP ¿¬°á °´Ã¼·Î º¯½ÅÇÕ´Ï´Ù.
+// ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ true, ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ falseï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
+// errorTextï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ð½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ø½ï¿½Æ®ï¿½ï¿½  Ã¤ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½.
+// acceptCandidateSocketï¿½ï¿½ï¿½ï¿½ ï¿½Ì¹ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ï¿½ï¿½ ï¿½ï¿½î°¡ï¿½ï¿½, acceptï¿½ï¿½ ï¿½Ç°ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ï¿½ï¿½ TCP ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
 bool Socket::AcceptOverlapped(Socket& acceptCandidateSocket, string& errorText)
 {
 	if (AcceptEx == NULL)
 	{
 		DWORD bytes;
-		// AcceptEx´Â ¿©Å¸ ¼ÒÄÏÇÔ¼ö¿Í ´Þ¸® Á÷Á¢ È£ÃâÇÏ´Â °ÍÀÌ ¾Æ´Ï°í,
-		// ÇÔ¼ö Æ÷ÀÎÅÍ¸¦ ¸ÕÀú °¡Á®¿Â ´ÙÀ½ È£ÃâÇÒ ¼ö ÀÖ´Ù. ±×°ÍÀ» ¿©±â¼­ ÇÑ´Ù.
+		// AcceptExï¿½ï¿½ ï¿½ï¿½Å¸ ï¿½ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½ ï¿½Þ¸ï¿½ ï¿½ï¿½ï¿½ï¿½ È£ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Æ´Ï°ï¿½,
+		// ï¿½Ô¼ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Í¸ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ È£ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ö´ï¿½. ï¿½×°ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½â¼­ ï¿½Ñ´ï¿½.
 		UUID uuid{ UUID(WSAID_ACCEPTEX) };
 		WSAIoctl(m_fd,
 			SIO_GET_EXTENSION_FUNCTION_POINTER,
@@ -166,7 +166,7 @@ bool Socket::AcceptOverlapped(Socket& acceptCandidateSocket, string& errorText)
 	}
 
 
-	// ¿©±â¿¡´Â acceptµÈ ¼ÒÄÏÀÇ ·ÎÄÃÁÖ¼Ò¿Í ¸®¸ðÆ®ÁÖ¼Ò°¡ Ã¤¿öÁý´Ï´Ù¸¸ º» ¿¹Á¦¿¡¼­ µ¶ÀÚµé¿¡°Ô °¡¸£ÃÄÁÙ ¹üÀ§¸¦ ¹þ¾î³ª¹Ç·Î ±×³É ¹ö¸³´Ï´Ù.
+	// ï¿½ï¿½ï¿½â¿¡ï¿½ï¿½ acceptï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ö¼Ò¿ï¿½ ï¿½ï¿½ï¿½ï¿½Æ®ï¿½Ö¼Ò°ï¿½ Ã¤ï¿½ï¿½ï¿½ï¿½ï¿½Ï´Ù¸ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Úµé¿¡ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½î³ªï¿½Ç·ï¿½ ï¿½×³ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½.
 	char ignored[200];
 	DWORD ignored2 = 0;
 
@@ -184,8 +184,8 @@ bool Socket::AcceptOverlapped(Socket& acceptCandidateSocket, string& errorText)
 }
 
 
-// AcceptEx°¡ I/O ¿Ï·á¸¦ ÇÏ´õ¶óµµ ¾ÆÁ÷ TCP ¿¬°á ¹Þ±â Ã³¸®°¡ ´Ù ³¡³­ °ÍÀÌ ¾Æ´Ï´Ù.
-// ÀÌ ÇÔ¼ö¸¦ È£ÃâÇØÁÖ¾î¾ß¸¸ ¿Ï·á°¡ µÈ´Ù.
+// AcceptExï¿½ï¿½ I/O ï¿½Ï·á¸¦ ï¿½Ï´ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ TCP ï¿½ï¿½ï¿½ï¿½ ï¿½Þ±ï¿½ Ã³ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Æ´Ï´ï¿½.
+// ï¿½ï¿½ ï¿½Ô¼ï¿½ï¿½ï¿½ È£ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾ï¿½ß¸ï¿½ ï¿½Ï·á°¡ ï¿½È´ï¿½.
 int Socket::UpdateAcceptContext(Socket& listenSocket)
 {
 	sockaddr_in ignore1;
@@ -228,10 +228,10 @@ Endpoint Socket::GetPeerAddr()
 	return ret;
 }
 
-// ¼ÒÄÏ ¼ö½ÅÀ» ÇÕ´Ï´Ù. 
-// ºí·ÎÅ· ¼ÒÄÏÀÌ¸é 1¹ÙÀÌÆ®¶óµµ ¼ö½ÅÇÏ°Å³ª ¼ÒÄÏ ¿¡·¯°¡ ³ª°Å³ª ¼ÒÄÏ ¿¬°áÀÌ ²÷¾îÁú ¶§±îÁö ±â´Ù¸³´Ï´Ù.
-// ³íºí·ÎÅ· ¼ÒÄÏÀÌ¸é ±â´Ù·Á¾ß ÇÏ´Â °æ¿ì Áï½Ã ¸®ÅÏÇÏ°í EWOULDBLOCKÀÌ errno³ª GetLastError¿¡¼­ ³ª¿À°Ô µË´Ï´Ù.
-// ¸®ÅÏ°ª: recv ¸®ÅÏ°ª ±×´ë·ÎÀÔ´Ï´Ù.
+// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Õ´Ï´ï¿½. 
+// ï¿½ï¿½ï¿½Å· ï¿½ï¿½ï¿½ï¿½ï¿½Ì¸ï¿½ 1ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°Å³ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Å³ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ù¸ï¿½ï¿½Ï´ï¿½.
+// ï¿½ï¿½ï¿½ï¿½Å· ï¿½ï¿½ï¿½ï¿½ï¿½Ì¸ï¿½ ï¿½ï¿½Ù·ï¿½ï¿½ï¿½ ï¿½Ï´ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ EWOULDBLOCKï¿½ï¿½ errnoï¿½ï¿½ GetLastErrorï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ë´Ï´ï¿½.
+// ï¿½ï¿½ï¿½Ï°ï¿½: recv ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½×´ï¿½ï¿½ï¿½Ô´Ï´ï¿½.
 int Socket::Receive()
 {
 	return (int)recv(m_fd, m_recv_over.send_buf, BUFSIZE, 0);
@@ -239,13 +239,13 @@ int Socket::Receive()
 
 #ifdef _WIN32
 
-// overlapeed ¼ö½ÅÀ» °Ì´Ï´Ù. Áï ¹é±×¶ó¿îµå·Î ¼ö½Å Ã³¸®¸¦ ÇÕ´Ï´Ù.
-// ¼ö½ÅµÇ´Â µ¥ÀÌÅÍ´Â m_receiveBuffer¿¡ ºñµ¿±â·Î Ã¤¿öÁý´Ï´Ù.
-// ¸®ÅÏ°ª: WSARecvÀÇ ¸®ÅÏ°ª ±×´ë·ÎÀÔ´Ï´Ù.
+// overlapeed ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ì´Ï´ï¿½. ï¿½ï¿½ ï¿½ï¿½×¶ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Ã³ï¿½ï¿½ï¿½ï¿½ ï¿½Õ´Ï´ï¿½.
+// ï¿½ï¿½ï¿½ÅµÇ´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Í´ï¿½ m_receiveBufferï¿½ï¿½ ï¿½ñµ¿±ï¿½ï¿½ Ã¤ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½.
+// ï¿½ï¿½ï¿½Ï°ï¿½: WSARecvï¿½ï¿½ ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½×´ï¿½ï¿½ï¿½Ô´Ï´ï¿½.
 int Socket::ReceiveOverlapped()
 {
 
-	// overlapped I/O°¡ ÁøÇàµÇ´Â µ¿¾È ¿©±â °ªÀÌ Ã¤¿öÁý´Ï´Ù.
+	// overlapped I/Oï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ç´ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Ã¤ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½.
 	m_readFlags = 0;
 	memset(&m_recv_over.over, 0, sizeof(m_recv_over.over));
 	m_recv_over.wsabuf.len = BUFSIZE - m_prev_remain;
@@ -256,7 +256,7 @@ int Socket::ReceiveOverlapped()
 
 #endif
 
-// ³Íºí·° ¼ÒÄÏÀ¸·Î ¸ðµå¸¦ ¼³Á¤ÇÕ´Ï´Ù.
+// ï¿½Íºï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½å¸¦ ï¿½ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
 void Socket::SetNonblocking()
 {
 	u_long val = 1;
@@ -274,7 +274,7 @@ void Socket::SetNonblocking()
 }
 
 //Returns the last Win32 error, in string format. Returns an empty string if there is no error.
-// ÃâÃ³: https://stackoverflow.com/questions/1387064/how-to-get-the-error-message-from-the-error-code-returned-by-getlasterror
+// ï¿½ï¿½Ã³: https://stackoverflow.com/questions/1387064/how-to-get-the-error-message-from-the-error-code-returned-by-getlasterror
 std::string GetLastErrorAsString()
 {
 #ifdef _WIN32
