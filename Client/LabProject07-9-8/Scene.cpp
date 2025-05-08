@@ -683,7 +683,8 @@ void CScene::CollectHierarchyObjects(CGameObject* obj, std::vector<BoundingOrien
 	}
 }
 
-
+#include "NonAtkState.h"
+#include "AtkState.h"
 void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 	if (!pPlayer) return;
 
@@ -703,7 +704,23 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 				obj->isRender = false;
 				m_pGameFramework->AddItem("stone");
 			}
-
+			if (obj->m_objectType == GameObjectType::Cow || obj->m_objectType == GameObjectType::Pig) {
+				auto npc = dynamic_cast<CMonsterObject*>(obj);
+				npc->Decreasehp(pPlayer->PlayerAttack);
+				if (obj->FSM_manager) {
+					if (npc->Gethp() > 0) obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCRunAwayState>());
+					else obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCDieState>());
+				}
+			}
+			if (obj->m_objectType != GameObjectType::Unknown && obj->m_objectType != GameObjectType::Cow && obj->m_objectType != GameObjectType::Pig &&
+				obj->m_objectType != GameObjectType::Rock && obj->m_objectType != GameObjectType::Tree && obj->m_objectType != GameObjectType::Player) {
+				auto npc = dynamic_cast<CMonsterObject*>(obj);
+				npc->Decreasehp(pPlayer->PlayerAttack);
+				if (obj->FSM_manager) {
+					if (npc->Gethp() > 0) obj->FSM_manager->ChangeState(std::make_shared<AtkNPCHitState>());
+					else obj->FSM_manager->ChangeState(std::make_shared<AtkNPCDieState>());
+				}
+			}
 
 		}
 	}
