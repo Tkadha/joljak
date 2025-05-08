@@ -705,6 +705,9 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 			if (obj->m_objectType == GameObjectType::Cow || obj->m_objectType == GameObjectType::Pig) {
 				auto npc = dynamic_cast<CMonsterObject*>(obj);
 				npc->Decreasehp(pPlayer->PlayerAttack);
+				if (npc->Gethp() <= 0) {
+					m_pGameFramework->AddItem("pork", 2);
+				}
 				if (obj->FSM_manager) {
 					if (npc->Gethp() > 0) obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCRunAwayState>());
 					else obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCDieState>());
@@ -714,9 +717,6 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 				obj->m_objectType != GameObjectType::Rock && obj->m_objectType != GameObjectType::Tree && obj->m_objectType != GameObjectType::Player) {
 				auto npc = dynamic_cast<CMonsterObject*>(obj);
 				npc->Decreasehp(pPlayer->PlayerAttack);
-				if (npc->Gethp() <= 0) {
-					m_pGameFramework->AddItem("pork", 2);
-				}
 				if (obj->FSM_manager) {
 					if (npc->Gethp() > 0) obj->FSM_manager->ChangeState(std::make_shared<AtkNPCHitState>());
 					else obj->FSM_manager->ChangeState(std::make_shared<AtkNPCDieState>());

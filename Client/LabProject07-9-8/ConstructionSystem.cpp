@@ -9,18 +9,13 @@ void CConstructionSystem::Init(ID3D12Device* device, ID3D12GraphicsCommandList* 
 
 void CConstructionSystem::EnterBuildMode()
 {
-    if (m_pPreviewObject)
-    {
-        delete m_pPreviewObject;
-        m_pPreviewObject = nullptr;
-    }
+    if (m_bBuildMode) return; // 이미 진입했으면 무시
 
-    m_pPreviewObject = CGameObject::LoadGeometryFromFile(
-        m_pd3dDevice,
-        m_pd3dCommandList,
-        "Model/FAE_Pine_A_LOD0.bin", // 우선 소나무로 테스트
-        m_pGameFramework
-    );
+    // 더미 오브젝트 생성
+    m_pPreviewObject = new CGameObject();
+    m_pPreviewObject->SetPosition(XMFLOAT3(0.f, 0.f, 0.f));
+    m_pPreviewObject->SetScale(100.f, 100.f, 100.f); // 보기 좋은 크기
+    m_pPreviewObject->SetColor(XMFLOAT4(1.f, 0.f, 0.f, 1.f)); // 눈에 띄는 색상 (빨강)
 
     m_bBuildMode = true;
 }
@@ -29,6 +24,27 @@ void CConstructionSystem::EnterBuildMode()
 void CConstructionSystem::ExitBuildMode()
 {
     m_bBuildMode = false;
+}
+
+void CConstructionSystem::UpdatePreviewPosition(const CCamera* pCamera)
+{
+    
+    if (!m_bBuildMode || !m_pPreviewObject) return;
+
+    // 카메라 기준 위치 계산 (앞으로 500만큼)
+    XMFLOAT3 camPos = pCamera->GetPosition();
+    XMFLOAT3 camLook = pCamera->GetLookVector();
+
+    XMVECTOR vCamPos = XMLoadFloat3(&camPos);
+    XMVECTOR vCamLook = XMLoadFloat3(&camLook);
+    XMVECTOR vTarget = XMVectorAdd(vCamPos, XMVectorScale(vCamLook, 500.f));
+
+    XMFLOAT3 previewPos;
+    XMStoreFloat3(&previewPos, vTarget);
+    m_xmf3PreviewPosition = previewPos;
+
+    m_pPreviewObject->SetPosition(previewPos);
+    
 }
 
 void CConstructionSystem::UpdatePreview(const XMFLOAT3& playerPos, const XMFLOAT3& forward)

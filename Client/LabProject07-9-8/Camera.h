@@ -73,13 +73,15 @@ public:
 
 	void SetPosition(XMFLOAT3 xmf3Position) { m_xmf3Position = xmf3Position; }
 	XMFLOAT3& GetPosition() { return(m_xmf3Position); }
-
+	XMFLOAT3 GetPosition() const { return m_xmf3Position; }
+	
 	void SetLookAtPosition(XMFLOAT3 xmf3LookAtWorld) { m_xmf3LookAtWorld = xmf3LookAtWorld; }
 	XMFLOAT3& GetLookAtPosition() { return(m_xmf3LookAtWorld); }
 
 	XMFLOAT3& GetRightVector() { return(m_xmf3Right); }
 	XMFLOAT3& GetUpVector() { return(m_xmf3Up); }
 	XMFLOAT3& GetLookVector() { return(m_xmf3Look); }
+	XMFLOAT3 GetLookVector() const { return m_xmf3Look; }
 
 	float& GetPitch() { return(m_fPitch); }
 	float& GetRoll() { return(m_fRoll); }
@@ -102,7 +104,7 @@ public:
 	virtual void Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed) { }
 	virtual void SetLookAt(XMFLOAT3& xmf3LookAt) { }
 
-	ID3D12Resource* GetCameraConstantBuffer() const { return m_pd3dcbCamera; } // ¹öÆÛ Á¢±ÙÀÚ Ãß°¡
+	ID3D12Resource* GetCameraConstantBuffer() const { return m_pd3dcbCamera; } // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½
 };
 
 class CSpaceShipCamera : public CCamera

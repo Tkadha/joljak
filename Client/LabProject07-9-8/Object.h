@@ -84,6 +84,7 @@ public:
 	int								m_nMaterials = 0;
 	CMaterial						**m_ppMaterials = NULL;
 
+	XMFLOAT4 m_xmf4DebugColor = XMFLOAT4(1, 1, 1, 1);
 	// OBB
 	XMFLOAT3 m_xmf3Position;
 	XMFLOAT3 m_xmf3Size;
@@ -191,6 +192,7 @@ public:
 	void SetOBB(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CShader* shader);
 	void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList);
 	void InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void SetColor(const XMFLOAT4& color);
 
 	// --- 재질 접근자 추가 ---
 	CMaterial* GetMaterial(int nIndex = 0) const {

@@ -1744,3 +1744,9 @@ void UserObject::ChangeAnimation(DWORD direction)
 {
 
 }
+
+
+void CGameObject::SetColor(const XMFLOAT4& color)
+{
+	m_xmf4DebugColor = color;
+}

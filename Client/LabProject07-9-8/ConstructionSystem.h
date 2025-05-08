@@ -4,6 +4,7 @@
 #include "d3dx12.h"
 #include "ResourceManager.h"
 
+
 class CConstructionSystem
 {
 public:
@@ -13,6 +14,8 @@ public:
     void UpdatePreview(const XMFLOAT3& playerPos, const XMFLOAT3& forward);
     void ConfirmPlacement(std::vector<CGameObject*>& sceneObjects);
     void SetSelectedBuilding(const std::string& name);
+    void UpdatePreviewPosition(const CCamera* pCamera);
+    XMFLOAT3 GetPreviewPosition() const { return m_xmf3PreviewPosition; }
 
     void RenderPreview(ID3D12GraphicsCommandList* cmdList, CCamera* camera);
 
@@ -29,4 +32,5 @@ private:
     //ResourceManager* m_pResourceManager = nullptr;
 
     CGameFramework* m_pGameFramework = nullptr;
+    XMFLOAT3 m_xmf3PreviewPosition;
 };
