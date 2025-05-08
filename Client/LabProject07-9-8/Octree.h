@@ -5,9 +5,9 @@
 
 // °´Ã¼ Å¬·¡½º
 struct tree_obj {
-    char u_id;
+    int u_id;
     XMFLOAT3 position; // °´Ã¼ÀÇ À§Ä¡
-    tree_obj(char id, const XMFLOAT3& pos) : u_id(id), position(pos) {}
+    tree_obj(int id, const XMFLOAT3& pos) : u_id(id), position(pos) {}
 
     float distanceTo(const tree_obj& other) const {
         return std::sqrt((position.x - other.position.x) * (position.x - other.position.x) +
