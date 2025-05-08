@@ -1750,8 +1750,8 @@ void UserObject::ChangeAnimation(PlayerInput inputData)
 	}
 	else if (inputData.MoveForward) on_track = 1;
 	else if (inputData.MoveBackward) on_track = 2;
-	else if (inputData.MoveLeft) on_track = 3;
-	else if (inputData.MoveRight) on_track = 4;
+	else if (inputData.WalkLeft) on_track = 3;
+	else if (inputData.WalkRight) on_track = 4;
 	else if (inputData.Jump) {}
 	else if (inputData.Interact) {}
 	else on_track = 0;

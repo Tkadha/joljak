@@ -634,25 +634,13 @@ void CTerrainPlayer::keyInput(UCHAR* key) {
 	bool actionTriggered = false; // 이번 프레임에 액션이 시작되었는지 여부
 
 	if (fKeyPressed) {
-		if (nAni != 5) { // F 액션이 이미 실행 중이 아니라면
-			m_pSkinnedAnimationController->SetTrackEnable(nAni, false); // 이전 애니메이션 트랙 비활성화
-			nAni = 5; // F 액션 애니메이션 인덱스
-			bAction = true;
-			m_pSkinnedAnimationController->SetTrackEnable(nAni, true); // F 액션 트랙 활성화
-			actionTriggered = true;
-
-			PerformActionInteractionCheck();
-		}
+		bAction = true;
+		actionTriggered = true;
+		PerformActionInteractionCheck();
 	}
 	else if (spacePressed) {
-		if (nAni != 6) { // 점프 액션이 이미 실행 중이 아니라면
-			m_pSkinnedAnimationController->SetTrackEnable(nAni, false);
-			nAni = 6; // 점프 애니메이션 인덱스
-			bAction = true;
-			m_pSkinnedAnimationController->SetTrackEnable(nAni, true);
-			actionTriggered = true;
-			// 점프 관련 로직 (물리 적용 등) 추가 가능
-		}
+		bAction = true;
+		actionTriggered = true;
 	}
 	else {
 		// F키나 스페이스바가 눌리지 않았을 때

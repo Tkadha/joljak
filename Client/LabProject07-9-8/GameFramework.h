@@ -1,7 +1,7 @@
 ﻿#pragma once
 
-#define FRAME_BUFFER_WIDTH		640
-#define FRAME_BUFFER_HEIGHT		480
+#define FRAME_BUFFER_WIDTH		1600
+#define FRAME_BUFFER_HEIGHT		1280
 
 #include "Timer.h"
 #include "Player.h"
@@ -23,7 +23,6 @@ struct CraftMaterial
 	int Quantity;             // 재료 수량
 };
 
-// ?쒖옉 ?꾩씠??援ъ“泥?
 struct CraftItem
 {
 	std::string ResultItemName;        // 최종 제작 아이템 이름
@@ -166,12 +165,9 @@ private:
 	ShaderManager* m_pShaderManager;
 
 public:
-	// CBV ���� �Ҵ� ��û (nDescriptors�� �Ҵ� �� ���� �ڵ� ��ȯ)
 	bool AllocateCbvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle);
-	// SRV ���� �Ҵ� ��û
 	bool AllocateSrvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle);
 
-	// ���� ���� �ڵ� ��ȯ �Լ� ��...
 	ID3D12DescriptorHeap* GetCbvSrvHeap() { return m_pd3dCbvSrvDescriptorHeap.Get(); }
 	UINT GetCbvSrvDescriptorSize() { return m_nCbvSrvDescriptorIncrementSize; }
 

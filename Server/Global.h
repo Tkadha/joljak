@@ -30,8 +30,8 @@ const int MAX_BUF_SIZE = 1024; // 버퍼 최대 크기
 struct PlayerInput {
 	char MoveForward = false;
 	char MoveBackward = false;
-	char MoveLeft = false;
-	char MoveRight = false;
+	char WalkLeft = false;
+	char WalkRight = false;
 	char Jump = false;
 	char Attack = false; // 예: F키 또는 마우스 클릭
 	char Interact = false; // 예: E키

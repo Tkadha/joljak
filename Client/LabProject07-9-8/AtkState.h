@@ -14,11 +14,11 @@ class AtkNPCGlobalState : public FSMState<CGameObject>
 
 	virtual void Exit(std::shared_ptr<CGameObject> npc);
 
-	void SetInvincible() { 
+	virtual void SetInvincible() { 
 		is_invincible = true;
 		starttime = std::chrono::system_clock::now(); // 무적상태 시작시간
 	} // 무적상태로 전환
-	bool GetInvincible() const { return is_invincible; } // 무적상태인지 체크하는 함수
+	virtual bool GetInvincible() const { return is_invincible; } // 무적상태인지 체크하는 함수
 };
 
 

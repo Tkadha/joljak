@@ -8,6 +8,9 @@
 
 // --- 구체적인 상태 클래스 구현 ---
 
+#define WalkSpeed 50
+#define RunSpeed 80
+
 class IdleState : public IPlayerState {
 public:
     PlayerStateID GetID() const override { return PlayerStateID::Idle; }
@@ -24,10 +27,11 @@ public:
         // 이동 입력 체크
         if (input.MoveForward) return PlayerStateID::WalkForward;
         if (input.MoveBackward) return PlayerStateID::WalkBackward;
-        if (input.MoveLeft) return PlayerStateID::MoveLeft;
-        if (input.MoveRight) return PlayerStateID::MoveRight;
+        if (input.WalkLeft) return PlayerStateID::WalkLeft;
+        if (input.WalkRight) return PlayerStateID::WalkRight;
         // 기타 입력 (공격, 점프 등)
-        if (input.Attack) return PlayerStateID::AttackMelee1;
+        if (input.Attack)  return PlayerStateID::AttackMelee;
+            //return stateMachine->DetermineAttackState();
         if (input.Jump) return PlayerStateID::JumpStart;
         if (input.Interact) { // 상호작용 키 입력 시
             // 충돌 검사
@@ -70,20 +74,19 @@ public:
             moveVector = Vector3::Add(moveVector, look, -1.0f);
             isMoving = true; // 뒤로 가는 키도 눌렸음
         }
-        if (input.MoveLeft) {
+        if (input.WalkLeft) {
             moveVector = Vector3::Add(moveVector, right, -1.0f);
             isMoving = true;
         }
-        if (input.MoveRight) {
+        if (input.WalkRight) {
             moveVector = Vector3::Add(moveVector, right);
             isMoving = true;
         }
 
         if (isMoving) {
             moveVector = Vector3::Normalize(moveVector); // 대각선 이동 시 속도 보정 위해 정규화
-            float currentSpeed = (input.Run && input.MoveForward) ? 80.0f : 200.0f; // 달리기/걷기 속도 구분 (RunForward 상태 전환은 아래에서)
             XMFLOAT3 currentVel = player->GetVelocity(); // 현재 Y 속도 유지
-            XMFLOAT3 targetVel = Vector3::ScalarProduct(moveVector, currentSpeed, false);
+            XMFLOAT3 targetVel = Vector3::ScalarProduct(moveVector, WalkSpeed, false);
             targetVel.y = currentVel.y; // Y 속도는 유지
             player->SetVelocity(targetVel); // 최종 속도 설정
         }
@@ -92,11 +95,10 @@ public:
             return PlayerStateID::Idle;
         }
         // 입력에 따른 상태 전환 체크
-        if (input.Run && input.MoveForward && !input.MoveLeft && !input.MoveRight && !input.MoveBackward) {
-            // 앞 + 달리기만 눌렸을 때 RunForward 상태로 (필요시)
-            // return PlayerStateID::RunForward;
+        if (input.Run && input.MoveForward && !input.WalkLeft && !input.WalkRight && !input.MoveBackward) {
+            return PlayerStateID::RunForward;
         }
-        if (input.Attack) return PlayerStateID::AttackMelee1;
+        if (input.Attack) return PlayerStateID::AttackMelee;
         if (input.Jump) return PlayerStateID::JumpStart;
         if (input.Interact) { /* 상호작용 체크 */ }
 
@@ -104,8 +106,8 @@ public:
         // 현재 상태 유지 조건 결정 (예: 어떤 이동키든 눌려 있으면 해당 주 방향 상태 유지)
         if (input.MoveForward) return PlayerStateID::WalkForward; // 주 방향 우선
         if (input.MoveBackward) return PlayerStateID::WalkBackward;
-        if (input.MoveLeft) return PlayerStateID::MoveLeft;
-        if (input.MoveRight) return PlayerStateID::MoveRight;
+        if (input.WalkLeft) return PlayerStateID::WalkLeft;
+        if (input.WalkRight) return PlayerStateID::WalkRight;
 
         // 여기까지 오면 안되지만, 만약을 위해 Idle 반환
         return PlayerStateID::Idle;
@@ -139,22 +141,20 @@ public:
             moveVector = Vector3::Add(moveVector, look, -1.0f);
             isMoving = true;
         }
-        if (input.MoveLeft) { // PlayerInputData 멤버 이름에 맞게 수정 (WalkLeft -> StrafeLeft)
+        if (input.WalkLeft) { // PlayerInputData 멤버 이름에 맞게 수정 (WalkLeft -> StrafeLeft)
             moveVector = Vector3::Add(moveVector, right, -1.0f);
             isMoving = true;
         }
-        if (input.MoveRight) { // PlayerInputData 멤버 이름에 맞게 수정 (WalkRight -> StrafeRight)
+        if (input.WalkRight) { // PlayerInputData 멤버 이름에 맞게 수정 (WalkRight -> StrafeRight)
             moveVector = Vector3::Add(moveVector, right);
             isMoving = true;
         }
 
         if (isMoving) {
             moveVector = Vector3::Normalize(moveVector); // 대각선 이동 속도 보정
-            // 달리기 키(Shift)는 앞으로 갈 때만 적용되도록 제한 (선택적)
-            float currentSpeed = (input.Run && input.MoveForward && !input.MoveBackward && !input.MoveLeft && !input.MoveRight) ? 80.0f : 50.0f; // 예시 속도
             XMFLOAT3 currentVel = player->GetVelocity();
-            XMFLOAT3 targetVel = Vector3::ScalarProduct(moveVector, currentSpeed, false);
-            targetVel.y = currentVel.y; // Y축 속도 유지
+            XMFLOAT3 targetVel = Vector3::ScalarProduct(moveVector, WalkSpeed, false);
+            targetVel.y = currentVel.y;
             player->SetVelocity(targetVel);
         }
         else {
@@ -162,14 +162,18 @@ public:
             return PlayerStateID::Idle;
         }
 
-        if (input.Attack) return PlayerStateID::AttackMelee1;
+        if (input.Run && input.MoveBackward && !input.MoveForward && !input.WalkLeft && !input.WalkRight) {
+            return PlayerStateID::RunBackward; // RunBackward 상태로 전환 요청
+        }
+
+        if (input.Attack) return PlayerStateID::AttackMelee;
         if (input.Jump) return PlayerStateID::JumpStart;
         if (input.Interact) { /* 상호작용 체크 */ }
 
         if (input.MoveForward) return PlayerStateID::WalkForward;
         if (input.MoveBackward) return PlayerStateID::WalkBackward;
-        if (input.MoveLeft) return PlayerStateID::MoveLeft;
-        if (input.MoveRight) return PlayerStateID::MoveRight;
+        if (input.WalkLeft) return PlayerStateID::WalkLeft;
+        if (input.WalkRight) return PlayerStateID::WalkRight;
 
         // 여기까지 오면 안 되지만, 안전을 위해 Idle 반환
         return PlayerStateID::Idle;
@@ -181,7 +185,7 @@ public:
 };
 class WalkLeftState : public IPlayerState {
 public:
-    PlayerStateID GetID() const override { return PlayerStateID::MoveLeft; }
+    PlayerStateID GetID() const override { return PlayerStateID::WalkLeft; }
 
     void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
     }
@@ -202,20 +206,19 @@ public:
             moveVector = Vector3::Add(moveVector, look, -1.0f);
             isMoving = true;
         }
-        if (input.MoveLeft) {
+        if (input.WalkLeft) {
             moveVector = Vector3::Add(moveVector, right, -1.0f);
             isMoving = true;
         }
-        if (input.MoveRight) {
+        if (input.WalkRight) {
             moveVector = Vector3::Add(moveVector, right);
             isMoving = true;
         }
 
         if (isMoving) {
             moveVector = Vector3::Normalize(moveVector);
-            float currentSpeed = (input.Run && input.MoveForward && !input.MoveBackward && !input.MoveLeft && !input.MoveRight) ? 80.0f : 50.0f;
             XMFLOAT3 currentVel = player->GetVelocity();
-            XMFLOAT3 targetVel = Vector3::ScalarProduct(moveVector, currentSpeed, false);
+            XMFLOAT3 targetVel = Vector3::ScalarProduct(moveVector, WalkSpeed, false);
             targetVel.y = currentVel.y;
             player->SetVelocity(targetVel);
         }
@@ -223,14 +226,18 @@ public:
             return PlayerStateID::Idle;
         }
 
-        if (input.Attack) return PlayerStateID::AttackMelee1;
+        if (input.Run && input.WalkLeft && !input.MoveForward && !input.MoveBackward && !input.WalkRight) {
+            return PlayerStateID::RunLeft; 
+        }
+
+        if (input.Attack) return PlayerStateID::AttackMelee;
         if (input.Jump) return PlayerStateID::JumpStart;
         if (input.Interact) { /* 상호작용 체크 */ }
 
         if (input.MoveForward) return PlayerStateID::WalkForward;
         if (input.MoveBackward) return PlayerStateID::WalkBackward;
-        if (input.MoveLeft) return PlayerStateID::MoveLeft;
-        if (input.MoveRight) return PlayerStateID::MoveRight;
+        if (input.WalkLeft) return PlayerStateID::WalkLeft;
+        if (input.WalkRight) return PlayerStateID::WalkRight;
 
         return PlayerStateID::Idle;
     }
@@ -241,7 +248,7 @@ public:
 };
 class WalkRightState : public IPlayerState {
 public:
-    PlayerStateID GetID() const override { return PlayerStateID::MoveRight; }
+    PlayerStateID GetID() const override { return PlayerStateID::WalkRight; }
 
     void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
     }
@@ -262,11 +269,11 @@ public:
             moveVector = Vector3::Add(moveVector, look, -1.0f);
             isMoving = true;
         }
-        if (input.MoveLeft) {
+        if (input.WalkLeft) {
             moveVector = Vector3::Add(moveVector, right, -1.0f);
             isMoving = true;
         }
-        if (input.MoveRight) {
+        if (input.WalkRight) {
             moveVector = Vector3::Add(moveVector, right);
             isMoving = true;
         }
@@ -274,24 +281,27 @@ public:
         // --- 속도 적용 ---
         if (isMoving) {
             moveVector = Vector3::Normalize(moveVector);
-            float currentSpeed = (input.Run && input.MoveForward && !input.MoveBackward && !input.MoveLeft && !input.MoveRight) ? 80.0f : 50.0f;
             XMFLOAT3 currentVel = player->GetVelocity();
-            XMFLOAT3 targetVel = Vector3::ScalarProduct(moveVector, currentSpeed, false);
+            XMFLOAT3 targetVel = Vector3::ScalarProduct(moveVector, WalkSpeed, false);
             targetVel.y = currentVel.y;
             player->SetVelocity(targetVel);
         }
         else {
             return PlayerStateID::Idle;
         }
-            
-        if (input.Attack) return PlayerStateID::AttackMelee1;
+         
+        if (input.Run && input.WalkRight && !input.MoveForward && !input.MoveBackward && !input.WalkLeft ) {
+            return PlayerStateID::RunRight;
+        }
+
+        if (input.Attack) return PlayerStateID::AttackMelee;
         if (input.Jump) return PlayerStateID::JumpStart;
         if (input.Interact) { /* 상호작용 체크 */ }
 
         if (input.MoveForward) return PlayerStateID::WalkForward;
         if (input.MoveBackward) return PlayerStateID::WalkBackward;
-        if (input.MoveLeft) return PlayerStateID::MoveLeft;
-        if (input.MoveRight) return PlayerStateID::MoveRight;
+        if (input.WalkLeft) return PlayerStateID::WalkLeft;
+        if (input.WalkRight) return PlayerStateID::WalkRight;
 
         return PlayerStateID::Idle;
     }
@@ -300,6 +310,164 @@ public:
         // player->SetVelocity({0.0f, player->GetVelocity().y, 0.0f});
     }
 };
+// Run
+class RunForwardState : public IPlayerState {
+public:
+    PlayerStateID GetID() const override { return PlayerStateID::RunForward; }
+
+    void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
+    }
+
+    PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
+        const auto& input = player->GetStateMachineInput();
+
+        if (!input.Run || !input.MoveForward || input.MoveBackward || input.WalkLeft || input.WalkRight) {
+            if (input.MoveForward) return PlayerStateID::WalkForward;
+            if (input.WalkLeft) return PlayerStateID::WalkLeft;
+            if (input.WalkRight) return PlayerStateID::WalkRight;
+            if (input.MoveBackward) return PlayerStateID::WalkBackward;
+            return PlayerStateID::Idle;
+        }
+
+        // 달리기 적용
+        XMFLOAT3 look = player->GetLookVector();
+        XMFLOAT3 currentVel = player->GetVelocity();
+        XMFLOAT3 targetVel = Vector3::ScalarProduct(look, RunSpeed, false);
+        targetVel.y = currentVel.y;
+        player->SetVelocity(targetVel);
+
+        // 다른 상태로 전환 체크
+        if (input.Attack) return PlayerStateID::AttackMelee; // 달리는 중 공격 가능?
+        if (input.Jump) return PlayerStateID::JumpStart;   // 달리는 중 점프 가능?
+        if (input.Interact) { /* 상호작용 체크 */ }
+
+        return PlayerStateID::RunForward;
+    }
+
+    void Exit(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
+    }
+};
+class RunBackwardState : public IPlayerState {
+public:
+    // PlayerStateID::RunBackward ID 가 정의되었다고 가정
+    PlayerStateID GetID() const override { return PlayerStateID::RunBackward; }
+
+    void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
+        std::cout << "Entering RunBackward State\n";
+    }
+
+    PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
+        const auto& input = player->GetStateMachineInput();
+
+        // --- 달리기 중단/방향 전환 조건 확인 ---
+        if (!input.Run || !input.MoveBackward || input.MoveForward || input.WalkLeft || input.WalkRight) {
+            // 달리기 키를 뗐거나, 뒤로가기 키를 뗐거나, 다른 방향키가 눌리면 상태 전환
+            if (input.MoveBackward) return PlayerStateID::WalkBackward; // 달리기는 멈추고 뒤로 걷기
+            if (input.MoveForward) return PlayerStateID::WalkForward; // 앞으로 걷기
+            if (input.WalkLeft) return PlayerStateID::WalkLeft;   // 왼쪽 걷기
+            if (input.WalkRight) return PlayerStateID::WalkRight;  // 오른쪽 걷기
+            return PlayerStateID::Idle; // 모든 이동 키 뗐으면 Idle
+        }
+
+        // --- 뒤로 달리기 속도 적용 ---
+        XMFLOAT3 look = player->GetLookVector();
+        XMFLOAT3 currentVel = player->GetVelocity();
+        XMFLOAT3 targetVel = Vector3::ScalarProduct(look, -RunSpeed, false); // 뒤로 달리기
+        targetVel.y = currentVel.y; // Y 속도 유지
+        player->SetVelocity(targetVel);
+
+        // --- 다른 상태로 전환 체크 ---
+        if (input.Attack) return PlayerStateID::AttackMelee;
+        if (input.Jump) return PlayerStateID::JumpStart;
+        if (input.Interact) { /* 상호작용 체크 */ }
+
+        return PlayerStateID::RunBackward; // 뒤로 달리기 상태 유지
+    }
+
+    void Exit(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
+        std::cout << "Exiting RunBackward State\n";
+    }
+};
+
+
+// --- RunLeftState ---
+class RunLeftState : public IPlayerState {
+public:
+    // PlayerStateID::RunLeft ID 가 정의되었다고 가정 (또는 PlayerStateID::WalkLeft 사용 시 조정 필요)
+    PlayerStateID GetID() const override { return PlayerStateID::RunLeft; }
+
+    void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
+        std::cout << "Entering RunLeft State\n";
+    }
+
+    PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
+        const auto& input = player->GetStateMachineInput();
+
+        if (!input.Run || !input.WalkLeft || input.MoveForward || input.MoveBackward || input.WalkRight) {
+            if (input.WalkLeft) return PlayerStateID::WalkLeft;    
+            if (input.MoveForward) return PlayerStateID::WalkForward; 
+            if (input.MoveBackward) return PlayerStateID::WalkBackward; 
+            if (input.WalkRight) return PlayerStateID::WalkRight;    
+            return PlayerStateID::Idle;
+        }
+
+        XMFLOAT3 right = player->GetRightVector();
+        XMFLOAT3 currentVel = player->GetVelocity();
+        XMFLOAT3 targetVel = Vector3::ScalarProduct(right, -RunSpeed, false); // 왼쪽으로 달리기
+        targetVel.y = currentVel.y;
+        player->SetVelocity(targetVel);
+
+        if (input.Attack) return PlayerStateID::AttackMelee;
+        if (input.Jump) return PlayerStateID::JumpStart;
+        if (input.Interact) { /* 상호작용 체크 */ }
+
+        return PlayerStateID::RunLeft; // 왼쪽 달리기 상태 유지
+    }
+
+    void Exit(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
+        std::cout << "Exiting RunLeft State\n";
+    }
+};
+class RunRightState : public IPlayerState {
+public:
+    // PlayerStateID::RunRight ID 가 정의되었다고 가정
+    PlayerStateID GetID() const override { return PlayerStateID::RunRight; }
+
+    void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
+        std::cout << "Entering RunRight State\n";
+    }
+
+    PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
+        const auto& input = player->GetStateMachineInput();
+
+
+        if (!input.Run || !input.WalkRight || input.MoveForward || input.MoveBackward || input.WalkLeft) {
+            if (input.WalkRight) return PlayerStateID::WalkRight;    
+            if (input.MoveForward) return PlayerStateID::WalkForward;   
+            if (input.MoveBackward) return PlayerStateID::WalkBackward; 
+            if (input.WalkLeft) return PlayerStateID::WalkLeft;    
+            return PlayerStateID::Idle;
+        }
+
+        XMFLOAT3 right = player->GetRightVector();
+        XMFLOAT3 currentVel = player->GetVelocity();
+        XMFLOAT3 targetVel = Vector3::ScalarProduct(right, RunSpeed, false); // 오른쪽으로 달리기
+        targetVel.y = currentVel.y;
+        player->SetVelocity(targetVel);
+
+        // 다른 상태로 전환 체크
+        if (input.Attack) return PlayerStateID::AttackMelee;
+        if (input.Jump) return PlayerStateID::JumpStart;
+        if (input.Interact) { /* 상호작용 체크 */ }
+
+        return PlayerStateID::RunRight;
+    }
+
+    void Exit(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
+        std::cout << "Exiting RunRight State\n";
+    }
+};
+
 
 class AttackMelee1State : public IPlayerState {
 private:
@@ -307,7 +475,7 @@ private:
     int m_nAnimTrack = BlendConfig::PRIMARY_TRACK; // 공격 애니메이션을 재생할 트랙
 
 public:
-    PlayerStateID GetID() const override { return PlayerStateID::AttackMelee1; }
+    PlayerStateID GetID() const override { return PlayerStateID::AttackMelee; }
 
     void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
         m_bAttackFinished = false;
@@ -342,7 +510,7 @@ public:
         }
 
         // 공격 중에는 다른 입력 무시하고 현재 상태 유지
-        return PlayerStateID::AttackMelee1;
+        return PlayerStateID::AttackMelee;
     }
 
     void Exit(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
@@ -405,10 +573,10 @@ public:
         XMFLOAT3 currentVel = player->GetVelocity();
         XMFLOAT3 right = player->GetRightVector();
 
-        if (input.MoveLeft) {
+        if (input.WalkLeft) {
             currentVel = Vector3::Add(currentVel, right, -50.0f * airControlFactor);
         }
-        if (input.MoveRight) {
+        if (input.WalkRight) {
             currentVel = Vector3::Add(currentVel, right, 50.0f * airControlFactor);
         }
         // 필요하다면 앞뒤 이동도 약간 허용
@@ -485,14 +653,22 @@ PlayerStateMachine::PlayerStateMachine(CTerrainPlayer* owner, CAnimationControll
 
     // 모든 상태 객체 생성 및 벡터에 추가
     m_vStates.push_back(std::make_unique<IdleState>());
+
     m_vStates.push_back(std::make_unique<WalkForwardState>());
     m_vStates.push_back(std::make_unique<WalkBackwardState>()); 
     m_vStates.push_back(std::make_unique<WalkLeftState>());  
     m_vStates.push_back(std::make_unique<WalkRightState>());  
+
     m_vStates.push_back(std::make_unique<AttackMelee1State>()); 
+
     m_vStates.push_back(std::make_unique<JumpStartState>());    
     m_vStates.push_back(std::make_unique<JumpLoopState>());     
-    m_vStates.push_back(std::make_unique<JumpEndState>());     
+    m_vStates.push_back(std::make_unique<JumpEndState>());
+
+    m_vStates.push_back(std::make_unique<RunForwardState>());
+    m_vStates.push_back(std::make_unique<RunBackwardState>()); 
+    m_vStates.push_back(std::make_unique<RunLeftState>());     
+    m_vStates.push_back(std::make_unique<RunRightState>());    
     // ... 다른 모든 상태들도 여기에 추가 ...
 
     // 초기 상태 설정
@@ -571,28 +747,42 @@ void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool force
         int animIndex = AnimIndices::IDLE; 
         int trackType = ANIMATION_TYPE_LOOP;
 
+        const auto& input = m_pOwner->GetStateMachineInput();
+
         switch (newStateID) { // 목표 상태에 맞는 애니메이션 인덱스 찾기
         case PlayerStateID::Idle:
             animIndex = AnimIndices::IDLE;
             trackType = ANIMATION_TYPE_LOOP; 
             break;
         case PlayerStateID::WalkForward:
-            animIndex = AnimIndices::WALK_FORWARD;
+            if(input.Run)
+                animIndex = AnimIndices::RUN_FORWARD;
+            else
+                animIndex = AnimIndices::WALK_FORWARD;
             trackType = ANIMATION_TYPE_LOOP;
             break;
-        case PlayerStateID::WalkBackward: 
-            animIndex = AnimIndices::WALK_BACKWARD;
+        case PlayerStateID::WalkBackward:
+            if (input.Run)
+                animIndex = AnimIndices::RUN_BACKWARD;
+            else
+                animIndex = AnimIndices::WALK_BACKWARD;
             trackType = ANIMATION_TYPE_LOOP;
             break;
-        case PlayerStateID::MoveLeft: 
-            animIndex = AnimIndices::WALK_LEFT;  
+        case PlayerStateID::WalkLeft:
+            if (input.Run)
+                animIndex = AnimIndices::RUN_LEFT;
+            else
+                animIndex = AnimIndices::WALK_LEFT;
             trackType = ANIMATION_TYPE_LOOP;
             break;
-        case PlayerStateID::MoveRight: 
-            animIndex = AnimIndices::WALK_RIGHT; 
+        case PlayerStateID::WalkRight:
+            if (input.Run)
+                animIndex = AnimIndices::RUN_RIGHT;
+            else
+                animIndex = AnimIndices::WALK_RIGHT;
             trackType = ANIMATION_TYPE_LOOP;
             break;
-        case PlayerStateID::AttackMelee1:
+        case PlayerStateID::AttackMelee:
             animIndex = AnimIndices::ATTACK_MELEE1;
             trackType = ANIMATION_TYPE_ONCE;
             break;
@@ -607,6 +797,23 @@ void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool force
         case PlayerStateID::JumpEnd:
             animIndex = AnimIndices::JUMP_END;
             trackType = ANIMATION_TYPE_ONCE;
+            break;
+
+        case PlayerStateID::RunForward:
+            animIndex = AnimIndices::RUN_FORWARD;
+            trackType = ANIMATION_TYPE_LOOP;
+            break;
+        case PlayerStateID::RunBackward:
+            animIndex = AnimIndices::RUN_BACKWARD;
+            trackType = ANIMATION_TYPE_LOOP;
+            break;
+        case PlayerStateID::RunLeft:
+            animIndex = AnimIndices::RUN_LEFT;
+            trackType = ANIMATION_TYPE_LOOP;
+            break;
+        case PlayerStateID::RunRight:
+            animIndex = AnimIndices::RUN_RIGHT;
+            trackType = ANIMATION_TYPE_LOOP;
             break;
             // ... 다른 상태들에 대한 애니메이션 인덱스 매핑 추가 ...
         default: std::cerr << "Warning: No animation index mapped for state " << (int)newStateID << std::endl; break;
@@ -656,15 +863,15 @@ void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool force
             animIndex = AnimIndices::WALK_BACKWARD;
             trackType = ANIMATION_TYPE_LOOP;
             break;
-        case PlayerStateID::MoveLeft:
+        case PlayerStateID::WalkLeft:
             animIndex = AnimIndices::WALK_LEFT;
             trackType = ANIMATION_TYPE_LOOP;
             break;
-        case PlayerStateID::MoveRight:
+        case PlayerStateID::WalkRight:
             animIndex = AnimIndices::WALK_RIGHT;
             trackType = ANIMATION_TYPE_LOOP;
             break;
-        case PlayerStateID::AttackMelee1:
+        case PlayerStateID::AttackMelee:
             animIndex = AnimIndices::ATTACK_MELEE1;
             trackType = ANIMATION_TYPE_ONCE;
             break;
@@ -679,6 +886,23 @@ void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool force
         case PlayerStateID::JumpEnd:
             animIndex = AnimIndices::JUMP_END;
             trackType = ANIMATION_TYPE_ONCE;
+            break;
+
+        case PlayerStateID::RunForward:
+            animIndex = AnimIndices::RUN_FORWARD;
+            trackType = ANIMATION_TYPE_LOOP;
+            break;
+        case PlayerStateID::RunBackward:
+            animIndex = AnimIndices::RUN_BACKWARD;
+            trackType = ANIMATION_TYPE_LOOP;
+            break;
+        case PlayerStateID::RunLeft:
+            animIndex = AnimIndices::RUN_LEFT;
+            trackType = ANIMATION_TYPE_LOOP;
+            break;
+        case PlayerStateID::RunRight:
+            animIndex = AnimIndices::RUN_RIGHT;
+            trackType = ANIMATION_TYPE_LOOP;
             break;
             // ... 다른 상태들에 대한 애니메이션 인덱스 매핑 추가 ...
         default: std::cerr << "Warning: No animation index mapped for state " << (int)newStateID << std::endl; break;
@@ -748,3 +972,60 @@ float PlayerStateMachine::GetAnimationLength(int trackIndex) const {
     return 0.0f;
 }
 
+
+
+#include "Scene.h" // CScene 클래스 접근 위해 포함
+#include "Object.h" // CGameObject, CMonsterObject 등 접근 위해 포함
+#include "GameFramework.h"
+
+PlayerStateID PlayerStateMachine::DetermineAttackState() {
+    if (!m_pOwner || !m_pOwner->m_pGameFramework) {
+        return PlayerStateID::AttackMelee; // 기본 공격 (오류 상황)
+    }
+    CScene* pScene = m_pOwner->m_pGameFramework->GetScene();
+    if (!pScene) {
+        return PlayerStateID::AttackMelee; // 기본 공격 (씬 없음)
+    }
+
+    CGameObject* targetObject = nullptr;
+    float interactionRangeSq = 100.0f * 100.0f; // 예시: 상호작용/공격 범위 (반경 100 유닛) - 조정 필요
+
+    // 1. 일반 객체들 (m_vGameObjects) 검사 (최적화 필요!)
+    for (auto& pOtherObject : pScene->m_vGameObjects) {
+        if (!pOtherObject || !pOtherObject->isRender) continue;
+
+        // 거리 체크
+        //float distSq = Vector3::LengthSq(Vector3::Subtract(pOtherObject->GetPosition(), m_pOwner->GetPosition()));
+        //if (distSq > interactionRangeSq) continue;
+
+        // 충돌 체크 (OBB 사용)
+        if (m_pOwner->m_worldOBB.Intersects(pOtherObject->m_worldOBB)) {
+            // 타입별 처리
+            switch (pOtherObject->m_objectType) { // m_eObjectType 멤버가 있다고 가정
+            case GameObjectType::Tree:
+                return PlayerStateID::AttackAxe; // 나무 발견 시 즉시 반환
+            case GameObjectType::Rock:
+                return PlayerStateID::AttackPick; // 바위 발견 시 즉시 반환
+            case GameObjectType::Cow:
+            case GameObjectType::Pig:
+                // 살아있는 몬스터인지 확인 (HP > 0)
+                return PlayerStateID::AttackMelee;
+            //{
+            //    auto npc = dynamic_cast<CMonsterObject*>(pOtherObject);
+            //    if (npc && npc->Gethp() > 0) {
+            //        return PlayerStateID::AttackMelee; // 몬스터 발견 시 즉시 반환
+            //    }
+            //}
+            break;
+            // 다른 공격 가능한 몬스터 타입들 추가...
+            default:
+                // 공격 불가능하거나 특별한 처리 없는 타입은 일단 무시하고 계속 탐색
+                break;
+            }
+            // 만약 여러 타입이 겹쳐있을 때 우선순위를 정하려면 여기서 break하지 않고 계속 탐색하며 가장 중요한 대상을 저장
+        }
+    }
+
+    // 특별히 상호작용할 대상을 찾지 못했으면 기본 공격 상태 반환
+    return PlayerStateID::AttackMelee;
+}

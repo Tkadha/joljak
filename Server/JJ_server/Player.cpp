@@ -120,7 +120,7 @@ void PlayerClient::Update_test(float deltaTime)
         else if (m_Velocity.y < -1.0f && !isGrounded && m_currentState != ServerPlayerState::Jumping) { // 떨어지는 중 
             m_currentState = ServerPlayerState::Falling;
         }
-        else if (isGrounded && (currentInput.MoveForward || currentInput.MoveBackward || currentInput.MoveLeft || currentInput.MoveRight)) {
+        else if (isGrounded && (currentInput.MoveForward || currentInput.MoveBackward || currentInput.WalkLeft || currentInput.WalkRight)) {
             // 땅에 있고 이동 입력이 있으면 Walking 또는 Running
             m_currentState = (currentInput.Run && currentInput.MoveForward) ? ServerPlayerState::Running : ServerPlayerState::Walking;
         }
@@ -147,11 +147,11 @@ void PlayerClient::Update_test(float deltaTime)
             moveVector = Vector3::Add(moveVector, look, -1.0f);
             isMovingInput = true;
         }
-        if (currentInput.MoveLeft) {
+        if (currentInput.WalkLeft) {
             moveVector = Vector3::Add(moveVector, right, -1.0f);
             isMovingInput = true;
         }
-        if (currentInput.MoveRight) {
+        if (currentInput.WalkRight) {
             moveVector = Vector3::Add(moveVector, right);
             isMovingInput = true;
         }
