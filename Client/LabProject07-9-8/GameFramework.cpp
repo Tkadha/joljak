@@ -68,7 +68,7 @@ void CGameFramework::ProcessPacket(char* packet)
 	{
 		INPUT_PACKET* recv_p = reinterpret_cast<INPUT_PACKET*>(packet);
 		if (m_pScene->PlayerList.find(recv_p->uid) != m_pScene->PlayerList.end()) {
-			m_pScene->PlayerList[recv_p->uid]->ChangeAnimation(recv_p->direction);
+			m_pScene->PlayerList[recv_p->uid]->ChangeAnimation(recv_p->inputData);
 		}
 	}
 		break;
@@ -81,7 +81,6 @@ void CGameFramework::ProcessPacket(char* packet)
 		}
 	}
 	break;
-
 	case E_PACKET::E_P_LOGOUT:
 	{
 		LOGOUT_PACKET* recv_p = reinterpret_cast<LOGOUT_PACKET*>(packet);
@@ -887,7 +886,7 @@ void CGameFramework::ProcessInput()
 			{
 				beforeInput = inputData;
 				auto& nwManager = NetworkManager::GetInstance();
-				INPUT2_PACKET p;
+				INPUT_PACKET p;
 				// 변경
 				p.inputData.Attack = inputData.Attack;
 				p.inputData.Jump = inputData.Jump;
@@ -897,7 +896,7 @@ void CGameFramework::ProcessInput()
 				p.inputData.MoveRight = inputData.MoveRight;
 				p.inputData.Run = inputData.Run;
 				p.inputData.Interact = inputData.Interact;
-				p.size = sizeof(INPUT2_PACKET);
+				p.size = sizeof(INPUT_PACKET);
 				p.type = static_cast<char>(E_PACKET::E_P_INPUT);
 				nwManager.PushSendQueue(p, p.size);
 			}
@@ -995,6 +994,7 @@ void CGameFramework::FrameAdvance()
 					m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
 					m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController->SetTrackEnable(j, false);
 				}
+				m_pScene->PlayerList[log.ID]->on_track = 0;
 				m_pScene->PlayerList[log.ID]->SetPosition(XMFLOAT3{ 1500.f,m_pScene->m_pTerrain->GetHeight(1500,1500) ,1500.f });
 				m_pScene->PlayerList[log.ID]->SetScale(10.0f, 10.0f, 10.0f);
 				m_pScene->PlayerList[log.ID]->SetTerraindata(m_pScene->m_pTerrain);

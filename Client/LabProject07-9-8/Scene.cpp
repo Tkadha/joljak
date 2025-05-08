@@ -138,6 +138,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		gameObj->SetScale(w, h, w);
 
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 	for (int i = 0; i < nPineObjects; ++i) {
 		CGameObject* gameObj = new CWillowObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
@@ -160,6 +162,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 	for (int i = 0; i < nRockObjects; ++i) {
 		CGameObject* gameObj = new CRockClusterBObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
@@ -178,6 +182,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 
 	//int nCliffFObjectCObjects = 5;
@@ -200,6 +206,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 	int nVegetationObject = 20;
 	for (int i = 0; i < nVegetationObject; ++i) {
@@ -209,6 +217,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 	for (int i = 0; i < nVegetationObject; ++i) {
 		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/RedPoppyCluster.bin", m_pGameFramework);
@@ -217,6 +227,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 	for (int i = 0; i < nVegetationObject; ++i) {
 		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Speedwell.bin", m_pGameFramework);
@@ -225,6 +237,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 	for (int i = 0; i < nVegetationObject; ++i) {
 		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/ElephantEar_A.bin", m_pGameFramework);
@@ -233,6 +247,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 	for (int i = 0; i < nVegetationObject; ++i) {
 		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/GrassPatch_LOD0.bin", m_pGameFramework);
@@ -252,6 +268,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 	for (int i = 0; i < nVegetationObject; ++i) {
 		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Daisies.bin", m_pGameFramework);
@@ -260,6 +278,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 	for (int i = 0; i < nVegetationObject; ++i) {
 		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Leaves.bin", m_pGameFramework);
@@ -268,6 +288,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 	for (int i = 0; i < nVegetationObject; ++i) {
 		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Poppies.bin", m_pGameFramework);
@@ -276,6 +298,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
 	}
 
 
@@ -557,38 +581,53 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		m_pTerrain->Render(pd3dCommandList, pCamera); // Terrain::Render 내부에서 상태 설정 및 렌더링
 	}
 
-	// 5.3. 일반 게임 오브젝트 렌더링
-	for (auto& obj : m_vGameObjects) {
-		if (obj /*&& obj->IsVisible()*/) {
-			if (obj->FSM_manager) obj->FSMUpdate();
-			if (obj->m_pSkinnedAnimationController) obj->Animate(m_fElapsedTime);
-			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
-		}	
-		// 5.5. OBB 렌더링 (선택적)
-		//bool bRenderOBBs = true; // OBB 렌더링 여부 플래그 (예시)
-		//if (bRenderOBBs) {
-		//	CShader* pOBBShader = pShaderManager->GetShader("OBB", pd3dCommandList);
-		//	if (pOBBShader) {
-		//		// OBB 렌더링 시작 전에 상태 설정
-		//		SetGraphicsState(pd3dCommandList, pOBBShader); // CScene의 멤버 함수 호출
-		//
-		//		for (auto& obj : m_vGameObjects) {
-		//			if (obj /*&& obj->ShouldRenderOBB()*/) {
-		//				// RenderOBB 내부에서는 OBB용 CBV만 바인딩
-		//				obj->RenderOBB(pd3dCommandList, pCamera);
-		//				pOBBShader->Release();
-		//			}
-		//
-		//			// 플레이어 OBB 렌더링 등
-		//			if (m_pPlayer) {
-		//				m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
-		//			}
-		//
-		//			pOBBShader->Release();
-		//		}
-		//	}
-		//}
+
+	// octree 렌더링
+	std::vector<tree_obj*> results;
+	tree_obj player_obj{ -1, m_pPlayer->GetPosition() };
+
+	octree.query(player_obj, XMFLOAT3{ 1000,1000,1000 }, results);
+
+	for (auto& obj : results) {
+		if (m_vGameObjects[obj->u_id]) {
+			if (m_vGameObjects[obj->u_id]->FSM_manager) m_vGameObjects[obj->u_id]->FSMUpdate();
+			if (m_vGameObjects[obj->u_id]->m_pSkinnedAnimationController) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
+			if (m_vGameObjects[obj->u_id]->isRender) m_vGameObjects[obj->u_id]->Render(pd3dCommandList, pCamera);
+		}
 	}
+
+	//// 5.3. 일반 게임 오브젝트 렌더링
+	//for (auto& obj : m_vGameObjects) {
+	//	if (obj /*&& obj->IsVisible()*/) {
+	//		if (obj->FSM_manager) obj->FSMUpdate();
+	//		if (obj->m_pSkinnedAnimationController) obj->Animate(m_fElapsedTime);
+	//		if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
+	//	}	
+	//	// 5.5. OBB 렌더링 (선택적)
+	//	//bool bRenderOBBs = true; // OBB 렌더링 여부 플래그 (예시)
+	//	//if (bRenderOBBs) {
+	//	//	CShader* pOBBShader = pShaderManager->GetShader("OBB", pd3dCommandList);
+	//	//	if (pOBBShader) {
+	//	//		// OBB 렌더링 시작 전에 상태 설정
+	//	//		SetGraphicsState(pd3dCommandList, pOBBShader); // CScene의 멤버 함수 호출
+	//	//
+	//	//		for (auto& obj : m_vGameObjects) {
+	//	//			if (obj /*&& obj->ShouldRenderOBB()*/) {
+	//	//				// RenderOBB 내부에서는 OBB용 CBV만 바인딩
+	//	//				obj->RenderOBB(pd3dCommandList, pCamera);
+	//	//				pOBBShader->Release();
+	//	//			}
+	//	//
+	//	//			// 플레이어 OBB 렌더링 등
+	//	//			if (m_pPlayer) {
+	//	//				m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
+	//	//			}
+	//	//
+	//	//			pOBBShader->Release();
+	//	//		}
+	//	//	}
+	//	//}
+	//}
 
 	// 5.5. 플레이어 렌더링
 	if (m_pPlayer) {

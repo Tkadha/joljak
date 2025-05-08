@@ -90,22 +90,10 @@ public:
 class INPUT_PACKET : public PACKET
 {
 public:
-	DWORD direction;	
+	PlayerInput inputData;
 	ULONGLONG uid;
 	INPUT_PACKET() {
 		size = sizeof(INPUT_PACKET);
-		type = static_cast<char>(E_PACKET::E_P_INPUT);
-	}
-};
-
-
-class INPUT2_PACKET : public PACKET
-{
-public:
-	PlayerInput inputData;
-	ULONGLONG uid;
-	INPUT2_PACKET() {
-		size = sizeof(INPUT2_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_INPUT);
 	}
 };

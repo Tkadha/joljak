@@ -1740,7 +1740,21 @@ CGameObject* UserObject::FindFrame(char* framename)
 	return nullptr;
 }
 
-void UserObject::ChangeAnimation(DWORD direction)
+#include "../../Server/Global.h"
+void UserObject::ChangeAnimation(PlayerInput inputData)
 {
+	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->SetTrackEnable(on_track, false);
 
+	if (inputData.Attack) {}
+	else if (inputData.Run) {
+	}
+	else if (inputData.MoveForward) on_track = 1;
+	else if (inputData.MoveBackward) on_track = 2;
+	else if (inputData.MoveLeft) on_track = 3;
+	else if (inputData.MoveRight) on_track = 4;
+	else if (inputData.Jump) {}
+	else if (inputData.Interact) {}
+	else on_track = 0;
+
+	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->SetTrackEnable(on_track, true);
 }

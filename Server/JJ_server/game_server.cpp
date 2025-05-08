@@ -219,39 +219,44 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_INPUT);
 		s_packet.direction = r_packet->direction;
 		*/
-		INPUT2_PACKET* r_packet = reinterpret_cast<INPUT2_PACKET*>(packet);
+		INPUT_PACKET* r_packet = reinterpret_cast<INPUT_PACKET*>(packet);
 		client->processInput(r_packet->inputData);
-		/*if (client->m_lastReceivedInput.Attack) {
+		if (r_packet->inputData.Attack) {
 			cout << client->m_id << " Attack!" << endl;
 		}
-		if (client->m_lastReceivedInput.Jump) {
+		if (r_packet->inputData.Jump) {
 			cout << client->m_id << " Jump!" << endl;
 		}
-		if (client->m_lastReceivedInput.MoveForward) {
+		if (r_packet->inputData.MoveForward) {
 			cout << client->m_id << " MoveForward!" << endl;
 		}
-		if (client->m_lastReceivedInput.MoveBackward) {
+		if (r_packet->inputData.MoveBackward) {
 			cout << client->m_id << " MoveBackward!" << endl;
 		}
-		if (client->m_lastReceivedInput.MoveLeft) {
+		if (r_packet->inputData.MoveLeft) {
 			cout << client->m_id << " MoveLeft!" << endl;
 		}
-		if (client->m_lastReceivedInput.MoveRight) {
+		if (r_packet->inputData.MoveRight) {
 			cout << client->m_id << " MoveRight!" << endl;
 		}
-		if (client->m_lastReceivedInput.Run) {
+		if (r_packet->inputData.Run) {
 			cout << client->m_id << " Run!" << endl;
 		}
-		if (client->m_lastReceivedInput.Interact) {
+		if (r_packet->inputData.Interact) {
 			cout << client->m_id << " Interact!" << endl;
-		}*/
+		}
 
 		auto& pos = client->GetPosition();
 		cout << client->m_id << " " << pos.x << " " << pos.y << " " << pos.z << endl;
-		INPUT2_PACKET s_packet;
-		s_packet.size = sizeof(INPUT2_PACKET);
+		INPUT_PACKET s_packet;
+		s_packet.size = sizeof(INPUT_PACKET);
 		s_packet.type = static_cast<unsigned char>(E_PACKET::E_P_INPUT);
-		//s_packet.inputData = r_packet->inputData;
+		s_packet.inputData = r_packet->inputData;
+		s_packet.uid = client->m_id;
+		for (auto& cl : PlayerClient::PlayerClients) {
+			if (cl.second.get() == client.get()) continue; // 나 자신은 제외한다.
+			cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+		}
 
 	}
 	break;
