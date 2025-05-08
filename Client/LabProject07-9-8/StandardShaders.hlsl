@@ -147,7 +147,6 @@ float4 PSStandard3(VS_STANDARD_OUTPUT input) : SV_TARGET
         cEmissionColor = gtxtEmissionTexture.Sample(gssWrap, input.uv);
 
     float3 normalW;
-    float4 cColor = cAlbedoColor + cSpecularColor + cMetallicColor + cEmissionColor;
     if (gnTexturesMask & MATERIAL_NORMAL_MAP)
     {
         float3x3 TBN = float3x3(normalize(input.tangentW), normalize(input.bitangentW), normalize(input.normalW));
@@ -160,6 +159,7 @@ float4 PSStandard3(VS_STANDARD_OUTPUT input) : SV_TARGET
     }
     float4 cIlluminationColor = Lighting(gMaterialInfo, input.positionW, normalW);
     
+    float4 cColor = cAlbedoColor + cSpecularColor + cMetallicColor + cEmissionColor;
     
     // 안개
     float distToEye = distance(input.positionW, gvCameraPosition.xyz);
@@ -169,6 +169,15 @@ float4 PSStandard3(VS_STANDARD_OUTPUT input) : SV_TARGET
     float4 litColor = lerp(cColor, cIlluminationColor, 0.5f);
     
     litColor.rgb = lerp(gFogColor.rgb, cColor.rgb, fogFactor);
+    
+    float normalizedDistance = saturate(distToEye / (gFogStart + gFogRange));
+    //return float4(normalizedDistance, normalizedDistance, normalizedDistance, 1.0f); // [수정된 디버깅 출력]
 
-    return (litColor);
+    
+    // --- fogFactor 값 디버깅 ---
+    //return float4(fogFactor, fogFactor, fogFactor, 1.0f); 
+    
+    cColor.rgb = lerp(cColor.rgb, gFogColor.rgb, normalizedDistance);
+    //return float4(fogFactor, fogFactor, fogFactor, 1.0f);
+    return (cColor);
 }

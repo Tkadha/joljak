@@ -176,7 +176,7 @@ ID3D12RootSignature* ShaderManager::CreateTerrainRootSignature()
     descRangeSRV[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1, 0); // t1, t2
 
     CD3DX12_ROOT_PARAMETER rootParameters[3]; // CBV(b1 Camera), Constants(b2 Object), Table(t1, t2 Textures)
-    rootParameters[0].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_VERTEX); // VS에서만 필요
+    rootParameters[0].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL); // 둘 다 사용
     rootParameters[1].InitAsConstants(16, 2, 0, D3D12_SHADER_VISIBILITY_VERTEX);     // VS에서만 필요
     rootParameters[2].InitAsDescriptorTable(1, &descRangeSRV[0], D3D12_SHADER_VISIBILITY_PIXEL); // PS에서만 필요
 

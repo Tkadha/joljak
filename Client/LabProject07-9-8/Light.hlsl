@@ -1,11 +1,18 @@
 //--------------------------------------------------------------------------------------
-#define MAX_LIGHTS			16 
 #define MAX_MATERIALS		16 
+#ifndef MAX_LIGHTS
+#define MAX_LIGHTS 16
+#endif
 
-#define POINT_LIGHT			1
-#define SPOT_LIGHT			2
-#define DIRECTIONAL_LIGHT	3
-
+#ifndef POINT_LIGHT
+#define POINT_LIGHT 1
+#endif
+#ifndef SPOT_LIGHT
+#define SPOT_LIGHT 2
+#endif
+#ifndef DIRECTIONAL_LIGHT
+#define DIRECTIONAL_LIGHT 3
+#endif
 #define _WITH_LOCAL_VIEWER_HIGHLIGHTING
 #define _WITH_THETA_PHI_CONES
 //#define _WITH_REFLECT
@@ -33,6 +40,7 @@ cbuffer cbLights : register(b4)
 	float4					gcGlobalAmbientLight;
 	int						gnLights;
 };
+
 
 float4 DirectionalLight(int nIndex, MaterialInfo material, float3 vNormal, float3 vToCamera) // material 파라미터 추가
 {

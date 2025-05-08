@@ -151,7 +151,6 @@ void CCamera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 	XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4Projection, XMMatrixTranspose(projMatrix));
 	m_pcbMappedCamera->m_xmf3Position = m_xmf3Position;
 
-
 	// 안개 적용
 	m_pcbMappedCamera->FogColor = m_xmf4FogColor;
 	m_pcbMappedCamera->FogStart = m_fFogStart;

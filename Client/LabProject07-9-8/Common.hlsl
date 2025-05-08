@@ -33,8 +33,6 @@ cbuffer cbCameraInfo : register(b1)
     float4 gFogColor; // 안개 색상 (r, g, b, 안개 강도와 무관한 alpha)
     float gFogStart; // 안개가 시작되는 카메라로부터의 거리
     float gFogRange; // 안개가 FogStart부터 완전히 불투명해지기까지의 거리 범위
-                             // (즉, FogEnd = FogStart + FogRange)
-  
 };
 
 // 조명 정보 (조명이 필요한 PS에서 사용, Light.hlsl 에서 정의된 구조체 사용 가정)

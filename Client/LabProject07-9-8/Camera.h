@@ -49,9 +49,9 @@ protected:
 	ID3D12Resource					*m_pd3dcbCamera = NULL;
 	VS_CB_CAMERA_INFO				*m_pcbMappedCamera = NULL;
 
-	DirectX::XMFLOAT4 m_xmf4FogColor = DirectX::XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f); // 안개 색상
-	float m_fFogStart = 500.0f;
-	float m_fFogRange = 1000.0f;
+	DirectX::XMFLOAT4 m_xmf4FogColor = DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f); // 안개 색상
+	float m_fFogStart = 5.0f;
+	float m_fFogRange = 2000.0f;
 
 public:
 	CCamera();

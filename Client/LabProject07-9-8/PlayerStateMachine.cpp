@@ -81,7 +81,7 @@ public:
 
         if (isMoving) {
             moveVector = Vector3::Normalize(moveVector); // 대각선 이동 시 속도 보정 위해 정규화
-            float currentSpeed = (input.Run && input.MoveForward) ? 80.0f : 50.0f; // 달리기/걷기 속도 구분 (RunForward 상태 전환은 아래에서)
+            float currentSpeed = (input.Run && input.MoveForward) ? 80.0f : 200.0f; // 달리기/걷기 속도 구분 (RunForward 상태 전환은 아래에서)
             XMFLOAT3 currentVel = player->GetVelocity(); // 현재 Y 속도 유지
             XMFLOAT3 targetVel = Vector3::ScalarProduct(moveVector, currentSpeed, false);
             targetVel.y = currentVel.y; // Y 속도는 유지

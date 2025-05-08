@@ -28,9 +28,9 @@ struct VS_TERRAIN_OUTPUT
 {
     float4 position : SV_POSITION;
     float4 color : COLOR;
+    float3 positionW : POSITION0; // 월드 공간 위치 (픽셀 셰이더 전달용)
     float2 uv0 : TEXCOORD0;
     float2 uv1 : TEXCOORD1;
-    float3 positionW : POSITION0; // 월드 공간 위치 (픽셀 셰이더 전달용)
 };
 
 // --- Vertex Shader ---
@@ -65,11 +65,21 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     // float4 cColor = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f)); // 단순 평균
     //float4 cColor = input.color * lerp(cBaseTexColor, cDetailTexColor, 0.5); // 예: 정점 색상과 블렌딩
     
-//안개
-   // float distToEye = distance(input.positionW, gvCameraPosition.xyz);
-    //float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);    
-    
-    //cColor.rgb = lerp(gFogColor.rgb, cColor.rgb, fogFactor);
     float4 cColor = input.color * lerp(cBaseTexColor, cDetailTexColor, 0.5);
+    //안개
+    float distToEye = distance(input.positionW, gvCameraPosition.xyz);
+        
+    float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);
+    
+    
+    float normalizedDistance = saturate(distToEye / (gFogStart + gFogRange));
+    //return float4(normalizedDistance, normalizedDistance, normalizedDistance, 1.0f); // [수정된 디버깅 출력]
+
+    
+    // --- fogFactor 값 디버깅 ---
+    //return float4(fogFactor, fogFactor, fogFactor, 1.0f); 
+    
+    cColor.rgb = lerp(cColor.rgb, gFogColor.rgb, normalizedDistance);
+    
     return cColor;
 }
