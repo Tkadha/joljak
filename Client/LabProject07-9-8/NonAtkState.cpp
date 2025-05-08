@@ -4,6 +4,28 @@
 #include "RandomUtil.h"
 
 
+void NonAtkNPCGlobalState::Enter(std::shared_ptr<CGameObject> npc)
+{
+}
+
+void NonAtkNPCGlobalState::Execute(std::shared_ptr<CGameObject> npc)
+{
+	if (is_invincible) {
+		auto nowtime = std::chrono::system_clock::now();
+		auto exectime = nowtime - starttime;
+		auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
+		if (exec_ms > 3.f * 1000) {
+			is_invincible = false;
+		}
+	}
+}
+
+void NonAtkNPCGlobalState::Exit(std::shared_ptr<CGameObject> npc)
+{
+}
+
+
+
 //=====================================Standing=================================================
 
 

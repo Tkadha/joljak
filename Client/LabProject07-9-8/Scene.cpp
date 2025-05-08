@@ -319,6 +319,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		}
 		gameobj->SetOwningScene(this);
 		gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+		gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 
 		gameobj->Rotate(0.f, 180.f, 0.f);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
@@ -343,6 +344,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		}
 		gameobj->SetOwningScene(this);
 		gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+		gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 		gameobj->Rotate(0.f, 180.f, 0.f);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
 		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
@@ -367,6 +369,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		}
 		gameobj->SetOwningScene(this);
 		gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+		gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
 		gameobj->Rotate(0.f, 180.f, 0.f);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
@@ -391,6 +394,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		}
 		gameobj->SetOwningScene(this);
 		gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+		gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
 		gameobj->Rotate(0.f, 180.f, 0.f);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
@@ -415,6 +419,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		}
 		gameobj->SetOwningScene(this);
 		gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+		gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
 		gameobj->Rotate(0.f, 180.f, 0.f);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
@@ -432,6 +437,42 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		obj->SetOBB();
 		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 		if (obj->m_pSkinnedAnimationController) obj->PropagateAnimController(obj->m_pSkinnedAnimationController);
+
+		switch (obj->m_objectType)
+		{
+		case GameObjectType::Wasp:
+		case GameObjectType::Snail:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[5].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[6].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Snake:
+		case GameObjectType::Spider:
+		case GameObjectType::Bat:
+		case GameObjectType::Turtle:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Wolf:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Toad:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Cow:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Pig:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		default:	// 잘못된 타입이다.
+			break;
+		}
 	}
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -755,22 +796,28 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 			}
 			if (obj->m_objectType == GameObjectType::Cow || obj->m_objectType == GameObjectType::Pig) {
 				auto npc = dynamic_cast<CMonsterObject*>(obj);
+				if (npc->Gethp() <= 0) continue;
+				if (npc->FSM_manager->GetInvincible()) continue;
+				if (npc->Gethp() <= 0) {
+					m_pGameFramework->AddItem("pork", 2);
+				}
 				npc->Decreasehp(pPlayer->PlayerAttack);
 				if (obj->FSM_manager) {
 					if (npc->Gethp() > 0) obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCRunAwayState>());
 					else obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCDieState>());
+					obj->FSM_manager->SetInvincible();
 				}
 			}
 			if (obj->m_objectType != GameObjectType::Unknown && obj->m_objectType != GameObjectType::Cow && obj->m_objectType != GameObjectType::Pig &&
 				obj->m_objectType != GameObjectType::Rock && obj->m_objectType != GameObjectType::Tree && obj->m_objectType != GameObjectType::Player) {
 				auto npc = dynamic_cast<CMonsterObject*>(obj);
-				npc->Decreasehp(pPlayer->PlayerAttack);
-				if (npc->Gethp() <= 0) {
-					m_pGameFramework->AddItem("pork", 2);
-				}
+				if (npc->Gethp() <= 0) continue;
+				if (npc->FSM_manager->GetInvincible()) continue;
+				npc->Decreasehp(pPlayer->PlayerAttack);				
 				if (obj->FSM_manager) {
 					if (npc->Gethp() > 0) obj->FSM_manager->ChangeState(std::make_shared<AtkNPCHitState>());
 					else obj->FSM_manager->ChangeState(std::make_shared<AtkNPCDieState>());
+					obj->FSM_manager->SetInvincible();
 				}
 			}
 
