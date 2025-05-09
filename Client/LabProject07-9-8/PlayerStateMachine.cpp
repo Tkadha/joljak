@@ -527,33 +527,34 @@ public:
             CGameObject* hitObject = player->FindObjectHitByAttack(); // 공격 판정 함수 필요
             if (hitObject && hitObject->m_objectType == GameObjectType::Tree) {
                 auto tree = dynamic_cast<CTreeObject*>(hitObject);
-                int hp = tree->getHp();
-                if (hp > 0) {
-                    switch (player->weaponType)
-                    {
-                    case WeaponType::Sword:
-                        hp -= 7;
-                        break;
-                    case WeaponType::Axe:
-                        hp -= 10;
-                        break;
-                    case WeaponType::Pick:
-                        hp -= 5;
-                        break;
-                    default:
-                        break;
+                if (tree && !tree->IsFalling() && !tree->HasFallen()) {
+                    int hp = tree->getHp();
+                    if (hp > 0) {
+                        switch (player->weaponType)
+                        {
+                        case WeaponType::Sword:
+                            hp -= 15;
+                            break;
+                        case WeaponType::Axe:
+                            hp -= 10;
+                            break;
+                        case WeaponType::Pick:
+                            hp -= 5;
+                            break;
+                        default:
+                            break;
+                        }
+                        tree->setHp(hp);
+
+                        player->m_pGameFramework->AddItem("wood", 1);
                     }
-                    tree->setHp(hp);
-
-                    player->m_pGameFramework->AddItem("wood", 3);
+                    if (hp <= 0) {
+                        tree->StartFalling(player->GetLookVector()); // 플레이어가 바라보는 방향으로 쓰러지도록 (또는 다른 방향)
+                        player->m_pGameFramework->AddItem("wood", 5); // 예시: 쓰러뜨리면 많이 획득
+                    }
                 }
-                else {
-                    tree->isRender = false;
-                }
-
             }
         }
-
         if (m_bAttackFinished) {
             return PlayerStateID::Idle;
         }

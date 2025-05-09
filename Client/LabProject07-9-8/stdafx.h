@@ -163,6 +163,16 @@ namespace Vector3
 		return(xmf3Result);
 	}
 
+	inline XMFLOAT3 CrossProduct(const XMFLOAT3& v1, const XMFLOAT3& v2)
+	{
+		XMVECTOR vec1 = XMLoadFloat3(&v1);
+		XMVECTOR vec2 = XMLoadFloat3(&v2);
+		XMVECTOR resultVec = XMVector3Cross(vec1, vec2);
+		XMFLOAT3 resultFloat3;
+		XMStoreFloat3(&resultFloat3, resultVec);
+		return resultFloat3;
+	}
+
 	inline XMFLOAT3 Normalize(XMFLOAT3& xmf3Vector)
 	{
 		XMFLOAT3 m_xmf3Normal;
@@ -175,6 +185,13 @@ namespace Vector3
 		XMFLOAT3 xmf3Result;
 		XMStoreFloat3(&xmf3Result, XMVector3Length(XMLoadFloat3(&xmf3Vector)));
 		return(xmf3Result.x);
+	}
+
+	inline float LengthSq(const XMFLOAT3& v)
+	{
+		XMVECTOR vec = XMLoadFloat3(&v);
+		XMVECTOR lengthSqVec = XMVector3LengthSq(vec); // 각 성분 제곱합의 X 성분만 가져옴
+		return XMVectorGetX(lengthSqVec);
 	}
 
 	inline float Distance(XMFLOAT3& xmf3Vector1, XMFLOAT3& xmf3Vector2)

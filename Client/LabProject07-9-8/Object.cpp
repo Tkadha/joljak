@@ -1540,6 +1540,76 @@ CHairObject::CHairObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 
 // ------------------ 나무 ------------------
+void CTreeObject::StartFalling(const XMFLOAT3& hitDirection) {
+	if (m_bIsFalling || m_bHasFallen) return; // 이미 쓰러지고 있거나 쓰러졌으면 중복 실행 방지
+
+	m_bIsFalling = true;
+	m_fFallingTimer = 0.0f;
+	m_fCurrentFallAngle = 0.0f;
+	m_xmf4x4InitialToParent = m_xmf4x4ToParent; // 현재 상대 변환 행렬 저장
+
+	// 쓰러지는 축 결정
+	// 예시: hitDirection (플레이어->나무 벡터 또는 플레이어 Look 벡터) 에 수직인 축으로 설정
+	// 여기서는 단순하게 X축 또는 Z축 중 하나로 랜덤하게 또는 고정된 값으로 설정
+	XMFLOAT3 worldUp = XMFLOAT3(0.0f, 1.0f, 0.0f);
+	m_xmf3FallingAxis = Vector3::CrossProduct(worldUp, hitDirection); // hitDirection에 수직이고 바닥에 평행한 축
+	if (Vector3::LengthSq(m_xmf3FallingAxis) < 0.001f) { // hitDirection이 위/아래 방향일 경우 대비
+		m_xmf3FallingAxis = XMFLOAT3(1.0f, 0.0f, 0.0f); // 기본 축으로 설정
+	}
+	m_xmf3FallingAxis = Vector3::Normalize(m_xmf3FallingAxis);
+
+	// 더 이상 공격 대상이 아니도록 설정 (선택적)
+	// isRender = false; // 아직은 렌더링 되어야 함
+	// 또는 충돌체 비활성화 등
+}
+
+void CTreeObject::Animate(float fTimeElapsed) {
+	// 만약 CGameObject 에 m_pSkinnedAnimationController 가 있고 이를 사용한다면 먼저 호출
+	// if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+
+	if (m_bIsFalling && !m_bHasFallen) {
+		m_fFallingTimer += fTimeElapsed;
+		float normalizedTime = std::min(m_fFallingTimer / m_fFallingDuration, 1.0f);
+
+		// 시간에 따라 회전 각도 보간 (Ease-Out 효과 등을 주면 더 자연스러움)
+		m_fCurrentFallAngle = m_fTargetFallAngle * normalizedTime; // 선형 보간
+
+		// 회전 변환 생성
+		// 1. 피봇으로 이동
+		XMMATRIX R = XMMatrixIdentity();
+		if (Vector3::LengthSq(m_xmf3RotationPivot) > 0.001f) { // 피봇이 원점이 아니면
+			R = XMMatrixTranslation(-m_xmf3RotationPivot.x, -m_xmf3RotationPivot.y, -m_xmf3RotationPivot.z);
+		}
+		// 2. 회전
+		R = XMMatrixMultiply(R, XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3FallingAxis), m_fCurrentFallAngle));
+		// 3. 다시 원래 피봇 위치로
+		if (Vector3::LengthSq(m_xmf3RotationPivot) > 0.001f) {
+			R = XMMatrixMultiply(R, XMMatrixTranslation(m_xmf3RotationPivot.x, m_xmf3RotationPivot.y, m_xmf3RotationPivot.z));
+		}
+
+
+		// 초기 변환 행렬에 회전 적용
+		XMStoreFloat4x4(&m_xmf4x4ToParent, XMMatrixMultiply(R, XMLoadFloat4x4(&m_xmf4x4InitialToParent)));
+
+		if (normalizedTime >= 1.0f) {
+			m_bHasFallen = true;
+			m_bIsFalling = false;
+			std::cout << "Tree Has Fallen!" << std::endl;
+			// isRender = false; // 완전히 쓰러진 후 일정 시간 뒤에 사라지게 할 수도 있음
+			// 또는 다른 객체(통나무)로 대체 등
+		}
+	}
+	UpdateTransform(NULL);
+
+	if (m_pSibling) m_pSibling->Animate(fTimeElapsed);
+	if (m_pChild) m_pChild->Animate(fTimeElapsed);
+	// CGameObject::Animate(fTimeElapsed); // 만약 위에서 스키닝 애니메이션 컨트롤러 호출을 안했다면 여기서 호출될 수 있음
+										// 하지만 CGameObject::Animate는 UpdateTransform을 호출하지 않으므로,
+										// 이 나무 객체의 m_xmf4x4World는 CScene::AnimateObjects 루프에서
+										// UpdateTransform을 통해 갱신되어야 함.
+}
+
+
 CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;

@@ -364,12 +364,41 @@ class CTreeObject : virtual public CGameObject
 {
 	int hp{ 30 };
 public:
+
+
+
 	CTreeObject() { m_objectType = GameObjectType::Tree; };
 	CTreeObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) {};
 	virtual ~CTreeObject() {};
 
 	int getHp() { return hp; }
 	void setHp(int n) { hp = n; }
+
+// ------- 쓰러지는 애니메이션 -------
+
+	// 쓰러지는 애니메이션 시작 함수
+	void StartFalling(const XMFLOAT3& hitDirection); // 플레이어의 공격 방향 등을 받을 수 있음
+
+	// 매 프레임 애니메이션 업데이트
+	virtual void Animate(float fTimeElapsed) override;
+
+	bool IsFalling() const { return	m_bIsFalling; }
+	bool HasFallen() const { return m_bHasFallen; }
+
+	bool m_bIsFalling = false;       // 현재 쓰러지는 애니메이션 중인가?
+	bool m_bHasFallen = false;       // 이미 쓰러진 상태인가?
+	float m_fFallingDuration = 2.5f;  // 쓰러지는 데 걸리는 시간 (초)
+	float m_fFallingTimer = 0.0f;     // 쓰러지기 시작한 후 지난 시간
+	XMFLOAT3 m_xmf3FallingAxis;       // 회전 축 (쓰러지는 방향 결정)
+	float m_fCurrentFallAngle = 0.0f; // 현재까지 회전한 각도
+	float m_fTargetFallAngle = XM_PIDIV2; // 목표 회전 각도 (90도)
+
+	// 쓰러지기 시작할 때의 초기 m_xmf4x4ToParent 값을 저장 (상대 변환 기준)
+	XMFLOAT4X4 m_xmf4x4InitialToParent;
+
+	// 회전의 중심점 (나무 밑동 부분, 로컬 좌표계 기준)
+	// 모델의 원점이 이미 밑동이라면 (0,0,0) 사용 가능
+	XMFLOAT3 m_xmf3RotationPivot = XMFLOAT3(0.0f, 0.0f, 0.0f);
 };
 
 
