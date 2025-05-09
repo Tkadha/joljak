@@ -11,7 +11,7 @@ public:
 	virtual void Execute(std::shared_ptr<entity_type>) = 0;
 	virtual void Exit(std::shared_ptr<entity_type>) = 0;
 
-	virtual void SetInvincible() {};
-	virtual bool GetInvincible() const { return false; };
+	virtual void SetInvincible() {}
+	virtual bool GetInvincible() const { return false; }
 };
 

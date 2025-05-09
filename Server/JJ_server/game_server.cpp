@@ -233,10 +233,10 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		if (r_packet->inputData.MoveBackward) {
 			cout << client->m_id << " MoveBackward!" << endl;
 		}
-		if (r_packet->inputData.MoveLeft) {
+		if (r_packet->inputData.WalkLeft) {
 			cout << client->m_id << " MoveLeft!" << endl;
 		}
-		if (r_packet->inputData.MoveRight) {
+		if (r_packet->inputData.WalkRight) {
 			cout << client->m_id << " MoveRight!" << endl;
 		}
 		if (r_packet->inputData.Run) {

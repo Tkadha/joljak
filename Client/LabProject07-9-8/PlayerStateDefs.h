@@ -8,16 +8,22 @@ enum class PlayerStateID {
     Idle,
     WalkForward,
     WalkBackward,
-    MoveLeft,
-    MoveRight,
+    WalkLeft,
+    WalkRight,
     RunForward,
-    AttackMelee1,
+    RunBackward,
+    RunLeft,
+    RunRight,
+    AttackMelee,
+    AttackAxe,
+    AttackPick,
     JumpStart,
     JumpLoop,
     JumpEnd,
     Interact,     // 일반 상호작용 (상황 따라 세분화 가능)
     HitReaction,
-    Dead
+    Dead,
+    RequestAttack // 공격 요청 신호용 ID
     // 필요한 상태 추가
 };
 
@@ -47,8 +53,8 @@ namespace AnimIndices {
 struct PlayerInputData {
     bool MoveForward = false;
     bool MoveBackward = false;
-    bool MoveLeft = false;
-    bool MoveRight = false;
+    bool WalkLeft = false;
+    bool WalkRight = false;
     bool Jump = false;
     bool Attack = false; // 예: F키 또는 마우스 클릭
     bool Interact = false; // 예: E키
@@ -58,8 +64,8 @@ struct PlayerInputData {
     bool operator!=(const PlayerInputData& other) const {
         return MoveForward != other.MoveForward ||
             MoveBackward != other.MoveBackward ||
-            MoveLeft != other.MoveLeft ||
-            MoveRight != other.MoveRight ||
+            WalkLeft != other.WalkLeft ||
+            WalkRight != other.WalkRight ||
             Jump != other.Jump ||
             Attack != other.Attack ||
             Interact != other.Interact ||

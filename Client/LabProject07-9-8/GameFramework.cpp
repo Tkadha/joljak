@@ -170,12 +170,12 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	ItemManager::Initialize();
 	InitializeItemIcons();
 
-	/*
+	
 	auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
 	std::thread t(&CGameFramework::NerworkThread, this);
 	t.detach();
-	*/
+	
 
 	//ChangeSwapChainState();
 
@@ -565,7 +565,7 @@ void CGameFramework::AddItem(const std::string& name, int quantity)
 	// 1. 이미 존재하는 아이템이면 수량 증가
 	for (auto& slot : m_inventorySlots) {
 		if (!slot.IsEmpty() && slot.item->GetName() == name) {
-			slot.quantity += 3;
+			slot.quantity += quantity;
 			return;
 		}
 	}
@@ -815,8 +815,8 @@ void CGameFramework::ProcessInput()
 
 		inputData.MoveForward = (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0);
 		inputData.MoveBackward = (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0);
-		inputData.MoveLeft = (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0);
-		inputData.MoveRight = (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0);
+		inputData.WalkLeft = (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0);
+		inputData.WalkRight = (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0);
 		inputData.Jump = (pKeysBuffer[VK_SPACE] & 0xF0);
 		inputData.Attack = (pKeysBuffer['F'] & 0xF0); // 'F' 키를 Attack 으로 매핑 (예시)
 		// inputData.Interact = (pKeysBuffer['E'] & 0xF0); // 'E' 키를 Interact 로 매핑 (필요시)
@@ -827,7 +827,7 @@ void CGameFramework::ProcessInput()
 			m_pPlayer->m_pStateMachine->HandleInput(inputData);
 		}
 
-		/*
+		
 		DWORD dwDirection = 0;
 		if (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0) dwDirection |= DIR_FORWARD;
 		if (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
@@ -835,7 +835,7 @@ void CGameFramework::ProcessInput()
 		if (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
 		if (pKeysBuffer[VK_SPACE] & 0xF0) dwDirection |= DIR_UP;
 		if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
-		else m_pPlayer->keyInput(pKeysBuffer);*/
+		else m_pPlayer->keyInput(pKeysBuffer);
 		
 
 		// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
@@ -892,8 +892,8 @@ void CGameFramework::ProcessInput()
 				p.inputData.Jump = inputData.Jump;
 				p.inputData.MoveBackward = inputData.MoveBackward;
 				p.inputData.MoveForward = inputData.MoveForward;
-				p.inputData.MoveLeft = inputData.MoveLeft;
-				p.inputData.MoveRight = inputData.MoveRight;
+				p.inputData.WalkLeft = inputData.WalkLeft;
+				p.inputData.WalkRight = inputData.WalkRight;
 				p.inputData.Run = inputData.Run;
 				p.inputData.Interact = inputData.Interact;
 				p.size = sizeof(INPUT_PACKET);

@@ -627,7 +627,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	std::vector<tree_obj*> results;
 	tree_obj player_obj{ -1, m_pPlayer->GetPosition() };
 
-	octree.query(player_obj, XMFLOAT3{ 1000,1000,1000 }, results);
+	octree.query(player_obj, XMFLOAT3{ 3000,1000,3000 }, results);
 
 	for (auto& obj : results) {
 		if (m_vGameObjects[obj->u_id]) {
@@ -798,10 +798,12 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 				auto npc = dynamic_cast<CMonsterObject*>(obj);
 				if (npc->Gethp() <= 0) continue;
 				if (npc->FSM_manager->GetInvincible()) continue;
+
+				npc->Decreasehp(pPlayer->PlayerAttack);
+
 				if (npc->Gethp() <= 0) {
 					m_pGameFramework->AddItem("pork", 2);
 				}
-				npc->Decreasehp(pPlayer->PlayerAttack);
 				if (obj->FSM_manager) {
 					if (npc->Gethp() > 0) obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCRunAwayState>());
 					else obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCDieState>());
@@ -820,7 +822,6 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 					obj->FSM_manager->SetInvincible();
 				}
 			}
-
 		}
 	}
 }

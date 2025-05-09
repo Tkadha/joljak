@@ -1,8 +1,3 @@
-// stdafx.h : ���� ��������� ���� ��������� �ʴ�
-// ǥ�� �ý��� ���� ���� �� ������Ʈ ���� ���� ������
-// ��� �ִ� ���� �����Դϴ�.
-//
-
 #pragma once
 
 #define WIN32_LEAN_AND_MEAN             // 거의 사용되지 않는 내용은 Windows 헤더에서 제외합니다.
@@ -65,8 +60,8 @@ extern HINSTANCE						ghAppInstance;
 
 //#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
 
-#define FRAME_BUFFER_WIDTH				640
-#define FRAME_BUFFER_HEIGHT				480
+#define FRAME_BUFFER_WIDTH				1600
+#define FRAME_BUFFER_HEIGHT				1280
 
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "d3d12.lib")
