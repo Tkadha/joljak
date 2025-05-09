@@ -5,6 +5,7 @@
 #include "Animation.h" // CAnimationController 정의 포함
 #include <iostream>   // 디버깅 출력용 (추후 제거)
 #include <algorithm>  // std::min, std::max 등 사용
+#include "GameFramework.h"
 
 // --- 구체적인 상태 클래스 구현 ---
 
@@ -30,8 +31,8 @@ public:
         if (input.WalkLeft) return PlayerStateID::WalkLeft;
         if (input.WalkRight) return PlayerStateID::WalkRight;
         // 기타 입력 (공격, 점프 등)
-        if (input.Attack)  return PlayerStateID::AttackMelee;
-            //return stateMachine->DetermineAttackState();
+        if (input.Attack)  //return PlayerStateID::AttackMelee;
+            return stateMachine->DetermineAttackState();
         if (input.Jump) return PlayerStateID::JumpStart;
         if (input.Interact) { // 상호작용 키 입력 시
             // 충돌 검사
@@ -48,7 +49,7 @@ public:
         std::cout << "Exiting Idle State\n";
     }
 };
-
+// Walk
 class WalkForwardState : public IPlayerState {
 public:
     PlayerStateID GetID() const override { return PlayerStateID::WalkForward; }
@@ -388,9 +389,6 @@ public:
         std::cout << "Exiting RunBackward State\n";
     }
 };
-
-
-// --- RunLeftState ---
 class RunLeftState : public IPlayerState {
 public:
     // PlayerStateID::RunLeft ID 가 정의되었다고 가정 (또는 PlayerStateID::WalkLeft 사용 시 조정 필요)
@@ -468,8 +466,8 @@ public:
     }
 };
 
-
-class AttackMelee1State : public IPlayerState {
+// Attack
+class AttackMeleeState : public IPlayerState {
 private:
     bool m_bAttackFinished = false;
     int m_nAnimTrack = BlendConfig::PRIMARY_TRACK; // 공격 애니메이션을 재생할 트랙
@@ -479,28 +477,15 @@ public:
 
     void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
         m_bAttackFinished = false;
-
-        // 상태 머신을 통해 애니메이션 변경 요청
-        // PerformStateChange 에서 실제로 트랙 설정이 이루어짐
-        // (이 상태는 보통 즉시 전환될 수 있음 - 필요시 forceImmediate 사용 고려)
-
-        // 공격 중에는 플레이어 이동 속도 0으로 설정 (선택적)
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f });
-
-        // Enter 시점에서 사용할 트랙 결정 (블렌딩 직후라면 target 트랙일 수 있음)
-        // m_nAnimTrack = stateMachine->GetCurrentAnimationTrack(); // 이런 함수가 필요할수도 있음
-        // 여기서는 일단 주 트랙 사용 가정
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
     }
 
     PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
-        // 애니메이션 재생 완료 확인
         float currentPosition = stateMachine->GetTrackPosition(m_nAnimTrack);
         float animLength = stateMachine->GetAnimationLength(m_nAnimTrack);
 
-        // CAnimationTrack의 m_nType 이 ANIMATION_TYPE_ONCE 로 설정되었다고 가정
-        // 재생 위치가 길이를 넘어서면 완료된 것으로 간주 (약간의 오차 감안)
-        if (!m_bAttackFinished && currentPosition >= animLength * 0.99f) { // 거의 끝에 도달하면
+        if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) { // 거의 끝에 도달하면
             m_bAttackFinished = true;
         }
 
@@ -518,11 +503,83 @@ public:
     }
 };
 
+class AttackAxeState : public IPlayerState {
+private:
+    bool m_bAttackFinished = false;
+    int m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
+public:
+    PlayerStateID GetID() const override { return PlayerStateID::AttackAxe; }
+
+    void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
+        m_bAttackFinished = false;
+        m_nAnimTrack = BlendConfig::PRIMARY_TRACK; // 즉시 전환 시 주 트랙 사용
+        player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); // 공격 중 이동 정지
+        // PerformStateChange에서 AnimIndices::ATTACK_TREE, ANIMATION_TYPE_ONCE 설정됨
+    }
+
+    PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
+        float currentPosition = stateMachine->GetTrackPosition(m_nAnimTrack);
+        float animLength = stateMachine->GetAnimationLength(m_nAnimTrack);
+
+        if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) { // 종료 지점 약간 앞으로 (0.99 -> 0.95)
+            m_bAttackFinished = true;
+
+            CGameObject* hitObject = player->FindObjectHitByAttack(); // 공격 판정 함수 필요
+            if (hitObject && hitObject->m_objectType == GameObjectType::Tree) {
+                auto tree = dynamic_cast<CTreeObject*>(hitObject);
+                int hp = tree->getHp();
+                if (hp > 0) {
+                    switch (player->weaponType)
+                    {
+                    case WeaponType::Sword:
+                        hp -= 7;
+                        break;
+                    case WeaponType::Axe:
+                        hp -= 10;
+                        break;
+                    case WeaponType::Pick:
+                        hp -= 5;
+                        break;
+                    default:
+                        break;
+                    }
+                    tree->setHp(hp);
+
+                    player->m_pGameFramework->AddItem("wood", 3);
+                }
+                else {
+                    tree->isRender = false;
+                }
+
+            }
+        }
+
+        if (m_bAttackFinished) {
+            return PlayerStateID::Idle;
+        }
+        return PlayerStateID::AttackAxe;
+    }
+
+    void Exit(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
+        std::cout << "Exiting AttackTree State\n";
+    }
+};
+
+// --- AttackRockState --- (AttackTreeState 와 유사하게 구현, 애니메이션 인덱스만 다름)
+class AttackRockState : public IPlayerState { /* ... AttackTreeState 와 거의 동일하게 구현 ... */ };
+
+// --- AttackMonsterState --- (AttackTreeState 와 유사하게 구현, 애니메이션 인덱스만 다름)
+class AttackMonsterState : public IPlayerState { /* ... AttackTreeState 와 거의 동일하게 구현 ... */
+    // TODO: Update 함수 종료 시점에서 데미지 적용 로직 추가
+};
+
+
+
 class JumpStartState : public IPlayerState {
 private:
     bool m_bAnimFinished = false;
     int m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
-    float m_fJumpVelocity = 300.0f; // 점프 시 수직 속도 (조정 필요)
+    float m_fJumpVelocity = 30.0f; // 점프 시 수직 속도 (조정 필요)
 
 public:
     PlayerStateID GetID() const override { return PlayerStateID::JumpStart; }
@@ -659,7 +716,8 @@ PlayerStateMachine::PlayerStateMachine(CTerrainPlayer* owner, CAnimationControll
     m_vStates.push_back(std::make_unique<WalkLeftState>());  
     m_vStates.push_back(std::make_unique<WalkRightState>());  
 
-    m_vStates.push_back(std::make_unique<AttackMelee1State>()); 
+    m_vStates.push_back(std::make_unique<AttackMeleeState>());
+    m_vStates.push_back(std::make_unique<AttackAxeState>());
 
     m_vStates.push_back(std::make_unique<JumpStartState>());    
     m_vStates.push_back(std::make_unique<JumpLoopState>());     
@@ -782,10 +840,18 @@ void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool force
                 animIndex = AnimIndices::WALK_RIGHT;
             trackType = ANIMATION_TYPE_LOOP;
             break;
+            
+
         case PlayerStateID::AttackMelee:
             animIndex = AnimIndices::ATTACK_MELEE1;
             trackType = ANIMATION_TYPE_ONCE;
             break;
+        case PlayerStateID::AttackAxe:
+            animIndex = AnimIndices::ATTACK_AXE;
+            trackType = ANIMATION_TYPE_ONCE;
+            break;
+
+
         case PlayerStateID::JumpStart:
             animIndex = AnimIndices::JUMP_START;
             trackType = ANIMATION_TYPE_ONCE;
@@ -875,6 +941,10 @@ void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool force
             animIndex = AnimIndices::ATTACK_MELEE1;
             trackType = ANIMATION_TYPE_ONCE;
             break;
+        case PlayerStateID::AttackAxe:
+            animIndex = AnimIndices::ATTACK_AXE;
+            trackType = ANIMATION_TYPE_ONCE;
+            break;
         case PlayerStateID::JumpStart:
             animIndex = AnimIndices::JUMP_START;
             trackType = ANIMATION_TYPE_ONCE;
@@ -905,7 +975,7 @@ void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool force
             trackType = ANIMATION_TYPE_LOOP;
             break;
             // ... 다른 상태들에 대한 애니메이션 인덱스 매핑 추가 ...
-        default: std::cerr << "Warning: No animation index mapped for state " << (int)newStateID << std::endl; break;
+        default: OutputDebugString(L"Warning: No animation index mapped for state ");
         }
         // 새 애니메이션
         m_pAnimController->SetTrackAnimationSet(m_nSourceTrack, animIndex);

@@ -296,14 +296,12 @@ public:
 	int GetAtk() { return _atk; }
 };
 
-
 class PlayerInput;
 class UserObject : public CGameObject
 {
 public:
 	int on_track = 0;
 
-public:
 	UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CLoadedModelInfo* pModel, int nAnimationTracks, CGameFramework* pGameFramework);
 	virtual ~UserObject();
 
@@ -364,11 +362,14 @@ public:
 // ------------------ 나무 ------------------
 class CTreeObject : virtual public CGameObject
 {
-	int hp{ 3 };
+	int hp{ 30 };
 public:
 	CTreeObject() { m_objectType = GameObjectType::Tree; };
 	CTreeObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) {};
 	virtual ~CTreeObject() {};
+
+	int getHp() { return hp; }
+	void setHp(int n) { hp = n; }
 };
 
 
@@ -398,11 +399,13 @@ public:
 // ------------------ 돌 ------------------
 class CRockObject : virtual public CGameObject
 {
-	int hp{ 3 };
+	int hp{ 30 };
 public:
 	CRockObject() { m_objectType = GameObjectType::Rock; };
 	CRockObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) {};
 	virtual ~CRockObject() {};
+
+	int getHp() { return hp; }
 };
 
 class CRockClusterAObject : public CRockObject

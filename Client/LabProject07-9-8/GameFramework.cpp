@@ -171,11 +171,11 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	InitializeItemIcons();
 
 	
-	auto& nwManager = NetworkManager::GetInstance();
+	/*auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
 	std::thread t(&CGameFramework::NerworkThread, this);
 	t.detach();
-	
+	*/
 
 	//ChangeSwapChainState();
 

@@ -775,8 +775,8 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 			if (!obj->isRender)   continue;
 			// 나무 충돌처리
 			if (obj->m_objectType == GameObjectType::Tree) {
-				obj->isRender = false;
-				m_pGameFramework->AddItem("wood", 3);
+				//obj->isRender = false;
+				//m_pGameFramework->AddItem("wood", 3);
 			}
 			// 돌 충돌처리
 			if (obj->m_objectType == GameObjectType::Rock) {

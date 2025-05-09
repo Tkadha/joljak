@@ -12,6 +12,11 @@
 #include <chrono>
 #include "PlayerStateMachine.h" 
 
+enum class WeaponType : int {
+	Sword,
+	Axe,
+	Pick
+};
 
 class CPlayer : public CGameObject
 {
@@ -170,6 +175,7 @@ public:
 	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pContext, CGameFramework* pGameFramework);
 	virtual ~CTerrainPlayer();
 
+	WeaponType weaponType;
 public:
 	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
 
@@ -184,6 +190,7 @@ public:
 	BOOL bAction = false;
 	void keyInput(UCHAR* key);
 
+	CGameObject* FindObjectHitByAttack();
 	
 };
 

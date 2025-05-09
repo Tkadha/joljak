@@ -370,6 +370,8 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	SetChild(pAngrybotModel->m_pModelRootObject, true);
 
 	AddObject(pd3dDevice, pd3dCommandList, "thumb_02_r", "Model/Sword_01.bin", pGameFramework, XMFLOAT3(0.05, 0.00, -0.05));
+	weaponType = WeaponType::Sword;
+
 	AddObject(pd3dDevice, pd3dCommandList, "Helmet", "Model/Hair_01.bin", pGameFramework, XMFLOAT3(0, 0.1, 0));
 	//AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Boots_Peasant_Armor", "Model/Boots_Peasant_Armor.bin");
 	AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, XMFLOAT3(-0.25, 0.1, 0), XMFLOAT3(90, 0, 90));
@@ -648,8 +650,30 @@ void CTerrainPlayer::keyInput(UCHAR* key) {
 			bAction = false; // 액션 상태 해제
 		}
 	}
-
 }
+
+#include "GameFramework.h"
+
+CGameObject* CTerrainPlayer::FindObjectHitByAttack() {
+	if (!m_pGameFramework) return nullptr;
+	CScene* pScene = m_pGameFramework->GetScene();
+	if (!pScene) return nullptr;
+
+	BoundingOrientedBox weapon = FindFrame("thumb_02_r")->m_pChild->m_worldOBB;
+
+
+	for (const auto& obj : pScene->m_vGameObjects) {
+
+		std::vector<DirectX::BoundingOrientedBox> obbList;
+		pScene->CollectHierarchyObjects(obj, obbList);
+		for (const auto& obb : obbList) {
+			if (weapon.Intersects(obb)) return obj;
+		}		
+	}
+
+	return nullptr;
+}
+
 
 // 'F' 키 액션 시 호출될 충돌/상호작용 검사 함수
 void CPlayer::PerformActionInteractionCheck() {
