@@ -781,19 +781,19 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 			}
 			// 돌 충돌처리
 			if (obj->m_objectType == GameObjectType::Rock) {
-				printf("[Rock 충돌 확인])\n");
-				obj->isRender = false;
+				//printf("[Rock 충돌 확인])\n");
+				//obj->isRender = false;
 
-				int randValue = rand() % 100; // 0 ~ 99
-				if (randValue < 50) {
-					m_pGameFramework->AddItem("stone",3);
-				}
-				else if (randValue < 75) {
-					m_pGameFramework->AddItem("coal",1);
-				}
-				else {
-					m_pGameFramework->AddItem("iron_material",1);
-				}
+				//int randValue = rand() % 100; // 0 ~ 99
+				//if (randValue < 50) {
+				//	m_pGameFramework->AddItem("stone",3);
+				//}
+				//else if (randValue < 75) {
+				//	m_pGameFramework->AddItem("coal",1);
+				//}
+				//else {
+				//	m_pGameFramework->AddItem("iron_material",1);
+				//}
 			}
 			if (obj->m_objectType == GameObjectType::Cow || obj->m_objectType == GameObjectType::Pig) {
 				auto npc = dynamic_cast<CMonsterObject*>(obj);

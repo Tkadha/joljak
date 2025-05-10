@@ -567,7 +567,67 @@ public:
 };
 
 // --- AttackRockState --- (AttackTreeState 와 유사하게 구현, 애니메이션 인덱스만 다름)
-class AttackRockState : public IPlayerState { /* ... AttackTreeState 와 거의 동일하게 구현 ... */ };
+class AttackPickState : public IPlayerState { 
+private:
+    bool m_bAttackFinished = false;
+    int m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
+public:
+    PlayerStateID GetID() const override { return PlayerStateID::AttackPick; }
+
+    void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
+        m_bAttackFinished = false;
+        m_nAnimTrack = BlendConfig::PRIMARY_TRACK; // 즉시 전환 시 주 트랙 사용
+        player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); // 공격 중 이동 정지
+    }
+
+    PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
+        float currentPosition = stateMachine->GetTrackPosition(m_nAnimTrack);
+        float animLength = stateMachine->GetAnimationLength(m_nAnimTrack);
+
+        if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) { 
+            m_bAttackFinished = true;
+
+            CGameObject* hitObject = player->FindObjectHitByAttack(); // 공격 판정 함수 필요
+            if (hitObject && hitObject->m_objectType == GameObjectType::Tree) {
+                auto tree = dynamic_cast<CTreeObject*>(hitObject);
+                if (tree && !tree->IsFalling() && !tree->HasFallen()) {
+                    int hp = tree->getHp();
+                    if (hp > 0) {
+                        switch (player->weaponType)
+                        {
+                        case WeaponType::Sword:
+                            hp -= 15;
+                            break;
+                        case WeaponType::Axe:
+                            hp -= 10;
+                            break;
+                        case WeaponType::Pick:
+                            hp -= 5;
+                            break;
+                        default:
+                            break;
+                        }
+                        tree->setHp(hp);
+
+                        player->m_pGameFramework->AddItem("wood", 1);
+                    }
+                    if (hp <= 0) {
+                        tree->StartFalling(player->GetLookVector()); // 플레이어가 바라보는 방향으로 쓰러지도록 (또는 다른 방향)
+                        player->m_pGameFramework->AddItem("wood", 5); // 예시: 쓰러뜨리면 많이 획득
+                    }
+                }
+            }
+        }
+        if (m_bAttackFinished) {
+            return PlayerStateID::Idle;
+        }
+        return PlayerStateID::AttackPick;
+    }
+
+    void Exit(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
+        std::cout << "Exiting AttackTree State\n";
+    }
+};
 
 // --- AttackMonsterState --- (AttackTreeState 와 유사하게 구현, 애니메이션 인덱스만 다름)
 class AttackMonsterState : public IPlayerState { /* ... AttackTreeState 와 거의 동일하게 구현 ... */
@@ -719,6 +779,7 @@ PlayerStateMachine::PlayerStateMachine(CTerrainPlayer* owner, CAnimationControll
 
     m_vStates.push_back(std::make_unique<AttackMeleeState>());
     m_vStates.push_back(std::make_unique<AttackAxeState>());
+    m_vStates.push_back(std::make_unique<AttackPickState>());
 
     m_vStates.push_back(std::make_unique<JumpStartState>());    
     m_vStates.push_back(std::make_unique<JumpLoopState>());     
@@ -851,6 +912,10 @@ void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool force
             animIndex = AnimIndices::ATTACK_AXE;
             trackType = ANIMATION_TYPE_ONCE;
             break;
+        case PlayerStateID::AttackPick:
+            animIndex = AnimIndices::ATTACK_PICK;
+            trackType = ANIMATION_TYPE_ONCE;
+            break;
 
 
         case PlayerStateID::JumpStart:
@@ -922,6 +987,7 @@ void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool force
             animIndex = AnimIndices::IDLE;
             trackType = ANIMATION_TYPE_LOOP;
             break;
+
         case PlayerStateID::WalkForward:
             animIndex = AnimIndices::WALK_FORWARD;
             trackType = ANIMATION_TYPE_LOOP;
@@ -938,6 +1004,7 @@ void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool force
             animIndex = AnimIndices::WALK_RIGHT;
             trackType = ANIMATION_TYPE_LOOP;
             break;
+
         case PlayerStateID::AttackMelee:
             animIndex = AnimIndices::ATTACK_MELEE1;
             trackType = ANIMATION_TYPE_ONCE;
@@ -946,6 +1013,11 @@ void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool force
             animIndex = AnimIndices::ATTACK_AXE;
             trackType = ANIMATION_TYPE_ONCE;
             break;
+        case PlayerStateID::AttackPick:
+            animIndex = AnimIndices::ATTACK_PICK;
+            trackType = ANIMATION_TYPE_ONCE;
+            break;
+
         case PlayerStateID::JumpStart:
             animIndex = AnimIndices::JUMP_START;
             trackType = ANIMATION_TYPE_ONCE;

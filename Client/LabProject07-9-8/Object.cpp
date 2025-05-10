@@ -1594,19 +1594,13 @@ void CTreeObject::Animate(float fTimeElapsed) {
 		if (normalizedTime >= 1.0f) {
 			m_bHasFallen = true;
 			m_bIsFalling = false;
-			std::cout << "Tree Has Fallen!" << std::endl;
-			// isRender = false; // 완전히 쓰러진 후 일정 시간 뒤에 사라지게 할 수도 있음
-			// 또는 다른 객체(통나무)로 대체 등
+			isRender = false; // 완전히 쓰러진 후 일정 시간 뒤에 사라지게 할 수도 있음
 		}
 	}
 	UpdateTransform(NULL);
 
 	if (m_pSibling) m_pSibling->Animate(fTimeElapsed);
 	if (m_pChild) m_pChild->Animate(fTimeElapsed);
-	// CGameObject::Animate(fTimeElapsed); // 만약 위에서 스키닝 애니메이션 컨트롤러 호출을 안했다면 여기서 호출될 수 있음
-										// 하지만 CGameObject::Animate는 UpdateTransform을 호출하지 않으므로,
-										// 이 나무 객체의 m_xmf4x4World는 CScene::AnimateObjects 루프에서
-										// UpdateTransform을 통해 갱신되어야 함.
 }
 
 
@@ -1645,6 +1639,29 @@ CWillowObject::CWillowObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 	if (pInFile) fclose(pInFile); // 파일 닫기 추가
 }
+
+CBranchObject::CBranchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain)
+	: CGameObject(1, pGameFramework) { // 재질 1개 가정, 부모 생성자 호출
+	m_pTerrainRef = pTerrain;
+	m_objectType = GameObjectType::Item; // 또는 새로운 GameObjectType::Branch
+
+	CLoadedModelInfo* pBranchModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch.bin", pGameFramework);
+	if (pBranchModel && pBranchModel->m_pModelRootObject) {
+		if (pBranchModel->m_pModelRootObject->m_pMesh)
+			SetMesh(pBranchModel->m_pModelRootObject->m_pMesh); // AddRef/Release 처리됨
+		if (pBranchModel->m_pModelRootObject->m_nMaterials > 0 && pBranchModel->m_pModelRootObject->m_ppMaterials[0])
+			SetMaterial(0, pBranchModel->m_pModelRootObject->m_ppMaterials[0]); // AddRef/Release 처리됨
+		delete pBranchModel;
+	}
+	else {
+		OutputDebugStringA("Error: Failed to load Branch.bin model.\n");
+	}
+	SetScale(5.0f, 5.0f, 5.0f); // 나뭇가지 크기 예시 (조정 필요)
+}
+
+
+
+
 
 CRockClusterAObject::CRockClusterAObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
