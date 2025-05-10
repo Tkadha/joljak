@@ -190,13 +190,15 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		pd3dDevice, pd3dCommandList, m_pGameFramework);
 	m_pPreviewPine->SetPosition(XMFLOAT3(0, 0, 0));
 	
-	auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-	m_pPreviewPine->SetScale(w, h, w);
+	//auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+	m_pPreviewPine->SetScale(10, 15, 10);
 	
 	m_pPreviewPine->isRender = false;
 
-	m_vGameObjects.emplace_back(m_pPreviewPine);
+	//m_vGameObjects.push_back(m_pPreviewPine);
 
+	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, m_pPreviewPine->m_worldOBB.Center);
+	octree.insert(std::move(t_obj));
 
 	//int nCliffFObjectCObjects = 5;
 	//for (int i = 0; i < nCliffFObjectCObjects; ++i) {
@@ -650,6 +652,8 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			if (m_vGameObjects[obj->u_id]->isRender) m_vGameObjects[obj->u_id]->Render(pd3dCommandList, pCamera);
 		}
 	}
+
+	if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
 
 	//// 5.3. 일반 게임 오브젝트 렌더링
 	//for (auto& obj : m_vGameObjects) {

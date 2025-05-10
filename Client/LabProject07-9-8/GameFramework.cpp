@@ -1446,6 +1446,7 @@ void CGameFramework::FrameAdvance()
 		if (ImGui::Button("건축 종료"))
 		{
 			BuildMode = false;
+			bPrevBuildMode = BuildMode;
 			m_pConstructionSystem->ExitBuildMode();
 		}
 
