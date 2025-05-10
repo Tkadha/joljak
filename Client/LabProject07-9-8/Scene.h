@@ -101,6 +101,7 @@ public:
 
 	vector<CGameObject*>				m_vGameObjects{};
 	std::unordered_map<std::string, CGameObject*> m_mapBuildPrefabs;
+	CPineObject* m_pPreviewPine = nullptr;
 
 
 	//int									m_nHierarchicalGameObjects = 0;

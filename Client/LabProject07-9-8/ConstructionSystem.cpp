@@ -1,21 +1,21 @@
 #include "ConstructionSystem.h"
 
-void CConstructionSystem::Init(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* pGameFramework)
+void CConstructionSystem::Init(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* pGameFramework, CScene* scene)
 {
     m_pd3dDevice = device;
     m_pd3dCommandList = cmdList;
     m_pGameFramework = pGameFramework;
+    m_pScene = scene;
 }
 
 void CConstructionSystem::EnterBuildMode()
 {
     if (m_bBuildMode) return; // 이미 진입했으면 무시
-
+    m_pPreviewObject = m_pScene->m_pPreviewPine;
+    m_pPreviewObject->SetPosition(previewPos);
+    m_pPreviewObject->isRender = true;
     // 더미 오브젝트 생성
-    m_pPreviewObject = new CGameObject();
-    m_pPreviewObject->SetPosition(XMFLOAT3(0.f, 0.f, 0.f));
-    m_pPreviewObject->SetScale(100.f, 100.f, 100.f); // 보기 좋은 크기
-    m_pPreviewObject->SetColor(XMFLOAT4(1.f, 0.f, 0.f, 1.f)); // 눈에 띄는 색상 (빨강)
+   
 
     m_bBuildMode = true;
 }
@@ -23,6 +23,8 @@ void CConstructionSystem::EnterBuildMode()
 
 void CConstructionSystem::ExitBuildMode()
 {
+    if (m_pPreviewObject)
+        m_pPreviewObject->isRender = false;
     m_bBuildMode = false;
 }
 
@@ -39,7 +41,7 @@ void CConstructionSystem::UpdatePreviewPosition(const CCamera* pCamera)
     XMVECTOR vCamLook = XMLoadFloat3(&camLook);
     XMVECTOR vTarget = XMVectorAdd(vCamPos, XMVectorScale(vCamLook, 500.f));
 
-    XMFLOAT3 previewPos;
+
     XMStoreFloat3(&previewPos, vTarget);
     m_xmf3PreviewPosition = previewPos;
 

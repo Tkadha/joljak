@@ -143,8 +143,6 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	m_pConstructionSystem = new CConstructionSystem();
-	m_pConstructionSystem->Init(m_pd3dDevice, m_pd3dCommandList, this);
 
 	BuildObjects();
 	
@@ -171,6 +169,9 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	ItemManager::Initialize();
 	InitializeItemIcons();
 
+
+	m_pConstructionSystem = new CConstructionSystem();
+	m_pConstructionSystem->Init(m_pd3dDevice, m_pd3dCommandList, this, m_pScene);
 	/*
 	auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
@@ -1403,7 +1404,7 @@ void CGameFramework::FrameAdvance()
 	if (BuildMode)
 	{
 		ImGui::SetNextWindowPos(ImVec2(100, 100));
-		ImGui::SetNextWindowSize(ImVec2(400, 400));
+		ImGui::SetNextWindowSize(ImVec2(200, 200));
 		ImGui::Begin("건축 선택", nullptr,
 			ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
 

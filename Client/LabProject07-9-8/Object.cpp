@@ -1750,3 +1750,14 @@ void CGameObject::SetColor(const XMFLOAT4& color)
 {
 	m_xmf4DebugColor = color;
 }
+
+CConstructionObject::CConstructionObject()
+{
+	// 초기화 (색상이나 렌더링 비활성화 등)
+	isRender = false;
+	SetColor(XMFLOAT4(1.f, 0.f, 0.f, 1.f)); // 디버깅용 빨간색
+}
+
+CConstructionObject::~CConstructionObject()
+{
+}

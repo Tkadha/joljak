@@ -168,6 +168,18 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		m_vGameObjects.emplace_back(gameObj);
 	}
 
+	m_pPreviewPine = new CPineObject(
+		pd3dDevice, pd3dCommandList, m_pGameFramework);
+	m_pPreviewPine->SetPosition(XMFLOAT3(0, 0, 0));
+	
+	auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+	m_pPreviewPine->SetScale(w, h, w);
+	
+	m_pPreviewPine->isRender = false;
+
+	m_vGameObjects.emplace_back(m_pPreviewPine);
+
+
 	//int nCliffFObjectCObjects = 5;
 	//for (int i = 0; i < nCliffFObjectCObjects; ++i) {
 	//	CGameObject* gameObj = new CCliffFObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
@@ -390,6 +402,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		octree.insert(std::move(t_obj));
 		if (pWolfModel) delete pWolfModel;
 	}
+
 
 
 	for (auto obj : m_vGameObjects) {

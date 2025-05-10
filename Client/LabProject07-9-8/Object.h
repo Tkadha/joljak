@@ -462,3 +462,10 @@ public:
 	virtual ~CStaticObject() {}
 };
 
+class CConstructionObject : public CGameObject
+{
+public:
+	CConstructionObject();
+	virtual ~CConstructionObject();
+
+};

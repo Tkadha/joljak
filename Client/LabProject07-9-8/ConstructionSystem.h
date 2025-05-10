@@ -8,7 +8,7 @@
 class CConstructionSystem
 {
 public:
-    void Init(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* pGameFramework);
+    void Init(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* pGameFramework, CScene* scene);
     void EnterBuildMode();
     void ExitBuildMode();
     void UpdatePreview(const XMFLOAT3& playerPos, const XMFLOAT3& forward);
@@ -24,6 +24,7 @@ public:
 private:
     bool m_bBuildMode = false;
     CGameObject* m_pPreviewObject = nullptr;
+    XMFLOAT3 previewPos;
     std::string m_sSelectedBuilding = "pine"; // 기본값은 pine
 
     ID3D12Device* m_pd3dDevice = nullptr;
@@ -32,5 +33,6 @@ private:
     //ResourceManager* m_pResourceManager = nullptr;
 
     CGameFramework* m_pGameFramework = nullptr;
+    CScene* m_pScene = NULL;
     XMFLOAT3 m_xmf3PreviewPosition;
 };
