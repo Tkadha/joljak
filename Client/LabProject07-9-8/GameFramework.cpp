@@ -142,8 +142,6 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	m_pConstructionSystem = new CConstructionSystem();
-	m_pConstructionSystem->Init(m_pd3dDevice, m_pd3dCommandList, this);
 
 	BuildObjects();
 	
@@ -170,8 +168,11 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	ItemManager::Initialize();
 	InitializeItemIcons();
 
-	
-	/*auto& nwManager = NetworkManager::GetInstance();
+
+	m_pConstructionSystem = new CConstructionSystem();
+	m_pConstructionSystem->Init(m_pd3dDevice, m_pd3dCommandList, this, m_pScene);
+	/*
+	auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
 	std::thread t(&CGameFramework::NerworkThread, this);
 	t.detach();*/
@@ -1031,10 +1032,15 @@ void CGameFramework::FrameAdvance()
 	ProcessInput();
 	UpdateFurnace(m_GameTimer.GetTimeElapsed());
     AnimateObjects();
+
+	if (m_pConstructionSystem->IsBuildMode()) {
+		m_pConstructionSystem->UpdatePreviewPosition(m_pCamera);
+	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 
 	HRESULT hResult = m_pd3dCommandAllocator->Reset();
 	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
+
 
 	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
 	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
@@ -1399,13 +1405,20 @@ void CGameFramework::FrameAdvance()
 	if (BuildMode)
 	{
 		ImGui::SetNextWindowPos(ImVec2(100, 100));
-		ImGui::SetNextWindowSize(ImVec2(200, 300));
+		ImGui::SetNextWindowSize(ImVec2(200, 200));
 		ImGui::Begin("건축 선택", nullptr,
 			ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
 
 		static int selected = -1;
 		const char* buildings[] = { "나무 벽", "나무 문", "나무 바닥", "계단" };
+		static bool bPrevBuildMode = false;
 
+		if (BuildMode && !bPrevBuildMode)
+		{
+			m_pConstructionSystem->EnterBuildMode(); // 상태 전환 시 한 번만 실행
+		}
+		bPrevBuildMode = BuildMode;
+		/*
 		for (int i = 0; i < IM_ARRAYSIZE(buildings); i++)
 		{
 			if (ImGui::Selectable(buildings[i], selected == i))
@@ -1421,10 +1434,15 @@ void CGameFramework::FrameAdvance()
 
 
 				// 3. 미리보기 재생성
-				m_pConstructionSystem->EnterBuildMode();
 			}
 		}
+		*/
 
+		if (m_pConstructionSystem->IsBuildMode())
+		{
+			XMFLOAT3 previewPos = m_pConstructionSystem->GetPreviewPosition(); // ★ getter 함수 필요
+			ImGui::Text("PreviewPos: %.2f, % .2f, % .2f", previewPos.x, previewPos.y, previewPos.z);
+		}
 		if (ImGui::Button("건축 종료"))
 		{
 			BuildMode = false;
