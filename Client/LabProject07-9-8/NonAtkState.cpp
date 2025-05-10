@@ -14,7 +14,7 @@ void NonAtkNPCGlobalState::Execute(std::shared_ptr<CGameObject> npc)
 		auto nowtime = std::chrono::system_clock::now();
 		auto exectime = nowtime - starttime;
 		auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
-		if (exec_ms > 3.f * 1000) {
+		if (exec_ms > 1.5f * 1000) {
 			is_invincible = false;
 		}
 	}

@@ -4,7 +4,7 @@
 #include <iostream>
 #include "RandomUtil.h"
 #include <cmath> // sqrt, pow 함수 사용
-
+#include <numbers>
 //=====================================Standing=================================================
 void AtkNPCStandingState::Enter(std::shared_ptr<CGameObject> npc)
 {
@@ -42,12 +42,35 @@ void AtkNPCStandingState::Execute(std::shared_ptr<CGameObject> npc)
 				pow(playerPos.z - npcPos.z, 2)
 			);
 
-			// 500 범위 내에 있다면 Chase 상태로 전환
-			float detectionRange = 500.f;
+			// 300 범위 내에 있다면 Chase 상태로 전환
+			float detectionRange = 300.f;
 			if (distance < detectionRange)
 			{
-				npc->FSM_manager->ChangeState(std::make_shared<AtkNPCChaseState>());
-				return;
+				// 플레이어 방향 벡터 계산 (NPC -> 플레이어)
+				XMVECTOR toPlayerVec = XMVectorSubtract(XMLoadFloat3(&playerPos), XMLoadFloat3(&npcPos));
+				XMVECTOR normalizedToPlayerVec = XMVector3Normalize(toPlayerVec);
+
+				// NPC의 Look 벡터 가져오기
+				XMFLOAT3 npcLook = npc->GetLook();
+				XMVECTOR npcLookVec = XMLoadFloat3(&npcLook);
+
+				// 두 벡터 사이의 각도 계산 (내적 사용)
+				XMVECTOR dotProductVec = XMVector3Dot(normalizedToPlayerVec, npcLookVec);
+				float dotProduct;
+				XMStoreFloat(&dotProduct, dotProductVec);
+
+				// acosf의 입력값은 [-1, 1] 범위 내에 있어야 안전합니다.
+				float angleBetween = acosf(std::max(-1.0f, std::min(1.0f, dotProduct)));
+
+				// 시야각 (30도를 라디안으로 변환)
+				float fieldOfView = XMConvertToRadians(60.0f);
+
+				// 시야각 내에 있다면 Chase 상태로 전환
+				if (angleBetween <= fieldOfView * 0.5f)
+				{
+					npc->FSM_manager->ChangeState(std::make_shared<AtkNPCChaseState>());
+					return;
+				}
 			}
 		}
 	}
@@ -132,13 +155,35 @@ void AtkNPCMoveState::Execute(std::shared_ptr<CGameObject> npc)
 				pow(playerPos.y - npcPos.y, 2) +
 				pow(playerPos.z - npcPos.z, 2)
 			);
-
-			// 500 범위 내에 있다면 Chase 상태로 전환
-			float detectionRange = 500.f;
+			// 300 범위 내에 있다면 Chase 상태로 전환
+			float detectionRange = 300.f;
 			if (distance < detectionRange)
 			{
-				npc->FSM_manager->ChangeState(std::make_shared<AtkNPCChaseState>());
-				return;
+				// 플레이어 방향 벡터 계산 (NPC -> 플레이어)
+				XMVECTOR toPlayerVec = XMVectorSubtract(XMLoadFloat3(&playerPos), XMLoadFloat3(&npcPos));
+				XMVECTOR normalizedToPlayerVec = XMVector3Normalize(toPlayerVec);
+
+				// NPC의 Look 벡터 가져오기
+				XMFLOAT3 npcLook = npc->GetLook();
+				XMVECTOR npcLookVec = XMLoadFloat3(&npcLook);
+
+				// 두 벡터 사이의 각도 계산 (내적 사용)
+				XMVECTOR dotProductVec = XMVector3Dot(normalizedToPlayerVec, npcLookVec);
+				float dotProduct;
+				XMStoreFloat(&dotProduct, dotProductVec);
+
+				// acosf의 입력값은 [-1, 1] 범위 내에 있어야 안전합니다.
+				float angleBetween = acosf(std::max(-1.0f, std::min(1.0f, dotProduct)));
+
+				// 시야각 (30도를 라디안으로 변환)
+				float fieldOfView = XMConvertToRadians(60.0f);
+
+				// 시야각 내에 있다면 Chase 상태로 전환
+				if (angleBetween <= fieldOfView * 0.5f)
+				{
+					npc->FSM_manager->ChangeState(std::make_shared<AtkNPCChaseState>());
+					return;
+				}
 			}
 		}
 	}
@@ -202,21 +247,41 @@ void AtkNPCChaseState::Execute(std::shared_ptr<CGameObject> npc)
 			XMFLOAT3 targetDirection;
 			XMStoreFloat3(&targetDirection, targetDirectionVec);
 
-			// 목표 Yaw 값 계산
+
+			// NPC의 Look 벡터 가져오기
+			XMFLOAT3 npcLook = npc->GetLook();
+			XMVECTOR npcLookVec = XMLoadFloat3(&npcLook);
+			XMFLOAT3 npcLookNorm;
+			XMStoreFloat3(&npcLookNorm, XMVector3Normalize(npcLookVec)); // Look 벡터도 정규화
+
+			// 수평면에서의 NPC Look 벡터 (Y 성분 0으로 설정 후 정규화)
+			XMVECTOR npcLookVecXZ = XMVector3Normalize(XMVectorSet(npcLookNorm.x, 0.0f, npcLookNorm.z, 0.0f));
+
+			// 목표 Yaw 값 계산 (수평 방향 벡터 사용)
 			float targetYaw = atan2f(targetDirection.x, targetDirection.z);
 
-			// 현재 NPC의 회전 값 가져오기 (GetLook 벡터를 사용하여 Yaw 계산)
-			XMFLOAT3 currentLook = npc->GetLook();
-			float currentYaw = atan2f(currentLook.x, currentLook.z);
+			// 현재 NPC의 Yaw 값 계산 (수평 Look 벡터 사용)
+			float currentYaw = atan2f(npcLookNorm.x, npcLookNorm.z);
 
+			float deltaYaw = targetYaw - currentYaw;
+
+			if (deltaYaw > std::numbers::pi_v<float>)
+			{
+				deltaYaw -= 2 * std::numbers::pi_v<float>;
+			}
+			else if (deltaYaw < -std::numbers::pi_v<float>)
+			{
+				deltaYaw += 2 * std::numbers::pi_v<float>;
+			}
 			// 목표 방향으로 회전
-			npc->Rotate(0.0f, targetYaw - currentYaw, 0.0f);
+			npc->Rotate(0.0f, deltaYaw*2, 0.0f);
+
 
 			// 앞으로 이동 (현재 Look 벡터 방향으로)
 			npc->MoveForward(0.4f);
 
-			// 공격 범위 확인 (예: 50 유닛 이내) 후 Attack 상태로 전환하는 로직 추가 가능
-			float attackRange = 50.0f;
+			// 공격 범위 확인 (예: 30 유닛 이내) 후 Attack 상태로 전환하는 로직 추가 가능
+			float attackRange = 30.0f;
 			float distanceToPlayer = sqrt(pow(playerPos.x - npcPos.x, 2) + pow(playerPos.y - npcPos.y, 2) + pow(playerPos.z - npcPos.z, 2));
 			if (distanceToPlayer < attackRange)
 			{
@@ -225,7 +290,7 @@ void AtkNPCChaseState::Execute(std::shared_ptr<CGameObject> npc)
 			}
 
 			// 추격 중 멈춤 조건 (예: 플레이어가 너무 멀리 벗어남)
-			float loseRange = 1000.f;
+			float loseRange = 700.f;
 			if (distanceToPlayer > loseRange)
 			{
 				npc->FSM_manager->ChangeState(std::make_shared<AtkNPCStandingState>());
@@ -407,7 +472,6 @@ void AtkNPCAttackState::Execute(std::shared_ptr<CGameObject> npc)
 		npc->FSM_manager->ChangeState(std::make_shared<AtkNPCChaseState>());
 		return;
 	}
-	// 천천히 도는게 아닌 바로 플레이어를 바라보도록 하고 싶음
 	if (exec_ms < 0.25 * 1000.f) {
 		npc->MoveForward(1.5f);
 	}
@@ -538,7 +602,7 @@ void AtkNPCGlobalState::Execute(std::shared_ptr<CGameObject> npc)
 		auto nowtime = std::chrono::system_clock::now();
 		auto exectime = nowtime - starttime;
 		auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
-		if (exec_ms > 3.f * 1000) {
+		if (exec_ms > 1.5f * 1000) {
 			is_invincible = false;
 		}
 	}
