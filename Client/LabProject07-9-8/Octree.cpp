@@ -29,7 +29,7 @@ void Octree::insert(std::unique_ptr<tree_obj> obj) {
     }
 }
 
-bool Octree::remove(char id)
+bool Octree::remove(int id)
 {
     auto it = std::find_if(objects.begin(), objects.end(), [id](const std::unique_ptr<tree_obj>& obj){
         return obj->u_id == id;
@@ -47,20 +47,15 @@ bool Octree::remove(char id)
     return false;
 }
 
-void Octree::update(char id, const XMFLOAT3& newpos)
+void Octree::update(int id, const XMFLOAT3& newpos)
 {
     for (auto it = objects.begin(); it != objects.end(); ++it) {
         if ((*it)->u_id == id) {
-            if ((*it)->isWithin(minBound, maxBound)) {
-                (*it)->position = newpos;
-                return;
-            }
+            (*it)->position = newpos;
+            if ((*it)->isWithin(minBound, maxBound)) return;
 
             // 객체를 이동 후 제거 및 재삽입
             std::unique_ptr<tree_obj> temp = std::move(*it);
-            objects.erase(it);
-
-            temp->position = newpos;
             insert(std::move(temp));
             return;
         }

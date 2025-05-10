@@ -84,6 +84,7 @@ public:
 	bool							isRender = true;
 	int								m_nMaterials = 0;
 	CMaterial						**m_ppMaterials = NULL;
+	int 							m_treecount{};
 
 	XMFLOAT4 m_xmf4DebugColor = XMFLOAT4(1, 1, 1, 1);
 	// OBB

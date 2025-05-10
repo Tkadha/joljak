@@ -46,14 +46,14 @@ public:
 
     Octree(const XMFLOAT3& min, const XMFLOAT3& max, int depth = 0)
         : minBound(min), maxBound(max), depth(depth) {
-        maxObjects = 6 * (depth + 1);
+        maxObjects = 100 * (depth + 1);
         objects.reserve(maxObjects);
     }
     ~Octree();
 
     void insert(std::unique_ptr<tree_obj> obj);
-    bool remove(char id);
-    void update(char id, const XMFLOAT3& newpos);
+    bool remove(int id);
+    void update(int id, const XMFLOAT3& newpos);
     // 특정 범위 내 객체 검색
     void query(const tree_obj& obj, const XMFLOAT3& distance, std::vector<tree_obj*>& results);
 

@@ -127,7 +127,7 @@ public:
 	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView;
 
 	std::vector<tree_obj>				tree_objects;
-	Octree								octree{ XMFLOAT3 {0,0,0}, XMFLOAT3{10200,4000,10200} };
+	Octree								octree{ XMFLOAT3 {0,0,0}, XMFLOAT3{10200,6000,10200} };
 	bool								checkTree = false;
 	bool								checkRock = false;
 
