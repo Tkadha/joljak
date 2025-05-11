@@ -68,6 +68,11 @@ public:
 	bool invincibility = false;
 	std::chrono::time_point<std::chrono::system_clock> starttime; // 무적 시작시간
 
+	WeaponType weaponType;
+
+	CGameObject* m_pSword;
+	CGameObject* m_pAxe;
+	CGameObject* m_pPick;
 	
 	XMFLOAT3 GetPosition() { return(m_xmf3Position); }
 	XMFLOAT3 GetLookVector() { return(m_xmf3Look); }
@@ -122,8 +127,8 @@ public:
 	void UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
 
 	// 장비
-	void AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework);
-	void AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate, XMFLOAT3 scale);
+	CGameObject* AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework);
+	CGameObject* AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate, XMFLOAT3 scale);
 	CGameObject* FindFrame(char* framename);
 
 
@@ -175,7 +180,6 @@ public:
 	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pContext, CGameFramework* pGameFramework);
 	virtual ~CTerrainPlayer();
 
-	WeaponType weaponType;
 public:
 	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
 
@@ -189,6 +193,7 @@ public:
 	int nAni{};
 	BOOL bAction = false;
 	void keyInput(UCHAR* key);
+
 
 	CGameObject* FindObjectHitByAttack();
 	

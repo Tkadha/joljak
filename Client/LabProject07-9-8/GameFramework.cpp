@@ -840,7 +840,7 @@ void CGameFramework::ProcessInput()
 		
 
 		// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
-		UCHAR toggleKeys[] = { 'R' /*, 다른 키들 */ };
+		UCHAR toggleKeys[] = { 'R','1','2','3' /*, 다른 키들 */};
 		for (UCHAR key : toggleKeys)
 		{
 			if (pKeysBuffer[key] & 0xF0)
@@ -854,6 +854,21 @@ void CGameFramework::ProcessInput()
 					{
 						obbRender = toggleStates[key];
 					}
+
+					if (key == '1')
+					{
+						m_pPlayer->m_pSword->isRender = true;
+						m_pPlayer->m_pAxe->isRender = false;
+						m_pPlayer->weaponType = WeaponType::Sword;
+					}
+
+					if (key == '2')
+					{
+						m_pPlayer->m_pSword->isRender = false;
+						m_pPlayer->m_pAxe->isRender = true;
+						m_pPlayer->weaponType = WeaponType::Axe;
+					}
+
 					// 다른 키에 대한 처리 추가
 				}
 			}

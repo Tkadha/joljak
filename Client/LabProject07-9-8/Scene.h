@@ -136,9 +136,13 @@ public:
 
 	CGameFramework* m_pGameFramework;
 
-
-
 	ID3D12RootSignature* m_pCurrentRootSignature = nullptr;
 	ID3D12PipelineState* m_pCurrentPSO = nullptr;
 	CShader* m_pCurrentShader = nullptr;
+
+	vector<CGameObject*> m_listBranchObjects; // 생성된 나뭇가지 저장 리스트
+
+	void SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
+	void SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
+
 };

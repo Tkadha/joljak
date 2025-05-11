@@ -198,7 +198,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	
 	m_pPreviewPine->isRender = false;
 
-	//m_vGameObjects.push_back(m_pPreviewPine);
 	m_pPreviewPine->m_treecount = tree_obj_count;
 	m_vGameObjects.emplace_back(m_pPreviewPine);
 	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, m_pPreviewPine->m_worldOBB.Center);
@@ -529,6 +528,8 @@ void CScene::ReleaseObjects()
 
 	ReleaseShaderVariables();
 
+	m_listBranchObjects.clear();
+
 	if (m_pLights) delete[] m_pLights;
 }
 
@@ -617,6 +618,14 @@ void CScene::AnimateObjects(float fTimeElapsed)
 {
 	m_fElapsedTime = fTimeElapsed;
 
+	for (auto& obj : m_listBranchObjects) {
+		if (CollisionCheck(m_pPlayer, obj)) {
+			m_pPlayer->m_pGameFramework->AddItem("wood", 1);
+			obj->isRender = false;
+		}
+	}
+
+
 	if (m_pLights)
 	{
 		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
@@ -681,6 +690,24 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			if (m_vGameObjects[obj->u_id]->isRender) m_vGameObjects[obj->u_id]->Render(pd3dCommandList, pCamera);
 		}
 	}
+
+	//for (auto it = m_listBranchObjects.begin(); it != m_listBranchObjects.end(); ) {
+	//	(*it)->Animate(m_fElapsedTime);
+	//	if (!(*it)->isRender) { // isRender가 false이면 (수명이 다하면) 리스트에서 제거
+	//		it = m_listBranchObjects.erase(it);
+	//	}
+	//	else {
+	//		++it;
+	//	}
+	//}
+
+	for (const auto& branch : m_listBranchObjects) {
+		if (branch->isRender) { // 렌더링 플래그 확인
+			branch->Animate(m_fElapsedTime);
+			branch->Render(pd3dCommandList, pCamera);
+		}
+	}
+
 
 	//if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
 
@@ -841,7 +868,7 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 				//	m_pGameFramework->AddItem("iron_material",1);
 				//}
 			}
-			if (obj->m_objectType == GameObjectType::Cow || obj->m_objectType == GameObjectType::Pig) {
+			/*if (obj->m_objectType == GameObjectType::Cow || obj->m_objectType == GameObjectType::Pig) {
 				auto npc = dynamic_cast<CMonsterObject*>(obj);
 				if (npc->Gethp() <= 0) continue;
 				if (npc->FSM_manager->GetInvincible()) continue;
@@ -862,14 +889,53 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 				auto npc = dynamic_cast<CMonsterObject*>(obj);
 				if (npc->Gethp() <= 0) continue;
 				if (npc->FSM_manager->GetInvincible()) continue;
-				npc->Decreasehp(pPlayer->PlayerAttack);				
+				npc->Decreasehp(pPlayer->PlayerAttack);
 				if (obj->FSM_manager) {
 					if (npc->Gethp() > 0) obj->FSM_manager->ChangeState(std::make_shared<AtkNPCHitState>());
 					else obj->FSM_manager->ChangeState(std::make_shared<AtkNPCDieState>());
 					obj->FSM_manager->SetInvincible();
 				}
-			}
+			}*/
 		}
 	}
 }
 
+
+
+void CScene::SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVelocity) {
+	if (!m_pGameFramework || !m_pTerrain) return; // 프레임워크와 지형 포인터 유효성 검사
+
+	CBranchObject* newBranch = new CBranchObject(
+		m_pGameFramework->GetDevice(),
+		m_pGameFramework->GetCommandList(),
+		m_pGameFramework,
+		m_pTerrain
+	);
+	newBranch->SetPosition(position);
+	newBranch->SetInitialVelocity(initialVelocity);
+	// 필요시 초기 회전 등 설정
+	newBranch->Rotate(0, (float)(rand() % 360), 0); // Y축으로 랜덤 회전
+
+	m_listBranchObjects.emplace_back(newBranch);
+	//auto t_obj = std::make_unique<newBranch>(tree_obj_count++, gameObj->m_worldOBB.Center);
+	//octree.insert(std::move(t_obj));
+}
+
+void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity) {
+	if (!m_pGameFramework || !m_pTerrain) return; // 프레임워크와 지형 포인터 유효성 검사
+
+	CRockDropObject* newBranch = new CRockDropObject(
+		m_pGameFramework->GetDevice(),
+		m_pGameFramework->GetCommandList(),
+		m_pGameFramework,
+		m_pTerrain
+	);
+	newBranch->SetPosition(position);
+	newBranch->SetInitialVelocity(initialVelocity);
+	// 필요시 초기 회전 등 설정
+	newBranch->Rotate(0, (float)(rand() % 360), 0); // Y축으로 랜덤 회전
+
+	m_listBranchObjects.emplace_back(newBranch);
+	//auto t_obj = std::make_unique<newBranch>(tree_obj_count++, gameObj->m_worldOBB.Center);
+	//octree.insert(std::move(t_obj));
+}

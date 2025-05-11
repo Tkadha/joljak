@@ -318,7 +318,7 @@ void CPlayer::UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFL
 
 // 장비
 
-void CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework)
+CGameObject* CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework)
 {
 	CGameObject* handFrame = FindFrame(framename);
 	if (handFrame) {
@@ -329,9 +329,13 @@ void CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 
 		handFrame->SetChild(weapon);
 		UpdateTransform(nullptr); // 변환 행렬 즉시 갱신
+
+		return weapon;
 	}
+
+	return nullptr;
 }
-void CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate = {0,0,0}, XMFLOAT3 scale = { 1,1,1 })
+CGameObject* CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate = {0,0,0}, XMFLOAT3 scale = { 1,1,1 })
 {
 	CGameObject* handFrame = FindFrame(framename);
 	if (handFrame) {
@@ -342,7 +346,11 @@ void CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 
 		handFrame->SetChild(weapon);
 		UpdateTransform(nullptr); // 변환 행렬 즉시 갱신
+
+		return weapon;
 	}
+	
+	return nullptr;
 }
 
 
@@ -369,8 +377,11 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	"Model/SK_Hu_M_FullBody.bin", pGameFramework);
 	SetChild(pAngrybotModel->m_pModelRootObject, true);
 
-	AddObject(pd3dDevice, pd3dCommandList, "thumb_02_r", "Model/Sword_01.bin", pGameFramework, XMFLOAT3(0.05, 0.00, -0.05));
+	m_pSword = AddObject(pd3dDevice, pd3dCommandList, "thumb_02_r", "Model/Sword_01.bin", pGameFramework, XMFLOAT3(0.05, 0.00, -0.05));
+	m_pAxe = AddObject(pd3dDevice, pd3dCommandList, "thumb_01_r", "Model/Axe.bin", pGameFramework, XMFLOAT3(0.05, 0.25, -0.05), XMFLOAT3(90, 0, 00));
 	weaponType = WeaponType::Sword;
+	m_pSword->isRender = true;	
+	m_pAxe->isRender = false;
 
 	AddObject(pd3dDevice, pd3dCommandList, "Helmet", "Model/Hair_01.bin", pGameFramework, XMFLOAT3(0, 0.1, 0));
 	//AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Boots_Peasant_Armor", "Model/Boots_Peasant_Armor.bin");
@@ -659,7 +670,11 @@ CGameObject* CTerrainPlayer::FindObjectHitByAttack() {
 	CScene* pScene = m_pGameFramework->GetScene();
 	if (!pScene) return nullptr;
 
-	BoundingOrientedBox weapon = FindFrame("thumb_02_r")->m_pChild->m_worldOBB;
+	BoundingOrientedBox weapon;
+	if (weaponType == WeaponType::Sword)
+		weapon = m_pSword->m_worldOBB;
+	else if (weaponType == WeaponType::Axe)
+		weapon = m_pAxe->m_worldOBB;
 
 
 	for (const auto& obj : pScene->m_vGameObjects) {

@@ -362,6 +362,24 @@ public:
 	virtual ~CHairObject() {};
 };
 
+class CItemObject : virtual public CGameObject
+{
+public:
+	XMFLOAT3 m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	XMFLOAT3 m_xmf3Gravity = XMFLOAT3(0.0f, -980.0f, 0.0f); // 중력 가속도 (조정 필요)
+	bool m_bOnGround = false;
+	float m_fLifeTime = 15.0f; // 바닥에 떨어진 후 사라지기까지 시간 (초)
+	float m_fElapsedAfterLanding = 0.0f;
+
+	CHeightMapTerrain* m_pTerrainRef = nullptr; // 지형 참조 (충돌 감지용)
+
+	CItemObject() { m_objectType = GameObjectType::Item; };
+	virtual ~CItemObject() {};
+
+	virtual void Animate(float fTimeElapsed) override; // 물리 및 수명 처리
+	void SetInitialVelocity(const XMFLOAT3& velocity) { m_xmf3Velocity = velocity; }
+};
+
 
 // ------------------ 나무 ------------------
 class CTreeObject : virtual public CGameObject
@@ -420,30 +438,18 @@ public:
 	virtual ~CWillowObject() {}
 };
 
-// 나뭇가지(드롭 아이템)
-class CBranchObject : public CGameObject {
-public:
-	XMFLOAT3 m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	XMFLOAT3 m_xmf3Gravity = XMFLOAT3(0.0f, -350.0f, 0.0f); // 중력 가속도 (조정 필요)
-	bool m_bOnGround = false;
-	float m_fLifeTime = 15.0f; // 바닥에 떨어진 후 사라지기까지 시간 (초)
-	float m_fElapsedAfterLanding = 0.0f;
-
-	CHeightMapTerrain* m_pTerrainRef = nullptr; // 지형 참조 (충돌 감지용)
-
-	CBranchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain);
-	//virtual ~CBranchObject();
-
-	//virtual void Animate(float fTimeElapsed) override; // 물리 및 수명 처리
-	void SetInitialVelocity(const XMFLOAT3& velocity) { m_xmf3Velocity = velocity; }
-};
-
-
 class CPineObject : public CTreeObject
 {
 public:
 	CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CPineObject() {}
+};
+
+// 나뭇가지(드롭 아이템)
+class CBranchObject : public CItemObject {
+public:
+	CBranchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain);
+	virtual ~CBranchObject() {};
 };
 
 
@@ -457,6 +463,9 @@ public:
 	virtual ~CRockObject() {};
 
 	int getHp() { return hp; }
+	void setHp(int n) { hp = n; }
+
+	void EraseRock();
 };
 
 class CRockClusterAObject : public CRockObject
@@ -485,6 +494,13 @@ class CCliffFObject : public CGameObject
 public:
 	CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CCliffFObject() {}
+};
+
+// 돌 파편(드롭 아이템)
+class CRockDropObject : public CItemObject {
+public:
+	CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain);
+	virtual ~CRockDropObject() {};
 };
 
 

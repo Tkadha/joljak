@@ -60,6 +60,8 @@ private:
 
 };
 
+class CGameObject;
+
 // --- 상태 인터페이스 ---
 class IPlayerState {
 public:
@@ -73,6 +75,8 @@ public:
     virtual void Exit(CTerrainPlayer* player, PlayerStateMachine* stateMachine) = 0;
     // 상태 ID 반환
     virtual PlayerStateID GetID() const = 0;
+
+    void CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObject);
 };
 
 

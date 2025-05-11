@@ -179,6 +179,7 @@ public:
 
 
 	ID3D12Device* GetDevice() { return m_pd3dDevice; }
+	ID3D12GraphicsCommandList* GetCommandList() { return m_pd3dCommandList; }
 	ResourceManager* GetResourceManager() { return m_pResourceManager.get(); };
 	ShaderManager* GetShaderManager() { return m_pShaderManager; };
 
