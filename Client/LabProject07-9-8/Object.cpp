@@ -1792,7 +1792,7 @@ CRockDropObject::CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	: CGameObject(1, pGameFramework) { // 재질 1개 가정, 부모 생성자 호출
 	m_pTerrainRef = pTerrain;
 
-	CLoadedModelInfo* pBranchModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/RockCluster_A_LOD0.bin", pGameFramework);
+	CLoadedModelInfo* pBranchModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/RockCluster_B_LOD0.bin", pGameFramework);
 	if (pBranchModel && pBranchModel->m_pModelRootObject) {
 		if (pBranchModel->m_pModelRootObject->m_pMesh)
 			SetMesh(pBranchModel->m_pModelRootObject->m_pMesh);
@@ -1803,13 +1803,38 @@ CRockDropObject::CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	else {
 		OutputDebugStringA("Error: Failed to load Branch.bin model.\n");
 	}
-	SetScale(1.0f, 1.0f, 1.0f);
+	SetScale(50.0f, 50.0f, 50.0f);
 }
-//
-//void CRockDropObject::EraseRock()
-//{
-//
-//}
+
+void CRockObject::EraseRock()
+{
+	CScene* pScene = m_pGameFramework->GetScene(); // CGameObject가 m_pGameFramework 멤버를 가져야 함
+	if (pScene) {
+		int numBranchesToSpawn = 3 + (rand() % 2); // 3 또는 4개
+		for (int i = 0; i < numBranchesToSpawn; ++i) {
+			XMFLOAT3 fallenTreePos = GetPosition();
+			XMFLOAT3 spawnOffsetLocal = XMFLOAT3(
+				((float)(rand() % 200) - 100.0f) * 0.1f, // X -10 ~ +10
+				(rand() % 10) + 10.0f,                     // Y 10~19
+				((float)(rand() % 200) - 100.0f) * 0.1f  // Z -10 ~ +10
+			);
+
+			XMFLOAT3 spawnPos = Vector3::Add(fallenTreePos, spawnOffsetLocal);
+			if (pScene->m_pTerrain) { // 지형 위에 스폰되도록 높이 보정
+				spawnPos.y = pScene->m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + spawnOffsetLocal.y;
+			}
+
+			XMFLOAT3 ejectVelocity = XMFLOAT3(
+				((float)(rand() % 100) - 50.0f),
+				((float)(rand() % 60) + 50.0f),
+				((float)(rand() % 100) - 50.0f)
+			);
+			pScene->SpawnRock(spawnPos, ejectVelocity);
+		}
+	}
+
+	isRender = false;
+}
 
 
 

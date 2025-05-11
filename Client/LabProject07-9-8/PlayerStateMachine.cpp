@@ -740,7 +740,6 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
             }
             if (hp <= 0) {
                 tree->StartFalling(player->GetLookVector()); // 플레이어가 바라보는 방향으로 쓰러지도록 (또는 다른 방향)
-                player->m_pGameFramework->AddItem("wood", 5); // 예시: 쓰러뜨리면 많이 획득
             }
         }
     }
@@ -780,7 +779,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
 
                     XMFLOAT3 spawnPos = Vector3::Add(treePos, spawnOffsetLocal);
                     if (pScene->m_pTerrain) { // 지형 위에 스폰되도록 높이 보정
-                        spawnPos.y = pScene->m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + spawnOffsetLocal.y;
+                        spawnPos.y = pScene->m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + spawnOffsetLocal.y+20;
                     }
 
                     XMFLOAT3 ejectVelocity = XMFLOAT3(
@@ -792,7 +791,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
                 }
             }
             if (hp <= 0) {
-                rock->SetScale(0.8f, 0.8f, 0.8f);
+                rock->EraseRock();
                 //player->m_pGameFramework->AddItem("rock", 5); // 예시: 쓰러뜨리면 많이 획득
             }
         }

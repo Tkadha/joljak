@@ -620,8 +620,30 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 	for (auto& obj : m_listBranchObjects) {
 		if (CollisionCheck(m_pPlayer, obj)) {
-			m_pPlayer->m_pGameFramework->AddItem("wood", 1);
-			obj->isRender = false;
+			auto branch = dynamic_cast<CBranchObject*>(obj);
+			if (branch && branch->m_bOnGround && branch->isRender) {
+				m_pPlayer->m_pGameFramework->AddItem("wood", 1);
+				branch->isRender = false;
+			}
+		}
+	}
+
+	for (auto& obj : m_listRockObjects) {
+		if (CollisionCheck(m_pPlayer, obj)) {
+			auto rock = dynamic_cast<CRockDropObject*>(obj);
+			if (rock && rock->m_bOnGround && rock->isRender) {
+				int randValue = rand() % 100; // 0 ~ 99
+				if (randValue < 50) {
+					m_pGameFramework->AddItem("stone",3);
+				}
+				else if (randValue < 75) {
+					m_pGameFramework->AddItem("coal",1);
+				}
+				else {
+					m_pGameFramework->AddItem("iron_material",1);
+				}
+				rock->isRender = false;
+			}
 		}
 	}
 
@@ -701,13 +723,19 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	//	}
 	//}
 
-	for (const auto& branch : m_listBranchObjects) {
+	for (auto branch : m_listBranchObjects) {
 		if (branch->isRender) { // 렌더링 플래그 확인
 			branch->Animate(m_fElapsedTime);
 			branch->Render(pd3dCommandList, pCamera);
 		}
 	}
 
+	for (auto branch : m_listRockObjects) {
+		if (branch->isRender) { // 렌더링 플래그 확인
+			branch->Animate(m_fElapsedTime);
+			branch->Render(pd3dCommandList, pCamera);
+		}
+	}
 
 	//if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
 
@@ -950,7 +978,7 @@ void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity
 	// 필요시 초기 회전 등 설정
 	newBranch->Rotate(0, (float)(rand() % 360), 0); // Y축으로 랜덤 회전
 
-	m_listBranchObjects.emplace_back(newBranch);
+	m_listRockObjects.emplace_back(newBranch);
 	//auto t_obj = std::make_unique<newBranch>(tree_obj_count++, gameObj->m_worldOBB.Center);
 	//octree.insert(std::move(t_obj));
 }

@@ -465,7 +465,7 @@ public:
 	int getHp() { return hp; }
 	void setHp(int n) { hp = n; }
 
-	//void EraseRock();
+	void EraseRock();
 };
 
 class CRockClusterAObject : public CRockObject
@@ -501,6 +501,7 @@ class CRockDropObject : public CItemObject {
 public:
 	CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain);
 	virtual ~CRockDropObject() {};
+
 };
 
 
