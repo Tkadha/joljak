@@ -1412,7 +1412,7 @@ void CGameFramework::FrameAdvance()
 		ImGui::SetNextWindowPos(craftingPos);
 		ImGui::SetNextWindowSize(ImVec2(windowWidth, windowHeight));
 
-		ImGui::Begin("조합 화면", nullptr,
+		ImGui::Begin("Crafting", nullptr,
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoCollapse);
 
@@ -1470,7 +1470,7 @@ void CGameFramework::FrameAdvance()
 	{
 		ImGui::SetNextWindowPos(ImVec2(100, 100));
 		ImGui::SetNextWindowSize(ImVec2(200, 200));
-		ImGui::Begin("건축 선택", nullptr,
+		ImGui::Begin("Build Mode", nullptr,
 			ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
 
 		static int selected = -1;
@@ -1507,7 +1507,7 @@ void CGameFramework::FrameAdvance()
 			XMFLOAT3 previewPos = m_pConstructionSystem->GetPreviewPosition(); // ★ getter 함수 필요
 			ImGui::Text("PreviewPos: %.2f, % .2f, % .2f", previewPos.x, previewPos.y, previewPos.z);
 		}
-		if (ImGui::Button("건축 종료"))
+		if (ImGui::Button("Build End"))
 		{
 			BuildMode = false;
 			bPrevBuildMode = BuildMode;
