@@ -7,6 +7,9 @@ class AtkNPCGlobalState : public FSMState<CGameObject>
 {
 	std::chrono::time_point<std::chrono::system_clock> starttime;
 	bool is_invincible = false; // 무적상태인지 체크하는 변수
+
+	std::chrono::time_point<std::chrono::system_clock> atk_delay_starttime;
+	bool is_atkdelay = false;
 	public:
 	virtual void Enter(std::shared_ptr<CGameObject> npc);
 
@@ -17,8 +20,15 @@ class AtkNPCGlobalState : public FSMState<CGameObject>
 	virtual void SetInvincible() {
 		is_invincible = true;
 		starttime = std::chrono::system_clock::now(); // 무적상태 시작시간
-	} // 무적상태로 전환
+	}
 	virtual bool GetInvincible() const { return is_invincible; } // 무적상태인지 체크하는 함수
+
+	virtual void SetAtkDelay() {
+		is_atkdelay = true;
+		atk_delay_starttime = std::chrono::system_clock::now(); // 공격 딜레이 시작시간
+	} 
+	virtual bool GetAtkDelay() const { return is_atkdelay; } // 공격 딜레이 상태인지 체크하는 함수
+
 };
 
 

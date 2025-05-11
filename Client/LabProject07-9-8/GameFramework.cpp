@@ -172,10 +172,10 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	m_pConstructionSystem = new CConstructionSystem();
 	m_pConstructionSystem->Init(m_pd3dDevice, m_pd3dCommandList, this, m_pScene);
 	
-	auto& nwManager = NetworkManager::GetInstance();
+	/*auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
 	std::thread t(&CGameFramework::NerworkThread, this);
-	t.detach();
+	t.detach();*/
 	
 
 	//ChangeSwapChainState();

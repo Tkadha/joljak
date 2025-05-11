@@ -13,5 +13,8 @@ public:
 
 	virtual void SetInvincible() {}
 	virtual bool GetInvincible() const { return false; }
+
+	virtual void SetAtkDelay() {}
+	virtual bool GetAtkDelay() const { return false; }
 };
 
