@@ -893,12 +893,13 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 					obj->FSM_manager->SetInvincible();
 				}
 			}
+
 			if (obj->m_objectType != GameObjectType::Unknown && obj->m_objectType != GameObjectType::Cow && obj->m_objectType != GameObjectType::Pig &&
 				obj->m_objectType != GameObjectType::Rock && obj->m_objectType != GameObjectType::Tree && obj->m_objectType != GameObjectType::Player) {
 				auto npc = dynamic_cast<CMonsterObject*>(obj);
 				if (npc->Gethp() <= 0) continue;
 				if (npc->FSM_manager->GetInvincible()) continue;
-				npc->Decreasehp(pPlayer->PlayerAttack);		
+				npc->Decreasehp(pPlayer->PlayerAttack);
 
 				if (npc->Gethp() <= 0) {
 					m_pPlayer->Playerxp += 20;
@@ -908,11 +909,6 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 						m_pPlayer->Totalxp *= 2;
 						m_pPlayer->StatPoint += 5;
 					}
-				}
-				if (obj->FSM_manager) {
-					if (npc->Gethp() > 0) obj->FSM_manager->ChangeState(std::make_shared<AtkNPCHitState>());
-					else obj->FSM_manager->ChangeState(std::make_shared<AtkNPCDieState>());
-					obj->FSM_manager->SetInvincible();
 				}
 			}*/
 		}

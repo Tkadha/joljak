@@ -846,6 +846,19 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         default:
             break;
         }
+
+
+        if (npc->Gethp() <= 0) {
+            player->Playerxp += 20;
+            if (player->Playerxp >= player->Totalxp) {
+                player->PlayerLevel++;
+                player->Playerxp = player->Playerxp - player->Totalxp;
+                player->Totalxp *= 2;
+                player->StatPoint += 5;
+            }
+        }
+
+
         if (hitObject->FSM_manager) {
             if (npc->Gethp() > 0) hitObject->FSM_manager->ChangeState(std::make_shared<AtkNPCHitState>());
             else hitObject->FSM_manager->ChangeState(std::make_shared<AtkNPCDieState>());

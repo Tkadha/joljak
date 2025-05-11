@@ -1805,11 +1805,11 @@ CRockDropObject::CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	}
 	SetScale(1.0f, 1.0f, 1.0f);
 }
-
-void CRockDropObject::EraseRock()
-{
-
-}
+//
+//void CRockDropObject::EraseRock()
+//{
+//
+//}
 
 
 

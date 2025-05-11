@@ -465,7 +465,7 @@ public:
 	int getHp() { return hp; }
 	void setHp(int n) { hp = n; }
 
-	void EraseRock();
+	//void EraseRock();
 };
 
 class CRockClusterAObject : public CRockObject
