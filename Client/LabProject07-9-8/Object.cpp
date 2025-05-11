@@ -1945,7 +1945,7 @@ void UserObject::ChangeAnimation(PlayerInput inputData)
 {
 	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->SetTrackEnable(on_track, false);
 
-	if (inputData.Attack) {}
+	if (inputData.Attack) on_track = 12;
 	else if (inputData.Run) {
 		if (inputData.MoveForward) on_track = 5;
 		else if (inputData.MoveBackward) on_track = 6;

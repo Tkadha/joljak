@@ -2,6 +2,8 @@
 #include "Object.h"
 #include <iostream>
 #include "RandomUtil.h"
+#include "Scene.h"
+
 
 
 void NonAtkNPCGlobalState::Enter(std::shared_ptr<CGameObject> npc)
@@ -133,6 +135,8 @@ void NonAtkNPCMoveState::Execute(std::shared_ptr<CGameObject> npc)
 	default:
 		break;
 	}
+	npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
+
 }
 
 void NonAtkNPCMoveState::Exit(std::shared_ptr<CGameObject> npc)
@@ -207,6 +211,8 @@ void NonAtkNPCRunAwayState::Execute(std::shared_ptr<CGameObject> npc)
 	default:
 		break;
 	}
+	npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
+
 	if (exec_ms > duration_time / 20)
 	{
 		move_type = rand_type(dre) % 2;
@@ -291,6 +297,8 @@ void NonAtkNPCRespawnState::Execute(std::shared_ptr<CGameObject> npc)
 		if (y < fHeight)y = fHeight;
 		
 		npc->SetPosition(x, y, z);
+		npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
+
 		// 상태 전환
 		npc->FSM_manager->ChangeState(std::make_shared<NonAtkNPCStandingState>());
 		return;
