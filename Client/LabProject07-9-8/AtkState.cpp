@@ -5,7 +5,7 @@
 #include "RandomUtil.h"
 #include <cmath> // sqrt, pow 함수 사용
 #include <numbers>
-//=====================================Standing=================================================
+//=====================================Standing==============================================
 void AtkNPCStandingState::Enter(std::shared_ptr<CGameObject> npc)
 {
 	starttime = std::chrono::system_clock::now();
@@ -410,6 +410,8 @@ void AtkNPCRespawnState::Execute(std::shared_ptr<CGameObject> npc)
 	auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
 	if (exec_ms > duration_time)
 	{
+		auto obj = dynamic_cast<CMonsterObject*> (npc.get());
+		obj->Sethp(20);
 		// 랜덤 위치에 생성
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
 		CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)npc->terraindata;
