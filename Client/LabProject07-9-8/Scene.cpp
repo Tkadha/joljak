@@ -190,7 +190,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	}
 
 
-	nRockObjects = 20;	objectMinSize = 30, objectMaxSize = 50;
+	nRockObjects = 30;	objectMinSize = 30, objectMaxSize = 50;
+	spawnMin = 1700, spawnMax = 9000;
 	for (int i = 0; i < nRockObjects; ++i) {
 		CGameObject* gameObj = new CCliffFObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
@@ -198,7 +199,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		gameObj->m_treecount = tree_obj_count;
+
 		m_vGameObjects.emplace_back(gameObj);
+
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
 	}
@@ -718,7 +721,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	std::vector<tree_obj*> results;
 	tree_obj player_obj{ -1, m_pPlayer->GetPosition() };
 
-	octree.query(player_obj, XMFLOAT3{ 3000,1000,3000 }, results);
+	octree.query(player_obj, XMFLOAT3{ 2500,1000,2500 }, results);
 
 	for (auto& obj : results) {
 		if (m_vGameObjects[obj->u_id]) {

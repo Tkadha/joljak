@@ -135,7 +135,7 @@ void NonAtkNPCMoveState::Execute(std::shared_ptr<CGameObject> npc)
 	default:
 		break;
 	}
-	npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
+	//npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
 
 }
 
@@ -211,7 +211,7 @@ void NonAtkNPCRunAwayState::Execute(std::shared_ptr<CGameObject> npc)
 	default:
 		break;
 	}
-	npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
+	//npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
 
 	if (exec_ms > duration_time / 20)
 	{
@@ -297,7 +297,7 @@ void NonAtkNPCRespawnState::Execute(std::shared_ptr<CGameObject> npc)
 		if (y < fHeight)y = fHeight;
 		
 		npc->SetPosition(x, y, z);
-		npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
+		//npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
 
 		// 상태 전환
 		npc->FSM_manager->ChangeState(std::make_shared<NonAtkNPCStandingState>());
