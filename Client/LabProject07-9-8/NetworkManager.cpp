@@ -144,10 +144,11 @@ void NetworkManager::Process_Packet(char* packet)
 	case E_PACKET::E_P_INPUT:
 	case E_PACKET::E_P_LOGIN:
 	case E_PACKET::E_P_LOGOUT:
+
 		PushRecvQueue(packet, static_cast<short>(packet[0]));
 		break;
 	default:
-		break;
+	break;
 	}
 }
 
