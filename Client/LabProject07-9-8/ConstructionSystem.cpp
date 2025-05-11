@@ -39,10 +39,11 @@ void CConstructionSystem::UpdatePreviewPosition(const CCamera* pCamera)
 
     XMVECTOR vCamPos = XMLoadFloat3(&camPos);
     XMVECTOR vCamLook = XMLoadFloat3(&camLook);
-    XMVECTOR vTarget = XMVectorAdd(vCamPos, XMVectorScale(vCamLook, 500.f));
+    XMVECTOR vTarget = XMVectorAdd(vCamPos, XMVectorScale(vCamLook, 300.f));
 
 
     XMStoreFloat3(&previewPos, vTarget);
+    previewPos.y += 40.f;
     m_xmf3PreviewPosition = previewPos;
 
     m_pPreviewObject->SetPosition(previewPos);
@@ -63,13 +64,11 @@ void CConstructionSystem::UpdatePreview(const XMFLOAT3& playerPos, const XMFLOAT
     m_pPreviewObject->SetPosition(previewPos);
 }
 
-void CConstructionSystem::ConfirmPlacement(std::vector<CGameObject*>& sceneObjects)
+void CConstructionSystem::ConfirmPlacement()
 {
-    if (!m_pPreviewObject) return;
+    m_bBuildMode = false;
 
-    auto* newWall = new CPineObject(m_pd3dDevice, m_pd3dCommandList, m_pGameFramework);
-    newWall->SetPosition(m_pPreviewObject->GetPosition());
-    sceneObjects.push_back(newWall);
+
 }
 
 void CConstructionSystem::RenderPreview(ID3D12GraphicsCommandList* cmdList, CCamera* camera)

@@ -64,7 +64,9 @@ public:
 	int Maxstamina = 150;
 	int StatPoint = 5;
 	int PlayerAttack = 10;
-	int PlayerSpeed = 10;
+	float PlayerSpeed = 10.0f;
+	int Playerxp = 0;
+	int Totalxp = 20;
 	bool invincibility = false;
 	std::chrono::time_point<std::chrono::system_clock> starttime; // 무적 시작시간
 

@@ -1944,13 +1944,13 @@ void CGameObject::SetColor(const XMFLOAT4& color)
 	m_xmf4DebugColor = color;
 }
 
-CConstructionObject::CConstructionObject()
+CConstructionObject::CConstructionObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
-	// 초기화 (색상이나 렌더링 비활성화 등)
-	isRender = false;
-	SetColor(XMFLOAT4(1.f, 0.f, 0.f, 1.f)); // 디버깅용 빨간색
-}
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, "Model/buildobject/pannel.bin", "rb");
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
+	SetChild(pGameObject);
 
-CConstructionObject::~CConstructionObject()
-{
+	
+	if (pInFile) fclose(pInFile); // 파일 닫기 추가
 }
