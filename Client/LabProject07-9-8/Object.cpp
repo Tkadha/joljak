@@ -407,6 +407,8 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	CScene* pScene = m_pGameFramework ? m_pGameFramework->GetScene() : nullptr;
 	if (!pScene) return; // 씬 없으면 렌더링 불가
 
+	if (!isRender) return;
+
 	// 이 객체가 직접 렌더링할 메쉬와 첫 번째 재질/셰이더를 가지고 있는지 확인
 	CMaterial* pPrimaryMaterial = GetMaterial(0); // 상태 설정 기준으로 첫 번째 재질 사용
 
@@ -1594,7 +1596,32 @@ void CTreeObject::Animate(float fTimeElapsed) {
 		if (normalizedTime >= 1.0f) {
 			m_bHasFallen = true;
 			m_bIsFalling = false;
-			isRender = false; // 완전히 쓰러진 후 일정 시간 뒤에 사라지게 할 수도 있음
+
+			CScene* pScene = m_pGameFramework->GetScene(); // CGameObject가 m_pGameFramework 멤버를 가져야 함
+			if (pScene) {
+				int numBranchesToSpawn = 3 + (rand() % 2); // 3 또는 4개
+				for (int i = 0; i < numBranchesToSpawn; ++i) {
+					XMFLOAT3 fallenTreePos = GetPosition(); 
+					XMFLOAT3 spawnOffsetLocal = XMFLOAT3(
+						((float)(rand() % 200) - 100.0f) * 0.1f, // X -10 ~ +10
+						(rand() % 10) + 10.0f,                     // Y 10~19
+						((float)(rand() % 200) - 100.0f) * 0.1f  // Z -10 ~ +10
+					);
+
+					XMFLOAT3 spawnPos = Vector3::Add(fallenTreePos, spawnOffsetLocal);
+					if (pScene->m_pTerrain) { // 지형 위에 스폰되도록 높이 보정
+						spawnPos.y = pScene->m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + spawnOffsetLocal.y;
+					}
+
+					XMFLOAT3 ejectVelocity = XMFLOAT3(
+						((float)(rand() % 100) - 50.0f), 
+						((float)(rand() % 60) + 50.0f),
+						((float)(rand() % 100) - 50.0f)
+					);
+					pScene->SpawnBranch(spawnPos, ejectVelocity);
+				}
+			}
+			isRender = false; // 바로 사라지게 하거나, 일정 시간 후 사라지도록 CBranchObject 에서 처리
 		}
 	}
 	UpdateTransform(NULL);
@@ -1643,22 +1670,59 @@ CWillowObject::CWillowObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 CBranchObject::CBranchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain)
 	: CGameObject(1, pGameFramework) { // 재질 1개 가정, 부모 생성자 호출
 	m_pTerrainRef = pTerrain;
-	m_objectType = GameObjectType::Item; // 또는 새로운 GameObjectType::Branch
 
-	CLoadedModelInfo* pBranchModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch.bin", pGameFramework);
+	CLoadedModelInfo* pBranchModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch_A.bin", pGameFramework);
 	if (pBranchModel && pBranchModel->m_pModelRootObject) {
 		if (pBranchModel->m_pModelRootObject->m_pMesh)
-			SetMesh(pBranchModel->m_pModelRootObject->m_pMesh); // AddRef/Release 처리됨
+			SetMesh(pBranchModel->m_pModelRootObject->m_pMesh);
 		if (pBranchModel->m_pModelRootObject->m_nMaterials > 0 && pBranchModel->m_pModelRootObject->m_ppMaterials[0])
-			SetMaterial(0, pBranchModel->m_pModelRootObject->m_ppMaterials[0]); // AddRef/Release 처리됨
+			SetMaterial(0, pBranchModel->m_pModelRootObject->m_ppMaterials[0]); 
 		delete pBranchModel;
 	}
 	else {
 		OutputDebugStringA("Error: Failed to load Branch.bin model.\n");
 	}
-	SetScale(5.0f, 5.0f, 5.0f); // 나뭇가지 크기 예시 (조정 필요)
+	SetScale(5.0f, 5.0f, 5.0f);
 }
 
+void CItemObject::Animate(float fTimeElapsed) {
+	if (!isRender) return; // 렌더링 안되면 업데이트도 안함
+
+	if (m_bOnGround) {
+		m_fElapsedAfterLanding += fTimeElapsed;
+		if (m_fElapsedAfterLanding > m_fLifeTime) {
+			isRender = false; // 일정 시간 후 사라짐 (씬에서 실제로 제거하는 로직 필요)
+		}
+		return;
+	}
+
+	// 중력 적용
+    XMFLOAT3 gravityForceThisFrame = Vector3::ScalarProduct(m_xmf3Gravity, 10.0f);
+    m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, gravityForceThisFrame);
+
+	// 위치 업데이트 (이동)
+	XMFLOAT3 xmf3Shift = Vector3::ScalarProduct(m_xmf3Velocity, 0.5f);
+	XMFLOAT3 oldPos = GetPosition();
+	XMFLOAT3 newPos = Vector3::Add(oldPos, xmf3Shift);;
+	SetPosition(newPos);
+
+
+	// 땅과의 충돌 체크
+	if (m_pTerrainRef) {
+		XMFLOAT3 currentPos = GetPosition();
+		// 나뭇가지 모델의 바닥 부분을 기준으로 지형 높이와 비교
+		float branchHeightOffset = (m_localOBB.Extents.y > 0) ? m_localOBB.Extents.y : 0.5f; // 모델 바운딩 박스 높이의 절반 또는 기본값
+		float terrainHeight = m_pTerrainRef->GetHeight(currentPos.x, currentPos.z) + branchHeightOffset;
+
+		if (currentPos.y <= terrainHeight) {
+			currentPos.y = terrainHeight;
+			SetPosition(currentPos); // 지형 높이에 맞춤
+			m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f); // 땅에 닿으면 속도 0
+			m_bOnGround = true;
+			m_fElapsedAfterLanding = 0.0f; // 수명 타이머 시작
+		}
+	}
+}
 
 
 
@@ -1723,6 +1787,30 @@ CCliffFObject::CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 	if (pInFile) fclose(pInFile); // 파일 닫기 추가
 }
+
+CRockDropObject::CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain)
+	: CGameObject(1, pGameFramework) { // 재질 1개 가정, 부모 생성자 호출
+	m_pTerrainRef = pTerrain;
+
+	CLoadedModelInfo* pBranchModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/RockCluster_A_LOD0.bin", pGameFramework);
+	if (pBranchModel && pBranchModel->m_pModelRootObject) {
+		if (pBranchModel->m_pModelRootObject->m_pMesh)
+			SetMesh(pBranchModel->m_pModelRootObject->m_pMesh);
+		if (pBranchModel->m_pModelRootObject->m_nMaterials > 0 && pBranchModel->m_pModelRootObject->m_ppMaterials[0])
+			SetMaterial(0, pBranchModel->m_pModelRootObject->m_ppMaterials[0]);
+		delete pBranchModel;
+	}
+	else {
+		OutputDebugStringA("Error: Failed to load Branch.bin model.\n");
+	}
+	SetScale(1.0f, 1.0f, 1.0f);
+}
+//
+//void CRockDropObject::EraseRock()
+//{
+//
+//}
+
 
 
 // ------------------ 꽃, 풀 ------------------
@@ -1856,13 +1944,13 @@ void CGameObject::SetColor(const XMFLOAT4& color)
 	m_xmf4DebugColor = color;
 }
 
-CConstructionObject::CConstructionObject()
+CConstructionObject::CConstructionObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
-	// 초기화 (색상이나 렌더링 비활성화 등)
-	isRender = false;
-	SetColor(XMFLOAT4(1.f, 0.f, 0.f, 1.f)); // 디버깅용 빨간색
-}
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, "Model/buildobject/pannel.bin", "rb");
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
+	SetChild(pGameObject);
 
-CConstructionObject::~CConstructionObject()
-{
+	
+	if (pInFile) fclose(pInFile); // 파일 닫기 추가
 }

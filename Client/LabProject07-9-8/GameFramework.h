@@ -106,11 +106,12 @@ private:
 
 	int							m_nWndClientWidth;
 	int							m_nWndClientHeight;
-	int                         m_nSelectedHotbarIndex = 0;
+	int                         m_SelectedHotbarIndex = 0;
 	bool						ShowInventory = false;
 	bool						ShowCraftingUI = false; 
 	bool						BuildMode = false;
 	bool						ShowFurnaceUI = false;
+	bool					bPrevBuildMode = false;
 	int							selectedCraftItemIndex = -1;
 	CPineObject*				m_pPreviewObject = nullptr;
 	FurnaceSlot					furnaceSlot;
@@ -179,6 +180,7 @@ public:
 
 
 	ID3D12Device* GetDevice() { return m_pd3dDevice; }
+	ID3D12GraphicsCommandList* GetCommandList() { return m_pd3dCommandList; }
 	ResourceManager* GetResourceManager() { return m_pResourceManager.get(); };
 	ShaderManager* GetShaderManager() { return m_pShaderManager; };
 

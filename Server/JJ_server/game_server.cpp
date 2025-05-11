@@ -110,11 +110,12 @@ void worker_thread()
 
 							// 패킷 재조립
 							int remain_data = recv_buf_length + remoteClient->tcpConnection.m_prev_remain;
-							u_char packet_size = recv_buf[0];
+							int packet_size = recv_buf[0];
 							while (remain_data > 0 && packet_size <= remain_data) {
 								ProcessPacket(remoteClient, recv_buf);
 								recv_buf += packet_size;
 								remain_data -= packet_size;
+								packet_size = recv_buf[0];
 							}
 							remoteClient->tcpConnection.m_prev_remain = remain_data;
 							if (remain_data > 0)

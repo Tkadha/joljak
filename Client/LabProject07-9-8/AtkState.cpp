@@ -413,6 +413,9 @@ void AtkNPCRespawnState::Execute(std::shared_ptr<CGameObject> npc)
 		auto obj = dynamic_cast<CMonsterObject*> (npc.get());
 		obj->Sethp(20);
 		// 랜덤 위치에 생성
+		auto obj = dynamic_cast<CMonsterObject*> (npc.get());
+		obj->Sethp(20);
+
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1000, 2000, 1000, 2000);
 		CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)npc->terraindata;
 		XMFLOAT3 xmf3Scale = pTerrain->GetScale();

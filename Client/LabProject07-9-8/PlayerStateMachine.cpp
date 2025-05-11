@@ -6,6 +6,7 @@
 #include <iostream>   // 디버깅 출력용 (추후 제거)
 #include <algorithm>  // std::min, std::max 등 사용
 #include "GameFramework.h"
+#include "Object.h"
 
 // --- 구체적인 상태 클래스 구현 ---
 
@@ -17,9 +18,6 @@ public:
     PlayerStateID GetID() const override { return PlayerStateID::Idle; }
 
     void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
-        std::cout << "Entering Idle State\n";
-        // 상태 머신을 통해 애니메이션 변경 요청 (즉시 변경, 블렌딩 없음 가정)
-        // 실제 애니메이션 설정은 PlayerStateMachine::PerformStateChange 에서 처리됨
     }
 
     PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
@@ -34,11 +32,7 @@ public:
         if (input.Attack)  //return PlayerStateID::AttackMelee;
             return stateMachine->DetermineAttackState();
         if (input.Jump) return PlayerStateID::JumpStart;
-        if (input.Interact) { // 상호작용 키 입력 시
-            // 충돌 검사
-            //if () {
-            //    // return PlayerStateID::Interact;
-            //}
+        if (input.Interact) { 
         }
 
         // 다른 입력이 없으면 Idle 상태 유지
@@ -46,7 +40,6 @@ public:
     }
 
     void Exit(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
-        std::cout << "Exiting Idle State\n";
     }
 };
 // Walk
@@ -159,7 +152,6 @@ public:
             player->SetVelocity(targetVel);
         }
         else {
-            // 모든 이동 키가 떨어졌으면 Idle 상태로 전환
             return PlayerStateID::Idle;
         }
 
@@ -467,6 +459,8 @@ public:
 };
 
 // Attack
+#include "NonAtkState.h"
+#include "AtkState.h"
 class AttackMeleeState : public IPlayerState {
 private:
     bool m_bAttackFinished = false;
@@ -485,8 +479,11 @@ public:
         float currentPosition = stateMachine->GetTrackPosition(m_nAnimTrack);
         float animLength = stateMachine->GetAnimationLength(m_nAnimTrack);
 
-        if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) { // 거의 끝에 도달하면
+        if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) { 
             m_bAttackFinished = true;
+
+            CGameObject* hitObject = player->FindObjectHitByAttack();
+            CollisionUpdate(player, hitObject);
         }
 
         // 애니메이션이 끝나면 Idle 상태로 전환
@@ -499,10 +496,8 @@ public:
     }
 
     void Exit(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
-        // 특별히 정리할 내용 없음 (Idle 상태에서 필요한 설정할 것임)
     }
 };
-
 class AttackAxeState : public IPlayerState {
 private:
     bool m_bAttackFinished = false;
@@ -514,46 +509,17 @@ public:
         m_bAttackFinished = false;
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK; // 즉시 전환 시 주 트랙 사용
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); // 공격 중 이동 정지
-        // PerformStateChange에서 AnimIndices::ATTACK_TREE, ANIMATION_TYPE_ONCE 설정됨
     }
 
     PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
         float currentPosition = stateMachine->GetTrackPosition(m_nAnimTrack);
         float animLength = stateMachine->GetAnimationLength(m_nAnimTrack);
 
-        if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) { // 종료 지점 약간 앞으로 (0.99 -> 0.95)
+        if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) {
             m_bAttackFinished = true;
 
             CGameObject* hitObject = player->FindObjectHitByAttack(); // 공격 판정 함수 필요
-            if (hitObject && hitObject->m_objectType == GameObjectType::Tree) {
-                auto tree = dynamic_cast<CTreeObject*>(hitObject);
-                if (tree && !tree->IsFalling() && !tree->HasFallen()) {
-                    int hp = tree->getHp();
-                    if (hp > 0) {
-                        switch (player->weaponType)
-                        {
-                        case WeaponType::Sword:
-                            hp -= 15;
-                            break;
-                        case WeaponType::Axe:
-                            hp -= 10;
-                            break;
-                        case WeaponType::Pick:
-                            hp -= 5;
-                            break;
-                        default:
-                            break;
-                        }
-                        tree->setHp(hp);
-
-                        player->m_pGameFramework->AddItem("wood", 1);
-                    }
-                    if (hp <= 0) {
-                        tree->StartFalling(player->GetLookVector()); // 플레이어가 바라보는 방향으로 쓰러지도록 (또는 다른 방향)
-                        player->m_pGameFramework->AddItem("wood", 5); // 예시: 쓰러뜨리면 많이 획득
-                    }
-                }
-            }
+            CollisionUpdate(player, hitObject);
         }
         if (m_bAttackFinished) {
             return PlayerStateID::Idle;
@@ -565,8 +531,6 @@ public:
         std::cout << "Exiting AttackTree State\n";
     }
 };
-
-// --- AttackRockState --- (AttackTreeState 와 유사하게 구현, 애니메이션 인덱스만 다름)
 class AttackPickState : public IPlayerState { 
 private:
     bool m_bAttackFinished = false;
@@ -588,35 +552,7 @@ public:
             m_bAttackFinished = true;
 
             CGameObject* hitObject = player->FindObjectHitByAttack(); // 공격 판정 함수 필요
-            if (hitObject && hitObject->m_objectType == GameObjectType::Tree) {
-                auto tree = dynamic_cast<CTreeObject*>(hitObject);
-                if (tree && !tree->IsFalling() && !tree->HasFallen()) {
-                    int hp = tree->getHp();
-                    if (hp > 0) {
-                        switch (player->weaponType)
-                        {
-                        case WeaponType::Sword:
-                            hp -= 15;
-                            break;
-                        case WeaponType::Axe:
-                            hp -= 10;
-                            break;
-                        case WeaponType::Pick:
-                            hp -= 5;
-                            break;
-                        default:
-                            break;
-                        }
-                        tree->setHp(hp);
-
-                        player->m_pGameFramework->AddItem("wood", 1);
-                    }
-                    if (hp <= 0) {
-                        tree->StartFalling(player->GetLookVector()); // 플레이어가 바라보는 방향으로 쓰러지도록 (또는 다른 방향)
-                        player->m_pGameFramework->AddItem("wood", 5); // 예시: 쓰러뜨리면 많이 획득
-                    }
-                }
-            }
+            CollisionUpdate(player, hitObject);
         }
         if (m_bAttackFinished) {
             return PlayerStateID::Idle;
@@ -629,10 +565,6 @@ public:
     }
 };
 
-// --- AttackMonsterState --- (AttackTreeState 와 유사하게 구현, 애니메이션 인덱스만 다름)
-class AttackMonsterState : public IPlayerState { /* ... AttackTreeState 와 거의 동일하게 구현 ... */
-    // TODO: Update 함수 종료 시점에서 데미지 적용 로직 추가
-};
 
 
 
@@ -675,7 +607,6 @@ public:
     void Exit(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
     }
 };
-
 class JumpLoopState : public IPlayerState {
 public:
     PlayerStateID GetID() const override { return PlayerStateID::JumpLoop; }
@@ -717,7 +648,6 @@ public:
     void Exit(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
     }
 };
-
 class JumpEndState : public IPlayerState {
 private:
     bool m_bAnimFinished = false;
@@ -756,6 +686,186 @@ public:
     void Exit(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
     }
 };
+
+
+
+
+void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObject)
+{
+    if (!hitObject) return;
+    if (hitObject->m_objectType == GameObjectType::Tree) {
+        auto tree = dynamic_cast<CTreeObject*>(hitObject);
+        if (tree && !tree->IsFalling() && !tree->HasFallen()) {
+            int hp = tree->getHp();
+            if (hp > 0) {
+                switch (player->weaponType)
+                {
+                case WeaponType::Sword:
+                    hp -= 8;
+                    break;
+                case WeaponType::Axe:
+                    hp -= 10;
+                    break;
+                case WeaponType::Pick:
+                    hp -= 5;
+                    break;
+                default:
+                    break;
+                }
+                tree->setHp(hp);
+
+                CScene* pScene = player->m_pGameFramework->GetScene();
+
+                if (pScene) {
+                    XMFLOAT3 treePos = tree->GetPosition();
+
+                    XMFLOAT3 spawnOffsetLocal = XMFLOAT3(
+                        ((float)(rand() % 200) - 100.0f) * 0.1f, // X -10 ~ +10
+                        (rand() % 10) + 10.0f,                     // Y 10~19
+                        ((float)(rand() % 200) - 100.0f) * 0.1f  // Z -10 ~ +10
+                    );
+                    
+                    XMFLOAT3 spawnPos = Vector3::Add(spawnPos, spawnOffsetLocal);
+                    if (pScene->m_pTerrain) { // 지형 위에 스폰되도록 높이 보정
+                        spawnPos.y = pScene->m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + spawnOffsetLocal.y;
+                    }
+
+                    XMFLOAT3 ejectVelocity = XMFLOAT3(
+                        ((float)(rand() % 100) - 50.0f),
+                        ((float)(rand() % 60) + 50.0f),
+                        ((float)(rand() % 100) - 50.0f)
+                    );
+                    pScene->SpawnRock(spawnPos, ejectVelocity);
+                }
+            }
+            if (hp <= 0) {
+                tree->StartFalling(player->GetLookVector()); // 플레이어가 바라보는 방향으로 쓰러지도록 (또는 다른 방향)
+                player->m_pGameFramework->AddItem("wood", 5); // 예시: 쓰러뜨리면 많이 획득
+            }
+        }
+    }
+    else if (hitObject->m_objectType == GameObjectType::Rock) {
+        auto rock = dynamic_cast<CRockObject*>(hitObject);
+        if (rock) {
+            int hp = rock->getHp();
+            if (hp > 0) {
+                switch (player->weaponType)
+                {
+                case WeaponType::Sword:
+                    hp -= 8;
+                    break;
+                case WeaponType::Axe:
+                    hp -= 10;
+                    break;
+                case WeaponType::Pick:
+                    hp -= 5;
+                    break;
+                default:
+                    break;
+                }
+                rock->setHp(hp);
+
+                rock->SetScale(0.9f, 0.9f, 0.9f);
+
+                CScene* pScene = player->m_pGameFramework->GetScene();
+
+                if (pScene) {
+                    XMFLOAT3 treePos = rock->GetPosition();
+
+                    XMFLOAT3 spawnOffsetLocal = XMFLOAT3(
+                        ((float)(rand() % 200) - 100.0f) * 0.1f, // X -10 ~ +10
+                        (rand() % 10) + 10.0f,                     // Y 10~19
+                        ((float)(rand() % 200) - 100.0f) * 0.1f  // Z -10 ~ +10
+                    );
+
+                    XMFLOAT3 spawnPos = Vector3::Add(treePos, spawnOffsetLocal);
+                    if (pScene->m_pTerrain) { // 지형 위에 스폰되도록 높이 보정
+                        spawnPos.y = pScene->m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + spawnOffsetLocal.y;
+                    }
+
+                    XMFLOAT3 ejectVelocity = XMFLOAT3(
+                        ((float)(rand() % 100) - 50.0f),
+                        ((float)(rand() % 60) + 50.0f),
+                        ((float)(rand() % 100) - 50.0f)
+                    );
+                    pScene->SpawnRock(spawnPos, ejectVelocity);
+                }
+            }
+            if (hp <= 0) {
+                rock->SetScale(0.8f, 0.8f, 0.8f);
+                //player->m_pGameFramework->AddItem("rock", 5); // 예시: 쓰러뜨리면 많이 획득
+            }
+        }
+    }
+    else if (hitObject->m_objectType == GameObjectType::Cow || hitObject->m_objectType == GameObjectType::Pig) {
+        auto npc = dynamic_cast<CMonsterObject*>(hitObject);
+        if (npc->Gethp() <= 0);
+        if (npc->FSM_manager->GetInvincible());
+
+        switch (player->weaponType)
+        {
+        case WeaponType::Sword:
+            npc->Decreasehp(10);
+            break;
+        case WeaponType::Axe:
+            npc->Decreasehp(8);
+            break;
+        case WeaponType::Pick:
+            npc->Decreasehp(6);
+            break;
+        default:
+            break;
+        }
+
+        if (npc->Gethp() <= 0) {
+            player->m_pGameFramework->AddItem("pork", 2);
+        }
+        if (hitObject->FSM_manager) {
+            if (npc->Gethp() > 0) hitObject->FSM_manager->ChangeState(std::make_shared<NonAtkNPCRunAwayState>());
+            else hitObject->FSM_manager->ChangeState(std::make_shared<NonAtkNPCDieState>());
+            hitObject->FSM_manager->SetInvincible();
+        }
+    }
+
+    else if (hitObject->m_objectType != GameObjectType::Unknown && hitObject->m_objectType != GameObjectType::Cow && hitObject->m_objectType != GameObjectType::Pig &&
+        hitObject->m_objectType != GameObjectType::Rock && hitObject->m_objectType != GameObjectType::Tree && hitObject->m_objectType != GameObjectType::Player) {
+        auto npc = dynamic_cast<CMonsterObject*>(hitObject);
+        if (npc->Gethp() <= 0) return;
+        if (npc->FSM_manager->GetInvincible()) return;
+        switch (player->weaponType)
+        {
+        case WeaponType::Sword:
+            npc->Decreasehp(10);
+            break;
+        case WeaponType::Axe:
+            npc->Decreasehp(8);
+            break;
+        case WeaponType::Pick:
+            npc->Decreasehp(6);
+            break;
+        default:
+            break;
+        }
+
+
+        if (npc->Gethp() <= 0) {
+            player->Playerxp += 20;
+            if (player->Playerxp >= player->Totalxp) {
+                player->PlayerLevel++;
+                player->Playerxp = player->Playerxp - player->Totalxp;
+                player->Totalxp *= 2;
+                player->StatPoint += 5;
+            }
+        }
+
+
+        if (hitObject->FSM_manager) {
+            if (npc->Gethp() > 0) hitObject->FSM_manager->ChangeState(std::make_shared<AtkNPCHitState>());
+            else hitObject->FSM_manager->ChangeState(std::make_shared<AtkNPCDieState>());
+            hitObject->FSM_manager->SetInvincible();
+        }
+    }
+}
 
 // --- PlayerStateMachine 클래스 구현 ---
 
@@ -832,6 +942,7 @@ IPlayerState* PlayerStateMachine::GetState(PlayerStateID id) {
     }
     return nullptr; // 해당 ID의 상태를 찾지 못함
 }
+
 
 void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool forceImmediate) {
     

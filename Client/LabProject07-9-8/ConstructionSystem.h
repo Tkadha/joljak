@@ -12,7 +12,7 @@ public:
     void EnterBuildMode();
     void ExitBuildMode();
     void UpdatePreview(const XMFLOAT3& playerPos, const XMFLOAT3& forward);
-    void ConfirmPlacement(std::vector<CGameObject*>& sceneObjects);
+    void ConfirmPlacement();
     void SetSelectedBuilding(const std::string& name);
     void UpdatePreviewPosition(const CCamera* pCamera);
     XMFLOAT3 GetPreviewPosition() const { return m_xmf3PreviewPosition; }

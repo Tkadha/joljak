@@ -171,11 +171,11 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	m_pConstructionSystem = new CConstructionSystem();
 	m_pConstructionSystem->Init(m_pd3dDevice, m_pd3dCommandList, this, m_pScene);
-	/*
+	
 	auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
 	std::thread t(&CGameFramework::NerworkThread, this);
-	t.detach();*/
+	t.detach();
 	
 
 	//ChangeSwapChainState();
@@ -434,6 +434,7 @@ void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM
 		case WM_RBUTTONDOWN:
 			::SetCapture(hWnd);
 			::GetCursorPos(&m_ptOldCursorPos);
+		
 			break;
 		case WM_LBUTTONUP:
 		case WM_RBUTTONUP:
@@ -489,6 +490,12 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				break;
 			case 'K':
 				ShowFurnaceUI = !ShowFurnaceUI;
+				break;
+			case 'R':
+				BuildMode = false;
+				bPrevBuildMode = BuildMode;
+				m_pConstructionSystem->ConfirmPlacement();
+
 				break;
 			}
 			break;
@@ -840,7 +847,7 @@ void CGameFramework::ProcessInput()
 		
 
 		// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
-		UCHAR toggleKeys[] = { 'R' /*, 다른 키들 */ };
+		UCHAR toggleKeys[] = { 'R','1','2','3' /*, 다른 키들 */};
 		for (UCHAR key : toggleKeys)
 		{
 			if (pKeysBuffer[key] & 0xF0)
@@ -854,6 +861,21 @@ void CGameFramework::ProcessInput()
 					{
 						obbRender = toggleStates[key];
 					}
+
+					if (key == '1')
+					{
+						m_pPlayer->m_pSword->isRender = true;
+						m_pPlayer->m_pAxe->isRender = false;
+						m_pPlayer->weaponType = WeaponType::Sword;
+					}
+
+					if (key == '2')
+					{
+						m_pPlayer->m_pSword->isRender = false;
+						m_pPlayer->m_pAxe->isRender = true;
+						m_pPlayer->weaponType = WeaponType::Axe;
+					}
+
 					// 다른 키에 대한 처리 추가
 				}
 			}
@@ -863,6 +885,14 @@ void CGameFramework::ProcessInput()
 			}
 		}
 
+		for (int i = 0; i < 5; ++i)
+		{
+			if (GetAsyncKeyState('1' + i) & 0x8000)
+			{
+				m_SelectedHotbarIndex = i;
+				break;
+			}
+		}
 		// 카메라 모드에 따른 입력 처리 (기존 코드와 동일)
 		if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
 		{
@@ -1100,6 +1130,9 @@ void CGameFramework::FrameAdvance()
 
 		ImGui::PushID(i);
 
+		if (i == m_SelectedHotbarIndex)
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 1.0f, 0.0f, 0.5f)); // 노란색 반투명
+
 		if (!m_inventorySlots[i].IsEmpty())
 		{
 			// 버튼 먼저 생성 (테두리 유지)
@@ -1121,6 +1154,8 @@ void CGameFramework::FrameAdvance()
 		{
 			ImGui::Button(" ", ImVec2(SlotSize, SlotSize)); // 빈 슬롯은 그냥 테두리만
 		}
+		if (i == m_SelectedHotbarIndex)
+			ImGui::PopStyleColor();
 
 		ImGui::PopID();
 	}
@@ -1150,7 +1185,7 @@ void CGameFramework::FrameAdvance()
 	
 	ImGui::BeginGroup();
 	ImGui::AlignTextToFramePadding();
-	ImGui::Text("🟥"); // 체력 
+	ImGui::Text("Hp"); // 체력 
 	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
 	ImGui::ProgressBar(
 		(float)m_pPlayer->Playerhp / (float)m_pPlayer->Maxhp,
@@ -1163,7 +1198,7 @@ void CGameFramework::FrameAdvance()
 	ImGui::SameLine(0.0f, 50.0f); 
 	ImGui::BeginGroup();
 	ImGui::AlignTextToFramePadding();
-	ImGui::Text("🟦"); // 스태미너
+	ImGui::Text("Stamina"); // 스태미너
 	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.5f, 1.0f, 1.0f));
 	ImGui::ProgressBar(
 		(float)m_pPlayer->Playerstamina / (float)m_pPlayer->Maxstamina,
@@ -1176,7 +1211,7 @@ void CGameFramework::FrameAdvance()
 	
 	ImGui::BeginGroup();
 	ImGui::AlignTextToFramePadding();
-	ImGui::Text("🟨"); // 허기
+	ImGui::Text("Hunger"); // 허기
 	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
 	ImGui::ProgressBar(m_pPlayer->PlayerHunger, ImVec2(barWidth, barHeight));
 	ImGui::PopStyleColor();
@@ -1186,7 +1221,7 @@ void CGameFramework::FrameAdvance()
 
 	ImGui::BeginGroup();
 	ImGui::AlignTextToFramePadding();
-	ImGui::Text("🟪"); // 갈증
+	ImGui::Text("Thirst"); // 갈증
 	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 0.2f, 1.0f, 1.0f));
 	ImGui::ProgressBar(m_pPlayer->PlayerThirst, ImVec2(barWidth, barHeight));
 	ImGui::PopStyleColor();
@@ -1207,8 +1242,8 @@ void CGameFramework::FrameAdvance()
 			displaySize.y * 0.5f - invSize.y * 0.5f
 		);
 
-		ImGui::SetNextWindowPos(invPos);
-		ImGui::SetNextWindowSize(invSize);
+		ImGui::SetNextWindowPos(invPos, ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(invSize, ImGuiCond_FirstUseEver);
 		ImGui::Begin("Inventory", nullptr,
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoCollapse);
@@ -1316,7 +1351,7 @@ void CGameFramework::FrameAdvance()
 				ImGui::BeginDisabled(); ImGui::Button("+##atk"); ImGui::EndDisabled();
 			}
 
-			ImGui::BulletText("이동속도: %d", m_pPlayer->PlayerSpeed);
+			ImGui::BulletText("이동속도: %.1f", m_pPlayer->PlayerSpeed);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
 				if (ImGui::Button("+##speed")) { m_pPlayer->PlayerSpeed += 0.2f; m_pPlayer->StatPoint--; }
@@ -1324,7 +1359,7 @@ void CGameFramework::FrameAdvance()
 			else {
 				ImGui::BeginDisabled(); ImGui::Button("+##speed"); ImGui::EndDisabled();
 			}
-
+			ImGui::BulletText("xp: %d / %d", m_pPlayer->Playerxp, m_pPlayer->Totalxp);
 			ImGui::Spacing();
 			ImGui::Separator();
 			ImGui::Text("보유 포인트: %d", m_pPlayer->StatPoint);
@@ -1411,7 +1446,7 @@ void CGameFramework::FrameAdvance()
 
 		static int selected = -1;
 		const char* buildings[] = { "나무 벽", "나무 문", "나무 바닥", "계단" };
-		static bool bPrevBuildMode = false;
+		//static bool bPrevBuildMode = false;
 
 		if (BuildMode && !bPrevBuildMode)
 		{
