@@ -8,8 +8,8 @@
 
 short PORT = 8999; // 완성결과는 const 제외 하나의 포트가 왔다갔다 하는 형식
 const short GAME_PORT = 9000;
-//char SERVER_ADDR[] = "58.228.11.233";
-char SERVER_ADDR[] = "127.0.0.1";
+char SERVER_ADDR[] = "58.228.11.233";
+//char SERVER_ADDR[] = "127.0.0.1";
 
 void recv_callback(DWORD err, DWORD recv_size, LPWSAOVERLAPPED recv_over, DWORD sendflag)
 {
@@ -23,7 +23,7 @@ void recv_callback(DWORD err, DWORD recv_size, LPWSAOVERLAPPED recv_over, DWORD 
 	auto& nwManager = NetworkManager::GetInstance();
 	{ // 패킷 수신
 		int remain_data = recv_len + nwManager.server_s->m_prev_remain;
-		unsigned char packet_size = recv_buf[0];
+		int packet_size = recv_buf[0];
 		while (remain_data > 0 && packet_size <= remain_data) {
 			if (packet_size == 0) {
 				remain_data = 0;
@@ -35,6 +35,7 @@ void recv_callback(DWORD err, DWORD recv_size, LPWSAOVERLAPPED recv_over, DWORD 
 			// 다음 패킷 이동, 남은 데이터 갱신
 			recv_buf += packet_size;
 			remain_data -= packet_size;
+			packet_size = recv_buf[0];
 		}
 		// 남은 데이터 저장
 		nwManager.server_s->m_prev_remain = remain_data;
@@ -138,11 +139,15 @@ void NetworkManager::Process_Packet(char* packet)
 		}
 	}
 		break;
-	//case E_PACKET::E_P_POSITION:
-	default:
-	{
+	case E_PACKET::E_P_POSITION:
+	case E_PACKET::E_P_ROTATE:
+	case E_PACKET::E_P_INPUT:
+	case E_PACKET::E_P_LOGIN:
+	case E_PACKET::E_P_LOGOUT:
+
 		PushRecvQueue(packet, static_cast<short>(packet[0]));
-	}
+		break;
+	default:
 	break;
 	}
 }
