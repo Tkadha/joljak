@@ -189,12 +189,12 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		octree.insert(std::move(t_obj));
 	}
 
-	m_pPreviewPine = new CPineObject(
+	m_pPreviewPine = new CConstructionObject(
 		pd3dDevice, pd3dCommandList, m_pGameFramework);
 	m_pPreviewPine->SetPosition(XMFLOAT3(0, 0, 0));
 	
 	//auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-	m_pPreviewPine->SetScale(10, 15, 10);
+	m_pPreviewPine->SetScale(10, 10, 10);
 	
 	m_pPreviewPine->isRender = false;
 
@@ -682,7 +682,8 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		}
 	}
 
-	//if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
+
+	if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
 
 	//// 5.3. 일반 게임 오브젝트 렌더링
 	//for (auto& obj : m_vGameObjects) {
@@ -850,6 +851,13 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 
 				if (npc->Gethp() <= 0) {
 					m_pGameFramework->AddItem("pork", 2);
+					m_pPlayer->Playerxp += 10;
+					if (m_pPlayer->Playerxp >= m_pPlayer->Totalxp) {
+						m_pPlayer->PlayerLevel++;
+						m_pPlayer->Playerxp = m_pPlayer->Playerxp - m_pPlayer->Totalxp;
+						m_pPlayer->Totalxp *= 2;
+						m_pPlayer->StatPoint += 5;
+					}
 				}
 				if (obj->FSM_manager) {
 					if (npc->Gethp() > 0) obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCRunAwayState>());
@@ -862,7 +870,17 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 				auto npc = dynamic_cast<CMonsterObject*>(obj);
 				if (npc->Gethp() <= 0) continue;
 				if (npc->FSM_manager->GetInvincible()) continue;
-				npc->Decreasehp(pPlayer->PlayerAttack);				
+				npc->Decreasehp(pPlayer->PlayerAttack);		
+
+				if (npc->Gethp() <= 0) {
+					m_pPlayer->Playerxp += 20;
+					if (m_pPlayer->Playerxp >= m_pPlayer->Totalxp) {
+						m_pPlayer->PlayerLevel++;
+						m_pPlayer->Playerxp = m_pPlayer->Playerxp - m_pPlayer->Totalxp;
+						m_pPlayer->Totalxp *= 2;
+						m_pPlayer->StatPoint += 5;
+					}
+				}
 				if (obj->FSM_manager) {
 					if (npc->Gethp() > 0) obj->FSM_manager->ChangeState(std::make_shared<AtkNPCHitState>());
 					else obj->FSM_manager->ChangeState(std::make_shared<AtkNPCDieState>());

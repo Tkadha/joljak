@@ -522,7 +522,6 @@ public:
 class CConstructionObject : public CGameObject
 {
 public:
-	CConstructionObject();
-	virtual ~CConstructionObject();
-
+	CConstructionObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
+	virtual ~CConstructionObject() {}
 };

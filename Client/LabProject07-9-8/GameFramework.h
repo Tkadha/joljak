@@ -106,11 +106,12 @@ private:
 
 	int							m_nWndClientWidth;
 	int							m_nWndClientHeight;
-	int                         m_nSelectedHotbarIndex = 0;
+	int                         m_SelectedHotbarIndex = 0;
 	bool						ShowInventory = false;
 	bool						ShowCraftingUI = false; 
 	bool						BuildMode = false;
 	bool						ShowFurnaceUI = false;
+	bool					bPrevBuildMode = false;
 	int							selectedCraftItemIndex = -1;
 	CPineObject*				m_pPreviewObject = nullptr;
 	FurnaceSlot					furnaceSlot;
