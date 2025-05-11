@@ -1350,10 +1350,10 @@ void CGameFramework::FrameAdvance()
 
 		// 오른쪽: 플레이어 스탯
 		{
-			ImGui::Text("플레이어 레벨: %d", m_pPlayer->PlayerLevel);
-			ImGui::Text("스테이터스:");
+			ImGui::Text("LV: %d", m_pPlayer->PlayerLevel);
+			ImGui::Text("STATUS:");
 
-			ImGui::BulletText("체력: %d / %d", m_pPlayer->Playerhp, m_pPlayer->Maxhp);
+			ImGui::BulletText("HP: %d / %d", m_pPlayer->Playerhp, m_pPlayer->Maxhp);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
 				if (ImGui::Button("+##hp")) { m_pPlayer->Maxhp += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerhp += 10; }
@@ -1362,7 +1362,7 @@ void CGameFramework::FrameAdvance()
 				ImGui::BeginDisabled(); ImGui::Button("+##hp"); ImGui::EndDisabled();
 			}
 
-			ImGui::BulletText("스태미너: %d / %d", m_pPlayer->Playerstamina, m_pPlayer->Maxstamina);
+			ImGui::BulletText("STAMINA: %d / %d", m_pPlayer->Playerstamina, m_pPlayer->Maxstamina);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
 				if (ImGui::Button("+##stamina")) { m_pPlayer->Maxstamina += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerstamina += 10; }
@@ -1371,7 +1371,7 @@ void CGameFramework::FrameAdvance()
 				ImGui::BeginDisabled(); ImGui::Button("+##stamina"); ImGui::EndDisabled();
 			}
 
-			ImGui::BulletText("공격력: %d", m_pPlayer->PlayerAttack);
+			ImGui::BulletText("ATK: %d", m_pPlayer->PlayerAttack);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
 				if (ImGui::Button("+##atk")) { m_pPlayer->PlayerAttack += 1; m_pPlayer->StatPoint--; }
@@ -1380,7 +1380,7 @@ void CGameFramework::FrameAdvance()
 				ImGui::BeginDisabled(); ImGui::Button("+##atk"); ImGui::EndDisabled();
 			}
 
-			ImGui::BulletText("이동속도: %.1f", m_pPlayer->PlayerSpeed);
+			ImGui::BulletText("SPEED: %.1f", m_pPlayer->PlayerSpeed);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
 				if (ImGui::Button("+##speed")) { m_pPlayer->PlayerSpeed += 0.2f; m_pPlayer->StatPoint--; }
@@ -1388,10 +1388,10 @@ void CGameFramework::FrameAdvance()
 			else {
 				ImGui::BeginDisabled(); ImGui::Button("+##speed"); ImGui::EndDisabled();
 			}
-			ImGui::BulletText("xp: %d / %d", m_pPlayer->Playerxp, m_pPlayer->Totalxp);
+			ImGui::BulletText("XP: %d / %d", m_pPlayer->Playerxp, m_pPlayer->Totalxp);
 			ImGui::Spacing();
 			ImGui::Separator();
-			ImGui::Text("보유 포인트: %d", m_pPlayer->StatPoint);
+			ImGui::Text("STAT POINT: %d", m_pPlayer->StatPoint);
 		}
 
 		ImGui::Columns(1); // 열 정리
@@ -1420,7 +1420,7 @@ void CGameFramework::FrameAdvance()
 		ImGui::Columns(2, nullptr, false);
 
 		// 조합 가능한 아이템 리스트
-		ImGui::Text("제작 아이템");
+		ImGui::Text("CRAFT ITEM");
 		ImGui::Separator();
 
 		for (int i = 0; i < m_vecCraftableItems.size(); ++i)
@@ -1436,7 +1436,7 @@ void CGameFramework::FrameAdvance()
 		ImGui::NextColumn();
 
 		// ▶ 오른쪽: 필요한 재료 출력
-		ImGui::Text("필요 재료");
+		ImGui::Text("MATERIAL");
 		ImGui::Separator();
 
 		if (selectedCraftItemIndex >= 0 && selectedCraftItemIndex < m_vecCraftableItems.size())
@@ -1452,7 +1452,7 @@ void CGameFramework::FrameAdvance()
 			ImGui::Separator();
 			ImGui::Spacing();
 
-			if (ImGui::Button("조합하기", ImVec2(200, 50)))
+			if (ImGui::Button("CRAFT", ImVec2(200, 50)))
 			{
 				if (CanCraftItem())
 				{
@@ -1535,7 +1535,7 @@ void CGameFramework::FrameAdvance()
 
 		ImGui::Begin("Furnace", &ShowFurnaceUI, ImGuiWindowFlags_NoResize);
 
-		ImGui::Text("화로");
+		ImGui::Text("FURANCE");
 		ImGui::Separator();
 
 		ImGui::SetCursorPos(ImVec2(60, 80));
@@ -1555,7 +1555,7 @@ void CGameFramework::FrameAdvance()
 
 		// 🔥 연료 아이콘
 		ImGui::SetCursorPos(ImVec2(60, 200));
-		ImGui::Text("연료");
+		ImGui::Text("FUEL");
 
 		ImGui::SetCursorPos(ImVec2(60, 220));
 		ImGui::ProgressBar(furnaceSlot.fuelAmount / 100.0f, ImVec2(150, 20));
@@ -1601,7 +1601,7 @@ void CGameFramework::FrameAdvance()
 		else
 		{
 			ImGui::SetCursorPos(ImVec2(260, 150));
-			ImGui::Button("결과", slotVec);
+			ImGui::Button("RESULT", slotVec);
 		}
 
 		ImGui::End();

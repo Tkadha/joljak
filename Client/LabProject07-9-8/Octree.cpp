@@ -6,25 +6,25 @@ Octree::~Octree() {
         delete child;
 }
 
-// °´Ã¼ »ðÀÔ
+// ï¿½ï¿½Ã¼ ï¿½ï¿½ï¿½ï¿½
 void Octree::insert(std::unique_ptr<tree_obj> obj) {
-    // °´Ã¼°¡ ÇöÀç ³ëµå¿¡ ¼ÓÇÏÁö ¾ÊÀ¸¸é ¹«½Ã
+    // ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½å¿¡ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     if (!obj->isWithin(minBound, maxBound)) return;
 
-    // ÇÏÀ§ ³ëµå·Î ºÐÇÒµÇÁö ¾Ê¾Ò°í, °´Ã¼ ¼ö°¡ Á¦ÇÑÀ» ÃÊ°úÇÏÁö ¾ÊÀ¸¸é Ãß°¡
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½ ï¿½Ê¾Ò°ï¿½, ï¿½ï¿½Ã¼ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê°ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½
     if (objects.size() < maxObjects || depth >= maxDepth) {
         objects.push_back(std::move(obj));
         return;
     }
 
-    // Ã³À½À¸·Î ÇÏÀ§ ³ëµå¸¦ »ý¼º
+    // Ã³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½å¸¦ ï¿½ï¿½ï¿½ï¿½
     if (children[0] == nullptr) subdivide();
 
-    // ÇÏÀ§ ³ëµå¿¡ °´Ã¼ »ðÀÔ ½Ãµµ
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½å¿¡ ï¿½ï¿½Ã¼ ï¿½ï¿½ï¿½ï¿½ ï¿½Ãµï¿½
     for (auto& child : children) {
         if (obj->isWithin(child->minBound, child->maxBound)) {
             child->insert(std::move(obj));
-            return;  // ¿Ã¹Ù¸¥ ÇÏÀ§ ³ëµå¿¡ »ðÀÔµÇ¸é Á¾·á
+            return;  // ï¿½Ã¹Ù¸ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½å¿¡ ï¿½ï¿½ï¿½ÔµÇ¸ï¿½ ï¿½ï¿½ï¿½ï¿½
         }
     }
 }
@@ -38,7 +38,7 @@ bool Octree::remove(int id)
         objects.erase(it);
         return true;
     }
-    // ÀÚ½Ä ³ëµå¿¡¼­ Á¦°Å ½Ãµµ
+    // ï¿½Ú½ï¿½ ï¿½ï¿½å¿¡ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ãµï¿½
     for (auto& child : children) {
         if (child != nullptr && child->remove(id)) {
             return true;
@@ -54,7 +54,7 @@ void Octree::update(int id, const XMFLOAT3& newpos)
             (*it)->position = newpos;
             if ((*it)->isWithin(minBound, maxBound)) return;
 
-            // °´Ã¼¸¦ ÀÌµ¿ ÈÄ Á¦°Å ¹× Àç»ðÀÔ
+            // ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½Ìµï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½
             std::unique_ptr<tree_obj> temp = std::move(*it);
             insert(std::move(temp));
             return;
@@ -68,12 +68,12 @@ void Octree::update(int id, const XMFLOAT3& newpos)
     }
 }
 
-// Æ¯Á¤ ¹üÀ§ ³» °´Ã¼ °Ë»ö
+// Æ¯ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½Ã¼ ï¿½Ë»ï¿½
 void Octree::query(const tree_obj& object, const XMFLOAT3& distance, std::vector<tree_obj*>& results) {
-    // ÇöÀç ³ëµå°¡ ¹üÀ§¿Í ±³Â÷ÇÏÁö ¾ÊÀ¸¸é Á¾·á
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½å°¡ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     if (!intersects(object.Sub_Pos_return(distance), object.Add_Pos_return(distance))) return;
 
-    // ÇöÀç ³ëµåÀÇ °´Ã¼ Ãß°¡
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ã¼ ï¿½ß°ï¿½
     for (auto& obj : objects) {
         if (obj->u_id == object.u_id) continue;
         if (obj->isWithin(object.Sub_Pos_return(distance), object.Add_Pos_return(distance))) {
@@ -81,7 +81,7 @@ void Octree::query(const tree_obj& object, const XMFLOAT3& distance, std::vector
         }
     }
 
-    // ÇÏÀ§ ³ëµå¿¡ ´ëÇØ °Ë»ö
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½å¿¡ ï¿½ï¿½ï¿½ï¿½ ï¿½Ë»ï¿½
     for (auto& child : children) {
         if (child != nullptr) {
             child->query(object, distance, results);
@@ -104,7 +104,7 @@ void Octree::subdivide() {
     children[7] = new Octree(center, maxBound, depth + 1);
 }
 
-// ÇöÀç ³ëµå°¡ ¹üÀ§¿Í ±³Â÷ÇÏ´ÂÁö È®ÀÎ
+// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½å°¡ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ï¿½ï¿½ È®ï¿½ï¿½
 bool Octree::intersects(const XMFLOAT3& queryMin, const XMFLOAT3& queryMax) const {
     return !(queryMax.x < minBound.x || queryMin.x > maxBound.x ||
         queryMax.y < minBound.y || queryMin.y > maxBound.y ||
