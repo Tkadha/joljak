@@ -787,11 +787,24 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
                         ((float)(rand() % 60) + 50.0f),
                         ((float)(rand() % 100) - 50.0f)
                     );
-                    pScene->SpawnRock(spawnPos, ejectVelocity);
+
+                    player->m_pGameFramework->AddItem("stone", 1);                   
+                    //pScene->SpawnRock(spawnPos, ejectVelocity);
                 }
             }
             if (hp <= 0) {
-                rock->EraseRock();
+
+                int randValue = rand() % 100; // 0 ~ 99
+                if (randValue < 50) {
+                    player->m_pGameFramework->AddItem("stone", 3);
+                }
+                else if (randValue < 75) {
+                    player->m_pGameFramework->AddItem("coal", 1);
+                }
+                else {
+                    player->m_pGameFramework->AddItem("iron_material", 1);
+                }
+                //rock->EraseRock();
                 //player->m_pGameFramework->AddItem("rock", 5); // øπΩ√: æ≤∑Ø∂ﬂ∏Æ∏È ∏π¿Ã »πµÊ
             }
         }

@@ -27,6 +27,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 
 	::LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	::LoadString(hInstance, IDC_LABPROJECT0798, szWindowClass, MAX_LOADSTRING);
+	_tcscpy_s(szTitle, MAX_LOADSTRING, _T("Survival Odyssey"));
 	MyRegisterClass(hInstance);
 
 	if (!InitInstance(hInstance, nCmdShow)) return(FALSE);

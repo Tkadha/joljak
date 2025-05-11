@@ -1776,7 +1776,7 @@ CRockClusterCObject::CRockClusterCObject(ID3D12Device* pd3dDevice, ID3D12Graphic
 CCliffFObject::CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/Cliff_F_LOD0.bin", "rb");
+	::fopen_s(&pInFile, "Model/Cliff_A_LOD0.bin", "rb");
 	::rewind(pInFile);
 
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(

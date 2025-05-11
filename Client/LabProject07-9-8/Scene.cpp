@@ -189,6 +189,21 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		octree.insert(std::move(t_obj));
 	}
 
+
+	nRockObjects = 20;	objectMinSize = 30, objectMaxSize = 50;
+	for (int i = 0; i < nRockObjects; ++i) {
+		CGameObject* gameObj = new CCliffFObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
+
+
 	m_pPreviewPine = new CConstructionObject(
 		pd3dDevice, pd3dCommandList, m_pGameFramework);
 	m_pPreviewPine->SetPosition(XMFLOAT3(0, 0, 0));
@@ -216,6 +231,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 	int nBushObject = 100;
+	objectMinSize = 10, objectMaxSize = 15;
 	for (int i = 0; i < nBushObject; ++i) {
 		CGameObject* gameObj = new CBushAObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
