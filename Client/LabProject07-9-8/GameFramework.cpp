@@ -1306,18 +1306,34 @@ void CGameFramework::FrameAdvance()
 				// 🔁 클릭 시 교환 처리
 				if (ImGui::IsItemClicked())
 				{
-					if (selectedSlotIndex == -1)
+					if (ShowFurnaceUI)  // 🔥 화로 UI가 열려 있는 경우
 					{
-						selectedSlotIndex = i;
+						Item* item = m_inventorySlots[i].item.get();
+						if (!item) return;
+
+						std::string name = item->GetName();
+
+						if (name == "coal" || name == "wood") {
+							furnaceSlot.fuelAmount += 25.0f;
+							if (furnaceSlot.fuelAmount > 100.0f) furnaceSlot.fuelAmount = 100.0f;
+							m_inventorySlots[i].quantity--;
+							if (m_inventorySlots[i].quantity <= 0) m_inventorySlots[i].item = nullptr;
+						}
+						else if (name == "pork" || name == "iron_material") {
+							furnaceSlot.material = item;
+							m_inventorySlots[i].quantity--;
+							if (m_inventorySlots[i].quantity <= 0) m_inventorySlots[i].item = nullptr;
+						}
 					}
-					else if (selectedSlotIndex != i)
+					else  // 🔄 화로 UI가 닫혀 있는 경우: 인벤토리 슬롯 교환
 					{
-						std::swap(m_inventorySlots[selectedSlotIndex], m_inventorySlots[i]);
-						selectedSlotIndex = -1;
-					}
-					else
-					{
-						selectedSlotIndex = -1;
+						if (selectedSlotIndex == -1) {
+							selectedSlotIndex = i;
+						}
+						else {
+							std::swap(m_inventorySlots[selectedSlotIndex], m_inventorySlots[i]);
+							selectedSlotIndex = -1;
+						}
 					}
 				}
 

@@ -12,9 +12,9 @@ struct VS_CB_CAMERA_INFO
 	XMFLOAT4X4						m_xmf4x4View;
 	XMFLOAT4X4						m_xmf4x4Projection;
 	XMFLOAT3						m_xmf3Position;
-	DirectX::XMFLOAT4 FogColor;    // ¾È°³ »ö»ó
-	float FogStart;                // ¾È°³ ½ÃÀÛ °Å¸®
-	float FogRange;                // ¾È°³ ¹üÀ§
+	DirectX::XMFLOAT4 FogColor;    // ï¿½È°ï¿½ ï¿½ï¿½ï¿½ï¿½
+	float FogStart;                // ï¿½È°ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Å¸ï¿½
+	float FogRange;                // ï¿½È°ï¿½ ï¿½ï¿½ï¿½ï¿½
 
 };
 
@@ -49,7 +49,7 @@ protected:
 	ID3D12Resource					*m_pd3dcbCamera = NULL;
 	VS_CB_CAMERA_INFO				*m_pcbMappedCamera = NULL;
 
-	DirectX::XMFLOAT4 m_xmf4FogColor = DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f); // ¾È°³ »ö»ó
+	DirectX::XMFLOAT4 m_xmf4FogColor = DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f); // ï¿½È°ï¿½ ï¿½ï¿½ï¿½ï¿½
 	float m_fFogStart = 5.0f;
 	float m_fFogRange = 2000.0f;
 
