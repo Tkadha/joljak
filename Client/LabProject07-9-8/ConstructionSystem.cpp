@@ -47,7 +47,7 @@ void CConstructionSystem::UpdatePreviewPosition(const CCamera* pCamera)
     m_xmf3PreviewPosition = previewPos;
 
     m_pPreviewObject->SetPosition(previewPos);
-    m_pScene->octree.update(m_pPreviewObject->m_treecount, previewPos);
+    //m_pScene->octree.update(m_pPreviewObject->m_treecount, previewPos);
 
 }
 

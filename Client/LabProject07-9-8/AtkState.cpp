@@ -142,7 +142,7 @@ void AtkNPCMoveState::Execute(std::shared_ptr<CGameObject> npc)
 		npc->Rotate(0.f, 0.25f, 0.f);
 		break;
 	}
-	npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
+	//npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
 
 	// standing과 동일하게 위치 기반으로 일정 범위 내면 chase 상태 변경
 	if (npc->m_pScene) {
@@ -295,7 +295,7 @@ void AtkNPCChaseState::Execute(std::shared_ptr<CGameObject> npc)
 			// 앞으로 이동 (현재 Look 벡터 방향으로)
 			npc->MoveForward(0.4f);
 
-			npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
+			//npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
 
 			// 추격 중 멈춤 조건 (예: 플레이어가 너무 멀리 벗어남)
 			float loseRange = 700.f;
@@ -432,7 +432,7 @@ void AtkNPCRespawnState::Execute(std::shared_ptr<CGameObject> npc)
 		if (y < fHeight)y = fHeight;
 
 		npc->SetPosition(x, y, z);
-		npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
+		//npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
 
 		// 상태 전환
 		npc->FSM_manager->ChangeState(std::make_shared<AtkNPCStandingState>());
@@ -488,7 +488,7 @@ void AtkNPCAttackState::Execute(std::shared_ptr<CGameObject> npc)
 	if (exec_ms < 0.25 * 1000.f) {
 		npc->MoveForward(1.5f);
 	}
-	npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
+	//npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
 
 	auto p_info = npc->m_pScene->GetPlayerInfo();
 	if (p_info) {
@@ -576,7 +576,7 @@ void AtkNPCHitState::Execute(std::shared_ptr<CGameObject> npc)
 		npc->MoveForward(1.5f);
 		npc->Rotate(0.f, 180.f, 0.f);
 	}
-	npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
+	//npc->m_pScene->octree.update(npc->m_treecount, npc->GetPosition());
 
 }
 
