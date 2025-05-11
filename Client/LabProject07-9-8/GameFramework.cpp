@@ -1253,60 +1253,71 @@ void CGameFramework::FrameAdvance()
 
 		// 왼쪽: 인벤토리 슬롯
 		{
+			static int selectedSlotIndex = -1;
+
 			for (int i = 0; i < m_inventorySlots.size(); ++i)
 			{
 				ImGui::PushID(i);
 
+				bool isClicked = false;
+
+				ImVec2 pos = ImGui::GetCursorScreenPos();
+				ImGui::Button(" ", ImVec2(slotSize, slotSize)); // 버튼만 깔아줌 (배경 유지용)
+
 				if (!m_inventorySlots[i].IsEmpty())
 				{
+					// 아이콘 출력
 					Item* item = m_inventorySlots[i].item.get();
 					ImTextureID icon = item->GetIconHandle();
-
 					if (icon)
 					{
-						ImGui::Image(icon, ImVec2(slotSize, slotSize));
+						ImGui::GetWindowDrawList()->AddImage(
+							icon,
+							pos,
+							ImVec2(pos.x + slotSize, pos.y + slotSize)
+						);
+					}
 
-						// 아이템 수량 표시
-						ImVec2 min = ImGui::GetItemRectMin();
-						ImVec2 max = ImGui::GetItemRectMax();
-						ImVec2 textPos = ImVec2(min.x + 2, max.y - 18);
-						ImGui::GetWindowDrawList()->AddText(textPos, IM_COL32_WHITE,
-							std::to_string(m_inventorySlots[i].quantity).c_str());
+					// 수량 텍스트 표시
+					ImVec2 min = pos;
+					ImVec2 max = ImVec2(pos.x + slotSize, pos.y + slotSize);
+					ImVec2 textPos = ImVec2(min.x + 2, max.y - 18);
+					ImGui::GetWindowDrawList()->AddText(
+						textPos,
+						IM_COL32_WHITE,
+						std::to_string(m_inventorySlots[i].quantity).c_str()
+					);
+				}
+
+				// ✅ 선택 테두리 강조
+				if (i == selectedSlotIndex)
+				{
+					ImGui::GetWindowDrawList()->AddRect(
+						pos,
+						ImVec2(pos.x + slotSize, pos.y + slotSize),
+						IM_COL32(255, 255, 0, 255), // 노란색
+						0.0f,
+						0,
+						2.0f
+					);
+				}
+
+				// 🔁 클릭 시 교환 처리
+				if (ImGui::IsItemClicked())
+				{
+					if (selectedSlotIndex == -1)
+					{
+						selectedSlotIndex = i;
+					}
+					else if (selectedSlotIndex != i)
+					{
+						std::swap(m_inventorySlots[selectedSlotIndex], m_inventorySlots[i]);
+						selectedSlotIndex = -1;
 					}
 					else
 					{
-						std::string label = item->GetName() + " x" + std::to_string(m_inventorySlots[i].quantity);
-						ImGui::Button(label.c_str(), ImVec2(slotSize, slotSize));
+						selectedSlotIndex = -1;
 					}
-
-					// 🔽 화로창이 열려 있을 경우, 클릭 시 자동 배정
-					if (ShowFurnaceUI && ImGui::IsItemClicked())
-					{
-						std::string name = item->GetName();
-
-						if (name == "coal" || name == "wood") {
-							furnaceSlot.fuelAmount += 25.0f; // 연료 게이지 증가량
-							if (furnaceSlot.fuelAmount > 100.0f)
-								furnaceSlot.fuelAmount = 100.0f;
-							m_inventorySlots[i].quantity--;
-							if (m_inventorySlots[i].quantity <= 0)
-							{
-								m_inventorySlots[i].item = nullptr;
-							}
-						}
-						else if (name == "pork" || name == "iron_material") {
-							furnaceSlot.material = item;
-							m_inventorySlots[i].quantity--;
-							if (m_inventorySlots[i].quantity <= 0)
-							{
-								m_inventorySlots[i].item = nullptr;
-							}
-						}
-					}
-				}
-				else
-				{
-					ImGui::Button(" ", ImVec2(slotSize, slotSize));
 				}
 
 				ImGui::PopID();
@@ -1314,6 +1325,7 @@ void CGameFramework::FrameAdvance()
 				if ((i + 1) % inventoryCols != 0)
 					ImGui::SameLine(0.0f, spacing);
 			}
+
 
 		}
 

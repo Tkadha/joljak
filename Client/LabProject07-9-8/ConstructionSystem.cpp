@@ -39,11 +39,11 @@ void CConstructionSystem::UpdatePreviewPosition(const CCamera* pCamera)
 
     XMVECTOR vCamPos = XMLoadFloat3(&camPos);
     XMVECTOR vCamLook = XMLoadFloat3(&camLook);
-    XMVECTOR vTarget = XMVectorAdd(vCamPos, XMVectorScale(vCamLook, 300.f));
+    XMVECTOR vTarget = XMVectorAdd(vCamPos, XMVectorScale(vCamLook, 100.f));
 
 
     XMStoreFloat3(&previewPos, vTarget);
-    previewPos.y += 40.f;
+    //previewPos.y += 40.f;
     m_xmf3PreviewPosition = previewPos;
 
     m_pPreviewObject->SetPosition(previewPos);
