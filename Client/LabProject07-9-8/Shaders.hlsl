@@ -226,12 +226,24 @@ struct VS_SKYBOX_CUBEMAP_OUTPUT
 
 VS_SKYBOX_CUBEMAP_OUTPUT VSSkyBox(VS_SKYBOX_CUBEMAP_INPUT input)
 {
-	VS_SKYBOX_CUBEMAP_OUTPUT output;
+    VS_SKYBOX_CUBEMAP_OUTPUT output;
 
-	output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
-	output.positionL = input.position;
+    // 뷰 행렬에서 이동 성분 제거 (4행 1,2,3열을 0으로)
+    float4x4 matViewNoTranslation = gmtxView;
+    matViewNoTranslation._41_42_43 = float3(0.0f, 0.0f, 0.0f); // 또는 _m30 = _m31 = _m32 = 0.0f;
 
-	return(output);
+    // 스카이박스는 보통 월드 변환이 필요 없으므로 gmtxGameObject는 곱하지 않거나 항등 행렬 사용
+    // float4 worldPos = float4(input.position, 1.0f); // 월드 변환 필요 시
+    float4 viewPos = mul(float4(input.position, 1.0f), matViewNoTranslation);
+    output.position = mul(viewPos, gmtxProjection);
+
+    // Z 값을 W와 같게 만들어 깊이 버퍼의 최대 깊이(1.0)에 위치하도록 함
+    // 이렇게 하면 깊이 테스트 시 가장 뒤에 그려지게 할 수 있음
+    output.position.z = output.position.w;
+
+    output.positionL = input.position; // 샘플링 좌표는 로컬 위치 그대로 사용
+
+    return (output);
 }
 
 TextureCube gtxtSkyCubeTexture : register(t13);
@@ -242,4 +254,118 @@ float4 PSSkyBox(VS_SKYBOX_CUBEMAP_OUTPUT input) : SV_TARGET
 	float4 cColor = gtxtSkyCubeTexture.Sample(gssClamp, input.positionL);
 
 	return(cColor);
+}	
+
+
+// 인스턴싱
+struct VS_INSTANCING_INPUT
+{
+    float3 position : POSITION;
+    float2 uv : TEXCOORD;
+    float3 normal : NORMAL;
+    float3 tangent : TANGENT;
+    float3 bitangent : BITANGENT;
+    float4x4 instanceTransform : INSTANCE_TRANSFORM; // 인스턴스별 변환 행렬
+};
+
+struct VS_INSTANCING_OUTPUT
+{
+    float4 position : SV_POSITION;
+    float3 positionW : POSITION;
+    float3 normalW : NORMAL;
+    float3 tangentW : TANGENT;
+    float3 bitangentW : BITANGENT;
+    float2 uv : TEXCOORD;
+};
+
+VS_INSTANCING_OUTPUT VSInstancing(VS_INSTANCING_INPUT input)
+{
+    VS_INSTANCING_OUTPUT output;
+
+    // 인스턴스별 변환 행렬을 적용
+    float4x4 worldMatrix = input.instanceTransform;
+    output.positionW = mul(float4(input.position, 1.0f), worldMatrix).xyz;
+    output.normalW = mul(input.normal, (float3x3) worldMatrix);
+    output.tangentW = mul(input.tangent, (float3x3) worldMatrix);
+    output.bitangentW = mul(input.bitangent, (float3x3) worldMatrix);
+    output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
+    output.uv = input.uv;
+
+    return output;
+}
+
+float4 PSInstancing(VS_INSTANCING_OUTPUT input) : SV_TARGET
+{
+    float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_ALBEDO_MAP)
+        cAlbedoColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
+    float4 cSpecularColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_SPECULAR_MAP)
+        cSpecularColor = gtxtSpecularTexture.Sample(gssWrap, input.uv);
+    float4 cNormalColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_NORMAL_MAP)
+        cNormalColor = gtxtNormalTexture.Sample(gssWrap, input.uv);
+    float4 cMetallicColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_METALLIC_MAP)
+        cMetallicColor = gtxtMetallicTexture.Sample(gssWrap, input.uv);
+    float4 cEmissionColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_EMISSION_MAP)
+        cEmissionColor = gtxtEmissionTexture.Sample(gssWrap, input.uv);
+
+    float3 normalW;
+    float4 cColor = cAlbedoColor + cSpecularColor + cMetallicColor + cEmissionColor;
+    if (gnTexturesMask & MATERIAL_NORMAL_MAP)
+    {
+        float3x3 TBN = float3x3(normalize(input.tangentW), normalize(input.bitangentW), normalize(input.normalW));
+        float3 vNormal = normalize(cNormalColor.rgb * 2.0f - 1.0f); //[0, 1] → [-1, 1]
+        normalW = normalize(mul(vNormal, TBN));
+    }
+    else
+    {
+        normalW = normalize(input.normalW);
+    }
+    float4 cIllumination = Lighting(input.positionW, normalW);
+    return (lerp(cColor, cIllumination, 0.5f));
+}
+
+
+
+// ObbShader.hlsl
+
+// 상수 버퍼 (월드, 뷰, 투영 행렬)
+cbuffer cbTransform : register(b0)
+{
+    float4x4 gWorld;
+    float4x4 gView;
+    float4x4 gProjection;
+};
+
+// 버텍스 셰이더 입력
+struct VS_OBBINPUT
+{
+    float3 position : POSITION;
+};
+
+// 버텍스 셰이더 출력
+struct VS_OBBOUTPUT
+{
+    float4 position : SV_POSITION;
+};
+
+// 버텍스 셰이더
+VS_OBBOUTPUT VSOBB(VS_OBBINPUT input)
+{
+    VS_OBBOUTPUT output;
+    float4 pos = float4(input.position, 1.0f);
+    pos = mul(pos, gWorld);
+    pos = mul(pos, gView);
+    pos = mul(pos, gProjection);
+    output.position = pos;
+    return output;
+}
+
+// 픽셀 셰이더
+float4 PSOBB(VS_OBBOUTPUT input) : SV_TARGET
+{
+    return float4(1.0f, 0.0f, 0.0f, 1.0f); // 빨간색 선
 }

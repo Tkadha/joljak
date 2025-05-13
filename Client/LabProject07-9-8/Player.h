@@ -9,6 +9,14 @@
 
 #include "Object.h"
 #include "Camera.h"
+#include <chrono>
+#include "PlayerStateMachine.h" 
+
+enum class WeaponType : int {
+	Sword,
+	Axe,
+	Pick
+};
 
 class CPlayer : public CGameObject
 {
@@ -33,12 +41,41 @@ protected:
 	LPVOID						m_pPlayerUpdatedContext = NULL;
 	LPVOID						m_pCameraUpdatedContext = NULL;
 
+	BoundingOrientedBox playerObb;
+	XMFLOAT3 playerSize = XMFLOAT3(4.0f, 4.0f, 4.0f); // 실제 크기의 반
+	XMFLOAT4 playerRotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+
 	CCamera						*m_pCamera = NULL;
 
-public:
-	CPlayer();
-	virtual ~CPlayer();
 
+public:
+	PlayerStateMachine* m_pStateMachine = nullptr;
+
+
+	CPlayer(CGameFramework* pGameFramework);
+	virtual ~CPlayer();
+	bool					    checkmove = false;
+	float PlayerHunger = 1.0f;
+	float PlayerThirst = 1.0f;
+	int PlayerLevel = 1;
+	int Playerhp = 300;
+	int Maxhp = 300;
+	int Playerstamina = 150;
+	int Maxstamina = 150;
+	int StatPoint = 5;
+	int PlayerAttack = 10;
+	float PlayerSpeed = 10.0f;
+	int Playerxp = 0;
+	int Totalxp = 20;
+	bool invincibility = false;
+	std::chrono::time_point<std::chrono::system_clock> starttime; // 무적 시작시간
+
+	WeaponType weaponType;
+
+	CGameObject* m_pSword;
+	CGameObject* m_pAxe;
+	CGameObject* m_pPick;
+	
 	XMFLOAT3 GetPosition() { return(m_xmf3Position); }
 	XMFLOAT3 GetLookVector() { return(m_xmf3Look); }
 	XMFLOAT3 GetUpVector() { return(m_xmf3Up); }
@@ -61,8 +98,8 @@ public:
 	CCamera *GetCamera() { return(m_pCamera); }
 	void SetCamera(CCamera *pCamera) { m_pCamera = pCamera; }
 
-	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false);
-	void Move(const XMFLOAT3& xmf3Shift, bool bVelocity = false);
+	virtual void Move(DWORD nDirection, float fDistance, bool bVelocity = false);
+	virtual void Move(const XMFLOAT3& xmf3Shift, bool bVelocity = false);
 	void Move(float fxOffset = 0.0f, float fyOffset = 0.0f, float fzOffset = 0.0f);
 	void Rotate(float x, float y, float z);
 
@@ -83,14 +120,38 @@ public:
 	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed) { return(NULL); }
 	virtual void OnPrepareRender();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
+	//virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, CCamera* pCamera = NULL);
 
 	virtual void keyInput(UCHAR* key) {};
+
+	bool CheckCollisionOBB(CGameObject* other);
+	//void SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
+	void UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
+
+	// 장비
+	CGameObject* AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework);
+	CGameObject* AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate, XMFLOAT3 scale);
+	CGameObject* FindFrame(char* framename);
+
+
+	void PerformActionInteractionCheck();
+
+	void SetInvincibility() {
+		if (invincibility) invincibility = false;
+		else {
+			invincibility = true;
+			starttime = std::chrono::system_clock::now();
+		}
+	}
+	void DecreaseHp(int value) { Playerhp -= value; }
+
+	const PlayerInputData& GetStateMachineInput() const;
 };
 
 class CAirplanePlayer : public CPlayer
 {
 public:
-	CAirplanePlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext=NULL);
+	CAirplanePlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CGameFramework* pGameFramework, void *pContext=NULL);
 	virtual ~CAirplanePlayer();
 
 	CGameObject					*m_pMainRotorFrame = NULL;
@@ -118,7 +179,7 @@ public:
 class CTerrainPlayer : public CPlayer
 {
 public:
-	CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext=NULL);
+	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pContext, CGameFramework* pGameFramework);
 	virtual ~CTerrainPlayer();
 
 public:
@@ -127,12 +188,16 @@ public:
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
 	virtual void OnCameraUpdateCallback(float fTimeElapsed);
 
-	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false);
-
+	//virtual void Move(DWORD nDirection, float fDistance, bool bVelocity = false);
+	
 	virtual void Update(float fTimeElapsed);
 
 	int nAni{};
 	BOOL bAction = false;
 	void keyInput(UCHAR* key);
+
+
+	CGameObject* FindObjectHitByAttack();
+	
 };
 

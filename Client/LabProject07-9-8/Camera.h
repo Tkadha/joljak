@@ -5,12 +5,17 @@
 #define FIRST_PERSON_CAMERA			0x01
 #define SPACESHIP_CAMERA			0x02
 #define THIRD_PERSON_CAMERA			0x03
+#define TOP_VIEW_CAMERA 0x04
 
 struct VS_CB_CAMERA_INFO
 {
 	XMFLOAT4X4						m_xmf4x4View;
 	XMFLOAT4X4						m_xmf4x4Projection;
 	XMFLOAT3						m_xmf3Position;
+	DirectX::XMFLOAT4 FogColor;    // �Ȱ� ����
+	float FogStart;                // �Ȱ� ���� �Ÿ�
+	float FogRange;                // �Ȱ� ����
+
 };
 
 class CPlayer;
@@ -44,6 +49,10 @@ protected:
 	ID3D12Resource					*m_pd3dcbCamera = NULL;
 	VS_CB_CAMERA_INFO				*m_pcbMappedCamera = NULL;
 
+	DirectX::XMFLOAT4 m_xmf4FogColor = DirectX::XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f); // �Ȱ� ����
+	float m_fFogStart = 5.0f;
+	float m_fFogRange = 2000.0f;
+
 public:
 	CCamera();
 	CCamera(CCamera *pCamera);
@@ -72,13 +81,15 @@ public:
 
 	void SetPosition(XMFLOAT3 xmf3Position) { m_xmf3Position = xmf3Position; }
 	XMFLOAT3& GetPosition() { return(m_xmf3Position); }
-
+	XMFLOAT3 GetPosition() const { return m_xmf3Position; }
+	
 	void SetLookAtPosition(XMFLOAT3 xmf3LookAtWorld) { m_xmf3LookAtWorld = xmf3LookAtWorld; }
 	XMFLOAT3& GetLookAtPosition() { return(m_xmf3LookAtWorld); }
 
 	XMFLOAT3& GetRightVector() { return(m_xmf3Right); }
 	XMFLOAT3& GetUpVector() { return(m_xmf3Up); }
 	XMFLOAT3& GetLookVector() { return(m_xmf3Look); }
+	XMFLOAT3 GetLookVector() const { return m_xmf3Look; }
 
 	float& GetPitch() { return(m_fPitch); }
 	float& GetRoll() { return(m_fRoll); }
@@ -100,6 +111,8 @@ public:
 	virtual void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f) { }
 	virtual void Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed) { }
 	virtual void SetLookAt(XMFLOAT3& xmf3LookAt) { }
+
+	ID3D12Resource* GetCameraConstantBuffer() const { return m_pd3dcbCamera; } // ���� ������ �߰�
 };
 
 class CSpaceShipCamera : public CCamera
@@ -128,5 +141,6 @@ public:
 
 	virtual void Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed);
 	virtual void SetLookAt(XMFLOAT3& vLookAt);
+	virtual void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f);
 };
 

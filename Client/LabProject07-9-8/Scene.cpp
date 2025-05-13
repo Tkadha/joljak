@@ -4,20 +4,13 @@
 
 #include "stdafx.h"
 #include "Scene.h"
+#include "GameFramework.h"
 
-ID3D12DescriptorHeap *CScene::m_pd3dCbvSrvDescriptorHeap = NULL;
+#include "NonAtkState.h"
+#include "AtkState.h"
 
-D3D12_CPU_DESCRIPTOR_HANDLE	CScene::m_d3dCbvCPUDescriptorStartHandle;
-D3D12_GPU_DESCRIPTOR_HANDLE	CScene::m_d3dCbvGPUDescriptorStartHandle;
-D3D12_CPU_DESCRIPTOR_HANDLE	CScene::m_d3dSrvCPUDescriptorStartHandle;
-D3D12_GPU_DESCRIPTOR_HANDLE	CScene::m_d3dSrvGPUDescriptorStartHandle;
 
-D3D12_CPU_DESCRIPTOR_HANDLE	CScene::m_d3dCbvCPUDescriptorNextHandle;
-D3D12_GPU_DESCRIPTOR_HANDLE	CScene::m_d3dCbvGPUDescriptorNextHandle;
-D3D12_CPU_DESCRIPTOR_HANDLE	CScene::m_d3dSrvCPUDescriptorNextHandle;
-D3D12_GPU_DESCRIPTOR_HANDLE	CScene::m_d3dSrvGPUDescriptorNextHandle;
-
-CScene::CScene()
+CScene::CScene(CGameFramework* pFramework) : m_pGameFramework(pFramework)
 {
 }
 
@@ -33,463 +26,567 @@ void CScene::BuildDefaultLightsAndMaterials()
 
 	m_xmf4GlobalAmbient = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);
 
-	m_pLights[0].m_bEnable = true;
+	m_pLights[0].m_bEnable = false;
 	m_pLights[0].m_nType = POINT_LIGHT;
 	m_pLights[0].m_fRange = 300.0f;
 	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.4f, 0.3f, 0.8f, 1.0f);
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
 	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
 	m_pLights[0].m_xmf3Position = XMFLOAT3(230.0f, 330.0f, 480.0f);
 	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
-	m_pLights[1].m_bEnable = true;
-	m_pLights[1].m_nType = SPOT_LIGHT;
-	m_pLights[1].m_fRange = 500.0f;
-	m_pLights[1].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
-	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(0.4f, 0.4f, 0.4f, 1.0f);
-	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-	m_pLights[1].m_xmf3Position = XMFLOAT3(-50.0f, 20.0f, -5.0f);
-	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 1.0f);
-	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-	m_pLights[1].m_fFalloff = 8.0f;
-	m_pLights[1].m_fPhi = (float)cos(XMConvertToRadians(40.0f));
-	m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
+
+	// 2. 주요 방향광 (태양) 설정
 	m_pLights[2].m_bEnable = true;
 	m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
-	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.7f, 0.7f, 0.7f, 1.0f);
-	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.4f, 0.4f, 0.4f, 0.0f);
-	m_pLights[2].m_xmf3Direction = XMFLOAT3(1.0f, -1.0f, 0.0f);
-	m_pLights[3].m_bEnable = true;
-	m_pLights[3].m_nType = SPOT_LIGHT;
-	m_pLights[3].m_fRange = 600.0f;
-	m_pLights[3].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
-	m_pLights[3].m_xmf4Diffuse = XMFLOAT4(0.3f, 0.7f, 0.0f, 1.0f);
-	m_pLights[3].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-	m_pLights[3].m_xmf3Position = XMFLOAT3(550.0f, 330.0f, 530.0f);
-	m_pLights[3].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 1.0f);
-	m_pLights[3].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-	m_pLights[3].m_fFalloff = 8.0f;
-	m_pLights[3].m_fPhi = (float)cos(XMConvertToRadians(90.0f));
-	m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
-	m_pLights[4].m_bEnable = true;
-	m_pLights[4].m_nType = POINT_LIGHT;
-	m_pLights[4].m_fRange = 200.0f;
-	m_pLights[4].m_xmf4Ambient = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-	m_pLights[4].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.3f, 0.3f, 1.0f);
-	m_pLights[4].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
-	m_pLights[4].m_xmf3Position = XMFLOAT3(600.0f, 250.0f, 700.0f);
-	m_pLights[4].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f); // 방향광 자체의 약한 주변광
+	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.75f, 0.7f, 1.0f); // 약간 따뜻한 느낌의 태양광
+	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f); // 반사광
+	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.5f, -0.707f, 0.5f); // 남동쪽 위에서 비추는 느낌 (벡터 정규화 필요할 수 있음)
+
+
+	m_pLights[1].m_bEnable = false;
+	{
+		m_pLights[1].m_nType = SPOT_LIGHT;
+		m_pLights[1].m_fRange = 500.0f;
+		m_pLights[1].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
+		m_pLights[1].m_xmf4Diffuse = XMFLOAT4(0.4f, 0.4f, 0.4f, 1.0f);
+		m_pLights[1].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
+		m_pLights[1].m_xmf3Position = XMFLOAT3(-50.0f, 20.0f, -5.0f);
+		m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 1.0f);
+		m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
+		m_pLights[1].m_fFalloff = 8.0f;
+		m_pLights[1].m_fPhi = (float)cos(XMConvertToRadians(40.0f));
+		m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
+	}
+	m_pLights[3].m_bEnable = false;
+	{
+		m_pLights[3].m_nType = SPOT_LIGHT;
+		m_pLights[3].m_fRange = 600.0f;
+		m_pLights[3].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
+		m_pLights[3].m_xmf4Diffuse = XMFLOAT4(0.3f, 0.7f, 0.0f, 1.0f);
+		m_pLights[3].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
+		m_pLights[3].m_xmf3Position = XMFLOAT3(550.0f, 330.0f, 530.0f);
+		m_pLights[3].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 1.0f);
+		m_pLights[3].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
+		m_pLights[3].m_fFalloff = 8.0f;
+		m_pLights[3].m_fPhi = (float)cos(XMConvertToRadians(90.0f));
+		m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
+	}
+	m_pLights[4].m_bEnable = false;
+	{
+		m_pLights[4].m_nType = POINT_LIGHT;
+		m_pLights[4].m_fRange = 200.0f;
+		m_pLights[4].m_xmf4Ambient = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
+		m_pLights[4].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.3f, 0.3f, 1.0f);
+		m_pLights[4].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
+		m_pLights[4].m_xmf3Position = XMFLOAT3(600.0f, 250.0f, 700.0f);
+		m_pLights[4].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+	}
 }
 
 void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
-
-	CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 76); //SuperCobra(17), Gunship(2), Player:Mi24(1), Angrybot()
-
-	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature); 
+	// ShaderManager 가져오기
+	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed!");
+	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
+	assert(pShaderManager != nullptr && "ShaderManager is not available!");
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); // 기존 코드 유지
 
 	BuildDefaultLightsAndMaterials();
 
-	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+	if (!pResourceManager) {
+		// 리소스 매니저가 없다면 로딩 불가! 오류 처리
+		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
+		return;
+	}
 
-	XMFLOAT3 xmf3Scale(8.0f, 2.0f, 8.0f);
-	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 257, 257, xmf3Scale, xmf4Color);
+	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	srand((unsigned int)time(NULL));
 
-	m_nHierarchicalGameObjects = 21;
-	m_ppHierarchicalGameObjects = new CGameObject*[m_nHierarchicalGameObjects];
+	XMFLOAT3 xmf3Scale(5.f, 0.2f, 5.f);
+	XMFLOAT4 xmf4Color(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color, m_pGameFramework);
+	m_pTerrain->m_xmf4x4World = Matrix4x4::Identity();
+	m_pTerrain->m_xmf4x4ToParent = Matrix4x4::Identity();
 
-	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Angrybot.bin", NULL);
-	m_ppHierarchicalGameObjects[0] = new CAngrybotObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pAngrybotModel, 1);
-	m_ppHierarchicalGameObjects[0]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[0]->SetPosition(410.0f, m_pTerrain->GetHeight(410.0f, 735.0f), 735.0f);
-	if (pAngrybotModel) delete pAngrybotModel;
+	// 랜덤 엔진
+	std::random_device rd;
+	std::mt19937 gen(rd());
 
-	CLoadedModelInfo *pMonsterModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Monster.bin", NULL);
-	m_ppHierarchicalGameObjects[1] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pMonsterModel, 1);
-	m_ppHierarchicalGameObjects[1]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[1]->SetPosition(430.0f, m_pTerrain->GetHeight(430.0f, 700.0f), 700.0f);
-	m_ppHierarchicalGameObjects[1]->SetScale(3.0f, 3.0f, 3.0f);
-	m_ppHierarchicalGameObjects[2] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pMonsterModel, 1);
-	m_ppHierarchicalGameObjects[2]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-	m_ppHierarchicalGameObjects[2]->SetPosition(400.0f, m_pTerrain->GetHeight(400.0f, 720.0f), 720.0f);
-	m_ppHierarchicalGameObjects[2]->SetScale(3.0f, 3.0f, 3.0f);
-	m_ppHierarchicalGameObjects[3] = new CMonsterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pMonsterModel, 1);
-	m_ppHierarchicalGameObjects[3]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
-	m_ppHierarchicalGameObjects[3]->SetPosition(380.0f, m_pTerrain->GetHeight(380.0f, 750.0f), 750.0f);
-	m_ppHierarchicalGameObjects[3]->SetScale(3.0f, 3.0f, 3.0f);
-	if (pMonsterModel) delete pMonsterModel;
+	int tree_obj_count{ 0 };
 
-	CLoadedModelInfo *pHumanoidModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Humanoid.bin", NULL);
-	m_ppHierarchicalGameObjects[4] = new CHumanoidObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanoidModel, 1);
-	m_ppHierarchicalGameObjects[4]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[4]->SetPosition(400.0f, m_pTerrain->GetHeight(400.0f, 670.0f), 670.0f);
-	m_ppHierarchicalGameObjects[4]->Rotate(0.0f, 180.0f, 0.0f);
-	m_ppHierarchicalGameObjects[4]->SetScale(5.0f, 5.0f, 5.0f);
+	float spawnMin = 500, spawnMax = 9500;
+	float objectMinSize = 15, objectMaxSize = 20;
 
-	m_ppHierarchicalGameObjects[5] = new CHumanoidObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanoidModel, 1);
-	m_ppHierarchicalGameObjects[5]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-	m_ppHierarchicalGameObjects[5]->SetPosition(410.0f, m_pTerrain->GetHeight(410.0f, 660.0f), 660.0f);
-	m_ppHierarchicalGameObjects[5]->SetScale(5.0f, 5.0f, 5.0f);
-	if (pHumanoidModel) delete pHumanoidModel;
+	int nPineObjects = 100;
+	for (int i = 0; i < nPineObjects; ++i) {
+		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
+	for (int i = 0; i < nPineObjects; ++i) {
+		CGameObject* gameObj = new CBirchObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
+	for (int i = 0; i < nPineObjects; ++i) {
+		CGameObject* gameObj = new CWillowObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
 
-	CLoadedModelInfo *pEthanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Ethan.bin", NULL);
-	m_ppHierarchicalGameObjects[6] = new CEthanObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEthanModel, 1);
-	m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-///*
-	float* pfData = new float[2];
-	pfData[0] = 0.0f;
-	pfData[1] = 1.0f;
 
-	m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetCallbackKeys(0, 2);
-	m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetCallbackKey(0, 0, 0.0f, &pfData[0]);
-	CAnimationSet* pAnimationSet = m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[1];
-	m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetCallbackKey(0, 1, pAnimationSet->m_fLength, &pfData[1]);
+	int nRockObjects = 100;	objectMinSize = 10, objectMaxSize = 15;
+	for (int i = 0; i < nRockObjects; ++i) {
+		CGameObject* gameObj = new CRockClusterAObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
+	for (int i = 0; i < nRockObjects; ++i) {
+		CGameObject* gameObj = new CRockClusterBObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
+	for (int i = 0; i < nRockObjects; ++i) {
+		CGameObject* gameObj = new CRockClusterCObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
 
-	CRootMotionCallbackHandler* pRootMotionCallbackHandler = new CRootMotionCallbackHandler();
-	m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetAnimationCallbackHandler(1, pRootMotionCallbackHandler);
-//*/
-	m_ppHierarchicalGameObjects[6]->SetRootMotion(true);
-	m_ppHierarchicalGameObjects[6]->SetPosition(350.0f, m_pTerrain->GetHeight(350.0f, 670.0f), 670.0f);
-	m_ppHierarchicalGameObjects[6]->Rotate(0.0f, -90.0f, 0.0f);
-	m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetTrackSpeed(0, 0.75f);
 
-	CLoadedModelInfo *pZebraModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Zebra.bin", NULL);
-	m_ppHierarchicalGameObjects[7] = new CZebraObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pZebraModel, 1);
-	m_ppHierarchicalGameObjects[7]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[7]->SetPosition(280.0f, m_pTerrain->GetHeight(280.0f, 640.0f), 620.0f);
-	m_ppHierarchicalGameObjects[7]->SetScale(0.1f, 0.1f, 0.1f);
-	if (pZebraModel) delete pZebraModel;
+	nRockObjects = 30;	objectMinSize = 30, objectMaxSize = 50;
+	spawnMin = 1700, spawnMax = 9000;
+	for (int i = 0; i < nRockObjects; ++i) {
+		CGameObject* gameObj = new CCliffFObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
 
-	CLoadedModelInfo *pLionModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Lion.bin", NULL);
-	m_ppHierarchicalGameObjects[8] = new CLionObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pLionModel, 1);
-	m_ppHierarchicalGameObjects[8]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[8]->SetPosition(300.0f, m_pTerrain->GetHeight(300.0f, 650.0f), 630.0f);
-	m_ppHierarchicalGameObjects[8]->SetScale(1.0f, 1.0f, 1.0f);
-	m_ppHierarchicalGameObjects[9] = new CLionObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pLionModel, 1);
-	m_ppHierarchicalGameObjects[9]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-	m_ppHierarchicalGameObjects[9]->SetPosition(310.0f, m_pTerrain->GetHeight(310.0f, 630.0f), 630.0f);
-	m_ppHierarchicalGameObjects[9]->SetScale(1.0f, 1.0f, 1.0f);
-	m_ppHierarchicalGameObjects[10] = new CLionObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pLionModel, 1);
-	m_ppHierarchicalGameObjects[10]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
-	m_ppHierarchicalGameObjects[10]->SetPosition(250.0f, m_pTerrain->GetHeight(250.0f, 600.0f), 600.0f);
-	m_ppHierarchicalGameObjects[10]->SetScale(1.0f, 1.0f, 1.0f);
-	m_ppHierarchicalGameObjects[11] = new CLionObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pLionModel, 1);
-	m_ppHierarchicalGameObjects[11]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 3);
-	m_ppHierarchicalGameObjects[11]->SetPosition(270.0f, m_pTerrain->GetHeight(270.0f, 620.0f), 620.0f);
-	m_ppHierarchicalGameObjects[11]->SetScale(1.0f, 1.0f, 1.0f);
-	m_xmf3RotatePosition = m_ppHierarchicalGameObjects[11]->GetPosition();
+		m_vGameObjects.emplace_back(gameObj);
 
-	if (pLionModel) delete pLionModel;
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
 
-	m_ppHierarchicalGameObjects[12] = new CEthanObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEthanModel, 2);
-	m_ppHierarchicalGameObjects[12]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[12]->m_pSkinnedAnimationController->SetTrackWeight(0, 0.85f);
-	m_ppHierarchicalGameObjects[12]->m_pSkinnedAnimationController->SetTrackSpeed(0, 0.5f);
-	m_ppHierarchicalGameObjects[12]->m_pSkinnedAnimationController->SetTrackAnimationSet(1, 1);
-	m_ppHierarchicalGameObjects[12]->m_pSkinnedAnimationController->SetTrackWeight(1, 0.15f);
-	m_ppHierarchicalGameObjects[12]->m_pSkinnedAnimationController->SetTrackSpeed(1, 0.025f);
-	m_ppHierarchicalGameObjects[12]->SetPosition(380.0f, m_pTerrain->GetHeight(380.0f, 680.0f), 680.0f);
 
-	CLoadedModelInfo *pEagleModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Eagle.bin", NULL);
-	m_ppHierarchicalGameObjects[13] = new CEagleObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEagleModel, 1);
-	m_ppHierarchicalGameObjects[13]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[13]->m_pSkinnedAnimationController->SetTrackPosition(0, 0.2f);
-	m_ppHierarchicalGameObjects[13]->SetRootMotion(true);
-	m_ppHierarchicalGameObjects[13]->SetPosition(330.0f, m_pTerrain->GetHeight(330.0f, 590.0f) + 20.0f, 590.0f);
-	m_ppHierarchicalGameObjects[14] = new CEagleObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEagleModel, 1);
-	m_ppHierarchicalGameObjects[14]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[14]->SetRootMotion(true);
-	m_ppHierarchicalGameObjects[14]->SetPosition(350.0f, m_pTerrain->GetHeight(350.0f, 590.0f) + 20.0f, 590.0f);
-	m_ppHierarchicalGameObjects[15] = new CEagleObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEagleModel, 1);
-	m_ppHierarchicalGameObjects[15]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[15]->SetRootMotion(true);
-	m_ppHierarchicalGameObjects[15]->SetPosition(330.0f, m_pTerrain->GetHeight(330.0f, 750.0f) + 25.0f, 750.0f);
-	m_ppHierarchicalGameObjects[15]->Rotate(0.0f, 180.0f, 0.0f);
-	m_ppHierarchicalGameObjects[16] = new CEagleObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEagleModel, 1);
-	m_ppHierarchicalGameObjects[16]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[16]->SetRootMotion(true);
-	m_ppHierarchicalGameObjects[16]->SetPosition(350.0f, m_pTerrain->GetHeight(350.0f, 750.0f) + 25.0f, 750.0f);
-	m_ppHierarchicalGameObjects[16]->Rotate(0.0f, 180.0f, 0.0f);
-	m_ppHierarchicalGameObjects[17] = new CEagleObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEagleModel, 1);
-	m_ppHierarchicalGameObjects[17]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[17]->SetRootMotion(true);
-	m_ppHierarchicalGameObjects[17]->SetPosition(300.0f, m_pTerrain->GetHeight(300.0f, 700.0f) + 25.0f, 700.0f);
-	m_ppHierarchicalGameObjects[17]->Rotate(0.0f, 180.0f, 0.0f);
-	m_ppHierarchicalGameObjects[18] = new CEagleObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEagleModel, 1);
-	m_ppHierarchicalGameObjects[18]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[18]->SetRootMotion(true);
-	m_ppHierarchicalGameObjects[18]->SetPosition(250.0f, m_pTerrain->GetHeight(250.0f, 700.0f) + 25.0f, 700.0f);
-	m_ppHierarchicalGameObjects[18]->Rotate(0.0f, 180.0f, 0.0f);
-	m_ppHierarchicalGameObjects[19] = new CEagleObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEagleModel, 1);
-	m_ppHierarchicalGameObjects[19]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[19]->SetRootMotion(true);
-	m_ppHierarchicalGameObjects[19]->SetPosition(270.0f, m_pTerrain->GetHeight(270.0f, 750.0f) + 25.0f, 750.0f);
-	m_ppHierarchicalGameObjects[19]->Rotate(0.0f, 180.0f, 0.0f);
-	m_ppHierarchicalGameObjects[20] = new CEagleObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEagleModel, 1);
-	m_ppHierarchicalGameObjects[20]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_ppHierarchicalGameObjects[20]->m_pSkinnedAnimationController->SetTrackPosition(0, 0.2f);
-	m_ppHierarchicalGameObjects[20]->SetRootMotion(true);
-	m_ppHierarchicalGameObjects[20]->SetPosition(270.0f, m_pTerrain->GetHeight(270.0f, 800.0f) + 25.0f, 800.0f);
-	m_ppHierarchicalGameObjects[20]->Rotate(0.0f, 180.0f, 0.0f);
+	m_pPreviewPine = new CConstructionObject(
+		pd3dDevice, pd3dCommandList, m_pGameFramework);
+	m_pPreviewPine->SetPosition(XMFLOAT3(0, 0, 0));
+	
+	//auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+	m_pPreviewPine->SetScale(10, 10, 10);
+	
+	m_pPreviewPine->isRender = false;
 
-	if (pEagleModel) delete pEagleModel;
+	m_pPreviewPine->m_treecount = tree_obj_count;
+	m_vGameObjects.emplace_back(m_pPreviewPine);
+	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, m_pPreviewPine->m_worldOBB.Center);
+	octree.insert(std::move(t_obj));
 
-///*
-	m_nShaders = 1;
-	m_ppShaders = new CShader*[m_nShaders];
+	//int nCliffFObjectCObjects = 5;
+	//for (int i = 0; i < nCliffFObjectCObjects; ++i) {
+	//	CGameObject* gameObj = new CCliffFObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	//	auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+	//	gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+	//	auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+	//	gameObj->SetScale(w, h, w);
+	//	m_vGameObjects.emplace_back(gameObj);
+	//}
 
-	CEthanObjectsShader *pEthanObjectsShader = new CEthanObjectsShader();
-	pEthanObjectsShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEthanModel, m_pTerrain);
 
-	m_ppShaders[0] = pEthanObjectsShader;
-//*/
-	if (pEthanModel) delete pEthanModel;
+
+	int nBushObject = 100;
+	objectMinSize = 10, objectMaxSize = 15;
+	for (int i = 0; i < nBushObject; ++i) {
+		CGameObject* gameObj = new CBushAObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
+	int nVegetationObject = 20;
+	for (int i = 0; i < nVegetationObject; ++i) {
+		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/ChervilCluster.bin", m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
+	for (int i = 0; i < nVegetationObject; ++i) {
+		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/RedPoppyCluster.bin", m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
+	for (int i = 0; i < nVegetationObject; ++i) {
+		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Speedwell.bin", m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
+	for (int i = 0; i < nVegetationObject; ++i) {
+		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/ElephantEar_A.bin", m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
+	for (int i = 0; i < nVegetationObject; ++i) {
+		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/GrassPatch_LOD0.bin", m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
+
+	for (int i = 0; i < nVegetationObject; ++i) {
+		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Clovers.bin", m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
+	for (int i = 0; i < nVegetationObject; ++i) {
+		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Daisies.bin", m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
+	for (int i = 0; i < nVegetationObject; ++i) {
+		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Leaves.bin", m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
+	for (int i = 0; i < nVegetationObject; ++i) {
+		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Poppies.bin", m_pGameFramework);
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+		gameObj->SetScale(w, h, w);
+		gameObj->m_treecount = tree_obj_count;
+
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
+
+
+	
+
+	int nCowObjects = 10;
+	int animate_count = 13;
+	for (int i = 0; i < nCowObjects; ++i)
+	{
+		CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Cow.bin", m_pGameFramework);
+		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, animate_count, m_pGameFramework);
+		gameobj->m_objectType = GameObjectType::Cow;
+		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+		for (int j = 1; j < animate_count; ++j) {
+			gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+		}
+		gameobj->SetOwningScene(this);
+		gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+		gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+
+		gameobj->Rotate(0.f, 180.f, 0.f);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
+		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		gameobj->SetScale(12.0f, 12.0f, 12.0f);
+		gameobj->SetTerraindata(m_pTerrain);
+		gameobj->m_treecount = tree_obj_count;
+		m_vGameObjects.emplace_back(gameobj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+		if (pCowModel) delete pCowModel;
+	}
+	int nPigObjects = 10;
+	for (int i = 0; i < nPigObjects; ++i)
+	{
+		CLoadedModelInfo* pPigModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Pig.bin", m_pGameFramework);
+		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pPigModel, animate_count, m_pGameFramework);
+		gameobj->m_objectType = GameObjectType::Pig;
+		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+		for (int j = 1; j < animate_count; ++j) {
+			gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+		}
+		gameobj->SetOwningScene(this);
+		gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+		gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+		gameobj->Rotate(0.f, 180.f, 0.f);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
+		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		gameobj->SetScale(10.0f, 10.0f, 10.0f);
+		gameobj->SetTerraindata(m_pTerrain);
+		gameobj->m_treecount = tree_obj_count;
+		m_vGameObjects.emplace_back(gameobj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+		if (pPigModel) delete pPigModel;
+	}
+
+	int nSpiderObjects = 10;
+	for (int i = 0; i < nSpiderObjects; ++i)
+	{
+		CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Spider.bin", m_pGameFramework);
+		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pSpiderModel, animate_count, m_pGameFramework);
+		gameobj->m_objectType = GameObjectType::Spider;
+		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+		for (int j = 1; j < animate_count; ++j) {
+			gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+		}
+		gameobj->SetOwningScene(this);
+		gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+		gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
+
+		gameobj->Rotate(0.f, 180.f, 0.f);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
+		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		gameobj->SetScale(8.f, 8.f, 8.f);
+		gameobj->SetTerraindata(m_pTerrain);
+		gameobj->m_treecount = tree_obj_count;
+		m_vGameObjects.emplace_back(gameobj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+		if (pSpiderModel) delete pSpiderModel;
+	}
+	int nToadObjects = 10;
+	for (int i = 0; i < nToadObjects; ++i)
+	{
+		CLoadedModelInfo* pToadModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Toad.bin", m_pGameFramework);
+		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pToadModel, animate_count, m_pGameFramework);
+		gameobj->m_objectType = GameObjectType::Toad;
+		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+		for (int j = 1; j < animate_count; ++j) {
+			gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+		}
+		gameobj->SetOwningScene(this);
+		gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+		gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
+
+		gameobj->Rotate(0.f, 180.f, 0.f);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
+		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		gameobj->SetScale(8.f, 8.f, 8.f);
+		gameobj->SetTerraindata(m_pTerrain);
+		gameobj->m_treecount = tree_obj_count;
+		m_vGameObjects.emplace_back(gameobj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+		if (pToadModel) delete pToadModel;
+	}
+	int nWolfObjects = 10;
+	for (int i = 0; i < nWolfObjects; ++i)
+	{
+		CLoadedModelInfo* pWolfModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Wolf.bin", m_pGameFramework);
+		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pWolfModel, animate_count, m_pGameFramework);
+		gameobj->m_objectType = GameObjectType::Wolf;
+		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+		for (int j = 1; j < animate_count; ++j) {
+			gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+		}
+		gameobj->SetOwningScene(this);
+		gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+		gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
+
+		gameobj->Rotate(0.f, 180.f, 0.f);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
+		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		gameobj->SetScale(10.f, 10.f, 10.f);
+		gameobj->SetTerraindata(m_pTerrain);
+		gameobj->m_treecount = tree_obj_count;
+		m_vGameObjects.emplace_back(gameobj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+		if (pWolfModel) delete pWolfModel;
+	}
+
+
+
+	for (auto obj : m_vGameObjects) {
+		obj->SetOBB();
+		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+		if (obj->m_pSkinnedAnimationController) obj->PropagateAnimController(obj->m_pSkinnedAnimationController);
+
+		switch (obj->m_objectType)
+		{
+		case GameObjectType::Wasp:
+		case GameObjectType::Snail:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[5].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[6].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Snake:
+		case GameObjectType::Spider:
+		case GameObjectType::Bat:
+		case GameObjectType::Turtle:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Wolf:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Toad:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Cow:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Pig:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		default:	// 잘못된 타입이다.
+			break;
+		}
+	}
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
 void CScene::ReleaseObjects()
 {
-	if (m_pd3dGraphicsRootSignature) m_pd3dGraphicsRootSignature->Release();
-	if (m_pd3dCbvSrvDescriptorHeap) m_pd3dCbvSrvDescriptorHeap->Release();
-
-	if (m_ppGameObjects)
-	{
-		for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Release();
-		delete[] m_ppGameObjects;
-	}
-
-	if (m_ppShaders)
-	{
-		for (int i = 0; i < m_nShaders; i++)
-		{
-			m_ppShaders[i]->ReleaseShaderVariables();
-			m_ppShaders[i]->ReleaseObjects();
-			m_ppShaders[i]->Release();
-		}
-		delete[] m_ppShaders;
-	}
-
 	if (m_pTerrain) delete m_pTerrain;
 	if (m_pSkyBox) delete m_pSkyBox;
 
-	if (m_ppHierarchicalGameObjects)
-	{
-		for (int i = 0; i < m_nHierarchicalGameObjects; i++) if (m_ppHierarchicalGameObjects[i]) m_ppHierarchicalGameObjects[i]->Release();
-		delete[] m_ppHierarchicalGameObjects;
-	}
-
 	ReleaseShaderVariables();
+
+	m_listBranchObjects.clear();
 
 	if (m_pLights) delete[] m_pLights;
 }
 
-ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)
+void CScene::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	ID3D12RootSignature *pd3dGraphicsRootSignature = NULL;
-
-	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[10];
-
-	pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[0].NumDescriptors = 1;
-	pd3dDescriptorRanges[0].BaseShaderRegister = 6; //t6: gtxtAlbedoTexture
-	pd3dDescriptorRanges[0].RegisterSpace = 0;
-	pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[1].NumDescriptors = 1;
-	pd3dDescriptorRanges[1].BaseShaderRegister = 7; //t7: gtxtSpecularTexture
-	pd3dDescriptorRanges[1].RegisterSpace = 0;
-	pd3dDescriptorRanges[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[2].NumDescriptors = 1;
-	pd3dDescriptorRanges[2].BaseShaderRegister = 8; //t8: gtxtNormalTexture
-	pd3dDescriptorRanges[2].RegisterSpace = 0;
-	pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[3].NumDescriptors = 1;
-	pd3dDescriptorRanges[3].BaseShaderRegister = 9; //t9: gtxtMetallicTexture
-	pd3dDescriptorRanges[3].RegisterSpace = 0;
-	pd3dDescriptorRanges[3].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[4].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[4].NumDescriptors = 1;
-	pd3dDescriptorRanges[4].BaseShaderRegister = 10; //t10: gtxtEmissionTexture
-	pd3dDescriptorRanges[4].RegisterSpace = 0;
-	pd3dDescriptorRanges[4].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[5].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[5].NumDescriptors = 1;
-	pd3dDescriptorRanges[5].BaseShaderRegister = 11; //t11: gtxtEmissionTexture
-	pd3dDescriptorRanges[5].RegisterSpace = 0;
-	pd3dDescriptorRanges[5].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[6].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[6].NumDescriptors = 1;
-	pd3dDescriptorRanges[6].BaseShaderRegister = 12; //t12: gtxtEmissionTexture
-	pd3dDescriptorRanges[6].RegisterSpace = 0;
-	pd3dDescriptorRanges[6].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[7].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[7].NumDescriptors = 1;
-	pd3dDescriptorRanges[7].BaseShaderRegister = 13; //t13: gtxtSkyBoxTexture
-	pd3dDescriptorRanges[7].RegisterSpace = 0;
-	pd3dDescriptorRanges[7].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[8].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[8].NumDescriptors = 1;
-	pd3dDescriptorRanges[8].BaseShaderRegister = 1; //t1: gtxtTerrainBaseTexture
-	pd3dDescriptorRanges[8].RegisterSpace = 0;
-	pd3dDescriptorRanges[8].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[9].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[9].NumDescriptors = 1;
-	pd3dDescriptorRanges[9].BaseShaderRegister = 2; //t2: gtxtTerrainDetailTexture
-	pd3dDescriptorRanges[9].RegisterSpace = 0;
-	pd3dDescriptorRanges[9].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	D3D12_ROOT_PARAMETER pd3dRootParameters[15];
-
-	pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[0].Descriptor.ShaderRegister = 1; //Camera
-	pd3dRootParameters[0].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
-	pd3dRootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-	pd3dRootParameters[1].Constants.Num32BitValues = 33;
-	pd3dRootParameters[1].Constants.ShaderRegister = 2; //GameObject
-	pd3dRootParameters[1].Constants.RegisterSpace = 0;
-	pd3dRootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
-	pd3dRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[2].Descriptor.ShaderRegister = 4; //Lights
-	pd3dRootParameters[2].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
-	pd3dRootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
-	pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[4].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[4].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[1]);
-	pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[5].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[5].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[2]);
-	pd3dRootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[6].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[6].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[3]);
-	pd3dRootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[7].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[7].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[4]);
-	pd3dRootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[8].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[8].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[5]);
-	pd3dRootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[9].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[9].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[9].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[6]);
-	pd3dRootParameters[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[10].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[10].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[10].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[7]);
-	pd3dRootParameters[10].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[11].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[11].Descriptor.ShaderRegister = 7; //Skinned Bone Offsets
-	pd3dRootParameters[11].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[11].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-
-	pd3dRootParameters[12].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[12].Descriptor.ShaderRegister = 8; //Skinned Bone Transforms
-	pd3dRootParameters[12].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[12].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-
-	pd3dRootParameters[13].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[13].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[13].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[8]);
-	pd3dRootParameters[13].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[14].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[14].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[14].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[9]);
-	pd3dRootParameters[14].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[2];
-
-	pd3dSamplerDescs[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-	pd3dSamplerDescs[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	pd3dSamplerDescs[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	pd3dSamplerDescs[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	pd3dSamplerDescs[0].MipLODBias = 0;
-	pd3dSamplerDescs[0].MaxAnisotropy = 1;
-	pd3dSamplerDescs[0].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	pd3dSamplerDescs[0].MinLOD = 0;
-	pd3dSamplerDescs[0].MaxLOD = D3D12_FLOAT32_MAX;
-	pd3dSamplerDescs[0].ShaderRegister = 0;
-	pd3dSamplerDescs[0].RegisterSpace = 0;
-	pd3dSamplerDescs[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dSamplerDescs[1].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-	pd3dSamplerDescs[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	pd3dSamplerDescs[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	pd3dSamplerDescs[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	pd3dSamplerDescs[1].MipLODBias = 0;
-	pd3dSamplerDescs[1].MaxAnisotropy = 1;
-	pd3dSamplerDescs[1].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	pd3dSamplerDescs[1].MinLOD = 0;
-	pd3dSamplerDescs[1].MaxLOD = D3D12_FLOAT32_MAX;
-	pd3dSamplerDescs[1].ShaderRegister = 1;
-	pd3dSamplerDescs[1].RegisterSpace = 0;
-	pd3dSamplerDescs[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-	D3D12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc;
-	::ZeroMemory(&d3dRootSignatureDesc, sizeof(D3D12_ROOT_SIGNATURE_DESC));
-	d3dRootSignatureDesc.NumParameters = _countof(pd3dRootParameters);
-	d3dRootSignatureDesc.pParameters = pd3dRootParameters;
-	d3dRootSignatureDesc.NumStaticSamplers = _countof(pd3dSamplerDescs);
-	d3dRootSignatureDesc.pStaticSamplers = pd3dSamplerDescs;
-	d3dRootSignatureDesc.Flags = d3dRootSignatureFlags;
-
-	ID3DBlob *pd3dSignatureBlob = NULL;
-	ID3DBlob *pd3dErrorBlob = NULL;
-	D3D12SerializeRootSignature(&d3dRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &pd3dSignatureBlob, &pd3dErrorBlob);
-	pd3dDevice->CreateRootSignature(0, pd3dSignatureBlob->GetBufferPointer(), pd3dSignatureBlob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void **)&pd3dGraphicsRootSignature);
-	if (pd3dSignatureBlob) pd3dSignatureBlob->Release();
-	if (pd3dErrorBlob) pd3dErrorBlob->Release();
-
-	return(pd3dGraphicsRootSignature);
-}
-
-void CScene::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
-{
-	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256�� ���
+	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256�� ���
 	m_pd3dcbLights = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
-	m_pd3dcbLights->Map(0, NULL, (void **)&m_pcbMappedLights);
+	m_pd3dcbLights->Map(0, NULL, (void**)&m_pcbMappedLights);
+
+
+	// 인스턴싱
+	UINT m_nObjects = 100;
+	//인스턴스 정보를 저장할 정점 버퍼를 업로드 힙 유형으로 생성한다. 
+	m_pd3dcbGameObjects = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL,
+		sizeof(VS_VB_INSTANCE) * m_nObjects, D3D12_HEAP_TYPE_UPLOAD,
+		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	//정점 버퍼(업로드 힙)에 대한 포인터를 저장한다. 
+	m_pd3dcbGameObjects->Map(0, NULL, (void**)&m_pcbMappedGameObjects);
+	//정점 버퍼에 대한 뷰를 생성한다. 
+	m_d3dInstancingBufferView.BufferLocation =
+		m_pd3dcbGameObjects->GetGPUVirtualAddress();
+	m_d3dInstancingBufferView.StrideInBytes = sizeof(VS_VB_INSTANCE);
+	m_d3dInstancingBufferView.SizeInBytes = sizeof(VS_VB_INSTANCE) * m_nObjects;
 }
 
 void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	::memcpy(m_pcbMappedLights->m_pLights, m_pLights, sizeof(LIGHT) * m_nLights);
-	::memcpy(&m_pcbMappedLights->m_xmf4GlobalAmbient, &m_xmf4GlobalAmbient, sizeof(XMFLOAT4));
-	::memcpy(&m_pcbMappedLights->m_nLights, &m_nLights, sizeof(int));
+	if (m_pcbMappedLights && m_pLights) {
+		assert(m_nLights >= 0 && m_nLights <= MAX_LIGHTS && "Invalid number of lights!");
+		if (m_nLights < 0 || m_nLights > MAX_LIGHTS) {
+			OutputDebugStringA("!!!!!!!! ERROR: Invalid m_nLights value detected! Clamping to 0. !!!!!!!!\n");
+			m_nLights = 0; //임시
+		}
+		::memcpy(m_pcbMappedLights->m_pLights, m_pLights, sizeof(LIGHT) * m_nLights);
+		::memcpy(&m_pcbMappedLights->m_xmf4GlobalAmbient, &m_xmf4GlobalAmbient, sizeof(XMFLOAT4));
+		::memcpy(&m_pcbMappedLights->m_nLights, &m_nLights, sizeof(int));
+	}
 }
 
 void CScene::ReleaseShaderVariables()
@@ -499,70 +596,20 @@ void CScene::ReleaseShaderVariables()
 		m_pd3dcbLights->Unmap(0, NULL);
 		m_pd3dcbLights->Release();
 	}
+
+	if (m_pd3dcbGameObjects) m_pd3dcbGameObjects->Unmap(0, NULL);
+	if (m_pd3dcbGameObjects) m_pd3dcbGameObjects->Release();
 }
 
 void CScene::ReleaseUploadBuffers()
 {
 	if (m_pSkyBox) m_pSkyBox->ReleaseUploadBuffers();
 	if (m_pTerrain) m_pTerrain->ReleaseUploadBuffers();
-
-	for (int i = 0; i < m_nShaders; i++) m_ppShaders[i]->ReleaseUploadBuffers();
-	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->ReleaseUploadBuffers();
-	for (int i = 0; i < m_nHierarchicalGameObjects; i++) m_ppHierarchicalGameObjects[i]->ReleaseUploadBuffers();
-}
-
-void CScene::CreateCbvSrvDescriptorHeaps(ID3D12Device *pd3dDevice, int nConstantBufferViews, int nShaderResourceViews)
-{
-	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
-	d3dDescriptorHeapDesc.NumDescriptors = nConstantBufferViews + nShaderResourceViews; //CBVs + SRVs 
-	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	d3dDescriptorHeapDesc.NodeMask = 0;
-	pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void **)&m_pd3dCbvSrvDescriptorHeap);
-
-	m_d3dCbvCPUDescriptorNextHandle = m_d3dCbvCPUDescriptorStartHandle = m_pd3dCbvSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	m_d3dCbvGPUDescriptorNextHandle = m_d3dCbvGPUDescriptorStartHandle = m_pd3dCbvSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
-	m_d3dSrvCPUDescriptorNextHandle.ptr = m_d3dSrvCPUDescriptorStartHandle.ptr = m_d3dCbvCPUDescriptorStartHandle.ptr + (::gnCbvSrvDescriptorIncrementSize * nConstantBufferViews);
-	m_d3dSrvGPUDescriptorNextHandle.ptr = m_d3dSrvGPUDescriptorStartHandle.ptr = m_d3dCbvGPUDescriptorStartHandle.ptr + (::gnCbvSrvDescriptorIncrementSize * nConstantBufferViews);
-}
-
-D3D12_GPU_DESCRIPTOR_HANDLE CScene::CreateConstantBufferViews(ID3D12Device *pd3dDevice, int nConstantBufferViews, ID3D12Resource *pd3dConstantBuffers, UINT nStride)
-{
-	D3D12_GPU_DESCRIPTOR_HANDLE d3dCbvGPUDescriptorHandle = m_d3dCbvGPUDescriptorNextHandle;
-	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = pd3dConstantBuffers->GetGPUVirtualAddress();
-	D3D12_CONSTANT_BUFFER_VIEW_DESC d3dCBVDesc;
-	d3dCBVDesc.SizeInBytes = nStride;
-	for (int j = 0; j < nConstantBufferViews; j++)
-	{
-		d3dCBVDesc.BufferLocation = d3dGpuVirtualAddress + (nStride * j);
-		m_d3dCbvCPUDescriptorNextHandle.ptr = m_d3dCbvCPUDescriptorNextHandle.ptr + ::gnCbvSrvDescriptorIncrementSize;
-		pd3dDevice->CreateConstantBufferView(&d3dCBVDesc, m_d3dCbvCPUDescriptorNextHandle);
-		m_d3dCbvGPUDescriptorNextHandle.ptr = m_d3dCbvGPUDescriptorNextHandle.ptr + ::gnCbvSrvDescriptorIncrementSize;
+	for(auto& obj : m_vGameObjects) {
+		if (obj) obj->ReleaseUploadBuffers();
 	}
-	return(d3dCbvGPUDescriptorHandle);
 }
 
-void CScene::CreateShaderResourceViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex)
-{
-	m_d3dSrvCPUDescriptorNextHandle.ptr += (::gnCbvSrvDescriptorIncrementSize * nDescriptorHeapIndex);
-	m_d3dSrvGPUDescriptorNextHandle.ptr += (::gnCbvSrvDescriptorIncrementSize * nDescriptorHeapIndex);
-
-	if (pTexture)
-	{
-		int nTextures = pTexture->GetTextures();
-		for (int i = 0; i < nTextures; i++)
-		{
-			ID3D12Resource* pShaderResource = pTexture->GetResource(i);
-			D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceViewDesc = pTexture->GetShaderResourceViewDesc(i);
-			pd3dDevice->CreateShaderResourceView(pShaderResource, &d3dShaderResourceViewDesc, m_d3dSrvCPUDescriptorNextHandle);
-			m_d3dSrvCPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
-			pTexture->SetGpuDescriptorHandle(i, m_d3dSrvGPUDescriptorNextHandle);
-			m_d3dSrvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
-		}
-	}
-	int nRootParameters = pTexture->GetRootParameters();
-	for (int j = 0; j < nRootParameters; j++) pTexture->SetRootParameterIndex(j, nRootParameterStartIndex + j);
-}
 
 bool CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
@@ -590,57 +637,367 @@ void CScene::AnimateObjects(float fTimeElapsed)
 {
 	m_fElapsedTime = fTimeElapsed;
 
-	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Animate(fTimeElapsed);
-	for (int i = 0; i < m_nShaders; i++) if (m_ppShaders[i]) m_ppShaders[i]->AnimateObjects(fTimeElapsed);
+	for (auto& obj : m_listBranchObjects) {
+		if (CollisionCheck(m_pPlayer, obj)) {
+			auto branch = dynamic_cast<CBranchObject*>(obj);
+			if (branch && branch->m_bOnGround && branch->isRender) {
+				m_pPlayer->m_pGameFramework->AddItem("wood", 1);
+				branch->isRender = false;
+			}
+		}
+	}
+
+	for (auto& obj : m_listRockObjects) {
+		if (CollisionCheck(m_pPlayer, obj)) {
+			auto rock = dynamic_cast<CRockDropObject*>(obj);
+			if (rock && rock->m_bOnGround && rock->isRender) {
+				int randValue = rand() % 100; // 0 ~ 99
+				if (randValue < 50) {
+					m_pGameFramework->AddItem("stone",3);
+				}
+				else if (randValue < 75) {
+					m_pGameFramework->AddItem("coal",1);
+				}
+				else {
+					m_pGameFramework->AddItem("iron_material",1);
+				}
+				rock->isRender = false;
+			}
+		}
+	}
+
 
 	if (m_pLights)
 	{
 		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
-
-//**/
-	static float fAngle = 0.0f;
-	fAngle += 1.50f;
-//	XMFLOAT3 xmf3Position = XMFLOAT3(50.0f, 0.0f, 0.0f);
-	XMFLOAT4X4 xmf4x4Rotate = Matrix4x4::Rotate(0.0f, -fAngle, 0.0f);
-	XMFLOAT3 xmf3Position = Vector3::TransformCoord(XMFLOAT3(65.0f, 0.0f, 0.0f), xmf4x4Rotate);
-//	m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent._41 = m_xmf3RotatePosition.x + xmf3Position.x;
-//	m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent._42 = m_xmf3RotatePosition.y + xmf3Position.y;
-//	m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent._43 = m_xmf3RotatePosition.z + xmf3Position.z;
-
-	m_ppHierarchicalGameObjects[11]->m_xmf4x4ToParent = Matrix4x4::AffineTransformation(XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, -fAngle, 0.0f), Vector3::Add(m_xmf3RotatePosition, xmf3Position));
-	m_ppHierarchicalGameObjects[11]->Rotate(0.0f, -1.5f, 0.0f);
-//**/
 }
 
-void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+
+void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (m_pd3dGraphicsRootSignature) pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
-	if (m_pd3dCbvSrvDescriptorHeap) pd3dCommandList->SetDescriptorHeaps(1, &m_pd3dCbvSrvDescriptorHeap);
+	// ShaderManager 가져오기 (매번 호출하는 대신 멤버 변수로 캐싱해도 좋음)
+	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed in CScene!");
+	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
+	assert(pShaderManager != nullptr && "ShaderManager is not available!");
 
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+	// 카메라 상수 버퍼(b1) 업데이트
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 
+	// 3. 전역 조명 상수 버퍼 업데이트 
 	UpdateShaderVariables(pd3dCommandList);
 
-	D3D12_GPU_VIRTUAL_ADDRESS d3dcbLightsGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
-	pd3dCommandList->SetGraphicsRootConstantBufferView(2, d3dcbLightsGpuVirtualAddress); //Lights
+	// 디스크립터 힙 설정 
+	ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() }; // CBV/SRV/UAV 힙 가져오기
+	if (ppHeaps[0]) { // 힙 포인터 유효성 검사
+		pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	}
+	else {
+		assert(!"CBV/SRV Descriptor Heap is NULL in CScene::Render!");
+		return; // 힙 없으면 렌더링 불가
+	}
 
-	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
-	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
+	// --- 4. 렌더링 상태 추적 변수 ---
+	m_pCurrentRootSignature = nullptr;
+	m_pCurrentPSO = nullptr;
+	m_pCurrentShader = nullptr;
 
-	for (int i = 0; i < m_nGameObjects; i++) if (m_ppGameObjects[i]) m_ppGameObjects[i]->Render(pd3dCommandList, pCamera);
-	for (int i = 0; i < m_nShaders; i++) if (m_ppShaders[i]) m_ppShaders[i]->Render(pd3dCommandList, pCamera);
 
-	for (int i = 0; i < m_nHierarchicalGameObjects; i++)
+
+	// 5.1. 스카이박스 렌더링
+	if (m_pSkyBox) {
+		m_pSkyBox->Render(pd3dCommandList, pCamera); // SkyBox::Render 내부에서 상태 설정 및 렌더링
+	}
+
+	// 5.2. 지형 렌더링
+	if (m_pTerrain) {
+		m_pTerrain->Render(pd3dCommandList, pCamera); // Terrain::Render 내부에서 상태 설정 및 렌더링
+	}
+
+
+	// octree 렌더링
+	std::vector<tree_obj*> results;
+	tree_obj player_obj{ -1, m_pPlayer->GetPosition() };
+
+	octree.query(player_obj, XMFLOAT3{ 2500,1000,2500 }, results);
+
+	for (auto& obj : results) {
+		if (m_vGameObjects[obj->u_id]) {
+			if (m_vGameObjects[obj->u_id]->FSM_manager) m_vGameObjects[obj->u_id]->FSMUpdate();
+			//if (m_vGameObjects[obj->u_id]->m_pSkinnedAnimationController) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
+			if (m_vGameObjects[obj->u_id]) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
+			if (m_vGameObjects[obj->u_id]->isRender) m_vGameObjects[obj->u_id]->Render(pd3dCommandList, pCamera);
+		}
+	}
+
+	//for (auto it = m_listBranchObjects.begin(); it != m_listBranchObjects.end(); ) {
+	//	(*it)->Animate(m_fElapsedTime);
+	//	if (!(*it)->isRender) { // isRender가 false이면 (수명이 다하면) 리스트에서 제거
+	//		it = m_listBranchObjects.erase(it);
+	//	}
+	//	else {
+	//		++it;
+	//	}
+	//}
+
+	for (auto branch : m_listBranchObjects) {
+		if (branch->isRender) { // 렌더링 플래그 확인
+			branch->Animate(m_fElapsedTime);
+			branch->Render(pd3dCommandList, pCamera);
+		}
+	}
+
+	for (auto branch : m_listRockObjects) {
+		if (branch->isRender) { // 렌더링 플래그 확인
+			branch->Animate(m_fElapsedTime);
+			branch->Render(pd3dCommandList, pCamera);
+		}
+	}
+
+	//if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
+
+	if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
+
+	//// 5.3. 일반 게임 오브젝트 렌더링
+	//for (auto& obj : m_vGameObjects) {
+	//	if (obj /*&& obj->IsVisible()*/) {
+	//		if (obj->FSM_manager) obj->FSMUpdate();
+	//		if (obj->m_pSkinnedAnimationController) obj->Animate(m_fElapsedTime);
+	//		if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
+	//	}	
+	//	// 5.5. OBB 렌더링 (선택적)
+	//	//bool bRenderOBBs = true; // OBB 렌더링 여부 플래그 (예시)
+	//	//if (bRenderOBBs) {
+	//	//	CShader* pOBBShader = pShaderManager->GetShader("OBB", pd3dCommandList);
+	//	//	if (pOBBShader) {
+	//	//		// OBB 렌더링 시작 전에 상태 설정
+	//	//		SetGraphicsState(pd3dCommandList, pOBBShader); // CScene의 멤버 함수 호출
+	//	//
+	//	//		for (auto& obj : m_vGameObjects) {
+	//	//			if (obj /*&& obj->ShouldRenderOBB()*/) {
+	//	//				// RenderOBB 내부에서는 OBB용 CBV만 바인딩
+	//	//				obj->RenderOBB(pd3dCommandList, pCamera);
+	//	//				pOBBShader->Release();
+	//	//			}
+	//	//
+	//	//			// 플레이어 OBB 렌더링 등
+	//	//			if (m_pPlayer) {
+	//	//				m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
+	//	//			}
+	//	//
+	//	//			pOBBShader->Release();
+	//	//		}
+	//	//	}
+	//	//}
+	//}
+
+	// 5.5. 플레이어 렌더링
+	if (m_pPlayer) {
+		if (m_pPlayer->invincibility) {
+			auto endtime = std::chrono::system_clock::now();
+			auto exectime = endtime - m_pPlayer->starttime;
+			auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
+			if (exec_ms > 1000.f) { // 무적시간이 1초가 경과되면
+				m_pPlayer->SetInvincibility();	// 변경
+			}
+		}
+		m_pPlayer->Render(pd3dCommandList, pCamera);
+	}
+	for (auto& p : PlayerList) {
+		if (p.second->m_pSkinnedAnimationController) p.second->Animate(m_fElapsedTime);
+		if (p.second->isRender) p.second->Render(pd3dCommandList, pCamera);
+	}
+}
+
+void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader)
+{
+	if (!pShader || !pd3dCommandList) return;
+
+	// 셰이더 객체 자체가 바뀌었는지 확인
+	if (pShader != m_pCurrentShader)
 	{
-		if (m_ppHierarchicalGameObjects[i])
-		{
-			m_ppHierarchicalGameObjects[i]->Animate(m_fElapsedTime);
-			if (!m_ppHierarchicalGameObjects[i]->m_pSkinnedAnimationController) m_ppHierarchicalGameObjects[i]->UpdateTransform(NULL);
-			m_ppHierarchicalGameObjects[i]->Render(pd3dCommandList, pCamera);
+		m_pCurrentShader = pShader; // 현재 셰이더 업데이트
+
+		// 루트 서명 설정 (셰이더에 저장된 루트 서명 사용)
+		ID3D12RootSignature* pRootSig = pShader->GetRootSignature();
+		if (pRootSig && pRootSig != m_pCurrentRootSignature) {
+			pd3dCommandList->SetGraphicsRootSignature(pRootSig);
+			m_pCurrentRootSignature = pRootSig;
+			// !!! 여기서 공통 CBV 바인딩 로직은 제거됨 !!!
+		}
+
+		// PSO 설정 (셰이더에 저장된 PSO 사용)
+		ID3D12PipelineState* pPSO = pShader->GetPipelineState();
+		if (pPSO && pPSO != m_pCurrentPSO) {
+			pd3dCommandList->SetPipelineState(pPSO);
+			m_pCurrentPSO = pPSO;
+		}
+	}
+	// 이미 같은 셰이더(같은 RS, 같은 PSO)라면 아무것도 변경 안 함
+}
+
+ShaderManager* CScene::GetShaderManager() const {
+	return m_pGameFramework ? m_pGameFramework->GetShaderManager() : nullptr;
+}
+
+
+bool CScene::CollisionCheck(CGameObject* a, CGameObject* b)
+{
+	if (!a || !b) {
+		return false;
+	}
+
+	// a 모든 OBB 수집
+	std::vector<DirectX::BoundingOrientedBox> obbListA;
+	CollectHierarchyObjects(a, obbListA);
+
+	//b 모든 OBB 수집
+	std::vector<DirectX::BoundingOrientedBox> obbListB;
+	CollectHierarchyObjects(b, obbListB);
+
+	// 충돌 검사
+	for (const auto& obbA : obbListA) { 
+		for (const auto& obbB : obbListB) {
+			if (obbA.Intersects(obbB)) {
+				return true; // 충돌 시 즉시 true 반환
+			}
+		}
+	}
+
+	// 충돌 없으면 false 반환
+	return false;
+
+}
+
+void CScene::CollectHierarchyObjects(CGameObject* obj, std::vector<BoundingOrientedBox>& obbList) {
+	if (!obj) {
+		return; // 재귀 탈출 조건
+	}
+
+	if(obj->m_pMesh)
+		obbList.push_back(obj->m_worldOBB);
+
+	// 재귀 호출
+	CGameObject* currentChild = obj->m_pChild;
+	while (currentChild) {
+		CollectHierarchyObjects(currentChild, obbList); // 자식 노드에 대해 
+		currentChild = currentChild->m_pSibling;        // 다음 형제 자식
+	}
+}
+
+#include "NonAtkState.h"
+#include "AtkState.h"
+void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
+	if (!pPlayer) return;
+
+	// Player <-> Object
+	for (auto& obj : m_vGameObjects) {
+		if (CollisionCheck(m_pPlayer, obj)) {
+			if (!obj->isRender)   continue;
+			// 나무 충돌처리
+			if (obj->m_objectType == GameObjectType::Tree) {
+				//obj->isRender = false;
+				//m_pGameFramework->AddItem("wood", 3);
+			}
+			// 돌 충돌처리
+			if (obj->m_objectType == GameObjectType::Rock) {
+				//printf("[Rock 충돌 확인])\n");
+				//obj->isRender = false;
+
+				//int randValue = rand() % 100; // 0 ~ 99
+				//if (randValue < 50) {
+				//	m_pGameFramework->AddItem("stone",3);
+				//}
+				//else if (randValue < 75) {
+				//	m_pGameFramework->AddItem("coal",1);
+				//}
+				//else {
+				//	m_pGameFramework->AddItem("iron_material",1);
+				//}
+			}
+			/*if (obj->m_objectType == GameObjectType::Cow || obj->m_objectType == GameObjectType::Pig) {
+				auto npc = dynamic_cast<CMonsterObject*>(obj);
+				if (npc->Gethp() <= 0) continue;
+				if (npc->FSM_manager->GetInvincible()) continue;
+
+				npc->Decreasehp(pPlayer->PlayerAttack);
+
+				if (npc->Gethp() <= 0) {
+					m_pGameFramework->AddItem("pork", 2);
+					m_pPlayer->Playerxp += 10;
+					if (m_pPlayer->Playerxp >= m_pPlayer->Totalxp) {
+						m_pPlayer->PlayerLevel++;
+						m_pPlayer->Playerxp = m_pPlayer->Playerxp - m_pPlayer->Totalxp;
+						m_pPlayer->Totalxp *= 2;
+						m_pPlayer->StatPoint += 5;
+					}
+				}
+				if (obj->FSM_manager) {
+					if (npc->Gethp() > 0) obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCRunAwayState>());
+					else obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCDieState>());
+					obj->FSM_manager->SetInvincible();
+				}
+			}
+
+			if (obj->m_objectType != GameObjectType::Unknown && obj->m_objectType != GameObjectType::Cow && obj->m_objectType != GameObjectType::Pig &&
+				obj->m_objectType != GameObjectType::Rock && obj->m_objectType != GameObjectType::Tree && obj->m_objectType != GameObjectType::Player) {
+				auto npc = dynamic_cast<CMonsterObject*>(obj);
+				if (npc->Gethp() <= 0) continue;
+				if (npc->FSM_manager->GetInvincible()) continue;
+				npc->Decreasehp(pPlayer->PlayerAttack);
+
+				if (npc->Gethp() <= 0) {
+					m_pPlayer->Playerxp += 20;
+					if (m_pPlayer->Playerxp >= m_pPlayer->Totalxp) {
+						m_pPlayer->PlayerLevel++;
+						m_pPlayer->Playerxp = m_pPlayer->Playerxp - m_pPlayer->Totalxp;
+						m_pPlayer->Totalxp *= 2;
+						m_pPlayer->StatPoint += 5;
+					}
+				}
+			}*/
 		}
 	}
 }
 
+
+
+void CScene::SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVelocity) {
+	if (!m_pGameFramework || !m_pTerrain) return; // 프레임워크와 지형 포인터 유효성 검사
+
+	CBranchObject* newBranch = new CBranchObject(
+		m_pGameFramework->GetDevice(),
+		m_pGameFramework->GetCommandList(),
+		m_pGameFramework,
+		m_pTerrain
+	);
+	newBranch->SetPosition(position);
+	newBranch->SetInitialVelocity(initialVelocity);
+	// 필요시 초기 회전 등 설정
+	newBranch->Rotate(0, (float)(rand() % 360), 0); // Y축으로 랜덤 회전
+
+	m_listBranchObjects.emplace_back(newBranch);
+	//auto t_obj = std::make_unique<newBranch>(tree_obj_count++, gameObj->m_worldOBB.Center);
+	//octree.insert(std::move(t_obj));
+}
+
+void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity) {
+	if (!m_pGameFramework || !m_pTerrain) return; // 프레임워크와 지형 포인터 유효성 검사
+
+	CRockDropObject* newBranch = new CRockDropObject(
+		m_pGameFramework->GetDevice(),
+		m_pGameFramework->GetCommandList(),
+		m_pGameFramework,
+		m_pTerrain
+	);
+	newBranch->SetPosition(position);
+	newBranch->SetInitialVelocity(initialVelocity);
+	// 필요시 초기 회전 등 설정
+	newBranch->Rotate(0, (float)(rand() % 360), 0); // Y축으로 랜덤 회전
+
+	m_listRockObjects.emplace_back(newBranch);
+	//auto t_obj = std::make_unique<newBranch>(tree_obj_count++, gameObj->m_worldOBB.Center);
+	//octree.insert(std::move(t_obj));
+}

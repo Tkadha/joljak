@@ -13,6 +13,7 @@
 9. run right
 
 10. death
+11. dodge
 
 소, 늑대
 1. idle
@@ -27,6 +28,7 @@
 8. run right
 
 9. death
+10. dodge
 
 두꺼비(Toad)
 
@@ -41,8 +43,9 @@
 7. run right
 
 8. death
+9. dodge
 
-곤충 (Wasp)
+곤충, 달팽이 (Wasp)
 
 1. idle
 
@@ -52,3 +55,24 @@
 5. walk right
 
 6. death
+7. dodge
+
+//////////////////////////
+플레이어
+
+IDLE = 0;
+WALK_FORWARD = 1;
+WALK_BACKWARD = 2; 
+WALK_LEFT = 3;
+WALK_RIGHT = 4;
+RUN_FORWARD = 5;
+RUN_BACKWARD = 6;
+RUN_LEFT = 7;
+RUN_RIGHT = 8;
+JUMP_START = 9; 
+JUMP_LOOP = 10;  
+JUMP_END = 11;    
+ATTACK_MELEE1 = 12;
+ATTACK_AXE = 13;
+ATTACK_PICK = 14;
+HIT_REACTION = 15;

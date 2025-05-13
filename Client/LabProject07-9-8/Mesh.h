@@ -1,9 +1,9 @@
-//------------------------------------------------------- ----------------------
+﻿//------------------------------------------------------- ----------------------
 // File: Mesh.h
 //-----------------------------------------------------------------------------
 
 #pragma once
-
+#include "stdafx.h"
 class CGameObject;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -55,8 +55,6 @@ protected:
 protected:
 	int								m_nVertices = 0;
 
-	XMFLOAT3						*m_pxmf3Positions = NULL;
-
 	ID3D12Resource					*m_pd3dPositionBuffer = NULL;
 	ID3D12Resource					*m_pd3dPositionUploadBuffer = NULL;
 	D3D12_VERTEX_BUFFER_VIEW		m_d3dPositionBufferView;
@@ -70,6 +68,9 @@ protected:
 	D3D12_INDEX_BUFFER_VIEW			*m_pd3dSubSetIndexBufferViews = NULL;
 
 public:
+	int m_nPositions;
+	XMFLOAT3						*m_pxmf3Positions = NULL;
+
 	UINT GetType() { return(m_nType); }
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
@@ -81,6 +82,10 @@ public:
 	virtual void OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int nSubSet);
 	virtual void OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
+
+	// 인스턴싱
+	void Render(ID3D12GraphicsCommandList* pd3dCommandList, UINT nInstances, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView);	
+	void Render(ID3D12GraphicsCommandList * pd3dCommandList, int nSubSet, UINT nInstances);
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -88,7 +93,7 @@ public:
 class CHeightMapImage
 {
 private:
-	BYTE							*m_pHeightMapPixels;
+	USHORT							*m_pHeightMapPixels;
 
 	int								m_nWidth;
 	int								m_nLength;
@@ -102,7 +107,7 @@ public:
 	XMFLOAT3 GetHeightMapNormal(int x, int z);
 	XMFLOAT3 GetScale() { return(m_xmf3Scale); }
 
-	BYTE *GetHeightMapPixels() { return(m_pHeightMapPixels); }
+	USHORT *GetHeightMapPixels() { return(m_pHeightMapPixels); }
 	int GetHeightMapWidth() { return(m_nWidth); }
 	int GetHeightMapLength() { return(m_nLength); }
 };
@@ -145,6 +150,8 @@ public:
 	virtual void ReleaseUploadBuffers();
 
 	virtual void OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
+
+	void AddSubMesh(int xStart, int zStart, int nWidth_part, int nLength_part, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

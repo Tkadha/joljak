@@ -1,15 +1,12 @@
-// stdafx.h : ÀÚÁÖ »ç¿ëÇÏÁö¸¸ ÀÚÁÖ º¯°æµÇÁö´Â ¾Ê´Â
-// Ç¥ÁØ ½Ã½ºÅÛ Æ÷ÇÔ ÆÄÀÏ ¹× ÇÁ·ÎÁ§Æ® °ü·Ã Æ÷ÇÔ ÆÄÀÏÀÌ
-// µé¾î ÀÖ´Â Æ÷ÇÔ ÆÄÀÏÀÔ´Ï´Ù.
-//
-
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN             // °ÅÀÇ »ç¿ëµÇÁö ¾Ê´Â ³»¿ëÀº Windows Çì´õ¿¡¼­ Á¦¿ÜÇÕ´Ï´Ù.
-// Windows Çì´õ ÆÄÀÏ:
+#define WIN32_LEAN_AND_MEAN             // ê±°ì˜ ì‚¬ìš©ë˜ì§€ ì•ŠëŠ” ë‚´ìš©ì€ Windows í—¤ë”ì—ì„œ ì œì™¸í•©ë‹ˆë‹¤.
+// Windows í—¤ë” íŒŒì¼:
+#define NOMINMAX
+
 #include <windows.h>
 
-// CÀÇ ·±Å¸ÀÓ Çì´õ ÆÄÀÏÀÔ´Ï´Ù.
+// Cï¿½ï¿½ ï¿½ï¿½Å¸ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ô´Ï´ï¿½.
 #include <stdlib.h>
 #include <malloc.h>
 #include <memory.h>
@@ -22,8 +19,12 @@
 
 #include <fstream>
 #include <vector>
+#include <array>
+#include <map>
 
 using namespace std;
+
+#include "d3dx12.h"
 
 #include <d3d12.h>
 #include <dxgi1_4.h>
@@ -35,9 +36,20 @@ using namespace std;
 
 #include <Mmsystem.h>
 
+//
+#include <random>
+#include <algorithm>
+
 #ifdef _DEBUG
 #include <dxgidebug.h>
 #endif
+
+// d3d12book
+#include "d3dUtil.h"
+#include "DDSTextureLoader.h"
+#include "GameTimer.h"
+#include "MathHelper.h"
+#include "UploadBuffer.h"
 
 using namespace DirectX;
 using namespace DirectX::PackedVector;
@@ -48,8 +60,8 @@ extern HINSTANCE						ghAppInstance;
 
 //#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
 
-#define FRAME_BUFFER_WIDTH				640
-#define FRAME_BUFFER_HEIGHT				480
+#define FRAME_BUFFER_WIDTH				1600
+#define FRAME_BUFFER_HEIGHT				1280
 
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "d3d12.lib")
@@ -57,7 +69,7 @@ extern HINSTANCE						ghAppInstance;
 
 #pragma comment(lib, "dxguid.lib")
 
-// TODO: ÇÁ·Î±×·¥¿¡ ÇÊ¿äÇÑ Ãß°¡ Çì´õ´Â ¿©±â¿¡¼­ ÂüÁ¶ÇÕ´Ï´Ù.
+// TODO: ï¿½ï¿½ï¿½Î±×·ï¿½ï¿½ï¿½ ï¿½Ê¿ï¿½ï¿½ï¿½ ï¿½ß°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½â¿¡ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
 
 extern UINT	gnCbvSrvDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;
@@ -69,6 +81,7 @@ extern void ExecuteCommandList(ID3D12GraphicsCommandList* pd3dCommandList, ID3D1
 
 extern ID3D12Resource* CreateBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType = D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, ID3D12Resource** ppd3dUploadBuffer = NULL);
 extern ID3D12Resource* CreateTextureResourceFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, ID3D12Resource** ppd3dUploadBuffer, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+extern ID3D12Resource* CreateTextureResourceFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const wchar_t* pszFileName, ID3D12Resource** ppd3dUploadBuffer, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 extern ID3D12Resource* CreateTexture2DResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nWidth, UINT nHeight, UINT nElements, UINT nMipLevels, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE* pd3dClearValue);
 extern ID3D12Resource* CreateTextureResourceFromWICFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, ID3D12Resource** ppd3dUploadBuffer, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
@@ -150,6 +163,16 @@ namespace Vector3
 		return(xmf3Result);
 	}
 
+	inline XMFLOAT3 CrossProduct(const XMFLOAT3& v1, const XMFLOAT3& v2)
+	{
+		XMVECTOR vec1 = XMLoadFloat3(&v1);
+		XMVECTOR vec2 = XMLoadFloat3(&v2);
+		XMVECTOR resultVec = XMVector3Cross(vec1, vec2);
+		XMFLOAT3 resultFloat3;
+		XMStoreFloat3(&resultFloat3, resultVec);
+		return resultFloat3;
+	}
+
 	inline XMFLOAT3 Normalize(XMFLOAT3& xmf3Vector)
 	{
 		XMFLOAT3 m_xmf3Normal;
@@ -162,6 +185,13 @@ namespace Vector3
 		XMFLOAT3 xmf3Result;
 		XMStoreFloat3(&xmf3Result, XMVector3Length(XMLoadFloat3(&xmf3Vector)));
 		return(xmf3Result.x);
+	}
+
+	inline float LengthSq(const XMFLOAT3& v)
+	{
+		XMVECTOR vec = XMLoadFloat3(&v);
+		XMVECTOR lengthSqVec = XMVector3LengthSq(vec); // ê° ì„±ë¶„ ì œê³±í•©ì˜ X ì„±ë¶„ë§Œ ê°€ì ¸ì˜´
+		return XMVectorGetX(lengthSqVec);
 	}
 
 	inline float Distance(XMFLOAT3& xmf3Vector1, XMFLOAT3& xmf3Vector2)
@@ -371,5 +401,30 @@ namespace Plane
 		XMFLOAT4 xmf4Result;
 		XMStoreFloat4(&xmf4Result, XMPlaneNormalize(XMLoadFloat4(&xmf4Plane)));
 		return(xmf4Result);
+	}
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+namespace genRandom
+{
+	template <typename T>
+	std::pair<T, T> generateRandomXZ(std::mt19937& gen, T xStart, T xEnd, T zStart, T zEnd) {
+		T x, z;
+
+		if constexpr (std::is_integral<T>::value) {
+			std::uniform_int_distribution<T> xDist(xStart, xEnd);
+			std::uniform_int_distribution<T> zDist(zStart, zEnd);
+			x = xDist(gen);
+			z = zDist(gen);
+		}
+		else {
+			std::uniform_real_distribution<T> xDist(xStart, xEnd);
+			std::uniform_real_distribution<T> zDist(zStart, zEnd);
+			x = xDist(gen);
+			z = zDist(gen);
+		}
+
+		return std::make_pair(x, z);
 	}
 }
