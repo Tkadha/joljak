@@ -12,15 +12,42 @@ enum class E_PACKET
 	E_P_POSITION = 6,
 	E_P_LOGIN = 7,
 	E_P_LOGOUT = 8,
+	E_O_ADD = 9,
+	E_O_REMOVE = 10,
 
 	E_DB_REGISTER = 100,
 	E_DB_LOGIN = 101,
 	E_DB_SUCCESS_FAIL = 102,
 };
 
+enum class OBJECT_TYPE
+{
+	OB_UNKNOWN = 0,
+	OB_PLAYER = 1,
+	OB_TREE = 2,
+	OB_STONE = 3,
+	OB_PIG = 4,
+	OB_COW = 5,
+	OB_WOLF = 6,
+	OB_TOAD = 7,
+	OB_WASP = 8,
+	OB_BAT = 9,
+	OB_SNAKE = 10,
+	OB_TURTLE = 11,
+	OB_SNAIL = 12,
+	OB_SPIDER = 13
+};
 
-
-
+enum class ANIMATION_TYPE
+{
+	UNKNOWN = 0,
+	IDLE,
+	WALK,
+	RUN,
+	DIE,
+	ATTACK,
+	HIT,
+};
 
 const int MAX_BUF_SIZE = 1024; // 버퍼 최대 크기
 
@@ -91,7 +118,7 @@ class INPUT_PACKET : public PACKET
 {
 public:
 	PlayerInput inputData;
-	ULONGLONG uid;
+	unsigned long long uid;
 	INPUT_PACKET() {
 		size = sizeof(INPUT_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_INPUT);
@@ -99,32 +126,47 @@ public:
 };
 
 class ROTATE_PACKET : public PACKET
-{	
-	public:
-		FLOAT3 right;
-		FLOAT3 up;
-		FLOAT3 look;
-		ULONGLONG uid;
-		ROTATE_PACKET() {
+{
+public:
+	FLOAT3 right;
+	FLOAT3 up;
+	FLOAT3 look;
+	unsigned long long uid;
+	ROTATE_PACKET() {
 		size = sizeof(ROTATE_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_ROTATE);
 	}
 };
 class POSITION_PACKET : public PACKET
 {
-	public:
+public:
 	FLOAT3 position;
-	ULONGLONG uid;
+	unsigned long long uid;
 	POSITION_PACKET() {
 		size = sizeof(POSITION_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_POSITION);
 	}
 };
 
+class ADD_PACKET : public PACKET 
+{
+public:
+	FLOAT3 right;
+	FLOAT3 up;
+	FLOAT3 look;
+	FLOAT3 position;
+	OBJECT_TYPE o_type;
+	ANIMATION_TYPE a_type;
+	ADD_PACKET() {
+		size = sizeof(ADD_PACKET);
+		type = static_cast<char>(E_PACKET::E_O_ADD);
+	}
+};
+
 class LOGIN_PACKET : public PACKET
 {
 	public:
-	ULONGLONG uid;
+	unsigned long long uid;
 	LOGIN_PACKET() {
 		size = sizeof(LOGIN_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_LOGIN);
@@ -133,7 +175,7 @@ class LOGIN_PACKET : public PACKET
 class LOGOUT_PACKET : public PACKET
 {
 	public:
-	ULONGLONG uid;
+	unsigned long long uid;
 	LOGOUT_PACKET() {
 		size = sizeof(LOGOUT_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_LOGOUT);
@@ -144,7 +186,7 @@ class DB_REGISTER_PACKET : public PACKET
 	public:
 	char id[20];
 	char pw[20];
-	ULONGLONG uid;
+	unsigned long long uid;
 	DB_REGISTER_PACKET() {
 		size = sizeof(DB_REGISTER_PACKET);
 		type = static_cast<char>(E_PACKET::E_DB_REGISTER);
@@ -155,7 +197,7 @@ class DB_LOGIN_PACKET : public PACKET
 public:
 	char id[20];
 	char pw[20];
-	ULONGLONG uid;
+	unsigned long long uid;
 	DB_LOGIN_PACKET() {
 		size = sizeof(DB_LOGIN_PACKET);
 		type = static_cast<char>(E_PACKET::E_DB_LOGIN);
@@ -166,7 +208,7 @@ class DB_SUCCESS_FAIL_PACKET : public PACKET
 	public:
 	char kind;	// E_DB_REGISTER, E_DB_LOGIN
 	char result;	//1: 성공, 0: 실패
-	ULONGLONG uid;
+	unsigned long long uid;
 	DB_SUCCESS_FAIL_PACKET() {
 		size = sizeof(DB_SUCCESS_FAIL_PACKET);
 		type = static_cast<char>(E_PACKET::E_DB_SUCCESS_FAIL);

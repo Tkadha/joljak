@@ -126,6 +126,7 @@ public:
 
 	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView;
 
+	int tree_obj_count{ 0 };
 	std::vector<tree_obj>				tree_objects;
 	Octree								octree{ XMFLOAT3 {0,0,0}, XMFLOAT3{10200,6000,10200} };
 	bool								checkTree = false;

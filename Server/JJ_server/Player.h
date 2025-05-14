@@ -8,11 +8,14 @@
 
 class Terrain;
 
+enum C_STATE { PC_FREE, PC_INGAME };
+
 class PlayerClient : public RemoteClient
 {
 public:
 	static unordered_map<PlayerClient*, shared_ptr<PlayerClient>> PlayerClients;
-
+	std::mutex c_mu;
+	C_STATE state;
 private:
 
 	XMFLOAT3					m_Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -33,12 +36,15 @@ private:
 	LPVOID						m_pPlayerUpdatedContext = NULL;
 	std::shared_ptr<Terrain>	m_pTerrain = nullptr;
 
+
 	float m_walkSpeed = 50.0f;
 	float m_runSpeed = 80.0f;
 
 public:
 	PlayerClient() : RemoteClient()
 	{
+		state = PC_FREE;
+
 		m_Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		m_Right = XMFLOAT3(1.0f, 0.0f, 0.0f);
 		m_Up = XMFLOAT3(0.0f, 1.0f, 0.0f);
@@ -57,6 +63,7 @@ public:
 	}
 	PlayerClient(SocketType socketType) :RemoteClient(socketType) 
 	{
+		state = PC_FREE;
 		m_Position = XMFLOAT3(1500.f, 0.0f, 1500.f);	// 테스트용 임의 지정
 		m_Right = XMFLOAT3(1.0f, 0.0f, 0.0f);
 		m_Up = XMFLOAT3(0.0f, 1.0f, 0.0f);

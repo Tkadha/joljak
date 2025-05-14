@@ -91,6 +91,7 @@ void PlayerClient::processInput(PlayerInput input)
 
 void PlayerClient::Update_test(float deltaTime)
 {
+    if (this->state != PC_INGAME) return;
     PlayerInput currentInput = m_lastReceivedInput;
     // 공격 상태 처리
     static float attackTimer = 0.0f; // 실제로는 멤버 변수로 관리
@@ -205,6 +206,7 @@ void PlayerClient::Update_test(float deltaTime)
 
 bool PlayerClient::CheckIfGrounded()
 {
+    if (this->state != PC_INGAME) return false;
     XMFLOAT3 xmf3Scale = m_pTerrain->GetScale();
     XMFLOAT3 xmf3PlayerPosition = GetPosition();
     int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
@@ -217,6 +219,7 @@ bool PlayerClient::CheckIfGrounded()
 
 void PlayerClient::SnapToGround()
 {
+    if (this->state != PC_INGAME) return;
     XMFLOAT3 xmf3Scale = m_pTerrain->GetScale();
     XMFLOAT3 xmf3PlayerPosition = GetPosition();
     int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
@@ -228,6 +231,11 @@ void PlayerClient::SnapToGround()
         xmf3PlayerVelocity.y = 0.0f;
         SetVelocity(xmf3PlayerVelocity);
 
+        xmf3PlayerPosition.y = fHeight;
+        SetPosition(xmf3PlayerPosition);
+    }
+    // 건축물이 생길 시 제거후 로직 변경하기
+    if (m_currentState != ServerPlayerState::Jumping) {
         xmf3PlayerPosition.y = fHeight;
         SetPosition(xmf3PlayerPosition);
     }

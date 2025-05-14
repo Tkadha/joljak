@@ -4,13 +4,13 @@
 
 #include "stdafx.h"
 #include <thread>
-#include "GameFramework.h"
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
-#include "NetworkManager.h"
+#include "GameFramework.h"
 #include "PlayerStateDefs.h"
 #include "Player.h"
+#include "NetworkManager.h"
 
 
 void CGameFramework::NerworkThread()
@@ -87,10 +87,24 @@ void CGameFramework::ProcessPacket(char* packet)
 		m_logQueue.push(log_inout{ E_PACKET::E_P_LOGOUT ,recv_p->uid });
 	}
 	break;
+	case E_PACKET::E_O_ADD:
+	{
+		ADD_PACKET* recv_p = reinterpret_cast<ADD_PACKET*>(packet);
+		FLOAT3 right = recv_p->right;
+		FLOAT3 up = recv_p->up;
+		FLOAT3 look = recv_p->look;
+		FLOAT3 position = recv_p->position;
+		OBJECT_TYPE o_type = recv_p->o_type;
+		ANIMATION_TYPE a_type = recv_p->a_type;
+		m_logQueue.push(log_inout{ E_PACKET::E_O_ADD,0,right,up,look,position,o_type,a_type });
+	}
+	break;
 	default:
 		break;
 	}
 }
+
+
 CGameFramework::CGameFramework()
 {
 	m_pdxgiFactory = NULL;
@@ -797,6 +811,48 @@ void CGameFramework::ReleaseObjects()
 	if (m_pScene) delete m_pScene;
 }
 
+void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look)
+{
+	if (m_pScene)
+	{
+		switch (o_type)
+		{
+		case OBJECT_TYPE::OB_TREE:
+		{
+			CGameObject* gameObj = new CBirchObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+		}
+			break;
+		case OBJECT_TYPE::OB_STONE:
+		{
+			CGameObject* gameObj = new CRockClusterAObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+		}
+			break;
+		default:
+			break;
+		}
+	}
+	else
+	{
+		OutputDebugString(L"Error: Scene is not initialized.\n");
+	}
+}
+
 #include <map>
 
 void CGameFramework::ProcessInput()
@@ -1042,6 +1098,11 @@ void CGameFramework::FrameAdvance()
 				}
 			}
 			break;
+			case E_PACKET::E_O_ADD:
+			{
+				AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look);
+			}
+				break;
 			default:
 				break;
 			}
