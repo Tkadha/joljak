@@ -10,8 +10,10 @@
 #include "GameFramework.h"
 #include "PlayerStateDefs.h"
 #include "Player.h"
-#include "NetworkManager.h"
 
+#include "NetworkManager.h"
+#include "NonAtkState.h"
+#include "AtkState.h"
 
 void CGameFramework::NerworkThread()
 {
@@ -96,6 +98,24 @@ void CGameFramework::ProcessPacket(char* packet)
 		FLOAT3 position = recv_p->position;
 		OBJECT_TYPE o_type = recv_p->o_type;
 		ANIMATION_TYPE a_type = recv_p->a_type;
+		OutputDebugString(L"==========add object==============\n");
+		switch (o_type)
+		{
+		case OBJECT_TYPE::OB_TREE:
+			OutputDebugString(L"==========TREE==============\n");
+			break;
+		case OBJECT_TYPE::OB_STONE:
+			OutputDebugString(L"==========STONE==============\n");
+			break;
+		case OBJECT_TYPE::OB_COW:
+			OutputDebugString(L"==========COW==============\n");
+			break;
+		case OBJECT_TYPE::OB_PIG:
+			OutputDebugString(L"==========PIG==============\n");
+			break;
+		}
+		OutputDebugString(L"==========add object==============\n");
+
 		m_logQueue.push(log_inout{ E_PACKET::E_O_ADD,0,right,up,look,position,o_type,a_type });
 	}
 	break;
@@ -155,6 +175,11 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	CreateDepthStencilView();
 
 	CoInitialize(NULL);
+	
+	// 서버 연결
+	auto& nwManager = NetworkManager::GetInstance();
+	nwManager.Init();
+	serverConnected = true;
 
 
 	BuildObjects();
@@ -186,12 +211,10 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	m_pConstructionSystem = new CConstructionSystem();
 	m_pConstructionSystem->Init(m_pd3dDevice, m_pd3dCommandList, this, m_pScene);
 	
-	
-	auto& nwManager = NetworkManager::GetInstance();
-	nwManager.Init();
+
+	// 서버 연결
 	std::thread t(&CGameFramework::NerworkThread, this);
 	t.detach();
-	
 
 	//ChangeSwapChainState();
 
@@ -769,7 +792,14 @@ void CGameFramework::BuildObjects()
 	m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
 
 	m_pScene = new CScene(this);
-	if (m_pScene) m_pScene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
+
+	auto& nwManager = NetworkManager::GetInstance();
+	if (m_pScene) {
+		if(serverConnected == false)
+			m_pScene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
+		else
+			m_pScene->ServerBuildObjects(m_pd3dDevice, m_pd3dCommandList);
+	}
 
 	
 
@@ -811,8 +841,11 @@ void CGameFramework::ReleaseObjects()
 	if (m_pScene) delete m_pScene;
 }
 
+
+
 void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look)
 {
+
 	if (m_pScene)
 	{
 		switch (o_type)
@@ -828,6 +861,8 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
+			gameObj->SetOBB();
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 		}
 			break;
 		case OBJECT_TYPE::OB_STONE:
@@ -841,11 +876,105 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
+			gameObj->SetOBB();
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+
 		}
 			break;
+		case OBJECT_TYPE::OB_COW:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Cow.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pCowModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Cow;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+			gameObj->SetOwningScene(m_pScene);
+			gameObj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+			gameObj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+			gameObj->SetOBB();
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			//gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+			if (pCowModel) delete(pCowModel);
+		}
+		break;
+		case OBJECT_TYPE::OB_PIG:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pPigModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Pig.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pPigModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Pig;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+			gameObj->SetOwningScene(m_pScene);
+			gameObj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+			gameObj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB();
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			//gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			if (pPigModel) delete(pPigModel);
+		}
+		break;
 		default:
 			break;
 		}
+
+		/*{
+		case GameObjectType::Wasp:
+		case GameObjectType::Snail:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[5].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[6].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Snake:
+		case GameObjectType::Spider:
+		case GameObjectType::Bat:
+		case GameObjectType::Turtle:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Wolf:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Toad:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		}*/
 	}
 	else
 	{
@@ -1100,6 +1229,7 @@ void CGameFramework::FrameAdvance()
 			break;
 			case E_PACKET::E_O_ADD:
 			{
+				std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
 				AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look);
 			}
 				break;
@@ -1112,6 +1242,10 @@ void CGameFramework::FrameAdvance()
 		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
 		WaitForGpuComplete();
+
+		for (auto& obj : m_pScene->m_vGameObjects) {
+			if (obj) obj->ReleaseUploadBuffers();
+		}
 
 		for(auto& player : m_pScene->PlayerList)
 		{

@@ -236,5 +236,8 @@ public:
 	ULONGLONG					_MyID = -1;
 
 	std::queue<log_inout> 	m_logQueue;
+
+	// 서버연결 확인코드
+	bool serverConnected = false;
 };
 

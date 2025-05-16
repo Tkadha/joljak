@@ -360,7 +360,7 @@ void ProcessAccept()
 				s_packet.look.z = obj->GetNonNormalizeLook().z;
 				s_packet.o_type = obj->GetType();
 				s_packet.a_type = obj->GetAnimationType();
-				remoteClient->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+				remoteClient->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));				
 			}		
 		}
 
@@ -393,7 +393,7 @@ void BuildObject()
 	float spawnmin = 1000, spawnmax = 2000;
 	float objectMinSize = 15, objectMaxSize = 20;
 
-	int TreeCount = 100;
+	int TreeCount = 50;
 	for (int i = 0; i < TreeCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 
@@ -407,7 +407,7 @@ void BuildObject()
 		obj->SetTerrain(terrain);
 		gameObjects.push_back(obj);
 	}
-	int RockCount = 100;
+	int RockCount = 10;
 	for (int i = 0; i < RockCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -421,6 +421,34 @@ void BuildObject()
 		gameObjects.push_back(obj);
 	}
 
+	int CowCount = 10;
+	for (int i = 0; i < CowCount; ++i) {
+		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		obj->SetPosition(randompos.first, terrain->GetHeight(randompos.first, randompos.second), randompos.second);
+		obj->SetScale(12.f, 12.f, 12.f);
+
+		obj->SetType(OBJECT_TYPE::OB_COW);
+		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
+		obj->SetTerrain(terrain);
+
+		// fsm 추가 해야함
+
+		gameObjects.push_back(obj);
+	}
+	int PigCount = 10;
+	for (int i = 0; i < PigCount; ++i) {
+		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		obj->SetPosition(randompos.first, terrain->GetHeight(randompos.first, randompos.second), randompos.second);
+		obj->SetScale(10.f, 10.f, 10.f);
+
+		obj->SetType(OBJECT_TYPE::OB_PIG);
+		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
+		obj->SetTerrain(terrain);
+
+		gameObjects.push_back(obj);
+	}
 
 }
 
@@ -446,6 +474,7 @@ int main(int argc, char* argv[])
 
 
 		BuildObject();
+		std::cout<<"BuildObject complete!"<< std::endl;
 
 		for (int i{}; i < IOCPCOUNT; ++i)
 			worker_threads.emplace_back(make_shared<thread>(worker_thread));

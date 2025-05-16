@@ -9,7 +9,6 @@
 #include "NonAtkState.h"
 #include "AtkState.h"
 
-
 CScene::CScene(CGameFramework* pFramework) : m_pGameFramework(pFramework)
 {
 }
@@ -84,7 +83,55 @@ void CScene::BuildDefaultLightsAndMaterials()
 	}
 }
 
-void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
+void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
+{
+	// ShaderManager 가져오기
+	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed!");
+	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
+	assert(pShaderManager != nullptr && "ShaderManager is not available!");
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); // 기존 코드 유지
+
+	BuildDefaultLightsAndMaterials();
+
+	if (!pResourceManager) {
+		// 리소스 매니저가 없다면 로딩 불가! 오류 처리
+		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
+		return;
+	}
+
+	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	srand((unsigned int)time(NULL));
+
+	XMFLOAT3 xmf3Scale(5.f, 0.2f, 5.f);
+	XMFLOAT4 xmf4Color(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color, m_pGameFramework);
+	m_pTerrain->m_xmf4x4World = Matrix4x4::Identity();
+	m_pTerrain->m_xmf4x4ToParent = Matrix4x4::Identity();
+
+
+	m_pPreviewPine = new CConstructionObject(
+		pd3dDevice, pd3dCommandList, m_pGameFramework);
+	m_pPreviewPine->SetPosition(XMFLOAT3(0, 0, 0));
+	
+	//auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
+	m_pPreviewPine->SetScale(10, 10, 10);
+	
+	m_pPreviewPine->isRender = false;
+
+	m_pPreviewPine->m_treecount = tree_obj_count;
+	m_vGameObjects.emplace_back(m_pPreviewPine);
+	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, m_pPreviewPine->m_worldOBB.Center);
+	octree.insert(std::move(t_obj));
+
+	for (auto obj : m_vGameObjects) {
+		obj->SetOBB();
+		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+		if (obj->m_pSkinnedAnimationController) obj->PropagateAnimController(obj->m_pSkinnedAnimationController);
+	}
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+}
+void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	// ShaderManager 가져오기
 	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed!");
@@ -116,6 +163,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	float spawnMin = 500, spawnMax = 9500;
 	float objectMinSize = 15, objectMaxSize = 20;
+
 
 	int nPineObjects = 100;
 	for (int i = 0; i < nPineObjects; ++i) {
@@ -210,10 +258,10 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_pPreviewPine = new CConstructionObject(
 		pd3dDevice, pd3dCommandList, m_pGameFramework);
 	m_pPreviewPine->SetPosition(XMFLOAT3(0, 0, 0));
-	
+
 	//auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 	m_pPreviewPine->SetScale(10, 10, 10);
-	
+
 	m_pPreviewPine->isRender = false;
 
 	m_pPreviewPine->m_treecount = tree_obj_count;
@@ -359,7 +407,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	}
 
 
-	
+
 
 	int nCowObjects = 10;
 	int animate_count = 13;
@@ -539,14 +587,16 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
-
 void CScene::ReleaseObjects()
 {
 	if (m_pTerrain) delete m_pTerrain;
 	if (m_pSkyBox) delete m_pSkyBox;
 
 	ReleaseShaderVariables();
-
+	//for(auto& obj : m_vGameObjects) {
+	//	if (obj) delete obj;
+	//}
+	m_vGameObjects.clear();
 	m_listBranchObjects.clear();
 
 	if (m_pLights) delete[] m_pLights;
@@ -722,15 +772,18 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	tree_obj player_obj{ -1, m_pPlayer->GetPosition() };
 
 	octree.query(player_obj, XMFLOAT3{ 2500,1000,2500 }, results);
-
-	for (auto& obj : results) {
-		if (m_vGameObjects[obj->u_id]) {
-			if (m_vGameObjects[obj->u_id]->FSM_manager) m_vGameObjects[obj->u_id]->FSMUpdate();
-			//if (m_vGameObjects[obj->u_id]->m_pSkinnedAnimationController) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
-			if (m_vGameObjects[obj->u_id]) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
-			if (m_vGameObjects[obj->u_id]->isRender) m_vGameObjects[obj->u_id]->Render(pd3dCommandList, pCamera);
+	{
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		for (auto& obj : results) {
+			if (m_vGameObjects[obj->u_id]) {
+				if (m_vGameObjects[obj->u_id]->FSM_manager) m_vGameObjects[obj->u_id]->FSMUpdate();
+				//if (m_vGameObjects[obj->u_id]->m_pSkinnedAnimationController) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
+				if (m_vGameObjects[obj->u_id]) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
+				if (m_vGameObjects[obj->u_id]->isRender) m_vGameObjects[obj->u_id]->Render(pd3dCommandList, pCamera);
+			}
 		}
 	}
+
 
 	//for (auto it = m_listBranchObjects.begin(); it != m_listBranchObjects.end(); ) {
 	//	(*it)->Animate(m_fElapsedTime);
