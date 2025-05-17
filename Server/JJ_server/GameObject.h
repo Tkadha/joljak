@@ -1,4 +1,7 @@
 #pragma once
+#include "stdafx.h"
+#include "../Global.h"
+#include "FSMManager.h"
 
 class GameObject
 {
@@ -6,12 +9,13 @@ class GameObject
 	ANIMATION_TYPE animationType;
 	XMFLOAT4X4	xmf4x4; // 11 12 13 right, 21 22 23 up, 31 32 33 look, 41 42 43 position
 
-	std::shared_ptr<Terrain>	Terraindata = nullptr;
 
 public:
 	GameObject();
 	virtual ~GameObject();
+	int o_id{ -1 };
 
+	void SetID(int id) { o_id = id; }
 public:
 	void SetPosition(float x, float y, float z) {
 		xmf4x4._41 = x;
@@ -62,11 +66,29 @@ public:
 	void SetAnimationType(ANIMATION_TYPE type) { this->animationType = type; }
 	ANIMATION_TYPE GetAnimationType() { return animationType; }
 
-	void SetTerrain(std::shared_ptr<Terrain> terrain) { Terraindata = terrain; }
-	std::shared_ptr<Terrain> GetTerrain() { return Terraindata; }
 
 	void MoveForward(float fDistance = 1.0f);
 	void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
 
+public:
+	bool is_alive;
+	std::shared_ptr<FSMManager<GameObject>> FSM_manager = NULL;
+	void FSMUpdate()
+	{
+		if (FSM_manager) FSM_manager->Update();
+	}
+	void ChangeState(std::shared_ptr<FSMState<GameObject>> newstate)
+	{
+		FSM_manager->ChangeState(newstate);
+	}
+
+public:
+	int _level = 0;
+	int _hp = 20;
+	int _atk = 3;
+	void Sethp(int hp) { _hp = hp; }
+	void Decreasehp(int num) { _hp -= num; }
+	int Gethp() { return _hp; }
+	int GetAtk() { return _atk; }
 };
 

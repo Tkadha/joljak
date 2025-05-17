@@ -6,7 +6,6 @@
 
 // client 정보
 
-class Terrain;
 
 enum C_STATE { PC_FREE, PC_INGAME };
 
@@ -34,7 +33,6 @@ private:
 	ServerPlayerState			m_currentState = ServerPlayerState::Idle; // 서버 측 플레이어 상태 (ServerPlayerState enum 정의 필요)
 
 	LPVOID						m_pPlayerUpdatedContext = NULL;
-	std::shared_ptr<Terrain>	m_pTerrain = nullptr;
 
 
 	float m_walkSpeed = 50.0f;
@@ -104,7 +102,6 @@ public:
 
 
 
-	void SetTerrain(std::shared_ptr<Terrain> pTerrain) { m_pTerrain = pTerrain; }
 	void Update(float fTimeElapsed);
 	
 	// 상태머신 적용 업데이트 테스트

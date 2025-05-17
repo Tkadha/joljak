@@ -59,13 +59,13 @@ void PlayerClient::Update(float fTimeElapsed)
 	XMFLOAT3 xmf3Velocity = Vector3::ScalarProduct(m_Velocity, fTimeElapsed, false);
 	Move(xmf3Velocity, false);
 
-	if(m_pTerrain)
+	if(Terrain::terrain)
 	{		
-		XMFLOAT3 xmf3Scale = m_pTerrain->GetScale();
+		XMFLOAT3 xmf3Scale = Terrain::terrain->GetScale();
 		XMFLOAT3 xmf3PlayerPosition = GetPosition();
 		int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
 		bool bReverseQuad = ((z % 2) != 0);
-		float fHeight = m_pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
+		float fHeight = Terrain::terrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
 		if (xmf3PlayerPosition.y < fHeight)
 		{
 			XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
@@ -207,11 +207,11 @@ void PlayerClient::Update_test(float deltaTime)
 bool PlayerClient::CheckIfGrounded()
 {
     if (this->state != PC_INGAME) return false;
-    XMFLOAT3 xmf3Scale = m_pTerrain->GetScale();
+    XMFLOAT3 xmf3Scale = Terrain::terrain->GetScale();
     XMFLOAT3 xmf3PlayerPosition = GetPosition();
     int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
     bool bReverseQuad = ((z % 2) != 0);
-    float fHeight = m_pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
+    float fHeight = Terrain::terrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
     if (xmf3PlayerPosition.y <= fHeight) return true;
     
     return false;
@@ -220,11 +220,11 @@ bool PlayerClient::CheckIfGrounded()
 void PlayerClient::SnapToGround()
 {
     if (this->state != PC_INGAME) return;
-    XMFLOAT3 xmf3Scale = m_pTerrain->GetScale();
+    XMFLOAT3 xmf3Scale = Terrain::terrain->GetScale();
     XMFLOAT3 xmf3PlayerPosition = GetPosition();
     int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
     bool bReverseQuad = ((z % 2) != 0);
-    float fHeight = m_pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
+    float fHeight = Terrain::terrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
 
     if (xmf3PlayerPosition.y < fHeight) {
         XMFLOAT3 xmf3PlayerVelocity = GetVelocity();

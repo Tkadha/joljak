@@ -11,6 +11,7 @@
 #include "Timer.h"
 #include "Terrain.h"
 #include "GameObject.h"
+#include "Octree.h"
 #include <vector>
 
 using namespace std;
@@ -37,7 +38,6 @@ shared_ptr<thread> logic_thread;
 
 
 Timer g_timer;
-std::shared_ptr<Terrain> terrain = std::make_shared<Terrain>(_T("../../Client/LabProject07-9-8/Terrain/terrain_16.raw"), 2049, 2049, XMFLOAT3(5.f, 0.2f, 5.f));
 
 std::vector<shared_ptr<GameObject>> gameObjects;
 
@@ -84,7 +84,6 @@ void worker_thread()
 					continue;
 				}
 
-
 				if (readEvent.lpCompletionKey == (ULONG_PTR)g_l_socket.get()) // 리슨소켓이면
 				{
 					ProcessAccept();				
@@ -99,9 +98,9 @@ void worker_thread()
 					{
 						// 이미 수신된 상태이다. 수신 완료된 것을 그냥 꺼내 쓰자.
 						remoteClient->tcpConnection.m_isReadOverlapped = false;
-						int ec = readEvent.dwNumberOfBytesTransferred;
+						int recv_buf_length = readEvent.dwNumberOfBytesTransferred;
 
-						if (ec <= 0)
+						if (recv_buf_length <= 0)
 						{
 							// 읽은 결과가 0 즉 TCP 연결이 끝났다...
 							// 혹은 음수 즉 뭔가 에러가 난 상태이다...
@@ -111,7 +110,6 @@ void worker_thread()
 						{
 							// 이미 수신된 상태이다. 수신 완료된 것을 그냥 꺼내 쓰자.
 							char* recv_buf = remoteClient->tcpConnection.m_recv_over.send_buf;
-							int recv_buf_length = ec;
 
 							// 패킷 재조립
 							int remain_data = recv_buf_length + remoteClient->tcpConnection.m_prev_remain;
@@ -158,7 +156,7 @@ void Logic_thread()
 
 		// fsm몬스터 로직
 		for(auto& obj : gameObjects) {
-			
+			if(obj->FSM_manager) obj->FSMUpdate();
 		}
 
 		for(auto& cl: PlayerClient::PlayerClients) {
@@ -238,7 +236,6 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 			if (cl.second.get() == client.get()) continue; // 나 자신은 제외한다.
 			cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 		}
-
 	}
 	break;
 	default:
@@ -280,7 +277,6 @@ void ProcessAccept()
 			PlayerClient::PlayerClients.insert({ remoteClient.get(), remoteClient });
 			cout << "Client joined. There are " << PlayerClient::PlayerClients.size() << " connections.\n";
 			cout <<" Client id: "<< remoteClient->m_id << endl;
-			remoteClient->SetTerrain(terrain);
 
 
 			LOGIN_PACKET s_packet;
@@ -360,6 +356,7 @@ void ProcessAccept()
 				s_packet.look.z = obj->GetNonNormalizeLook().z;
 				s_packet.o_type = obj->GetType();
 				s_packet.a_type = obj->GetAnimationType();
+				s_packet.id = obj->o_id;
 				remoteClient->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));				
 			}		
 		}
@@ -393,31 +390,31 @@ void BuildObject()
 	float spawnmin = 1000, spawnmax = 2000;
 	float objectMinSize = 15, objectMaxSize = 20;
 
+	int obj_id = 0;
 	int TreeCount = 50;
 	for (int i = 0; i < TreeCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		obj->SetPosition(randompos.first, terrain->GetHeight(randompos.first, randompos.second), randompos.second);
+		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		std::pair<float, float> randomsize = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		obj->SetScale(randomsize.first, randomsize.second, randomsize.first);
-
+		obj->SetID(obj_id++);
 		obj->SetType(OBJECT_TYPE::OB_TREE);
 		obj->SetAnimationType(ANIMATION_TYPE::UNKNOWN);
-		obj->SetTerrain(terrain);
 		gameObjects.push_back(obj);
 	}
 	int RockCount = 10;
 	for (int i = 0; i < RockCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		obj->SetPosition(randompos.first, terrain->GetHeight(randompos.first, randompos.second), randompos.second);
+		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		std::pair<float, float> randomsize = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		obj->SetScale(randomsize.first, randomsize.second, randomsize.first);
+		obj->SetID(obj_id++);
 
 		obj->SetType(OBJECT_TYPE::OB_STONE);
 		obj->SetAnimationType(ANIMATION_TYPE::UNKNOWN);
-		obj->SetTerrain(terrain);
 		gameObjects.push_back(obj);
 	}
 
@@ -425,12 +422,12 @@ void BuildObject()
 	for (int i = 0; i < CowCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		obj->SetPosition(randompos.first, terrain->GetHeight(randompos.first, randompos.second), randompos.second);
+		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(12.f, 12.f, 12.f);
+		obj->SetID(obj_id++);
 
 		obj->SetType(OBJECT_TYPE::OB_COW);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
-		obj->SetTerrain(terrain);
 
 		// fsm 추가 해야함
 
@@ -440,12 +437,12 @@ void BuildObject()
 	for (int i = 0; i < PigCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		obj->SetPosition(randompos.first, terrain->GetHeight(randompos.first, randompos.second), randompos.second);
+		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(10.f, 10.f, 10.f);
+		obj->SetID(obj_id++);
 
 		obj->SetType(OBJECT_TYPE::OB_PIG);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
-		obj->SetTerrain(terrain);
 
 		gameObjects.push_back(obj);
 	}
@@ -476,7 +473,7 @@ int main(int argc, char* argv[])
 		BuildObject();
 		std::cout<<"BuildObject complete!"<< std::endl;
 
-		for (int i{}; i < IOCPCOUNT; ++i)
+		for (int i{}; i < iocpcount; ++i)
 			worker_threads.emplace_back(make_shared<thread>(worker_thread));
 		logic_thread = make_shared<thread>(Logic_thread);
 

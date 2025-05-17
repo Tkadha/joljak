@@ -3,6 +3,9 @@
 
 class Terrain
 {
+public:
+	static std::shared_ptr<Terrain> terrain;
+
 private:
 	USHORT* m_pHeightMapPixels;
 

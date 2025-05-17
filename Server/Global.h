@@ -14,6 +14,9 @@ enum class E_PACKET
 	E_P_LOGOUT = 8,
 	E_O_ADD = 9,
 	E_O_REMOVE = 10,
+	E_O_CHANGEANIMATION = 11,
+	E_O_MOVE = 12,
+
 
 	E_DB_REGISTER = 100,
 	E_DB_LOGIN = 101,
@@ -65,7 +68,17 @@ struct PlayerInput {
 	char Run = false; // 예: Shift 키
 	// 필요시 다른 키나 마우스 입력 추가
 
-	
+	void clear()
+	{
+		MoveForward = false;
+		MoveBackward = false;
+		WalkLeft = false;
+		WalkRight = false;
+		Jump = false;
+		Attack = false; 
+		Interact = false;
+		Run = false; 
+	}
 };
 
 class FLOAT3
@@ -107,8 +120,9 @@ class CHANGEPORT_PACKET : public PACKET
 {
 public:
 	short port;
-	char addr[15];
+	char addr[15] {};
 	CHANGEPORT_PACKET() {
+		port = -1;
 		size = sizeof(CHANGEPORT_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_CHANGEPORT);
 	}
@@ -117,9 +131,11 @@ public:
 class INPUT_PACKET : public PACKET
 {
 public:
-	PlayerInput inputData;
+	PlayerInput inputData {};
 	unsigned long long uid;
 	INPUT_PACKET() {
+		inputData.clear();
+		uid = -1;
 		size = sizeof(INPUT_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_INPUT);
 	}
@@ -128,11 +144,12 @@ public:
 class ROTATE_PACKET : public PACKET
 {
 public:
-	FLOAT3 right;
-	FLOAT3 up;
-	FLOAT3 look;
+	FLOAT3 right {};
+	FLOAT3 up {};
+	FLOAT3 look {};
 	unsigned long long uid;
 	ROTATE_PACKET() {
+		uid = -1;
 		size = sizeof(ROTATE_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_ROTATE);
 	}
@@ -140,9 +157,10 @@ public:
 class POSITION_PACKET : public PACKET
 {
 public:
-	FLOAT3 position;
+	FLOAT3 position {};
 	unsigned long long uid;
 	POSITION_PACKET() {
+		uid = -1;
 		size = sizeof(POSITION_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_POSITION);
 	}
@@ -151,43 +169,94 @@ public:
 class ADD_PACKET : public PACKET 
 {
 public:
-	FLOAT3 right;
-	FLOAT3 up;
-	FLOAT3 look;
-	FLOAT3 position;
+	FLOAT3 right{};
+	FLOAT3 up{};
+	FLOAT3 look{};
+	FLOAT3 position{};
+	int id;
 	OBJECT_TYPE o_type;
 	ANIMATION_TYPE a_type;
 	ADD_PACKET() {
+		id = -1;
+		o_type = OBJECT_TYPE::OB_UNKNOWN;
+		a_type = ANIMATION_TYPE::UNKNOWN;
 		size = sizeof(ADD_PACKET);
 		type = static_cast<char>(E_PACKET::E_O_ADD);
 	}
 };
 
+class REMOVE_PACKET : public PACKET
+{
+public:
+	int id;
+	REMOVE_PACKET() {
+		id = -1;
+		size = sizeof(REMOVE_PACKET);
+		type = static_cast<char>(E_PACKET::E_O_REMOVE);
+	}
+};
+
+class CHANGEANIMATION_PACKET : public PACKET
+{
+public:
+	ANIMATION_TYPE a_type;
+	CHANGEANIMATION_PACKET() {
+		a_type = ANIMATION_TYPE::UNKNOWN;
+		size = sizeof(ANIMATION_TYPE);
+		type = static_cast<char>(E_PACKET::E_O_CHANGEANIMATION);
+	}
+};
+
+class OBJMOVE_PACKET : public PACKET
+{
+	FLOAT3 right{};
+	FLOAT3 up{};
+	FLOAT3 look{};
+	FLOAT3 position{};
+	OBJMOVE_PACKET() {
+		size = sizeof(OBJMOVE_PACKET);
+		type = static_cast<char>(E_PACKET::E_O_MOVE);
+	}
+};
+
+
+
+
+
+
+
+
+
+
+
 class LOGIN_PACKET : public PACKET
 {
-	public:
+public:
 	unsigned long long uid;
 	LOGIN_PACKET() {
+		uid = -1;
 		size = sizeof(LOGIN_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_LOGIN);
 	}
 };
 class LOGOUT_PACKET : public PACKET
 {
-	public:
+public:
 	unsigned long long uid;
 	LOGOUT_PACKET() {
+		uid = -1;
 		size = sizeof(LOGOUT_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_LOGOUT);
 	}
 };
 class DB_REGISTER_PACKET : public PACKET
 {
-	public:
-	char id[20];
-	char pw[20];
+public:
+	char id[20]{};
+	char pw[20]{};
 	unsigned long long uid;
 	DB_REGISTER_PACKET() {
+		uid = -1;
 		size = sizeof(DB_REGISTER_PACKET);
 		type = static_cast<char>(E_PACKET::E_DB_REGISTER);
 	}
@@ -195,21 +264,23 @@ class DB_REGISTER_PACKET : public PACKET
 class DB_LOGIN_PACKET : public PACKET
 {
 public:
-	char id[20];
-	char pw[20];
+	char id[20]{};
+	char pw[20]{};
 	unsigned long long uid;
 	DB_LOGIN_PACKET() {
+		uid = -1;
 		size = sizeof(DB_LOGIN_PACKET);
 		type = static_cast<char>(E_PACKET::E_DB_LOGIN);
 	}
 };
 class DB_SUCCESS_FAIL_PACKET : public PACKET
 {
-	public:
-	char kind;	// E_DB_REGISTER, E_DB_LOGIN
-	char result;	//1: 성공, 0: 실패
+public:
+	char kind{};	// E_DB_REGISTER, E_DB_LOGIN
+	char result{};	//1: 성공, 0: 실패
 	unsigned long long uid;
 	DB_SUCCESS_FAIL_PACKET() {
+		uid = -1;
 		size = sizeof(DB_SUCCESS_FAIL_PACKET);
 		type = static_cast<char>(E_PACKET::E_DB_SUCCESS_FAIL);
 	}

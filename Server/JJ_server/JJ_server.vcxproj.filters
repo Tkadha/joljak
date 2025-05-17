@@ -9,9 +9,23 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
-    <Filter Include="리소스 파일">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    <Filter Include="FSM">
+      <UniqueIdentifier>{c5aea881-992d-4f17-b7a8-395170444c90}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FSM\RandomUtil">
+      <UniqueIdentifier>{fd41110f-01b7-4afd-9d8f-39a6065264f1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Octree">
+      <UniqueIdentifier>{2bfa86b8-0044-4997-9ef5-21d435d6057f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameObject">
+      <UniqueIdentifier>{6b2eebb4-c511-48f7-8b38-26bdf592a589}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Timer">
+      <UniqueIdentifier>{97084971-20ad-48c3-93a6-5e6898f4f49b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Terrain">
+      <UniqueIdentifier>{a3049cb0-73fc-4568-b50f-cba8018a4b19}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -21,17 +35,35 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Player.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="FSMManager.cpp">
+      <Filter>FSM</Filter>
     </ClCompile>
-    <ClCompile Include="Timer.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="FSMState.cpp">
+      <Filter>FSM</Filter>
     </ClCompile>
-    <ClCompile Include="Terrain.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="NonAtkState.cpp">
+      <Filter>FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="AtkState.cpp">
+      <Filter>FSM</Filter>
+    </ClCompile>
+    <ClCompile Include="RandomUtil.cpp">
+      <Filter>FSM\RandomUtil</Filter>
+    </ClCompile>
+    <ClCompile Include="Octree.cpp">
+      <Filter>Octree</Filter>
     </ClCompile>
     <ClCompile Include="GameObject.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="Player.cpp">
+      <Filter>GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="Timer.cpp">
+      <Filter>Timer</Filter>
+    </ClCompile>
+    <ClCompile Include="Terrain.cpp">
+      <Filter>Terrain</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -41,17 +73,35 @@
     <ClInclude Include="targetver.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Player.h">
-      <Filter>헤더 파일</Filter>
+    <ClInclude Include="FSMManager.h">
+      <Filter>FSM</Filter>
     </ClInclude>
-    <ClInclude Include="Timer.h">
-      <Filter>헤더 파일</Filter>
+    <ClInclude Include="FSMState.h">
+      <Filter>FSM</Filter>
     </ClInclude>
-    <ClInclude Include="Terrain.h">
-      <Filter>헤더 파일</Filter>
+    <ClInclude Include="NonAtkState.h">
+      <Filter>FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="AtkState.h">
+      <Filter>FSM</Filter>
+    </ClInclude>
+    <ClInclude Include="RandomUtil.h">
+      <Filter>FSM\RandomUtil</Filter>
+    </ClInclude>
+    <ClInclude Include="Octree.h">
+      <Filter>Octree</Filter>
     </ClInclude>
     <ClInclude Include="GameObject.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.h">
+      <Filter>GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer.h">
+      <Filter>Timer</Filter>
+    </ClInclude>
+    <ClInclude Include="Terrain.h">
+      <Filter>Terrain</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
