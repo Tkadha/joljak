@@ -1979,3 +1979,142 @@ CConstructionObject::CConstructionObject(ID3D12Device* pd3dDevice, ID3D12Graphic
 	
 	if (pInFile) fclose(pInFile); // 파일 닫기 추가
 }
+
+
+
+
+CWaveObject::CWaveObject(ID3D12Device* pd3dDevice, Waves* pWavesLogic, ResourceManager* pResourceManager, ShaderManager* pShaderManager)
+	: CGameObject() // 부모 클래스 생성자 호출 (필요한 인자 전달)
+	, m_pWavesLogicRef(pWavesLogic)
+	, m_pResourceManagerRef(pResourceManager)
+	, m_pShaderManagerRef(pShaderManager)
+	, m_nVertices(0)
+	, m_nIndices(0)
+{
+	if (!m_pWavesLogicRef || !m_pResourceManagerRef || !m_pShaderManagerRef) {
+		OutputDebugStringA("Error: CWaveObject constructor received null pointers.\n");
+		// 예외 처리 또는 플래그 설정
+		return;
+	}
+
+	// 파도 메쉬 생성 (정점/인덱스 버퍼)
+	BuildWaveMesh(pd3dDevice, m_pResourceManagerRef);
+
+	// CGameObject의 멤버 변수 초기화 (예: 재질 인덱스, 텍스처 설정 등)
+	// 파도에 사용할 재질 정보 설정 (CGameObject의 SetMaterial 등 사용)
+	// 예를 들어, 물 재질을 나타내는 MaterialInfo를 CGameObject의 m_pMaterial에 설정
+	// 이 MaterialInfo는 cbGameObjectInfo (b2)를 통해 셰이더로 전달됨
+	// SetMaterial(물_재질_인덱스_또는_객체);
+}
+
+CWaveObject::~CWaveObject()
+{
+	// m_pVertexBuffer, m_pIndexBuffer는 ComPtr이므로 자동 해제됨
+}
+
+void CWaveObject::BuildWaveMesh(ID3D12Device* pd3dDevice, ResourceManager* pResourceManager)
+{
+	m_nVertices = m_pWavesLogicRef->VertexCount();
+	UINT nTriangles = m_pWavesLogicRef->TriangleCount(); // 삼각형 수
+	m_nIndices = nTriangles * 3; // 인덱스 수
+
+	std::vector<WaveVertex> vertices(m_nVertices);
+	std::vector<uint32_t> indices(m_nIndices); // 인덱스 타입은 보통 uint16 또는 uint32
+
+	// d3d12book의 Waves::InitGrid() 로직 참고하여 정점 및 인덱스 데이터 생성
+	float width = m_pWavesLogicRef->Width();
+	float depth = m_pWavesLogicRef->Depth();
+	int numRows = m_pWavesLogicRef->RowCount();
+	int numCols = m_pWavesLogicRef->ColumnCount();
+
+	float dx = width / (numCols - 1);
+	float dz = depth / (numRows - 1);
+
+	// 정점 생성 (XY 평면에 그리드 생성, Y는 0 또는 초기값)
+	for (int r = 0; r < numRows; ++r) {
+		for (int c = 0; c < numCols; ++c) {
+			int index = r * numCols + c;
+			vertices[index].PosL = DirectX::XMFLOAT3((c * dx) - (width * 0.5f), 0.0f, (r * dz) - (depth * 0.5f));
+			vertices[index].TexC = DirectX::XMFLOAT2((float)c / (numCols - 1), (float)r / (numRows - 1)); // UV는 [0,1] 범위
+			vertices[index].NormalL = DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f); // 초기 법선
+			vertices[index].TangentL = DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f); // 초기 탄젠트
+		}
+	}
+
+	// 인덱스 생성
+	int k = 0;
+	for (int r = 0; r < numRows - 1; ++r) {
+		for (int c = 0; c < numCols - 1; ++c) {
+			indices[k++] = r * numCols + c;
+			indices[k++] = r * numCols + c + 1;
+			indices[k++] = (r + 1) * numCols + c;
+
+			indices[k++] = (r + 1) * numCols + c;
+			indices[k++] = r * numCols + c + 1;
+			indices[k++] = (r + 1) * numCols + c + 1;
+		}
+	}
+
+	// ResourceManager를 통해 정점 버퍼 생성
+	// (CGameFramework::BuildObjects에서 m_pd3dCommandList를 전달받거나, ResourceManager가 내부적으로 처리)
+	// 여기서는 ResourceManager가 Device와 CommandList를 받는다고 가정 (또는 ResourceManager가 프레임워크 멤버 통해 접근)
+	// ResourceManager의 버퍼 생성 함수 인터페이스에 맞춰야 함
+	ID3D12GraphicsCommandList* pTempCmdList = nullptr; // 실제로는 CGameFramework에서 얻어와야 함
+
+	m_pVertexBuffer = pResourceManager->CreateVertexBuffer(pd3dDevice, pTempCmdList, L"WaveMeshVB", vertices.data(), sizeof(WaveVertex), m_nVertices, false);
+	m_pIndexBuffer = pResourceManager->CreateIndexBuffer(pd3dDevice, pTempCmdList, L"WaveMeshIB", indices.data(), m_nIndices);
+
+	if (!m_pVertexBuffer || !m_pIndexBuffer) {
+		OutputDebugStringA("Error: Failed to create VB/IB for CWaveObject.\n");
+		return;
+	}
+
+	m_VertexBufferView.BufferLocation = m_pVertexBuffer->GetGPUVirtualAddress();
+	m_VertexBufferView.StrideInBytes = sizeof(WaveVertex);
+	m_VertexBufferView.SizeInBytes = sizeof(WaveVertex) * m_nVertices;
+
+	m_IndexBufferView.BufferLocation = m_pIndexBuffer->GetGPUVirtualAddress();
+	m_IndexBufferView.Format = DXGI_FORMAT_R32_UINT; // indices 벡터 타입이 uint32_t이므로
+	m_IndexBufferView.SizeInBytes = sizeof(uint32_t) * m_nIndices;
+}
+
+void CWaveObject::Animate(float fTimeElapsed)
+{
+	// CGameObject::Animate(fTimeElapsed); // 부모 클래스 Animate 호출 (필요 시)
+
+	// 파도 데이터는 GPU에서 직접 업데이트되므로,
+	// 이 함수에서는 특별한 애니메이션 로직이 필요 없을 수 있습니다.
+	// 만약 CPU에서 정점 버퍼를 매 프레임 업데이트해야 한다면 여기서 처리합니다.
+	// (하지만 비효율적이므로 권장하지 않음)
+}
+
+void CWaveObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	CShader* pShaderBase = m_pShaderManagerRef->GetShader(m_strWaveShaderName, pd3dCommandList);
+	if (!pShaderBase || !pShaderBase->GetPipelineState()) {
+		if (pShaderBase) pShaderBase->Release();
+		return;
+	}
+
+	// 2. PSO 및 루트 시그니처 설정
+	pd3dCommandList->SetPipelineState(pShaderBase->GetPipelineState());
+	pd3dCommandList->SetGraphicsRootSignature(pShaderBase->GetRootSignature());
+
+	CGameObject::Render(pd3dCommandList, pCamera); 
+
+	/*if (m_pWavesLogicRef && m_pWavesLogicRef->m_hCurrSolSrvGPU.ptr != 0) { 
+		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pWavesLogicRef->m_hCurrSolSrvGPU);
+	}
+	else {
+		OutputDebugStringA("Error: Invalid SRV GPU handle for wave solution in CWaveObject::Render.\n");
+	}*/
+
+	pd3dCommandList->IASetVertexBuffers(0, 1, &m_VertexBufferView);
+	pd3dCommandList->IASetIndexBuffer(&m_IndexBufferView);
+	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	pd3dCommandList->DrawIndexedInstanced(m_nIndices, 1, 0, 0, 0);
+
+
+	if (pShaderBase) pShaderBase->Release(); // GetShader에서 AddRef 했으므로 Release
+}

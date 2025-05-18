@@ -36,7 +36,9 @@ private:
     // 셰이더 생성 함수
     CShader* CreateShaderInternal(const std::string& name, ID3D12GraphicsCommandList* pd3dCommandList);
 
-
+    // 파도용 함수   
+    ID3D12RootSignature* CreateWaveSimComputeRootSignature();
+    ID3D12RootSignature* CreateWaveRenderRootSignature();
 public:
     ShaderManager(ID3D12Device* pd3dDevice);
     ~ShaderManager(); // 소멸자에서 캐시된 리소스 정리 필요
@@ -56,4 +58,6 @@ public:
 
     // --- 정리 ---
     void ReleaseAll(); // 모든 캐시된 리소스 해제
+
+
 };

@@ -54,3 +54,42 @@ std::shared_ptr<CTexture> ResourceManager::GetTexture(const std::wstring& filena
     m_TextureCache[filename] = newTexture; // 캐시에 shared_ptr 저장
     return newTexture; // 새로 생성된 shared_ptr 반환
 }
+
+
+Microsoft::WRL::ComPtr<ID3D12Resource> ResourceManager::CreateUAVTexture2D(
+    ID3D12Device* pd3dDevice, const std::wstring& resourceName,
+    UINT width, UINT height, DXGI_FORMAT format,
+    D3D12_RESOURCE_STATES initialResourceState, const D3D12_CLEAR_VALUE* pOptimizedClearValue,
+    D3D12_RESOURCE_FLAGS flags)
+{
+    Microsoft::WRL::ComPtr<ID3D12Resource> pResource;
+    D3D12_RESOURCE_DESC texDesc = {};
+    texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    texDesc.Alignment = 0;
+    texDesc.Width = width;
+    texDesc.Height = height;
+    texDesc.DepthOrArraySize = 1;
+    texDesc.MipLevels = 1;
+    texDesc.Format = format;
+    texDesc.SampleDesc.Count = 1;
+    texDesc.SampleDesc.Quality = 0;
+    texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    texDesc.Flags = flags;
+
+    auto heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+    HRESULT hr = pd3dDevice->CreateCommittedResource(
+        &heapProps,
+        D3D12_HEAP_FLAG_NONE,
+        &texDesc,
+        initialResourceState,
+        pOptimizedClearValue,
+        IID_PPV_ARGS(&pResource));
+
+    if (FAILED(hr)) {
+        OutputDebugStringW((L"Failed to create UAV Texture2D: " + resourceName + L"\n").c_str());
+        return nullptr;
+    }
+    pResource->SetName((resourceName + L"_UAV_Texture").c_str());
+    // m_ResourceCache[resourceName] = pResource; // 필요시 캐싱
+    return pResource;
+}

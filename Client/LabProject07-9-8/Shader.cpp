@@ -266,6 +266,41 @@ void CShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 	OnPrepareRender(pd3dCommandList);
 }
 
+
+
+
+void CShader::CreateComputeShader(ID3D12Device* pd3dDevice, const std::wstring& fileName, const std::string& entryPoint, ID3D12RootSignature* pd3dRootSignature)
+{
+	UINT nCompileFlags = 0;
+#if defined(_DEBUG)
+	nCompileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
+
+	Microsoft::WRL::ComPtr<ID3DBlob> pd3dComputeShaderBlob;
+	Microsoft::WRL::ComPtr<ID3DBlob> pd3dErrorBlob;
+
+	HRESULT hr = D3DCompileFromFile(fileName.c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+		entryPoint.c_str(), "cs_5_1", nCompileFlags, 0, &pd3dComputeShaderBlob, &pd3dErrorBlob);
+
+	if (FAILED(hr)) {
+		if (pd3dErrorBlob) OutputDebugStringA((char*)pd3dErrorBlob->GetBufferPointer());
+		return;
+	}
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC computePSODesc = {};
+	computePSODesc.pRootSignature = pd3dRootSignature;
+	computePSODesc.CS = CD3DX12_SHADER_BYTECODE(pd3dComputeShaderBlob.Get());
+	computePSODesc.NodeMask = 0;
+	computePSODesc.CachedPSO.pCachedBlob = nullptr;
+	computePSODesc.CachedPSO.CachedBlobSizeInBytes = 0;
+	computePSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+
+	hr = pd3dDevice->CreateComputePipelineState(&computePSODesc, IID_PPV_ARGS(&m_pd3dComputePipelineState));
+	if (FAILED(hr)) {
+		OutputDebugStringA("Failed to create Compute PSO\n");
+	}
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 float Random(float fMin, float fMax)

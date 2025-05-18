@@ -542,3 +542,45 @@ public:
 	CConstructionObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CConstructionObject() {}
 };
+
+#include "Waves.h"      // Waves 클래스 헤더 (파도 시뮬레이션 데이터 접근용)
+
+// 파도 메쉬의 정점 구조체 (WaveRender.hlsl의 VS_WAVE_INPUT과 일치)
+struct WaveVertex
+{
+	DirectX::XMFLOAT3 PosL;    // 로컬 XY 평면 그리드 정점 위치
+	DirectX::XMFLOAT2 TexC;    // UV 좌표
+	DirectX::XMFLOAT3 NormalL; // 초기 법선 (주로 (0,1,0))
+	DirectX::XMFLOAT3 TangentL;// 초기 탄젠트 (주로 (1,0,0))
+};
+
+class CWaveObject : public CGameObject // CGameObject를 상속받도록 수정
+{
+public:
+	CWaveObject(ID3D12Device* pd3dDevice, Waves* pWavesLogic, ResourceManager* pResourceManager, ShaderManager* pShaderManager);
+	virtual ~CWaveObject();
+
+	// CGameObject의 가상 함수 오버라이드
+	virtual void Animate(float fTimeElapsed) override; // Update 대신 Animate 사용 가능성
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
+
+private:
+	void BuildWaveMesh(ID3D12Device* pd3dDevice, ResourceManager* pResourceManager);
+
+	Waves* m_pWavesLogicRef;            // 파도 시뮬레이션 로직 객체 참조
+	ResourceManager* m_pResourceManagerRef; // 리소스 매니저 참조
+	ShaderManager* m_pShaderManagerRef;   // 셰이더 매니저 참조
+
+	// ResourceManager가 관리하는 정점/인덱스 버퍼에 대한 핸들 또는 ID
+	// 실제 ResourceManager 구현에 따라 ComPtr<ID3D12Resource> 또는 size_t ID 등이 될 수 있음
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_pVertexBuffer;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_pIndexBuffer;
+	D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView;
+	D3D12_INDEX_BUFFER_VIEW  m_IndexBufferView;
+
+	UINT m_nVertices;
+	UINT m_nIndices;
+
+	// 파도 렌더링에 사용할 셰이더 이름 (ShaderManager에서 이 이름으로 가져옴)
+	const std::string m_strWaveShaderName = "WaveRender";
+};

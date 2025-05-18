@@ -59,6 +59,11 @@ public:
 	// 이 함수는 각 파생 셰이더 클래스가 자신의 타입을 문자열로 반환하도록 강제합니다.
 	virtual std::string GetShaderType() const = 0; // 순수 가상 함수로 선언
 
+	// 파도
+	virtual void CreateComputeShader(ID3D12Device* pd3dDevice, const std::wstring& fileName, const std::string& entryPoint, ID3D12RootSignature* pd3dRootSignature);
+	ID3D12PipelineState* GetComputePipelineState() { return m_pd3dComputePipelineState.Get(); }
+
+
 protected:
 	ID3DBlob							*m_pd3dVertexShaderBlob = NULL;
 	ID3DBlob							*m_pd3dPixelShaderBlob = NULL;
@@ -71,4 +76,8 @@ protected:
 
 	// --- 루트 서명 포인터 멤버 추가 ---
 	ID3D12RootSignature* m_pd3dGraphicsRootSignature = nullptr;
+
+
+	// 파도
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pd3dComputePipelineState;
 };
