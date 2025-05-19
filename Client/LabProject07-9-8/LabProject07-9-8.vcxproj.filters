@@ -81,6 +81,12 @@
     <Filter Include="소스 파일\Object\Player\PlayerStateMachine">
       <UniqueIdentifier>{b468b9b6-15c6-4e72-ad25-76ecdd26a8f9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Wave">
+      <UniqueIdentifier>{4bc0e112-91ef-42dd-a89a-8000bd2646f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\WaveShader">
+      <UniqueIdentifier>{55f6cf91-dffb-444e-9f49-29da5c1080ff}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConstructionSystem.cpp" />
@@ -205,6 +211,12 @@
     </ClCompile>
     <ClCompile Include="MathHelper.cpp">
       <Filter>Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="Waves.cpp">
+      <Filter>소스 파일\Wave</Filter>
+    </ClCompile>
+    <ClCompile Include="ComputeShader.cpp">
+      <Filter>소스 파일\Shader</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -339,6 +351,12 @@
     <ClInclude Include="UploadBuffer.h">
       <Filter>Utility</Filter>
     </ClInclude>
+    <ClInclude Include="Waves.h">
+      <Filter>소스 파일\Wave</Filter>
+    </ClInclude>
+    <ClInclude Include="ComputeShader.h">
+      <Filter>소스 파일\Shader</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LabProject07-9-8.rc" />
@@ -361,8 +379,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Common.hlsl" />
-    <FxCompile Include="InstancingShaders.hlsl" />
     <FxCompile Include="Shaders.hlsl">
       <Filter>소스 파일\Shader</Filter>
     </FxCompile>
@@ -380,6 +396,18 @@
     </FxCompile>
     <FxCompile Include="OBBShader.hlsl">
       <Filter>소스 파일\Shader\OBBShader</Filter>
+    </FxCompile>
+    <FxCompile Include="WaveSim.hlsl">
+      <Filter>소스 파일\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="WaveShader.hlsl">
+      <Filter>소스 파일\Shader\WaveShader</Filter>
+    </FxCompile>
+    <FxCompile Include="Common.hlsl">
+      <Filter>소스 파일\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="InstancingShaders.hlsl">
+      <Filter>소스 파일\Shader</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

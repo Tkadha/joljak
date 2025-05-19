@@ -21,6 +21,33 @@ public:
 
     void ReleaseAll();
 
+    Microsoft::WRL::ComPtr<ID3D12Resource> CreateUAVTexture2D(
+        ID3D12Device* pd3dDevice, // CGameFramework로부터 전달받음
+        const std::wstring& resourceName,
+        UINT width, UINT height, DXGI_FORMAT format,
+        D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+        const D3D12_CLEAR_VALUE* pOptimizedClearValue = nullptr,
+        D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS
+    );
+
+    // (선택적) 생성된 리소스를 이름으로 캐싱하고 가져오는 기능
+    // Microsoft::WRL::ComPtr<ID3D12Resource> GetResource(const std::wstring& name);
+
+    // 정점/인덱스 버퍼 생성 (기존 프로젝트에 유사한 기능이 있다면 그것을 활용)
+    Microsoft::WRL::ComPtr<ID3D12Resource> CreateVertexBuffer(
+        ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList,
+        const std::wstring& name, const void* pData, UINT uiElementSize, UINT uiCount, bool bIsDynamic,
+        D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_GENERIC_READ
+    );
+    Microsoft::WRL::ComPtr<ID3D12Resource> CreateIndexBuffer(
+        ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList,
+        const std::wstring& name, const void* pData, UINT uiCount, // 인덱스는 보통 uint16 또는 uint32
+        D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_GENERIC_READ
+    );
+    // 동적 버퍼 업데이트 함수 (필요시)
+    void UpdateDynamicBuffer(ID3D12Resource* pBuffer, const void* pData, UINT uiSize);
+
+
 private:
     CGameFramework* m_pFramework = nullptr;
 

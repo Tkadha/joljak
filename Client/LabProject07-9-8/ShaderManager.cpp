@@ -8,6 +8,7 @@
 #include "StandardShader.h"
 #include "SkinnedShader.h"
 #include "SkyBoxShader.h"
+#include "ComputeShader.h"
 // 예: #include "StandardShader.h", "SkinnedShader.h" 등 (아직 없다면 생성 필요)
 
 // --- 정적 샘플러 정의 ---
@@ -103,6 +104,9 @@ ID3D12RootSignature* ShaderManager::CreateRootSignatureInternal(const std::strin
     if (name == "Skybox") return CreateSkyboxRootSignature();
     if (name == "OBB") return CreateOBBRootSignature();
     if (name == "Instancing") return CreateInstancingRootSignature(); // 필요시
+    
+    if (name == "WaveSimCompute") return CreateWaveSimComputeRootSignature();
+    if (name == "WaveRender") return CreateWaveRenderRootSignature();
 
     OutputDebugStringA("Error: Unknown root signature name requested!\n");
     return nullptr;
@@ -308,7 +312,36 @@ CShader* ShaderManager::CreateShaderInternal(const std::string& name, ID3D12Grap
     std::string rootSignatureName = "";
 
     // 1. 셰이더 이름에 따라 사용할 클래스와 루트 서명 이름 결정
-    if (name == "Standard") {
+    if (name == "WaveSimCompute") {
+        pShader = new CComputeShaderWrapper();
+        rootSignatureName = "WaveSimCompute";
+        if (pShader && !rootSignatureName.empty()) {
+            pRootSig = GetRootSignature(rootSignatureName);
+            if (pRootSig) {
+                // 컴퓨트 셰이더 파일 경로 및 엔트리 포인트 지정
+                dynamic_cast<CShader*>(pShader)->CreateComputeShader(m_pd3dDevice, L"Assets/Shaders/WaveSimCS.hlsl", "CS", pRootSig);
+                if (!dynamic_cast<CShader*>(pShader)->GetComputePipelineState()) { // PSO 생성 확인
+                    OutputDebugStringA(("Error: Failed to create Compute PSO for shader '" + name + "'\n").c_str());
+                    delete pShader; pShader = nullptr;
+                }
+                else {
+                    pShader->SetRootSignature(pRootSig); // 루트 시그니처 저장
+                }
+            }
+            else { delete pShader; pShader = nullptr; }
+        }
+        else if (pShader) { delete pShader; pShader = nullptr; }
+        return pShader; // 컴퓨트 셰이더는 여기서 바로 반환 (그래픽스 PSO 생성 로직 스킵)
+    }
+    else if (name == "WaveRender") {
+        // 파도 렌더링은 StandardShader와 유사한 파이프라인을 사용한다고 가정
+        // 또는 CWaveRenderShader 같은 새 클래스 사용
+        pShader = new CStandardShader(); // 예시로 StandardShader 재활용, 필요시 CWaveRenderShader 만들어서 사용
+        rootSignatureName = "WaveRender";
+        // 입력 레이아웃은 파도 메쉬에 맞게 설정해야 함 (CStandardShader::CreateShader 내부 수정 또는 새 클래스)
+        // ((CStandardShader*)pShader)->SetInputLayout(...); // 파도 정점 구조에 맞는 입력 레이아웃 설정 필요
+    }
+    else if (name == "Standard") {
         pShader = new CStandardShader(); // Standard 셰이더 객체 생성
         rootSignatureName = "Standard";  // Standard 루트 서명 필요
     }
@@ -335,6 +368,7 @@ CShader* ShaderManager::CreateShaderInternal(const std::string& name, ID3D12Grap
         OutputDebugStringA("Warning: Instancing shader creation not fully implemented in example.\n");
         // return nullptr; // 혹은 적절한 클래스 생성
     }
+
     else {
         OutputDebugStringA("Error: Unknown shader name requested for creation!\n");
         return nullptr; // 모르는 셰이더 이름
@@ -378,4 +412,68 @@ CShader* ShaderManager::CreateShaderInternal(const std::string& name, ID3D12Grap
 
     OutputDebugStringA(("Successfully created Shader and PSO: " + name + "\n").c_str());
     return pShader; // 성공
+}
+
+
+
+ID3D12RootSignature* ShaderManager::CreateWaveSimComputeRootSignature()
+{
+    // WaveSimCS.hlsl 이 사용하는 리소스에 맞춰 루트 시그니처 정의
+    // - b0: 상수 버퍼 (시뮬레이션 파라미터)
+    // - u0, u1, u2: UAV (RWTexture2D)
+    CD3DX12_DESCRIPTOR_RANGE ranges[1];
+    // UAV 3개를 하나의 테이블로 묶는다고 가정 (u0, u1, u2)
+    ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 3, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE); // u0, u1, u2
+
+    CD3DX12_ROOT_PARAMETER rootParameters[2];
+    rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL); // b0
+    rootParameters[1].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_ALL); // u0, u1, u2
+
+    CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(_countof(rootParameters), rootParameters,
+        0, nullptr, // No static samplers for compute
+        D3D12_ROOT_SIGNATURE_FLAG_NONE); // 컴퓨트 셰이더는 보통 플래그 최소화
+
+    Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+    HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) { if (errorBlob) OutputDebugStringA((char*)errorBlob->GetBufferPointer()); return nullptr; }
+
+    ID3D12RootSignature* pd3dRootSignature = nullptr;
+    hr = m_pd3dDevice->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&pd3dRootSignature));
+    if (FAILED(hr)) return nullptr;
+    return pd3dRootSignature;
+}
+
+ID3D12RootSignature* ShaderManager::CreateWaveRenderRootSignature()
+{
+    // WaveRender.hlsl (그래픽 셰이더) 이 사용하는 리소스에 맞춰 정의
+    // - t0: SRV (Texture2D, 파도 시뮬레이션 결과)
+    // - b0: 상수 버퍼 (객체별 월드 변환, 재질 등)
+    // - b1: 상수 버퍼 (카메라/패스 정보)
+    // - 샘플러 (정적 샘플러 사용)
+    CD3DX12_DESCRIPTOR_RANGE descRangeSRV[1];
+    descRangeSRV[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // t0 (WaveSolution)
+
+    CD3DX12_ROOT_PARAMETER rootParameters[3];
+    rootParameters[0].InitAsDescriptorTable(1, &descRangeSRV[0], D3D12_SHADER_VISIBILITY_VERTEX); // VS에서 파도 높이 읽음
+    rootParameters[1].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL); // b0 PerObject
+    rootParameters[2].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL); // b1 PerPass
+
+    auto staticSamplers = GetStaticSamplers(); // 기존 GetStaticSamplers() 활용
+    CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(_countof(rootParameters), rootParameters,
+        (UINT)staticSamplers.size(), staticSamplers.data(), // 모든 정적 샘플러 사용 가능하도록
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS);
+
+    Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+    HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) { if (errorBlob) OutputDebugStringA((char*)errorBlob->GetBufferPointer()); return nullptr; }
+
+    ID3D12RootSignature* pd3dRootSignature = nullptr;
+    hr = m_pd3dDevice->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&pd3dRootSignature));
+    if (FAILED(hr)) return nullptr;
+    return pd3dRootSignature;
 }
