@@ -211,7 +211,6 @@
     <ClInclude Include="..\..\Server\Global.h" />
     <ClInclude Include="ConstructionSystem.h" />
     <ClInclude Include="LabProject07-9-8.h" />
-    <ClInclude Include="Scene.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="d3dx12.h">
       <Filter>Utility</Filter>
@@ -338,6 +337,9 @@
     </ClInclude>
     <ClInclude Include="UploadBuffer.h">
       <Filter>Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene.h">
+      <Filter>소스 파일\Scene</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

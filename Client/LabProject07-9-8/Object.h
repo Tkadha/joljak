@@ -196,6 +196,9 @@ public:
 	void InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void SetColor(const XMFLOAT4& color);
 
+	virtual bool ShouldRenderOBB() const { return isRender; } // 기본적으로 렌더링 대상이면 OBB도 그림 (필요에 따라 수정)
+
+
 	// --- 재질 접근자 추가 ---
 	CMaterial* GetMaterial(int nIndex = 0) const {
 		// 인덱스 범위 및 포인터 유효성 검사

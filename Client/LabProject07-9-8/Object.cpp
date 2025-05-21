@@ -244,84 +244,104 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)
 
 void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	// OBB 렌더링에 필요한 리소스(버텍스/인덱스/상수 버퍼)가 생성되었는지 확인
-	if (!m_pOBBVertexBuffer || !m_pOBBIndexBuffer || !m_pd3dcbOBBTransform || !m_pcbMappedOBBTransform) return;
+	// 카메라 유효성 검사는 필수
+	if (!pCamera) return;
 
-	// 1. OBB의 WVP(World * View * Projection) 행렬 계산
-	XMMATRIX world = XMMatrixIdentity();
-	XMMATRIX view = XMLoadFloat4x4(&pCamera->GetViewMatrix());
-	XMMATRIX proj = XMLoadFloat4x4(&pCamera->GetProjectionMatrix());
-	XMFLOAT4X4 wvpMatrix;
-	// HLSL은 row-major 기본, C++는 row-major -> HLSL에서 transpose 안 하려면 여기서 transpose
-	XMStoreFloat4x4(&wvpMatrix, XMMatrixTranspose(world * view * proj));
+	// 1. 현재 오브젝트의 OBB를 그릴 수 있는지 확인하고, 그릴 수 있다면 그립니다.
+	bool bCanRenderCurrentObjectOBB = m_pOBBVertexBuffer &&
+		m_pOBBIndexBuffer &&
+		m_pd3dcbOBBTransform &&
+		m_pcbMappedOBBTransform;
 
-	// 2. OBB 상수 버퍼 업데이트 (b0)
-	memcpy(m_pcbMappedOBBTransform, &wvpMatrix, sizeof(XMFLOAT4X4));
+	if (bCanRenderCurrentObjectOBB) {
 
-	// 3. 상수 버퍼 바인딩 (OBB 루트 서명의 파라미터 인덱스 0번)
-	pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbOBBTransform->GetGPUVirtualAddress());
+		// 1. OBB의 WVP(World * View * Projection) 행렬 계산
+		XMMATRIX world = XMLoadFloat4x4(&m_xmf4x4World);
+		XMMATRIX view = XMLoadFloat4x4(&pCamera->GetViewMatrix());
+		XMMATRIX proj = XMLoadFloat4x4(&pCamera->GetProjectionMatrix());
+		XMFLOAT4X4 wvpMatrix;
+		// HLSL은 row-major 기본, C++는 row-major -> HLSL에서 transpose 안 하려면 여기서 transpose
+		XMStoreFloat4x4(&wvpMatrix, XMMatrixTranspose(world * view * proj));
 
-	// 4. IA(Input Assembler) 설정
-	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST); // 라인 리스트
-	pd3dCommandList->IASetVertexBuffers(0, 1, &m_OBBVertexBufferView);        // 정점 버퍼
-	pd3dCommandList->IASetIndexBuffer(&m_OBBIndexBufferView);              // 인덱스 버퍼
+		// 2. OBB 상수 버퍼 업데이트 (b0)
+		memcpy(m_pcbMappedOBBTransform, &wvpMatrix, sizeof(XMFLOAT4X4));
 
-	// 5. 그리기
-	pd3dCommandList->DrawIndexedInstanced(24, 1, 0, 0, 0); // 인덱스 24개 (선 12개)
+		// 3. 상수 버퍼 바인딩 (OBB 루트 서명의 파라미터 인덱스 0번)
+		pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbOBBTransform->GetGPUVirtualAddress());
+
+		// 4. IA(Input Assembler) 설정
+		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST); // 라인 리스트
+		pd3dCommandList->IASetVertexBuffers(0, 1, &m_OBBVertexBufferView);        // 정점 버퍼
+		pd3dCommandList->IASetIndexBuffer(&m_OBBIndexBufferView);              // 인덱스 버퍼
+
+		// 5. 그리기
+		pd3dCommandList->DrawIndexedInstanced(24, 1, 0, 0, 0); // 인덱스 24개 (선 12개)
+	}
+
+	if (m_pSibling) {
+        //if (m_pSibling->ShouldRenderOBB()) { // 형제가 OBB 렌더링 대상인지 확인
+            m_pSibling->RenderOBB(pd3dCommandList, pCamera);
+        //}
+    }
+    if (m_pChild) {
+        //if (m_pChild->ShouldRenderOBB()) { // 자식이 OBB 렌더링 대상인지 확인
+            m_pChild->RenderOBB(pd3dCommandList, pCamera);
+        //}
+    }
 }
 
-void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
-{
-	// 메쉬 유효성 검사 등 추가 가능
-	if (m_pMesh)
+	void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 	{
-		// OBB 모서리 데이터
-		XMFLOAT3 corners[8];
-		m_worldOBB.GetCorners(corners); // m_worldOBB가 유효한지 먼저 확인 필요
+		// 메쉬 유효성 검사 등 추가 가능
+		if (m_pMesh)
+		{
+			// OBB 모서리 데이터
+			XMFLOAT3 corners[8];
+			m_worldOBB.GetCorners(corners); // m_worldOBB가 유효한지 먼저 확인 필요
 
-		// 2. OBB 정점 버퍼 생성 (+ HRESULT 확인)
-		m_pOBBVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, corners, sizeof(XMFLOAT3) * 8, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, nullptr);
-		if (!m_pOBBVertexBuffer) {
-			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Vertex Buffer! !!!!!!!!\n");
-			// 실패 시 이후 리소스 생성 중단 또는 다른 처리
-		}
-		else {
-			m_OBBVertexBufferView.BufferLocation = m_pOBBVertexBuffer->GetGPUVirtualAddress();
-			m_OBBVertexBufferView.StrideInBytes = sizeof(XMFLOAT3);
-			m_OBBVertexBufferView.SizeInBytes = sizeof(XMFLOAT3) * 8;
-		}
+			// 2. OBB 정점 버퍼 생성 (+ HRESULT 확인)
+			m_pOBBVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, corners, sizeof(XMFLOAT3) * 8, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, nullptr);
+			if (!m_pOBBVertexBuffer) {
+				OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Vertex Buffer! !!!!!!!!\n");
+				// 실패 시 이후 리소스 생성 중단 또는 다른 처리
+			}
+			else {
+				m_OBBVertexBufferView.BufferLocation = m_pOBBVertexBuffer->GetGPUVirtualAddress();
+				m_OBBVertexBufferView.StrideInBytes = sizeof(XMFLOAT3);
+				m_OBBVertexBufferView.SizeInBytes = sizeof(XMFLOAT3) * 8;
+			}
 
-		// 3. OBB 인덱스 데이터 정의 (변경 없음)
-		UINT indices[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
+			// 3. OBB 인덱스 데이터 정의 (변경 없음)
+			UINT indices[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
 
-		// 4. OBB 인덱스 버퍼 생성 (+ HRESULT 확인)
-		m_pOBBIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, indices, sizeof(UINT) * 24, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, nullptr);
-		if (!m_pOBBIndexBuffer) {
-			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Index Buffer! !!!!!!!!\n");
-		}
-		else {
-			m_OBBIndexBufferView.BufferLocation = m_pOBBIndexBuffer->GetGPUVirtualAddress();
-			m_OBBIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
-			m_OBBIndexBufferView.SizeInBytes = sizeof(UINT) * 24;
-		}
+			// 4. OBB 인덱스 버퍼 생성 (+ HRESULT 확인)
+			m_pOBBIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, indices, sizeof(UINT) * 24, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, nullptr);
+			if (!m_pOBBIndexBuffer) {
+				OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Index Buffer! !!!!!!!!\n");
+			}
+			else {
+				m_OBBIndexBufferView.BufferLocation = m_pOBBIndexBuffer->GetGPUVirtualAddress();
+				m_OBBIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
+				m_OBBIndexBufferView.SizeInBytes = sizeof(UINT) * 24;
+			}
 
-		// 5. OBB 변환 행렬용 상수 버퍼 생성 (+ HRESULT 확인)
-		UINT ncbElementBytes = (((sizeof(XMFLOAT4X4)) + 255) & ~255);
-		m_pd3dcbOBBTransform = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-		if (!m_pd3dcbOBBTransform) {
-			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Transform CBV! !!!!!!!!\n");
-			m_pcbMappedOBBTransform = nullptr; // 맵핑 포인터도 null 처리
-		}
-		else {
-			// 맵핑된 포인터 저장 (+ HRESULT 확인)
-			HRESULT hr = m_pd3dcbOBBTransform->Map(0, NULL, (void**)&m_pcbMappedOBBTransform);
-			if (FAILED(hr) || !m_pcbMappedOBBTransform) {
-				OutputDebugString(L"!!!!!!!! ERROR: Failed to map OBB Transform CBV! !!!!!!!!\n");
-				m_pcbMappedOBBTransform = nullptr; // 실패 시 null 처리
-				// 필요시 m_pd3dcbOBBTransform Release 고려
+			// 5. OBB 변환 행렬용 상수 버퍼 생성 (+ HRESULT 확인)
+			UINT ncbElementBytes = (((sizeof(XMFLOAT4X4)) + 255) & ~255);
+			m_pd3dcbOBBTransform = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+			if (!m_pd3dcbOBBTransform) {
+				OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Transform CBV! !!!!!!!!\n");
+				m_pcbMappedOBBTransform = nullptr; // 맵핑 포인터도 null 처리
+			}
+			else {
+				// 맵핑된 포인터 저장 (+ HRESULT 확인)
+				HRESULT hr = m_pd3dcbOBBTransform->Map(0, NULL, (void**)&m_pcbMappedOBBTransform);
+				if (FAILED(hr) || !m_pcbMappedOBBTransform) {
+					OutputDebugString(L"!!!!!!!! ERROR: Failed to map OBB Transform CBV! !!!!!!!!\n");
+					m_pcbMappedOBBTransform = nullptr; // 실패 시 null 처리
+					// 필요시 m_pd3dcbOBBTransform Release 고려
+				}
 			}
 		}
-	}
 
 	// 자식/형제 객체 재귀 호출 (기존 코드 유지)
 	if (m_pSibling) m_pSibling->InitializeOBBResources(pd3dDevice, pd3dCommandList);

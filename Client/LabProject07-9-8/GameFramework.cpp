@@ -13,7 +13,7 @@
 #include "Player.h"
 
 // 서버 연결 여부
-#define ONLINE
+//#define ONLINE
 
 void CGameFramework::NerworkThread()
 {
