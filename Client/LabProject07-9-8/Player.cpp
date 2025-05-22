@@ -420,7 +420,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pStateMachine = new PlayerStateMachine(this, m_pSkinnedAnimationController);
 
 	CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)pContext;
-	SetPosition(XMFLOAT3(10.0f, pTerrain->GetHeight(10.0f, 10.0f), 10.0f));
+	SetPosition(XMFLOAT3(1500.0f, pTerrain->GetHeight(1500.0f, 1500.0f), 1500.0f));
 	SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
 
 	m_pCamera->Move(XMFLOAT3(1500.0f, pTerrain->GetHeight(1500.0f, 1500.0f) + 20.0f, 1500.0f));

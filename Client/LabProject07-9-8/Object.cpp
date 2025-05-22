@@ -297,10 +297,11 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 		{
 			// OBB 모서리 데이터
 			XMFLOAT3 corners[8];
-			m_worldOBB.GetCorners(corners); // m_worldOBB가 유효한지 먼저 확인 필요
+			m_localOBB.GetCorners(corners); // m_worldOBB가 유효한지 먼저 확인 필요
 
 			// 2. OBB 정점 버퍼 생성 (+ HRESULT 확인)
-			m_pOBBVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, corners, sizeof(XMFLOAT3) * 8, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, nullptr);
+			ID3D12Resource* pVertexUploadBuffer = nullptr; // 임시 업로드 버퍼 포인터
+			m_pOBBVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, corners, sizeof(XMFLOAT3) * 8, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &pVertexUploadBuffer);
 			if (!m_pOBBVertexBuffer) {
 				OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Vertex Buffer! !!!!!!!!\n");
 				// 실패 시 이후 리소스 생성 중단 또는 다른 처리
@@ -313,9 +314,11 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 
 			// 3. OBB 인덱스 데이터 정의 (변경 없음)
 			UINT indices[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
+			UINT indices_test[] = { 0, 1, 2, 0, 2, 3 };
 
 			// 4. OBB 인덱스 버퍼 생성 (+ HRESULT 확인)
-			m_pOBBIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, indices, sizeof(UINT) * 24, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, nullptr);
+			ID3D12Resource* pIndexUploadBuffer = nullptr; // 임시 업로드 버퍼 포인터
+			m_pOBBIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, indices, sizeof(UINT) * 24, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &pIndexUploadBuffer);
 			if (!m_pOBBIndexBuffer) {
 				OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Index Buffer! !!!!!!!!\n");
 			}
