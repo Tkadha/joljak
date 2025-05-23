@@ -970,7 +970,7 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 				//	m_pGameFramework->AddItem("iron_material",1);
 				//}
 			}
-			/*if (obj->m_objectType == GameObjectType::Cow || obj->m_objectType == GameObjectType::Pig) {
+			if (obj->m_objectType == GameObjectType::Cow || obj->m_objectType == GameObjectType::Pig) {
 				auto npc = dynamic_cast<CMonsterObject*>(obj);
 				if (npc->Gethp() <= 0) continue;
 				if (npc->FSM_manager->GetInvincible()) continue;
@@ -1010,7 +1010,7 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 						m_pPlayer->StatPoint += 5;
 					}
 				}
-			}*/
+			}
 		}
 	}
 }

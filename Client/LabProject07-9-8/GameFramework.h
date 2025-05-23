@@ -61,6 +61,7 @@ struct log_inout {
 	FLOAT3 position;
 	OBJECT_TYPE o_type;
 	ANIMATION_TYPE a_type;
+	int id;
 };
 
 class CGameFramework
@@ -114,7 +115,7 @@ public:
 	void NerworkThread();
 	void ProcessPacket(char* packet);
 
-	void AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look);
+	void AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id);
 private:
 	HINSTANCE					m_hInstance;
 	HWND						m_hWnd; 

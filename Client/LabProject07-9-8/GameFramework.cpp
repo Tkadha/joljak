@@ -98,26 +98,52 @@ void CGameFramework::ProcessPacket(char* packet)
 		FLOAT3 position = recv_p->position;
 		OBJECT_TYPE o_type = recv_p->o_type;
 		ANIMATION_TYPE a_type = recv_p->a_type;
-		OutputDebugString(L"==========add object==============\n");
-		switch (o_type)
-		{
-		case OBJECT_TYPE::OB_TREE:
-			OutputDebugString(L"==========TREE==============\n");
-			break;
-		case OBJECT_TYPE::OB_STONE:
-			OutputDebugString(L"==========STONE==============\n");
-			break;
-		case OBJECT_TYPE::OB_COW:
-			OutputDebugString(L"==========COW==============\n");
-			break;
-		case OBJECT_TYPE::OB_PIG:
-			OutputDebugString(L"==========PIG==============\n");
-			break;
-		}
-		OutputDebugString(L"==========add object==============\n");
-
-		m_logQueue.push(log_inout{ E_PACKET::E_O_ADD,0,right,up,look,position,o_type,a_type });
+		int id = recv_p->id;
+		m_logQueue.push(log_inout{ E_PACKET::E_O_ADD,0,right,up,look,position,o_type,a_type,id });
 	}
+	break;
+	case E_PACKET::E_O_REMOVE:
+	{
+		REMOVE_PACKET* recv_p = reinterpret_cast<REMOVE_PACKET*>(packet);
+		int id = recv_p->id;
+		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
+			return obj->m_id == id;
+			});
+		if (it != m_pScene->m_vGameObjects.end()) {	// 해당 객체가 있다면 삭제
+			//delete* it;
+			m_pScene->m_vGameObjects.erase(it);
+		}
+	}
+		break;
+	case E_PACKET::E_O_MOVE:
+	{
+		MOVE_PACKET* recv_p = reinterpret_cast<MOVE_PACKET*>(packet);
+		int id = recv_p->id;
+		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
+			return obj->m_id == id;
+			});
+		if (it != m_pScene->m_vGameObjects.end()) {	// 해당 객체가 있다면 이동
+			CGameObject* Found_obj = *it;
+			Found_obj->SetLook(XMFLOAT3(recv_p->look.x, recv_p->look.y, recv_p->look.z));
+			Found_obj->SetUp(XMFLOAT3(recv_p->up.x, recv_p->up.y, recv_p->up.z));
+			Found_obj->SetRight(XMFLOAT3(recv_p->right.x, recv_p->right.y, recv_p->right.z));
+			Found_obj->SetPosition(recv_p->position.x, recv_p->position.y, recv_p->position.z);
+		}
+	}
+	break;
+	case E_PACKET::E_O_CHANGEANIMATION:
+	{
+		CHANGEANIMATION_PACKET* recv_p = reinterpret_cast<CHANGEANIMATION_PACKET*>(packet);
+		int id = recv_p->oid;
+		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
+			return obj->m_id == id;
+			});
+		if (it != m_pScene->m_vGameObjects.end()) {	// 해당 객체가 있다면 이동
+			CGameObject* Found_obj = *it;
+			Found_obj->ChangeAnimation(recv_p->a_type);
+		}
+	}
+		break;
 	break;
 	default:
 		break;
@@ -843,7 +869,7 @@ void CGameFramework::ReleaseObjects()
 
 
 
-void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look)
+void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id)
 {
 
 	if (m_pScene)
@@ -857,10 +883,14 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
+
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
+
 			gameObj->SetOBB();
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 		}
@@ -872,10 +902,14 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
+
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
+
 			gameObj->SetOBB();
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 
@@ -888,18 +922,28 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pCowModel, animate_count, this);
 			gameObj->m_objectType = GameObjectType::Cow;
 			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
 			for (int j = 1; j < animate_count; ++j) {
 				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
 				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
 			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
 			gameObj->SetOwningScene(m_pScene);
-			gameObj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
-			gameObj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+			//gameObj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+			//gameObj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 
 			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
 			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
 
@@ -907,10 +951,10 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
+
 			gameObj->SetOBB();
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
-			//gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
 			if (pCowModel) delete(pCowModel);
 		}
 		break;
@@ -921,17 +965,26 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pPigModel, animate_count, this);
 			gameObj->m_objectType = GameObjectType::Pig;
 			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
 			for (int j = 1; j < animate_count; ++j) {
 				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
 				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
 			}
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
 			gameObj->SetOwningScene(m_pScene);
-			gameObj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
-			gameObj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+			//gameObj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+			//gameObj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
 			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
@@ -941,7 +994,6 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetOBB();
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
-			//gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
 			if (pPigModel) delete(pPigModel);
 		}
 		break;
@@ -960,11 +1012,13 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		case GameObjectType::Spider:
 		case GameObjectType::Bat:
 		case GameObjectType::Turtle:
+		case GameObjectType::Pig:
 			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
 			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
 			obj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
 			break;
 		case GameObjectType::Wolf:
+		case GameObjectType::Cow:
 			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
 			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
 			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
@@ -1230,7 +1284,7 @@ void CGameFramework::FrameAdvance()
 			case E_PACKET::E_O_ADD:
 			{
 				std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
-				AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look);
+				AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id);
 			}
 				break;
 			default:
@@ -1253,7 +1307,7 @@ void CGameFramework::FrameAdvance()
 		}
 	}
 
-	m_GameTimer.Tick(60.0f);
+	m_GameTimer.Tick(144.0f);
 
 	ProcessInput();
 	UpdateFurnace(m_GameTimer.GetTimeElapsed());

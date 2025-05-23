@@ -199,22 +199,25 @@ public:
 class CHANGEANIMATION_PACKET : public PACKET
 {
 public:
+	int oid;
 	ANIMATION_TYPE a_type;
 	CHANGEANIMATION_PACKET() {
 		a_type = ANIMATION_TYPE::UNKNOWN;
-		size = sizeof(ANIMATION_TYPE);
+		size = sizeof(CHANGEANIMATION_PACKET);
 		type = static_cast<char>(E_PACKET::E_O_CHANGEANIMATION);
 	}
 };
 
-class OBJMOVE_PACKET : public PACKET
+class MOVE_PACKET : public PACKET
 {
+public:
 	FLOAT3 right{};
 	FLOAT3 up{};
 	FLOAT3 look{};
 	FLOAT3 position{};
-	OBJMOVE_PACKET() {
-		size = sizeof(OBJMOVE_PACKET);
+	int id;
+	MOVE_PACKET() {
+		size = sizeof(MOVE_PACKET);
 		type = static_cast<char>(E_PACKET::E_O_MOVE);
 	}
 };

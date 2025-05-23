@@ -1,11 +1,13 @@
 #pragma once
 #include "../ServerLib/RemoteClient.h"
 #include "stdafx.h"
-
 #include "../Global.h"
-
+#include <unordered_set>
+#include "Terrain.h"
 // client 정보
 
+
+class GameObject;
 
 enum C_STATE { PC_FREE, PC_INGAME };
 
@@ -15,6 +17,8 @@ public:
 	static unordered_map<PlayerClient*, shared_ptr<PlayerClient>> PlayerClients;
 	std::mutex c_mu;
 	C_STATE state;
+	std::mutex vl_mu;
+	std::unordered_set<int> viewlist;
 private:
 
 	XMFLOAT3					m_Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -100,8 +104,6 @@ public:
 	XMFLOAT3 GetUp() const { return m_Up; }
 	XMFLOAT3 GetLook() const { return m_Look; }
 
-
-
 	void Update(float fTimeElapsed);
 	
 	// 상태머신 적용 업데이트 테스트
@@ -109,15 +111,20 @@ public:
 	bool CheckIfGrounded();
 	void SnapToGround();
 
-
-
-
-
 	void processInput(PlayerInput input);
 
 	XMFLOAT3 GetLookVector() { return(m_Look); }
 	XMFLOAT3 GetUpVector() { return(m_Up); }
 	XMFLOAT3 GetRightVector() { return(m_Right); }
 
+
+public:
+	void BroadCastPosPacket();
+	void BroadCastRotatePacket();
+	void BroadCastInputPacket();
+	void SendAddPacket(shared_ptr<GameObject>);
+	void SendRemovePacket(shared_ptr<GameObject>);
+	void SendMovePacket(shared_ptr<GameObject>);
+	void SendAnimationPacket(shared_ptr<GameObject>);
 };
 

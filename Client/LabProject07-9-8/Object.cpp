@@ -73,7 +73,10 @@ CGameObject::~CGameObject()
 	}
 	if (m_ppMaterials) delete[] m_ppMaterials;
 
-	if (m_pSkinnedAnimationController) delete m_pSkinnedAnimationController;
+	if (m_pSkinnedAnimationController) {
+		delete m_pSkinnedAnimationController;
+		m_pSkinnedAnimationController = nullptr;
+	}
 	//if (FSM_manager) delete FSM_manager;
 }
 
@@ -110,6 +113,119 @@ void CGameObject::SetChild(CGameObject *pChild, bool bReferenceUpdate)
 		m_pChild = pChild;
 	}
 }
+
+void CGameObject::ChangeAnimation(ANIMATION_TYPE type)
+{
+	m_pSkinnedAnimationController->SetTrackEnable(m_anitype, false);
+
+	switch (m_objectType)
+	{
+	case GameObjectType::Spider:
+	case GameObjectType::Bat:
+	case GameObjectType::Turtle:
+	case GameObjectType::Pig:
+	case GameObjectType::Snake:
+		switch (type)
+		{
+		case ANIMATION_TYPE::IDLE:
+			m_anitype = 0;
+			break;
+		case ANIMATION_TYPE::WALK:
+			m_anitype = 2;
+			break;
+		case ANIMATION_TYPE::RUN:
+			m_anitype = 6;
+			break;
+		case ANIMATION_TYPE::DIE:
+			m_anitype = 9;
+			break;
+		case ANIMATION_TYPE::HIT:
+			m_anitype = 10;
+			break;
+		case ANIMATION_TYPE::ATTACK:
+			m_anitype = 11;
+			break;
+		}
+		break;
+	case GameObjectType::Snail:
+	case GameObjectType::Wasp:
+		switch (type)
+		{
+		case ANIMATION_TYPE::IDLE:
+			m_anitype = 0;
+			break;
+		case ANIMATION_TYPE::WALK:
+			m_anitype = 2;
+			break;
+		case ANIMATION_TYPE::RUN:
+			m_anitype = 2;
+			break;
+		case ANIMATION_TYPE::DIE:
+			m_anitype = 5;
+			break;
+		case ANIMATION_TYPE::HIT:
+			m_anitype = 6;
+			break;
+		case ANIMATION_TYPE::ATTACK:
+			m_anitype = 7;
+			break;
+		}
+		break;
+	case GameObjectType::Wolf:
+	case GameObjectType::Cow:
+		switch (type)
+		{
+		case ANIMATION_TYPE::IDLE:
+			m_anitype = 0;
+			break;
+		case ANIMATION_TYPE::WALK:
+			m_anitype = 2;
+			break;
+		case ANIMATION_TYPE::RUN:
+			m_anitype = 5;
+			break;
+		case ANIMATION_TYPE::DIE:
+			m_anitype = 8;
+			break;
+		case ANIMATION_TYPE::HIT:
+			m_anitype = 9;
+			break;
+		case ANIMATION_TYPE::ATTACK:
+			m_anitype = 10;
+			break;
+		}
+		break;
+	case GameObjectType::Toad:
+		switch (type)
+		{
+		case ANIMATION_TYPE::IDLE:
+			m_anitype = 0;
+			break;
+		case ANIMATION_TYPE::WALK:
+			m_anitype = 1;
+			break;
+		case ANIMATION_TYPE::RUN:
+			m_anitype = 4;
+			break;
+		case ANIMATION_TYPE::DIE:
+			m_anitype = 7;
+			break;
+		case ANIMATION_TYPE::HIT:
+			m_anitype = 8;
+			break;
+		case ANIMATION_TYPE::ATTACK:
+			m_anitype = 9;
+			break;
+		}
+		break;
+	default:	// 잘못된 타입이다.
+		break;
+	}
+	// 모든 애니메이션은 새로 시작하기전에 초기화
+	m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].SetPosition(-ANIMATION_CALLBACK_EPSILON);
+	m_pSkinnedAnimationController->SetTrackEnable(m_anitype, true);
+}
+
 
 void CGameObject::SetMesh(CMesh *pMesh)
 {

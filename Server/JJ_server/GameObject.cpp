@@ -9,6 +9,7 @@ GameObject::GameObject()
 	type = OBJECT_TYPE::OB_UNKNOWN;
 	xmf4x4 = Matrix4x4::Identity();
 	is_alive = true;
+	FSM_manager = std::make_shared<FSMManager<GameObject>>(this);
 }
 
 GameObject::~GameObject()

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Player.h"
 #include "Terrain.h"
+#include "GameObject.h"
 #include <iostream>
 
 #define DIR_FORWARD					0x01
@@ -239,4 +240,122 @@ void PlayerClient::SnapToGround()
         xmf3PlayerPosition.y = fHeight;
         SetPosition(xmf3PlayerPosition);
     }
+}
+
+void PlayerClient::BroadCastPosPacket()
+{
+    POSITION_PACKET s_packet;
+    s_packet.size = sizeof(POSITION_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_P_POSITION);
+    s_packet.uid = m_id;
+    s_packet.position.x = m_Position.x;
+    s_packet.position.y = m_Position.y;
+    s_packet.position.z = m_Position.z;
+
+    for (auto& client : PlayerClient::PlayerClients) {
+        if (client.second->state != PC_INGAME) continue;
+        client.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+    }
+}
+
+void PlayerClient::BroadCastRotatePacket()
+{
+    ROTATE_PACKET s_packet;
+    s_packet.size = sizeof(ROTATE_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_P_ROTATE);
+    s_packet.right = FLOAT3{ m_Right.x,m_Right.y,m_Right.z };
+    s_packet.up = FLOAT3{ m_Up.x,m_Up.y,m_Up.z };
+    s_packet.look = FLOAT3{ m_Look.x,m_Look.y,m_Look.z };
+    s_packet.uid = m_id;
+    for (auto& cl : PlayerClient::PlayerClients) {
+        if (cl.second->state != PC_INGAME) continue;
+        if (cl.second->m_id == m_id) continue; // 나 자신은 제외한다.
+        cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+    }
+}
+
+void PlayerClient::BroadCastInputPacket()
+{
+    INPUT_PACKET s_packet;
+    s_packet.size = sizeof(INPUT_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_P_INPUT);
+    s_packet.inputData = m_lastReceivedInput;
+    s_packet.uid = m_id;
+    for (auto& cl : PlayerClient::PlayerClients) {
+        if (cl.second->state != PC_INGAME) continue;
+        if (cl.second->m_id == m_id) continue; // 나 자신은 제외한다.
+        cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+    }
+}
+
+void PlayerClient::SendAddPacket(shared_ptr<GameObject> obj)
+{
+    if (false == obj->is_alive) return; // 리스폰 중 상태라면
+    vl_mu.lock();
+    viewlist.insert(obj->GetID());
+    vl_mu.unlock();
+
+    ADD_PACKET s_packet;
+    s_packet.size = sizeof(ADD_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_O_ADD);
+    s_packet.position.x = obj->GetPosition().x;
+    s_packet.position.y = obj->GetPosition().y;
+    s_packet.position.z = obj->GetPosition().z;
+    s_packet.right.x = obj->GetNonNormalizeRight().x;
+    s_packet.right.y = obj->GetNonNormalizeRight().y;
+    s_packet.right.z = obj->GetNonNormalizeRight().z;
+    s_packet.up.x = obj->GetNonNormalizeUp().x;
+    s_packet.up.y = obj->GetNonNormalizeUp().y;
+    s_packet.up.z = obj->GetNonNormalizeUp().z;
+    s_packet.look.x = obj->GetNonNormalizeLook().x;
+    s_packet.look.y = obj->GetNonNormalizeLook().y;
+    s_packet.look.z = obj->GetNonNormalizeLook().z;
+    s_packet.o_type = obj->GetType();
+    s_packet.a_type = obj->GetAnimationType();
+    s_packet.id = obj->GetID();
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
+void PlayerClient::SendRemovePacket(shared_ptr<GameObject> obj)
+{
+    vl_mu.lock();
+    viewlist.erase(obj->GetID());
+    vl_mu.unlock();
+
+    REMOVE_PACKET s_packet;
+    s_packet.size = sizeof(REMOVE_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_O_REMOVE);
+    s_packet.id = obj->GetID();
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
+void PlayerClient::SendMovePacket(shared_ptr<GameObject> obj)
+{
+    MOVE_PACKET s_packet;
+    s_packet.size = sizeof(MOVE_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_O_MOVE);
+    s_packet.position.x = obj->GetPosition().x;
+    s_packet.position.y = obj->GetPosition().y;
+    s_packet.position.z = obj->GetPosition().z;
+    s_packet.right.x = obj->GetNonNormalizeRight().x;
+    s_packet.right.y = obj->GetNonNormalizeRight().y;
+    s_packet.right.z = obj->GetNonNormalizeRight().z;
+    s_packet.up.x = obj->GetNonNormalizeUp().x;
+    s_packet.up.y = obj->GetNonNormalizeUp().y;
+    s_packet.up.z = obj->GetNonNormalizeUp().z;
+    s_packet.look.x = obj->GetNonNormalizeLook().x;
+    s_packet.look.y = obj->GetNonNormalizeLook().y;
+    s_packet.look.z = obj->GetNonNormalizeLook().z;
+    s_packet.id = obj->GetID();
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
+void PlayerClient::SendAnimationPacket(shared_ptr<GameObject> obj)
+{
+    CHANGEANIMATION_PACKET s_packet;
+    s_packet.size = sizeof(CHANGEANIMATION_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_O_CHANGEANIMATION);
+    s_packet.oid = obj->GetID();
+    s_packet.a_type = obj->GetAnimationType();
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 }

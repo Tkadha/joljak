@@ -56,7 +56,7 @@ enum class GameObjectType : int {
 
 };
 
-
+enum class ANIMATION_TYPE;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 class CGameObject
@@ -85,6 +85,8 @@ public:
 	int								m_nMaterials = 0;
 	CMaterial						**m_ppMaterials = NULL;
 	int 							m_treecount{};
+	int								m_id{}; // server에서 관리하는 객체 고유 id
+	int								m_anitype;
 
 	XMFLOAT4 m_xmf4DebugColor = XMFLOAT4(1, 1, 1, 1);
 	// OBB
@@ -127,6 +129,7 @@ public:
 	GameObjectType m_objectType = GameObjectType::Unknown;
 
 	virtual void FSMUpdate() {}
+	void ChangeAnimation(ANIMATION_TYPE type);
 
 	void SetMesh(CMesh *pMesh);
 	//void SetShader(CShader *pShader);

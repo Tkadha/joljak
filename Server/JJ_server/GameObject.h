@@ -8,14 +8,15 @@ class GameObject
 	OBJECT_TYPE type;
 	ANIMATION_TYPE animationType;
 	XMFLOAT4X4	xmf4x4; // 11 12 13 right, 21 22 23 up, 31 32 33 look, 41 42 43 position
+	int o_id{ -1 };
 
 
 public:
 	GameObject();
 	virtual ~GameObject();
-	int o_id{ -1 };
 
 	void SetID(int id) { o_id = id; }
+	int GetID() { return o_id; }
 public:
 	void SetPosition(float x, float y, float z) {
 		xmf4x4._41 = x;
