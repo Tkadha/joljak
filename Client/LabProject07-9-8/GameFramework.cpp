@@ -12,6 +12,8 @@
 #include "PlayerStateDefs.h"
 #include "Player.h"
 
+// 서버 연결 여부
+//#define ONLINE
 
 void CGameFramework::NerworkThread()
 {
@@ -172,12 +174,12 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	m_pConstructionSystem = new CConstructionSystem();
 	m_pConstructionSystem->Init(m_pd3dDevice, m_pd3dCommandList, this, m_pScene);
 	
-	/*
+#ifdef ONLINE
 	auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
 	std::thread t(&CGameFramework::NerworkThread, this);
 	t.detach();
-	*/
+#endif
 
 	//ChangeSwapChainState();
 

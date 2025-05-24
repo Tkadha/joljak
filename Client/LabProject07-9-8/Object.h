@@ -97,9 +97,9 @@ public:
 	ID3D12Resource* m_pOBBIndexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW m_OBBVertexBufferView;
 	D3D12_INDEX_BUFFER_VIEW m_OBBIndexBufferView;
-	// OBB ë³€???‰ë ¬???ìˆ˜ ë²„í¼
+	// OBB è¹‚Â€????°ì ¹???ê³¸ë‹” è¸°ê¾ª??
 	ID3D12Resource* m_pd3dcbOBBTransform = nullptr;
-	XMFLOAT4X4* m_pcbMappedOBBTransform = nullptr; // ë§µí•‘???¬ì¸??
+	XMFLOAT4X4* m_pcbMappedOBBTransform = nullptr; // ï§ë“¯ë¸???????
 
 	CMaterial* m_OBBMaterial = NULL;
 	//COBBShader m_OBBShader;
@@ -118,12 +118,12 @@ public:
 
 	CGameFramework* m_pGameFramework;
 
-	// ë°”ë€?êµ¬ì¡°?ì„œ ê³„ì¸µ êµ¬ì¡° ì²˜ë¦¬ë¥??„í•´ ?„ìš”
+	// è«›ë¶¾???´ÑŠâ€?ë¨?½Œ ?¨ê¾©ë§??´ÑŠâ€?ï§£ì„Ž?ç‘œ??ê¾ªë¹ ?ê¾©ìŠ‚
 	CAnimationController* m_pSharedAnimController = nullptr;
 	void PropagateAnimController(CAnimationController* controller); 
 
 
-	CScene* m_pScene = nullptr; // ?ì‹ ???Œìœ ??Scene ?¬ì¸??
+	CScene* m_pScene = nullptr; // ?ë¨?–Š????????Scene ?????
 	GameObjectType m_objectType = GameObjectType::Unknown;
 
 	virtual void FSMUpdate() {}
@@ -196,17 +196,20 @@ public:
 	void InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void SetColor(const XMFLOAT4& color);
 
+	virtual bool ShouldRenderOBB() const { return isRender; } // ê¸°ë³¸?ìœ¼ë¡??Œë”ë§??€?ì´ë©?OBB??ê·¸ë¦¼ (?„ìš”???°ë¼ ?˜ì •)
+
+
 	// --- ?¬ì§ˆ ?‘ê·¼??ì¶”ê? ---
 	CMaterial* GetMaterial(int nIndex = 0) const {
-		// ?¸ë±??ë²”ìœ„ ë°??¬ì¸??? íš¨??ê²€??
+		// ?ëªƒëœ³??è¸°ë¶¿??è«???????ì¢ìŠš??å¯ƒÂ€??
 		if (nIndex >= 0 && nIndex < m_nMaterials && m_ppMaterials) {
 			return m_ppMaterials[nIndex];
 		}
-		return nullptr; // ? íš¨?˜ì? ?Šìœ¼ë©?nullptr ë°˜í™˜
+		return nullptr; // ?ì¢ìŠš??? ??†ì‘ï§?nullptr è«›ì„‘??
 	}
 	int GetMaterialCount() const { return m_nMaterials; }
 
-	// --- OBB ?Œë”ë§??¨ìˆ˜ ? ì–¸ ---
+	// --- OBB ???œ‘ï§???¥ë‹” ?ì¢Žë¼µ ---
 	virtual void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 	void SetTerraindata(LPVOID pContext) {terraindata = pContext;}
@@ -366,22 +369,22 @@ class CItemObject : virtual public CGameObject
 {
 public:
 	XMFLOAT3 m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	XMFLOAT3 m_xmf3Gravity = XMFLOAT3(0.0f, -980.0f, 0.0f); // ì¤‘ë ¥ ê°€?ë„ (ì¡°ì • ?„ìš”)
+	XMFLOAT3 m_xmf3Gravity = XMFLOAT3(0.0f, -980.0f, 0.0f); // ä»¥ë¬??åª›Â€??¾ë£„ (è­°ê³—???ê¾©ìŠ‚)
 	bool m_bOnGround = false;
-	float m_fLifeTime = 15.0f; // ë°”ë‹¥???¨ì–´ì§????¬ë¼ì§€ê¸°ê¹Œì§€ ?œê°„ (ì´?
+	float m_fLifeTime = 15.0f; // è«›ë¶¾?????¥ë¼±ï§??????ªï§ž?æ¹²ê³Œ?´ï§ž? ??“ì»™ (??
 	float m_fElapsedAfterLanding = 0.0f;
 
-	CHeightMapTerrain* m_pTerrainRef = nullptr; // ì§€??ì°¸ì¡° (ì¶©ëŒ ê°ì???
+	CHeightMapTerrain* m_pTerrainRef = nullptr; // ï§žÂ€??ï§¡ëª„??(?°â‘¸ë£?åª›ë¨¯???
 
 	CItemObject() { m_objectType = GameObjectType::Item; };
 	virtual ~CItemObject() {};
 
-	virtual void Animate(float fTimeElapsed) override; // ë¬¼ë¦¬ ë°??˜ëª… ì²˜ë¦¬
+	virtual void Animate(float fTimeElapsed) override; // ?¾ì‡°??è«???Žì±¸ ï§£ì„Ž??
 	void SetInitialVelocity(const XMFLOAT3& velocity) { m_xmf3Velocity = velocity; }
 };
 
 
-// ------------------ ?˜ë¬´ ------------------
+// ------------------ ??ŽÐ?------------------
 class CTreeObject : virtual public CGameObject
 {
 	int hp{ 30 };
@@ -396,30 +399,30 @@ public:
 	int getHp() { return hp; }
 	void setHp(int n) { hp = n; }
 
-// ------- ?°ëŸ¬ì§€??? ë‹ˆë©”ì´??-------
+// ------- ?ê³•ìœ­ï§žÂ€???ì¢Šë•²ï§Žë¶¿???-------
 
-	// ?°ëŸ¬ì§€??? ë‹ˆë©”ì´???œìž‘ ?¨ìˆ˜
-	void StartFalling(const XMFLOAT3& hitDirection); // ?Œë ˆ?´ì–´??ê³µê²© ë°©í–¥ ?±ì„ ë°›ì„ ???ˆìŒ
+	// ?ê³•ìœ­ï§žÂ€???ì¢Šë•²ï§Žë¶¿?????–ì˜‰ ??¥ë‹”
+	void StartFalling(const XMFLOAT3& hitDirection); // ??? …??ë¼±???¨ë“¦êº?è«›â‘ºë¼??ê¹†ì“£ è«›ì†??????‰ì“¬
 
-	// ë§??„ë ˆ??? ë‹ˆë©”ì´???…ë°?´íŠ¸
+	// ï§??ê¾¨ì …???ì¢Šë•²ï§Žë¶¿?????…ëœ²??„ë“ƒ
 	virtual void Animate(float fTimeElapsed) override;
 
 	bool IsFalling() const { return	m_bIsFalling; }
 	bool HasFallen() const { return m_bHasFallen; }
 
-	bool m_bIsFalling = false;       // ?„ìž¬ ?°ëŸ¬ì§€??? ë‹ˆë©”ì´??ì¤‘ì¸ê°€?
-	bool m_bHasFallen = false;       // ?´ë? ?°ëŸ¬ì§??íƒœ?¸ê??
-	float m_fFallingDuration = 2.5f;  // ?°ëŸ¬ì§€????ê±¸ë¦¬???œê°„ (ì´?
-	float m_fFallingTimer = 0.0f;     // ?°ëŸ¬ì§€ê¸??œìž‘????ì§€???œê°„
-	XMFLOAT3 m_xmf3FallingAxis;       // ?Œì „ ì¶?(?°ëŸ¬ì§€??ë°©í–¥ ê²°ì •)
-	float m_fCurrentFallAngle = 0.0f; // ?„ìž¬ê¹Œì? ?Œì „??ê°ë„
-	float m_fTargetFallAngle = XM_PIDIV2; // ëª©í‘œ ?Œì „ ê°ë„ (90??
+	bool m_bIsFalling = false;       // ?ê¾©ì˜± ?ê³•ìœ­ï§žÂ€???ì¢Šë•²ï§Žë¶¿???ä»¥ë¬’?¤åª›??
+	bool m_bHasFallen = false;       // ??€? ?ê³•ìœ­ï§??ê³¹ê¹­?ë©??
+	float m_fFallingDuration = 2.5f;  // ?ê³•ìœ­ï§žÂ€????å«„ëªƒ?????“ì»™ (??
+	float m_fFallingTimer = 0.0f;     // ?ê³•ìœ­ï§žÂ€æ¹???–ì˜‰????ï§žÂ€????“ì»™
+	XMFLOAT3 m_xmf3FallingAxis;       // ???Ÿ¾ ??(?ê³•ìœ­ï§žÂ€??è«›â‘ºë¼?å¯ƒê³—??
+	float m_fCurrentFallAngle = 0.0f; // ?ê¾©ì˜±æºëš¯? ???Ÿ¾??åª›ê³·ë£?
+	float m_fTargetFallAngle = XM_PIDIV2; // ï§â‘ºëª????Ÿ¾ åª›ê³·ë£?(90??
 
-	// ?°ëŸ¬ì§€ê¸??œìž‘???Œì˜ ì´ˆê¸° m_xmf4x4ToParent ê°’ì„ ?€??(?ë? ë³€??ê¸°ì?)
+	// ?ê³•ìœ­ï§žÂ€æ¹???–ì˜‰?????“½ ?¥ë‡ë¦?m_xmf4x4ToParent åª›ë???????(?ê³? è¹‚Â€??æ¹²ê³—?)
 	XMFLOAT4X4 m_xmf4x4InitialToParent;
 
-	// ?Œì „??ì¤‘ì‹¬??(?˜ë¬´ ë°‘ë™ ë¶€ë¶? ë¡œì»¬ ì¢Œí‘œê³?ê¸°ì?)
-	// ëª¨ë¸???ì ???´ë? ë°‘ë™?´ë¼ë©?(0,0,0) ?¬ìš© ê°€??
+	// ???Ÿ¾??ä»¥ë¬’???(??ŽÐ?è«›ë¬ë£??ºÂ€?? æ¿¡ì’–ëº??«ëš°ëª´æ€?æ¹²ê³—?)
+	// ï§â‘¤????ë¨? ????€? è«›ë¬ë£??€?ªï§Ž?(0,0,0) ????åª›Â€??
 	XMFLOAT3 m_xmf3RotationPivot = XMFLOAT3(0.0f, 0.0f, 0.0f);
 };
 
@@ -445,7 +448,7 @@ public:
 	virtual ~CPineObject() {}
 };
 
-// ?˜ë­‡ê°€ì§€(?œë¡­ ?„ì´??
+// ??Žì¶ªåª›Â€ï§žÂ€(??•âˆ¼ ?ê¾©ì” ??
 class CBranchObject : public CItemObject {
 public:
 	CBranchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain);
@@ -496,7 +499,7 @@ public:
 	virtual ~CCliffFObject() {}
 };
 
-// ???ŒíŽ¸(?œë¡­ ?„ì´??
+// ????°ë ª(??•âˆ¼ ?ê¾©ì” ??
 class CRockDropObject : public CItemObject {
 public:
 	CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain);
@@ -505,7 +508,7 @@ public:
 };
 
 
-// ------------------ ê½? ?€ ------------------
+// ------------------ ?? ?? ------------------
 class VegetationObject : virtual public CGameObject
 {
 public:

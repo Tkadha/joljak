@@ -798,6 +798,68 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		if (p.second->m_pSkinnedAnimationController) p.second->Animate(m_fElapsedTime);
 		if (p.second->isRender) p.second->Render(pd3dCommandList, pCamera);
 	}
+
+
+
+	// --- OBB 렌더링 시작 ---
+    bool bRenderOBBs = true; // 디버그 플래그 등으로 제어 가능 (예: m_bDebugRenderOBBs 멤버 변수)
+    if (bRenderOBBs) {
+        CShader* pOBBShader = pShaderManager->GetShader("OBB",pd3dCommandList); // 등록된 OBB 셰이더 가져오기
+        if (pOBBShader) {
+            // OBB 렌더링을 위한 상태 설정 (PSO, 루트 서명)
+            // SetGraphicsState가 셰이더 객체로부터 PSO와 루트 서명을 가져와 설정한다고 가정
+            SetGraphicsState(pd3dCommandList, pOBBShader);
+            // 만약 CShader 클래스에 GetRootSignature()가 있고, 루트 서명을 별도로 설정해야 한다면:
+            // pd3dCommandList->SetGraphicsRootSignature(pOBBShader->GetRootSignature()); // CShader에 GetRootSignature() 구현 필요
+            // pd3dCommandList->SetPipelineState(pOBBShader->GetPipelineState()); // CShader에 GetPipelineState() 구현 필요
+
+            // Octree 결과 오브젝트들의 OBB 렌더링
+            for (auto& obj_info : results) {
+                 if (obj_info->u_id < m_vGameObjects.size() && m_vGameObjects[obj_info->u_id]) {
+                    CGameObject* pGameObject = m_vGameObjects[obj_info->u_id];
+                    if (pGameObject->ShouldRenderOBB()) { // isRender 체크는 ShouldRenderOBB 내부에서 고려 가능
+                        pGameObject->RenderOBB(pd3dCommandList, pCamera);
+                    }
+                }
+            }
+
+            // 다른 리스트 오브젝트들의 OBB 렌더링
+            for (auto& branch : m_listBranchObjects) {
+                if (branch->ShouldRenderOBB()) {
+                    branch->RenderOBB(pd3dCommandList, pCamera);
+                }
+            }
+            for (auto& rock : m_listRockObjects) {
+                if (rock->ShouldRenderOBB()) {
+                    rock->RenderOBB(pd3dCommandList, pCamera);
+                }
+            }
+
+            if(m_pPreviewPine && m_pPreviewPine->ShouldRenderOBB()) {
+                 m_pPreviewPine->RenderOBB(pd3dCommandList, pCamera);
+            }
+
+
+            // 플레이어 OBB 렌더링
+            if (m_pPlayer && m_pPlayer->ShouldRenderOBB()) {
+                m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
+            }
+
+            // 다른 플레이어들 OBB 렌더링
+            //for (auto& entry : PlayerList) {
+            //    CPlayer* pOtherPlayer = entry.second;
+            //    if (pOtherPlayer && pOtherPlayer->ShouldRenderOBB()) {
+            //        pOtherPlayer->RenderOBB(pd3dCommandList, pCamera);
+            //    }
+            //}
+        } else {
+            assert(!"OBB Shader (named 'OBB') not found in ShaderManager!");
+        }
+        // OBB 렌더링 후, 다음 프레임이나 다음 일반 오브젝트 렌더링을 위해
+        // 상태를 명시적으로 되돌릴 필요는 없습니다. CScene::Render의 현재 구조는
+        // 각 Render() 호출 시 SetGraphicsState()를 통해 필요한 셰이더 상태를 설정하기 때문입니다.
+    }
+    // --- OBB 렌더링 끝 ---
 }
 
 void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader)
