@@ -768,22 +768,29 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 
 	// octree 렌더링
-	std::vector<tree_obj*> results;
-	tree_obj player_obj{ -1, m_pPlayer->GetPosition() };
+	//std::vector<tree_obj*> results;
+	//tree_obj player_obj{ -1, m_pPlayer->GetPosition() };
+	//octree.query(player_obj, XMFLOAT3{ 2500,1000,2500 }, results);
+	//{
+	//	std::lock_guard<std::mutex> lock(m_Mutex);
+	//	for (auto& obj : results) {
+	//		if (m_vGameObjects[obj->u_id]) {
+	//			if (m_vGameObjects[obj->u_id]->FSM_manager) m_vGameObjects[obj->u_id]->FSMUpdate();
+	//			//if (m_vGameObjects[obj->u_id]->m_pSkinnedAnimationController) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
+	//			if (m_vGameObjects[obj->u_id]) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
+	//			if (m_vGameObjects[obj->u_id]->isRender) m_vGameObjects[obj->u_id]->Render(pd3dCommandList, pCamera);
+	//		}
+	//	}
+	//}
 
-	octree.query(player_obj, XMFLOAT3{ 2500,1000,2500 }, results);
+	//server 기준
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
-		for (auto& obj : results) {
-			if (m_vGameObjects[obj->u_id]) {
-				if (m_vGameObjects[obj->u_id]->FSM_manager) m_vGameObjects[obj->u_id]->FSMUpdate();
-				//if (m_vGameObjects[obj->u_id]->m_pSkinnedAnimationController) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
-				if (m_vGameObjects[obj->u_id]) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
-				if (m_vGameObjects[obj->u_id]->isRender) m_vGameObjects[obj->u_id]->Render(pd3dCommandList, pCamera);
-			}
+		for (auto& obj : m_vGameObjects) {
+			if (obj) obj->Animate(m_fElapsedTime);
+			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
 		}
 	}
-
 
 	//for (auto it = m_listBranchObjects.begin(); it != m_listBranchObjects.end(); ) {
 	//	(*it)->Animate(m_fElapsedTime);

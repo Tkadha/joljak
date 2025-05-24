@@ -19,7 +19,7 @@ void CGameFramework::NerworkThread()
 {
 	auto& nwManager = NetworkManager::GetInstance();
 	nwManager.do_recv();
-	while (true)
+	while (b_running)
 	{
 
 		while (!nwManager.send_queue.empty())
@@ -106,6 +106,7 @@ void CGameFramework::ProcessPacket(char* packet)
 	{
 		REMOVE_PACKET* recv_p = reinterpret_cast<REMOVE_PACKET*>(packet);
 		int id = recv_p->id;
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
 		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
 			return obj->m_id == id;
 			});
@@ -206,7 +207,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	auto& nwManager = NetworkManager::GetInstance();
 	nwManager.Init();
 	serverConnected = true;
-
+	b_running = true;
 
 	BuildObjects();
 	
@@ -774,6 +775,7 @@ void CGameFramework::CreateIconDescriptorHeap()
 }
 void CGameFramework::OnDestroy()
 {
+	b_running = false;
 	WaitForGpu();
 	::CloseHandle(m_hFenceEvent);
 

@@ -240,5 +240,6 @@ public:
 
 	// 서버연결 확인코드
 	bool serverConnected = false;
+	std::atomic_bool b_running;
 };
 
