@@ -42,7 +42,7 @@ protected:
 	LPVOID						m_pCameraUpdatedContext = NULL;
 
 	BoundingOrientedBox playerObb;
-	XMFLOAT3 playerSize = XMFLOAT3(4.0f, 4.0f, 4.0f); // 실제 크기의 반
+	XMFLOAT3 playerSize = XMFLOAT3(2.0f, 2.0f, 2.0f); // ?�제 ?�기??�?
 	XMFLOAT4 playerRotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
 	CCamera						*m_pCamera = NULL;
@@ -68,7 +68,7 @@ public:
 	int Playerxp = 0;
 	int Totalxp = 20;
 	bool invincibility = false;
-	std::chrono::time_point<std::chrono::system_clock> starttime; // 무적 시작시간
+	std::chrono::time_point<std::chrono::system_clock> starttime; // 무적 ?�작?�간
 
 	WeaponType weaponType;
 
@@ -128,7 +128,7 @@ public:
 	//void SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
 	void UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
 
-	// 장비
+	// ?�비
 	CGameObject* AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework);
 	CGameObject* AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate, XMFLOAT3 scale);
 	CGameObject* FindFrame(char* framename);

@@ -58,6 +58,8 @@ void CPlayer::ReleaseShaderVariables()
 
 void CPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
 {
+	
+
 	if (dwDirection)
 	{
 		XMFLOAT3 xmf3Shift = XMFLOAT3(0, 0, 0);
@@ -71,27 +73,38 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
 			Playerstamina -= 2;
 		}
 		Move(xmf3Shift, bUpdateVelocity);
-		if (checkmove == true) {
-			checkmove = false;
-		}
+		
 		
 	}
 }
 
 void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 {
-	if (checkmove == false) {
-		if (bUpdateVelocity)
-		{
-			m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
-		}
-		else
-		{
-			m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
-			m_pCamera->Move(xmf3Shift);
-		}
-	}
+	if (Vector3::Length(XMFLOAT3(xmf3Shift)) == 0.0f) return;
+
+	// 이동 전 위치 저장
+	XMFLOAT3 oldPosition = m_xmf3Position;
+
+	// 위치 적용
+	m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
+	m_pCamera->Move(xmf3Shift);
 	UpdateOBB(m_xmf3Position, playerSize, playerRotation);
+
+	// 충돌 여부 확인 (checkmove는 Scene에서 설정됨)
+	if (checkmove)
+	{
+		// 충돌이면 위치 복구
+		m_xmf3Position = oldPosition;
+		m_pCamera->Move(Vector3::ScalarProduct(XMFLOAT3(xmf3Shift), -1.0f, false)); // 카메라도 복구
+		UpdateOBB(m_xmf3Position, playerSize, playerRotation);
+		return;
+	}
+
+	// 속도 적용
+	if (bUpdateVelocity)
+	{
+		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
+	}
 }
 
 void CPlayer::Rotate(float x, float y, float z)

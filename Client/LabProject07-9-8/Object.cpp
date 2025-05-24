@@ -11,7 +11,7 @@
 #include <algorithm>
 
 
-// 루트 상수로 전달할 구조체 (HLSL의 cbGameObjectInfo 와 일치해야 함)
+// 루트 ?�수�??�달??구조�?(HLSL??cbGameObjectInfo ?� ?�치?�야 ??
 struct cbGameObjectInfo {
 	XMFLOAT4X4    gmtxGameObject;     // 16 DWORDS
 	struct MaterialInfoCpp {
@@ -27,7 +27,7 @@ struct cbGameObjectInfo {
 		XMFLOAT3   Padding;           // 3 => MaterialInfoCpp = 24 DWORDS
 	} gMaterialInfo;
 	UINT          gnTexturesMask;     // 1 DWORD
-	// 총 16 + 24 + 1 = 41 DWORDS
+	// �?16 + 24 + 1 = 41 DWORDS
 };
 
 
@@ -139,9 +139,9 @@ void CGameObject::SetMaterial(int nIndex, CMaterial *pMaterial)
 
 	if (m_ppMaterials && (nIndex < m_nMaterials))
 	{
-		if (m_ppMaterials[nIndex]) m_ppMaterials[nIndex]->Release(); // 기존 재질 해제
+		if (m_ppMaterials[nIndex]) m_ppMaterials[nIndex]->Release(); // 기존 ?�질 ?�제
 		m_ppMaterials[nIndex] = pMaterial;
-		if (m_ppMaterials[nIndex]) m_ppMaterials[nIndex]->AddRef(); // 새 재질 참조 증가
+		if (m_ppMaterials[nIndex]) m_ppMaterials[nIndex]->AddRef(); // ???�질 참조 증�?
 	}
 	else {
 		OutputDebugStringW(L"  --> SetMaterial FAILED: Invalid index or m_ppMaterials is null.\n");
@@ -163,11 +163,11 @@ void CGameObject::SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMF
 	XMStoreFloat4(&m_localOBB.Orientation, XMLoadFloat4(&orientation));
 }
 
-// 메쉬 데이터로 바운딩 박스 만들기
+// 메쉬 ?�이?�로 바운??박스 만들�?
 void CGameObject::SetOBB()
 {
 	if (m_pMesh) {
-		// 메시 데이터로 OBB 만들기
+		// 메시 ?�이?�로 OBB 만들�?
 		XMFLOAT3 minPos = m_pMesh->m_pxmf3Positions[0];
 		XMFLOAT3 maxPos = m_pMesh->m_pxmf3Positions[0];
 		for (int i = 1; i < m_pMesh->m_nPositions; ++i) {
@@ -188,7 +188,7 @@ void CGameObject::SetOBB()
 			(maxPos.y - minPos.y) * 0.5f,
 			(maxPos.z - minPos.z) * 0.5f
 		);
-		m_localOBB.Orientation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);  // 초기 회전 없음
+		m_localOBB.Orientation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);  // 초기 ?�전 ?�음
 	}
 
 	if (m_pSibling) m_pSibling->SetOBB();
@@ -198,7 +198,7 @@ void CGameObject::SetOBB()
 void CGameObject::SetOBB(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CShader* shader)
 {
 	if (m_pMesh) {
-		// 메시 데이터로 OBB 만들기
+		// 메시 ?�이?�로 OBB 만들�?
 		XMFLOAT3 minPos = m_pMesh->m_pxmf3Positions[0];
 		XMFLOAT3 maxPos = m_pMesh->m_pxmf3Positions[0];
 		for (int i = 1; i < m_pMesh->m_nPositions; ++i) {
@@ -219,7 +219,7 @@ void CGameObject::SetOBB(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 			(maxPos.y - minPos.y) * 0.5f,
 			(maxPos.z - minPos.z) * 0.5f
 		);
-		m_localOBB.Orientation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);  // 초기 회전 없음
+		m_localOBB.Orientation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
 		InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	}
@@ -233,57 +233,57 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)
 	//m_OBBShader.Render(pd3dCommandList, NULL);
 	m_OBBMaterial->m_pShader->Render(pd3dCommandList, NULL);
 
-	// OBB 선을 그리기 위한 설정
+	// OBB ?�을 그리�??�한 ?�정
 	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
 	pd3dCommandList->IASetVertexBuffers(0, 1, &m_OBBVertexBufferView);
 	pd3dCommandList->IASetIndexBuffer(&m_OBBIndexBufferView);
 
-	// 선(Line) OBB 그리기
-	pd3dCommandList->DrawIndexedInstanced(24, 1, 0, 0, 0); // 12개 선 = 24개 인덱스
+	// ??Line) OBB 그리�?
+	pd3dCommandList->DrawIndexedInstanced(24, 1, 0, 0, 0); // 12�???= 24�??�덱??
 }
 
 void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	// OBB 렌더링에 필요한 리소스(버텍스/인덱스/상수 버퍼)가 생성되었는지 확인
+	// OBB ?�더링에 ?�요??리소??버텍???�덱???�수 버퍼)가 ?�성?�었?��? ?�인
 	if (!m_pOBBVertexBuffer || !m_pOBBIndexBuffer || !m_pd3dcbOBBTransform || !m_pcbMappedOBBTransform) return;
 
-	// 1. OBB의 WVP(World * View * Projection) 행렬 계산
+	// 1. OBB??WVP(World * View * Projection) ?�렬 계산
 	XMMATRIX world = XMMatrixIdentity();
 	XMMATRIX view = XMLoadFloat4x4(&pCamera->GetViewMatrix());
 	XMMATRIX proj = XMLoadFloat4x4(&pCamera->GetProjectionMatrix());
 	XMFLOAT4X4 wvpMatrix;
-	// HLSL은 row-major 기본, C++는 row-major -> HLSL에서 transpose 안 하려면 여기서 transpose
+	// HLSL?� row-major 기본, C++??row-major -> HLSL?�서 transpose ???�려�??�기??transpose
 	XMStoreFloat4x4(&wvpMatrix, XMMatrixTranspose(world * view * proj));
 
-	// 2. OBB 상수 버퍼 업데이트 (b0)
+	// 2. OBB ?�수 버퍼 ?�데?�트 (b0)
 	memcpy(m_pcbMappedOBBTransform, &wvpMatrix, sizeof(XMFLOAT4X4));
 
-	// 3. 상수 버퍼 바인딩 (OBB 루트 서명의 파라미터 인덱스 0번)
+	// 3. ?�수 버퍼 바인??(OBB 루트 ?�명???�라미터 ?�덱??0�?
 	pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbOBBTransform->GetGPUVirtualAddress());
 
-	// 4. IA(Input Assembler) 설정
-	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST); // 라인 리스트
-	pd3dCommandList->IASetVertexBuffers(0, 1, &m_OBBVertexBufferView);        // 정점 버퍼
-	pd3dCommandList->IASetIndexBuffer(&m_OBBIndexBufferView);              // 인덱스 버퍼
+	// 4. IA(Input Assembler) ?�정
+	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST); // ?�인 리스??
+	pd3dCommandList->IASetVertexBuffers(0, 1, &m_OBBVertexBufferView);        // ?�점 버퍼
+	pd3dCommandList->IASetIndexBuffer(&m_OBBIndexBufferView);              // ?�덱??버퍼
 
-	// 5. 그리기
-	pd3dCommandList->DrawIndexedInstanced(24, 1, 0, 0, 0); // 인덱스 24개 (선 12개)
+	// 5. 그리�?
+	pd3dCommandList->DrawIndexedInstanced(24, 1, 0, 0, 0); // ?�덱??24�?(??12�?
 }
 
 void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// 메쉬 유효성 검사 등 추가 가능
+	// 메쉬 ?�효??검????추�? 가??
 	if (m_pMesh)
 	{
-		// OBB 모서리 데이터
+		// OBB 모서�??�이??
 		XMFLOAT3 corners[8];
-		m_worldOBB.GetCorners(corners); // m_worldOBB가 유효한지 먼저 확인 필요
+		m_worldOBB.GetCorners(corners); // m_worldOBB가 ?�효?��? 먼�? ?�인 ?�요
 
-		// 2. OBB 정점 버퍼 생성 (+ HRESULT 확인)
+		// 2. OBB ?�점 버퍼 ?�성 (+ HRESULT ?�인)
 		m_pOBBVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, corners, sizeof(XMFLOAT3) * 8, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, nullptr);
 		if (!m_pOBBVertexBuffer) {
 			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Vertex Buffer! !!!!!!!!\n");
-			// 실패 시 이후 리소스 생성 중단 또는 다른 처리
+			// ?�패 ???�후 리소???�성 중단 ?�는 ?�른 처리
 		}
 		else {
 			m_OBBVertexBufferView.BufferLocation = m_pOBBVertexBuffer->GetGPUVirtualAddress();
@@ -291,10 +291,10 @@ void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12Graphic
 			m_OBBVertexBufferView.SizeInBytes = sizeof(XMFLOAT3) * 8;
 		}
 
-		// 3. OBB 인덱스 데이터 정의 (변경 없음)
+		// 3. OBB ?�덱???�이???�의 (변�??�음)
 		UINT indices[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
 
-		// 4. OBB 인덱스 버퍼 생성 (+ HRESULT 확인)
+		// 4. OBB ?�덱??버퍼 ?�성 (+ HRESULT ?�인)
 		m_pOBBIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, indices, sizeof(UINT) * 24, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, nullptr);
 		if (!m_pOBBIndexBuffer) {
 			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Index Buffer! !!!!!!!!\n");
@@ -305,25 +305,25 @@ void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12Graphic
 			m_OBBIndexBufferView.SizeInBytes = sizeof(UINT) * 24;
 		}
 
-		// 5. OBB 변환 행렬용 상수 버퍼 생성 (+ HRESULT 확인)
+		// 5. OBB 변???�렬???�수 버퍼 ?�성 (+ HRESULT ?�인)
 		UINT ncbElementBytes = (((sizeof(XMFLOAT4X4)) + 255) & ~255);
 		m_pd3dcbOBBTransform = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 		if (!m_pd3dcbOBBTransform) {
 			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Transform CBV! !!!!!!!!\n");
-			m_pcbMappedOBBTransform = nullptr; // 맵핑 포인터도 null 처리
+			m_pcbMappedOBBTransform = nullptr; // 맵핑 ?�인?�도 null 처리
 		}
 		else {
-			// 맵핑된 포인터 저장 (+ HRESULT 확인)
+			// 맵핑???�인???�??(+ HRESULT ?�인)
 			HRESULT hr = m_pd3dcbOBBTransform->Map(0, NULL, (void**)&m_pcbMappedOBBTransform);
 			if (FAILED(hr) || !m_pcbMappedOBBTransform) {
 				OutputDebugString(L"!!!!!!!! ERROR: Failed to map OBB Transform CBV! !!!!!!!!\n");
-				m_pcbMappedOBBTransform = nullptr; // 실패 시 null 처리
-				// 필요시 m_pd3dcbOBBTransform Release 고려
+				m_pcbMappedOBBTransform = nullptr; // ?�패 ??null 처리
+				// ?�요??m_pd3dcbOBBTransform Release 고려
 			}
 		}
 	}
 
-	// 자식/형제 객체 재귀 호출 (기존 코드 유지)
+	// ?�식/?�제 객체 ?��? ?�출 (기존 코드 ?��?)
 	if (m_pSibling) m_pSibling->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	if (m_pChild) m_pChild->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 
@@ -355,21 +355,21 @@ void CGameObject::UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent)
 {
 	m_xmf4x4World = (pxmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4ToParent, *pxmf4x4Parent) : m_xmf4x4ToParent;
 
-	// 월드 OBB 계산
+	
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
 
-	// 중심점 변환
+	
 	XMVECTOR localCenter = XMLoadFloat3(&m_localOBB.Center);
 	XMVECTOR worldCenter = XMVector3TransformCoord(localCenter, worldMatrix);
 	XMStoreFloat3(&m_worldOBB.Center, worldCenter);
 
-	// 방향 변환 (회전)
+	
 	XMMATRIX rotationMatrix = worldMatrix;
-	rotationMatrix.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);  // 이동 성분 제거
+	rotationMatrix.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);  // ?�동 ?�분 ?�거
 	XMVECTOR orientation = XMQuaternionRotationMatrix(rotationMatrix);
 	XMStoreFloat4(&m_worldOBB.Orientation, orientation);
 
-	// 크기 변환 (스케일)
+	
 	XMFLOAT3 scale;
 	scale.x = XMVectorGetX(XMVector3Length(worldMatrix.r[0]));
 	scale.y = XMVectorGetX(XMVector3Length(worldMatrix.r[1]));
@@ -405,12 +405,12 @@ void CGameObject::Animate(float fTimeElapsed)
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	CScene* pScene = m_pGameFramework ? m_pGameFramework->GetScene() : nullptr;
-	if (!pScene) return; // 씬 없으면 렌더링 불가
+	if (!pScene) return; // ???�으�??�더�?불�?
 
 	if (!isRender) return;
 
-	// 이 객체가 직접 렌더링할 메쉬와 첫 번째 재질/셰이더를 가지고 있는지 확인
-	CMaterial* pPrimaryMaterial = GetMaterial(0); // 상태 설정 기준으로 첫 번째 재질 사용
+	// ??객체가 직접 ?�더링할 메쉬?� �?번째 ?�질/?�이?��? 가지�??�는지 ?�인
+	CMaterial* pPrimaryMaterial = GetMaterial(0); // ?�태 ?�정 기�??�로 �?번째 ?�질 ?�용
 
 
 	if (m_pMesh && pPrimaryMaterial && pPrimaryMaterial->m_pShader)
@@ -418,54 +418,54 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		pScene->SetGraphicsState(pd3dCommandList, pPrimaryMaterial->m_pShader);
 
 
-		// --- 공통 CBV 바인딩 ---
-		// 카메라 CBV (b1 @ 인덱스 0)
+		// --- 공통 CBV 바인??---
+		// 카메??CBV (b1 @ ?�덱??0)
 		if (pCamera && pCamera->GetCameraConstantBuffer()) {
 			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress());
 		}
-		// 조명 CBV (b4 @ 인덱스 2) - Standard/Skinned/Instancing 인 경우에만 바인딩
-		CShader* pCurrentShader = pPrimaryMaterial->m_pShader; // 편의상
-		std::string shaderType = pCurrentShader->GetShaderType(); // GetShaderType() 함수 필요
+		// 조명 CBV (b4 @ ?�덱??2) - Standard/Skinned/Instancing ??경우?�만 바인??
+		CShader* pCurrentShader = pPrimaryMaterial->m_pShader; // ?�의??
+		std::string shaderType = pCurrentShader->GetShaderType(); // GetShaderType() ?�수 ?�요
 		if (shaderType == "Standard" || shaderType == "Skinned" /* || shaderType == "Instancing" */) {
-			ID3D12Resource* pLightBuffer = pScene->GetLightsConstantBuffer(); // CScene 함수 통해 접근
+			ID3D12Resource* pLightBuffer = pScene->GetLightsConstantBuffer(); // CScene ?�수 ?�해 ?�근
 			if (pLightBuffer) {
 				pd3dCommandList->SetGraphicsRootConstantBufferView(2, pLightBuffer->GetGPUVirtualAddress());
 			}
 		}
 
 
-		// 이 GameObject에 속한 모든 메쉬/재질 쌍에 대해 반복
+		// ??GameObject???�한 모든 메쉬/?�질 ?�에 ?�??반복
 		for (int i = 0; i < m_nMaterials; i++)
 		{
-			CMaterial* pMaterial = GetMaterial(i); // 현재 재질
-			// 현재 재질과 Primary 재질의 셰이더가 다르면 SetGraphicsState 다시 호출? (복잡도 증가, 일단 생략)
-			if (pMaterial && pMaterial->m_pShader == pCurrentShader) // 같은 셰이더를 사용하는 재질만 그림 (단순화)
+			CMaterial* pMaterial = GetMaterial(i); // ?�재 ?�질
+			// ?�재 ?�질�?Primary ?�질???�이?��? ?�르�?SetGraphicsState ?�시 ?�출? (복잡??증�?, ?�단 ?�략)
+			if (pMaterial && pMaterial->m_pShader == pCurrentShader) // 같�? ?�이?��? ?�용?�는 ?�질�?그림 (?�순??
 			{
-				// --- 리소스 바인딩 ---
-				// 현재 CShader (및 RootSignature)는 CScene::Render에서 이미 설정됨
-				// 1. 객체별 상수 업데이트 (루트 상수 b2 사용)
-				cbGameObjectInfo gameObjectInfo; // C++ 구조체 인스턴스
+				// --- 리소??바인??---
+				// ?�재 CShader (�?RootSignature)??CScene::Render?�서 ?��? ?�정??
+				// 1. 객체�??�수 ?�데?�트 (루트 ?�수 b2 ?�용)
+				cbGameObjectInfo gameObjectInfo; // C++ 구조�??�스?�스
 
-				// 1.1. 월드 변환 행렬 설정
+				// 1.1. ?�드 변???�렬 ?�정
 				XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
 
-				// 1.2. 재질 정보 채우기
+				// 1.2. ?�질 ?�보 채우�?
 				gameObjectInfo.gMaterialInfo.AmbientColor = pMaterial->m_xmf4AmbientColor;
 				gameObjectInfo.gMaterialInfo.DiffuseColor = pMaterial->m_xmf4AlbedoColor;
 				gameObjectInfo.gMaterialInfo.SpecularColor = pMaterial->m_xmf4SpecularColor;
-				// 예: Specular Power를 Alpha에 저장했다면 gameObjectInfo.gMaterialInfo.SpecularColor.w = pMaterial->m_fGlossiness;
+				// ?? Specular Power�?Alpha???�?�했?�면 gameObjectInfo.gMaterialInfo.SpecularColor.w = pMaterial->m_fGlossiness;
 				gameObjectInfo.gMaterialInfo.EmissiveColor = pMaterial->m_xmf4EmissiveColor;
 				gameObjectInfo.gMaterialInfo.Glossiness = pMaterial->m_fGlossiness;
 				gameObjectInfo.gMaterialInfo.Smoothness = pMaterial->m_fSmoothness;
 				gameObjectInfo.gMaterialInfo.SpecularHighlight = pMaterial->m_fSpecularHighlight;
 				gameObjectInfo.gMaterialInfo.Metallic = pMaterial->m_fMetallic;
 				gameObjectInfo.gMaterialInfo.GlossyReflection = pMaterial->m_fGlossyReflection;
-				// Padding은 초기화 필요 없음
+				// Padding?� 초기???�요 ?�음
 
-				// 1.3. 텍스처 마스크 설정
+				// 1.3. ?�스�?마스???�정
 				gameObjectInfo.gnTexturesMask = 0;
 				for (int texIdx = 0; texIdx < pMaterial->GetTextureCount(); ++texIdx) {
-					// GetTexture 함수가 shared_ptr 벡터를 확인하고 raw 포인터 반환
+					// GetTexture ?�수가 shared_ptr 벡터�??�인?�고 raw ?�인??반환
 					if (pMaterial->GetTexture(texIdx)) {
 						if (texIdx == 0) gameObjectInfo.gnTexturesMask |= MATERIAL_ALBEDO_MAP;
 						else if (texIdx == 1) gameObjectInfo.gnTexturesMask |= MATERIAL_SPECULAR_MAP;
@@ -476,50 +476,50 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 						else if (texIdx == 6) gameObjectInfo.gnTexturesMask |= MATERIAL_DETAIL_NORMAL_MAP;
 					}
 				}
-				// ... 다른 텍스처 타입이 있다면 추가 ...
+				// ... ?�른 ?�스�??�?�이 ?�다�?추�? ...
 
-				// 1.4. 루트 상수 바인딩 (Standard/Skinned 루트 서명의 파라미터 인덱스 1번)
+				// 1.4. 루트 ?�수 바인??(Standard/Skinned 루트 ?�명???�라미터 ?�덱??1�?
 				pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo, 0);
 
-				// 2. 재질 텍스처 바인딩 (Descriptor Table 사용 가정)
-				// Standard/Skinned 루트 서명의 파라미터 인덱스 3번이 t6-t12 텍스처 테이블이었음
-				D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle(); // 재질이 자신의 텍스처 테이블 시작 핸들을 알아야 함 (CTexture 로딩/관리 시 설정 필요)
+				// 2. ?�질 ?�스�?바인??(Descriptor Table ?�용 가??
+				// Standard/Skinned 루트 ?�명???�라미터 ?�덱??3번이 t6-t12 ?�스�??�이블이?�음
+				D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle(); // ?�질???�신???�스�??�이�??�작 ?�들???�아????(CTexture 로딩/관�????�정 ?�요)
 				if (textureTableHandle.ptr != 0) {
-					// 루트 파라미터 인덱스 3번에 텍스처 테이블 시작 핸들 바인딩
+					// 루트 ?�라미터 ?�덱??3번에 ?�스�??�이�??�작 ?�들 바인??
 					pd3dCommandList->SetGraphicsRootDescriptorTable(3, textureTableHandle);
 				}
 
-				// 3. 스키닝 관련 CBV 바인딩 (Skinned 루트 서명 사용 시)
-		   // 현재 셰이더가 Skinned 인지 확인하는 로직이 있으면 더 좋음 (예: shader->GetType())
-				 // --- 스키닝 CBV 바인딩 (셰이더 타입 "Skinned" 확인 후) ---
+				// 3. ?�키??관??CBV 바인??(Skinned 루트 ?�명 ?�용 ??
+		   // ?�재 ?�이?��? Skinned ?��? ?�인?�는 로직???�으�???좋음 (?? shader->GetType())
+				 // --- ?�키??CBV 바인??(?�이???�??"Skinned" ?�인 ?? ---
 				if (shaderType == "Skinned") {
 					CSkinnedMesh* pSkinnedMesh = dynamic_cast<CSkinnedMesh*>(m_pMesh);
 					if (pSkinnedMesh) {
-						// 3.1. 본 오프셋 버퍼 바인딩 (b7, 파라미터 인덱스 4)
+						// 3.1. �??�프??버퍼 바인??(b7, ?�라미터 ?�덱??4)
 						ID3D12Resource* pOffsetBuffer = pSkinnedMesh->m_pd3dcbBindPoseBoneOffsets;
                         if (pOffsetBuffer) {
                             pd3dCommandList->SetGraphicsRootConstantBufferView(4, pOffsetBuffer->GetGPUVirtualAddress());
                         }
-						// 3.2. 본 변환 버퍼 바인딩 (b8, 파라미터 인덱스 5)
-						if (m_pSharedAnimController && // 이 노드에 저장된 컨트롤러 포인터 확인
+						// 3.2. �?변??버퍼 바인??(b8, ?�라미터 ?�덱??5)
+						if (m_pSharedAnimController && // ???�드???�?�된 컨트롤러 ?�인???�인
 							m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms &&
 							m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]) {
 							pd3dCommandList->SetGraphicsRootConstantBufferView(5, m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]->GetGPUVirtualAddress());
 						}
 						else {
-							// 로그 출력: 컨트롤러 포인터가 null 인지, 아니면 내부 버퍼가 null 인지 확인
+							// 로그 출력: 컨트롤러 ?�인?��? null ?��?, ?�니�??��? 버퍼가 null ?��? ?�인
 							OutputDebugStringW(L"!!! Render: Skinned - Failed to get valid Bone Transform buffer (b8) via m_pSharedAnimController!\n");
 							wchar_t dbgMsg[128];
-							swprintf_s(dbgMsg, L"    m_pSharedAnimController = %p\n", (void*)m_pSharedAnimController); // 포인터 값 로깅
+							swprintf_s(dbgMsg, L"    m_pSharedAnimController = %p\n", (void*)m_pSharedAnimController); // ?�인??�?로깅
 							OutputDebugStringW(dbgMsg);
-							// 필요시 m_pSharedAnimController 내부 포인터들도 확인하는 로그 추가
+							// ?�요??m_pSharedAnimController ?��? ?�인?�들???�인?�는 로그 추�?
 						}
 					}
 				}
 
 
 
-				// --- 그리기 ---
+				// --- 그리�?---
 				m_pMesh->Render(pd3dCommandList, i); 
 			}
 		}
@@ -706,38 +706,38 @@ void CGameObject::Rotate(XMFLOAT4 *pxmf4Quaternion)
 
 std::shared_ptr<CTexture> CGameObject::FindReplicatedTexture(_TCHAR *pstrTextureName)
 {
-	std::shared_ptr<CTexture> pTexture = nullptr; // shared_ptr로 변경
+	std::shared_ptr<CTexture> pTexture = nullptr; // shared_ptr�?변�?
 	
 	for (int i = 0; i < m_nMaterials; i++)
 	{
-		if (m_ppMaterials[i]) // CMaterial 포인터 배열 유지 가정
+		if (m_ppMaterials[i]) // CMaterial ?�인??배열 ?��? 가??
 		{
-			// m_ppMaterials[i]->m_vTextures 가 shared_ptr 벡터라고 가정
-			for (int j = 0; j < m_ppMaterials[i]->GetTextureCount(); j++) // GetTextureCount 사용
+			// m_ppMaterials[i]->m_vTextures 가 shared_ptr 벡터?�고 가??
+			for (int j = 0; j < m_ppMaterials[i]->GetTextureCount(); j++) // GetTextureCount ?�용
 			{
-				// 텍스처 이름 비교 (m_ppstrTextureNames 사용 유지)
+				// ?�스�??�름 비교 (m_ppstrTextureNames ?�용 ?��?)
 				if (!_tcsncmp(m_ppMaterials[i]->m_ppstrTextureNames[j], pstrTextureName, _tcslen(pstrTextureName)))
 				{
-					// CMaterial의 m_vTextures에서 shared_ptr 가져오기
+					// CMaterial??m_vTextures?�서 shared_ptr 가?�오�?
 					if (j < m_ppMaterials[i]->m_vTextures.size()) {
-						return m_ppMaterials[i]->m_vTextures[j]; // shared_ptr 복사하여 반환 (참조 카운트 증가)
+						return m_ppMaterials[i]->m_vTextures[j]; // shared_ptr 복사?�여 반환 (참조 카운??증�?)
 					}
 				}
 			}
 		}
 	}
 
-	// 자식/형제 노드에서 찾기 (재귀 호출)
+	// ?�식/?�제 ?�드?�서 찾기 (?��? ?�출)
 	if (m_pSibling) {
 		pTexture = m_pSibling->FindReplicatedTexture(pstrTextureName);
-		if (pTexture) return pTexture; // 찾으면 바로 반환
+		if (pTexture) return pTexture; // 찾으�?바로 반환
 	}
 	if (m_pChild) {
 		pTexture = m_pChild->FindReplicatedTexture(pstrTextureName);
-		if (pTexture) return pTexture; // 찾으면 바로 반환
+		if (pTexture) return pTexture; // 찾으�?바로 반환
 	}
 
-	return nullptr; // 못 찾으면 nullptr (빈 shared_ptr) 반환
+	return nullptr; // �?찾으�?nullptr (�?shared_ptr) 반환
 }
 
 int ReadIntegerFromFile(FILE *pInFile)
@@ -767,7 +767,7 @@ BYTE ReadStringFromFile(FILE *pInFile, char *pstrToken)
 
 void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, FILE* pInFile, CGameFramework* pGameFramework)
 {
-	// ShaderManager 및 ResourceManager 가져오기
+	// ShaderManager �?ResourceManager 가?�오�?
 	assert(pGameFramework != nullptr && "GameFramework pointer is needed!");
 	ShaderManager* pShaderManager = pGameFramework->GetShaderManager();
 	ResourceManager* pResourceManager = pGameFramework->GetResourceManager();
@@ -780,13 +780,13 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 
 	m_nMaterials = ReadIntegerFromFile(pInFile);
 
-	wchar_t buffer[128];// 로그용 버퍼
+	wchar_t buffer[128];// 로그??버퍼
 	swprintf_s(buffer, L"LoadMaterialsFromFile: Expecting %d materials.\n", m_nMaterials);
 	OutputDebugStringW(buffer);
 
-	if (m_nMaterials <= 0) return; // 재질 없으면 종료
+	if (m_nMaterials <= 0) return; // ?�질 ?�으�?종료
 
-	if (m_ppMaterials) delete[] m_ppMaterials; // 이미 있다면 해제 (재할당 방지)
+	if (m_ppMaterials) delete[] m_ppMaterials; // ?��? ?�다�??�제 (?�할??방�?)
 	m_ppMaterials = new CMaterial*[m_nMaterials];
 	for (int i = 0; i < m_nMaterials; i++) m_ppMaterials[i] = NULL;
 
@@ -808,15 +808,15 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 			pMaterial = new CMaterial(7, pGameFramework); // Assume 7 textures for now
 			OutputDebugStringW((L"    new CMaterial result: " + std::wstring(pMaterial ? L"Success" : L"FAILED!") + L"\n").c_str());
 
-			if (!pMaterial) continue; // Material 생성 실패 시 다음 토큰으로
+			if (!pMaterial) continue; // Material ?�성 ?�패 ???�음 ?�큰?�로
 
-			// --- 셰이더 설정 로직 변경 ---
+			// --- ?�이???�정 로직 변�?---
 			UINT nMeshType = GetMeshType();
-			std::string shaderName = "Standard"; // 기본값
+			std::string shaderName = "Standard"; // 기본�?
 
-			// 메쉬 타입에 따라 필요한 셰이더 이름 결정
-			if (nMeshType & VERTEXT_NORMAL_TANGENT_TEXTURE) { // 기본 텍스처/노멀/탄젠트 포함 시
-				if (nMeshType & VERTEXT_BONE_INDEX_WEIGHT) { // 본 가중치 포함 시
+			// 메쉬 ?�?�에 ?�라 ?�요???�이???�름 결정
+			if (nMeshType & VERTEXT_NORMAL_TANGENT_TEXTURE) { // 기본 ?�스�??��?/?�젠???�함 ??
+				if (nMeshType & VERTEXT_BONE_INDEX_WEIGHT) { // �?가중치 ?�함 ??
 					shaderName = "Skinned";
 				}
 				else {
@@ -824,29 +824,29 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 				}
 			}
 			else {
-				// 다른 메쉬 타입에 대한 처리 (예: 색상만 있는 메쉬 등)
-				// 필요하다면 여기에 다른 셰이더 이름 할당 로직 추가
+				// ?�른 메쉬 ?�?�에 ?�??처리 (?? ?�상�??�는 메쉬 ??
+				// ?�요?�다�??�기???�른 ?�이???�름 ?�당 로직 추�?
 			}
 
-			// ShaderManager로부터 셰이더 가져오기
+			// ShaderManager로�????�이??가?�오�?
 			CShader* pMatShader = pShaderManager->GetShader(shaderName, pd3dCommandList);
 			if (pMatShader) {
-				pMaterial->SetShader(pMatShader); // CMaterial에 셰이더 설정
-				// GetShader는 호출자를 위해 AddRef 했으므로, SetShader에서 AddRef 한 후 여기서 Release
+				pMaterial->SetShader(pMatShader); // CMaterial???�이???�정
+				// GetShader???�출?��? ?�해 AddRef ?�으므�? SetShader?�서 AddRef ?????�기??Release
 				pMatShader->Release();
 			}
 			else {
 				OutputDebugStringA(("Error: Could not get shader '" + shaderName + "' from ShaderManager! Assigning default Standard shader.\n").c_str());
-				// 예외 처리: Standard 셰이더라도 다시 시도
+				// ?�외 처리: Standard ?�이?�라???�시 ?�도
 				pMatShader = pShaderManager->GetShader("Standard", pd3dCommandList);
 				if (pMatShader) {
 					pMaterial->SetShader(pMatShader);
 					pMatShader->Release();
 				}
 			}
-			// --- 셰이더 설정 로직 끝 ---
+			// --- ?�이???�정 로직 ??---
 
-			SetMaterial(nMaterial, pMaterial); // 재질 설정
+			SetMaterial(nMaterial, pMaterial); // ?�질 ?�정
 			OutputDebugStringW((L"    SetMaterial called for index: " + std::to_wstring(nMaterial) + L"\n").c_str());
 		}
 		else if (!strcmp(pstrToken, "<AlbedoColor>:"))
@@ -883,7 +883,7 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		}
 		else if (!strcmp(pstrToken, "<AlbedoMap>:"))
 		{
-			// LoadTextureFromFile 호출 시 인덱스(0)와 타입(MATERIAL_ALBEDO_MAP) 전달
+			// LoadTextureFromFile ?�출 ???�덱??0)?� ?�??MATERIAL_ALBEDO_MAP) ?�달
 			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 0, MATERIAL_ALBEDO_MAP, pParent, pInFile, pResourceManager);
 		}
 		else if (!strcmp(pstrToken, "<SpecularMap>:"))
@@ -917,7 +917,7 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		}
 	}
 
-	// 함수 종료 전 확인 (디버깅용)
+	// ?�수 종료 ???�인 (?�버깅용)
 	for (int i = 0; i < m_nMaterials; ++i) {
 		swprintf_s(buffer, L"LoadMaterialsFromFile: Final check - Material[%d] pointer: %p\n", i, (void*)m_ppMaterials[i]);
 		OutputDebugStringW(buffer);
@@ -1273,12 +1273,12 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
 }
 
  void CGameObject::PropagateAnimController(CAnimationController* controller) {
-     CAnimationController* controllerToUse = m_pSkinnedAnimationController ? m_pSkinnedAnimationController : controller; // 자신이 있으면 자신 우선
+     CAnimationController* controllerToUse = m_pSkinnedAnimationController ? m_pSkinnedAnimationController : controller; // ?�신???�으�??�신 ?�선
      if (m_pMesh && dynamic_cast<CSkinnedMesh*>(m_pMesh)) {
-         m_pSharedAnimController = controllerToUse; // 스키드 메쉬면 컨트롤러 저장
+         m_pSharedAnimController = controllerToUse; // ?�키??메쉬�?컨트롤러 ?�??
      }
-     if (m_pChild) m_pChild->PropagateAnimController(controllerToUse); // 자식에게 전파
-     if (m_pSibling) m_pSibling->PropagateAnimController(controller);    // 형제는 부모가 준 것 전파
+     if (m_pChild) m_pChild->PropagateAnimController(controllerToUse); // ?�식?�게 ?�파
+     if (m_pSibling) m_pSibling->PropagateAnimController(controller);    // ?�제??부모�? 준 �??�파
  }
 
 
@@ -1286,11 +1286,11 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList,
-	LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) // Material 슬롯 1개
+	LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) // Material ?�롯 1�?
 {
 	assert(pGameFramework != nullptr && "GameFramework pointer is needed for CHeightMapTerrain!");
 	ResourceManager* pResourceManager = pGameFramework->GetResourceManager();
-	ShaderManager* pShaderManager = pGameFramework->GetShaderManager(); // ShaderManager 가져오기
+	ShaderManager* pShaderManager = pGameFramework->GetShaderManager(); // ShaderManager 가?�오�?
 	assert(pResourceManager != nullptr && pShaderManager != nullptr);
 
 	m_nWidth = nWidth;
@@ -1305,26 +1305,26 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	// 재질 생성
+	// ?�질 ?�성
 	CMaterial* pTerrainMaterial = new CMaterial(2, pGameFramework);
 
-	// 텍스처 로드 
+	// ?�스�?로드 
 	std::shared_ptr<CTexture> pTerrainBaseTexture = pResourceManager->GetTexture(L"Terrain/DemoTerrain3.dds", pd3dCommandList);
 	std::shared_ptr<CTexture> pTerrainDetailTexture = pResourceManager->GetTexture(L"Terrain/TerrainGrass_basecolor.dds", pd3dCommandList);
 	
-	// 재질에 텍스처 할당 및 SRV 생성 요청
+	// ?�질???�스�??�당 �?SRV ?�성 ?�청
 	if (pTerrainBaseTexture) {
-		pTerrainMaterial->AssignTexture(0, pTerrainBaseTexture, pd3dDevice); // 0번 슬롯
+		pTerrainMaterial->AssignTexture(0, pTerrainBaseTexture, pd3dDevice); // 0�??�롯
 	}
 	if (pTerrainDetailTexture) {
-		pTerrainMaterial->AssignTexture(1, pTerrainDetailTexture, pd3dDevice); // 1번 슬롯
+		pTerrainMaterial->AssignTexture(1, pTerrainDetailTexture, pd3dDevice); // 1�??�롯
 	}
 
-	// 셰이더 가져오기 및 설정
+	// ?�이??가?�오�?�??�정
 	CShader* pTerrainShader = pShaderManager->GetShader("Terrain", pd3dCommandList); 
 	if (pTerrainShader) {
 		pTerrainMaterial->SetShader(pTerrainShader); 
-		pTerrainShader->Release(); // GetShader로 얻은 참조 해제
+		pTerrainShader->Release(); // GetShader�??��? 참조 ?�제
 	}
 	else {
 		OutputDebugString(L"Error: Failed to get Terrain shader. Material will not have a shader.\n");
@@ -1345,41 +1345,41 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 	if (!pScene) return;
 
 
-	CMaterial* pMaterial = GetMaterial(0); // 지형은 재질 하나 가정
+	CMaterial* pMaterial = GetMaterial(0); // 지?��? ?�질 ?�나 가??
 	if (m_pMesh && pMaterial && pMaterial->m_pShader)
 	{
-		// --- 상태 설정 ---
+		// --- ?�태 ?�정 ---
 		pScene->SetGraphicsState(pd3dCommandList, pMaterial->m_pShader);
 
-		// --- 공통 CBV 바인딩 ---
-		// 카메라 CBV (b1 @ 인덱스 0)
+		// --- 공통 CBV 바인??---
+		// 카메??CBV (b1 @ ?�덱??0)
 		if (pCamera && pCamera->GetCameraConstantBuffer()) {
 			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress());
 		}
 
-		UpdateTransform(NULL); // 지형 월드 행렬 업데이트
+		UpdateTransform(NULL); // 지???�드 ?�렬 ?�데?�트
 
-		// 1. 지형 객체 상수 바인딩 (b2 @ Param 1 - 월드 행렬만)
-		XMFLOAT4X4 gmtxGameObject; // 월드 행렬만 필요
+		// 1. 지??객체 ?�수 바인??(b2 @ Param 1 - ?�드 ?�렬�?
+		XMFLOAT4X4 gmtxGameObject; // ?�드 ?�렬�??�요
 		XMStoreFloat4x4(&gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
-		// 루트 파라미터 1번에 16 DWORDS (행렬 크기) 설정
+		// 루트 ?�라미터 1번에 16 DWORDS (?�렬 ?�기) ?�정
 		pd3dCommandList->SetGraphicsRoot32BitConstants(1, 16, &gmtxGameObject, 0);
 
-		// 2. 지형 텍스처 테이블 바인딩 (t1, t2 @ Param 2)
+		// 2. 지???�스�??�이�?바인??(t1, t2 @ Param 2)
 		D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle();
 		if (textureTableHandle.ptr != 0) {
-			// 루트 파라미터 인덱스 2번에 바인딩!
+			// 루트 ?�라미터 ?�덱??2번에 바인??
 			pd3dCommandList->SetGraphicsRootDescriptorTable(2, textureTableHandle);
 		}
 		else {
 			OutputDebugString(L"Warning: Terrain material has null texture handle for binding.\n");
 		}
 
-		// --- 그리기 ---
+		// --- 그리�?---
 		m_pMesh->Render(pd3dCommandList, 0);
 
 	}
-	// 지형은 자식/형제 없음
+	// 지?��? ?�식/?�제 ?�음
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1388,7 +1388,7 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 {
 	assert(pGameFramework != nullptr && "GameFramework pointer is needed for CSkyBox!");
 	ResourceManager* pResourceManager = pGameFramework->GetResourceManager();
-	ShaderManager* pShaderManager = pGameFramework->GetShaderManager(); // ShaderManager 가져오기
+	ShaderManager* pShaderManager = pGameFramework->GetShaderManager(); // ShaderManager 가?�오�?
 	assert(pResourceManager != nullptr && pShaderManager != nullptr);
 
 	CSkyBoxMesh *pSkyBoxMesh = new CSkyBoxMesh(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 2.0f);
@@ -1396,20 +1396,20 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	// 재질 생성
+	// ?�질 ?�성
 	CMaterial* pSkyBoxMaterial = new CMaterial(1, pGameFramework);
 
-	// 텍스처 로드 
+	// ?�스�?로드 
 	std::shared_ptr<CTexture> pSkyBoxTexture = pResourceManager->GetTexture(L"SkyBox/SkyBox_1.dds", pd3dCommandList);
 	if (pSkyBoxTexture) {
-		pSkyBoxMaterial->AssignTexture(0, pSkyBoxTexture, pd3dDevice); // 0번 인덱스에 할당
+		pSkyBoxMaterial->AssignTexture(0, pSkyBoxTexture, pd3dDevice); // 0�??�덱?�에 ?�당
 	}
 	else {
-		// 텍스처 로딩 실패 처리!
+		// ?�스�?로딩 ?�패 처리!
 		OutputDebugString(L"Error: Failed to load SkyBox texture using ResourceManager.\n");
 	}
 
-	// 5. 셰이더 가져오기 및 설정
+	// 5. ?�이??가?�오�?�??�정
 	CShader* pSkyBoxShader = pShaderManager->GetShader("Skybox", pd3dCommandList);
 	if (pSkyBoxShader) {
 		pSkyBoxMaterial->SetShader(pSkyBoxShader);
@@ -1430,34 +1430,34 @@ void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 	CScene* pScene = m_pGameFramework ? m_pGameFramework->GetScene() : nullptr;
 	if (!pScene || !pCamera) return;
 
-	CMaterial* pMaterial = GetMaterial(0); // 스카이박스는 재질 하나 가정
+	CMaterial* pMaterial = GetMaterial(0); // ?�카?�박?�는 ?�질 ?�나 가??
 	if (m_pMesh && pMaterial && pMaterial->m_pShader)
 	{
 		pScene->SetGraphicsState(pd3dCommandList, pMaterial->m_pShader);
 
-		// --- 공통 CBV 바인딩 ---
-		// 카메라 CBV (b1 @ 인덱스 0)
-		if (pCamera->GetCameraConstantBuffer()) { // pCamera는 null 아님
+		// --- 공통 CBV 바인??---
+		// 카메??CBV (b1 @ ?�덱??0)
+		if (pCamera->GetCameraConstantBuffer()) { // pCamera??null ?�님
 			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress());
 		}
 
-		// --- 스카이박스 리소스 바인딩 ---
+		// --- ?�카?�박??리소??바인??---
 		XMFLOAT3 xmf3CameraPos = pCamera->GetPosition();
 		SetPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
-		UpdateTransform(NULL); // 월드 행렬 업데이트
+		UpdateTransform(NULL); // ?�드 ?�렬 ?�데?�트
 
-		// 스카이박스 텍스처 테이블 바인딩 (t13 @ Param 1)
+		// ?�카?�박???�스�??�이�?바인??(t13 @ Param 1)
 		D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle();
 		if (textureTableHandle.ptr != 0) {
-			// 루트 파라미터 인덱스 1번에 바인딩!
+			// 루트 ?�라미터 ?�덱??1번에 바인??
 			pd3dCommandList->SetGraphicsRootDescriptorTable(1, textureTableHandle);
 		}
 		else {
 			OutputDebugString(L"Warning: Skybox material has null texture handle for binding.\n");
 		}
 
-		// --- 그리기 ---
-		m_pMesh->Render(pd3dCommandList, 0); // 메쉬 렌더링
+		// --- 그리�?---
+		m_pMesh->Render(pd3dCommandList, 0); // 메쉬 ?�더�?
 
 	}
 }
@@ -1537,69 +1537,69 @@ CHairObject::CHairObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	SetChild(pGameObject);
 
-	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+	if (pInFile) fclose(pInFile); // ?�일 ?�기 추�?
 }
 
 
-// ------------------ 나무 ------------------
+// ------------------ ?�무 ------------------
 void CTreeObject::StartFalling(const XMFLOAT3& hitDirection) {
-	if (m_bIsFalling || m_bHasFallen) return; // 이미 쓰러지고 있거나 쓰러졌으면 중복 실행 방지
+	if (m_bIsFalling || m_bHasFallen) return; // ?��? ?�러지�??�거???�러졌으�?중복 ?�행 방�?
 
 	m_bIsFalling = true;
 	m_fFallingTimer = 0.0f;
 	m_fCurrentFallAngle = 0.0f;
-	m_xmf4x4InitialToParent = m_xmf4x4ToParent; // 현재 상대 변환 행렬 저장
+	m_xmf4x4InitialToParent = m_xmf4x4ToParent; // ?�재 ?��? 변???�렬 ?�??
 
-	// 쓰러지는 축 결정
-	// 예시: hitDirection (플레이어->나무 벡터 또는 플레이어 Look 벡터) 에 수직인 축으로 설정
-	// 여기서는 단순하게 X축 또는 Z축 중 하나로 랜덤하게 또는 고정된 값으로 설정
+	// ?�러지??�?결정
+	// ?�시: hitDirection (?�레?�어->?�무 벡터 ?�는 ?�레?�어 Look 벡터) ???�직??축으�??�정
+	// ?�기?�는 ?�순?�게 X�??�는 Z�?�??�나�??�덤?�게 ?�는 고정??값으�??�정
 	XMFLOAT3 worldUp = XMFLOAT3(0.0f, 1.0f, 0.0f);
-	m_xmf3FallingAxis = Vector3::CrossProduct(worldUp, hitDirection); // hitDirection에 수직이고 바닥에 평행한 축
-	if (Vector3::LengthSq(m_xmf3FallingAxis) < 0.001f) { // hitDirection이 위/아래 방향일 경우 대비
-		m_xmf3FallingAxis = XMFLOAT3(1.0f, 0.0f, 0.0f); // 기본 축으로 설정
+	m_xmf3FallingAxis = Vector3::CrossProduct(worldUp, hitDirection); // hitDirection???�직?�고 바닥???�행??�?
+	if (Vector3::LengthSq(m_xmf3FallingAxis) < 0.001f) { // hitDirection?????�래 방향??경우 ?��?
+		m_xmf3FallingAxis = XMFLOAT3(1.0f, 0.0f, 0.0f); // 기본 축으�??�정
 	}
 	m_xmf3FallingAxis = Vector3::Normalize(m_xmf3FallingAxis);
 
-	// 더 이상 공격 대상이 아니도록 설정 (선택적)
-	// isRender = false; // 아직은 렌더링 되어야 함
-	// 또는 충돌체 비활성화 등
+	// ???�상 공격 ?�?�이 ?�니?�록 ?�정 (?�택??
+	// isRender = false; // ?�직?� ?�더�??�어????
+	// ?�는 충돌�?비활?�화 ??
 }
 
 void CTreeObject::Animate(float fTimeElapsed) {
-	// 만약 CGameObject 에 m_pSkinnedAnimationController 가 있고 이를 사용한다면 먼저 호출
+	// 만약 CGameObject ??m_pSkinnedAnimationController 가 ?�고 ?��? ?�용?�다�?먼�? ?�출
 	// if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 
 	if (m_bIsFalling && !m_bHasFallen) {
 		m_fFallingTimer += fTimeElapsed;
 		float normalizedTime = std::min(m_fFallingTimer / m_fFallingDuration, 1.0f);
 
-		// 시간에 따라 회전 각도 보간 (Ease-Out 효과 등을 주면 더 자연스러움)
-		m_fCurrentFallAngle = m_fTargetFallAngle * normalizedTime; // 선형 보간
+		// ?�간???�라 ?�전 각도 보간 (Ease-Out ?�과 ?�을 주면 ???�연?�러?�)
+		m_fCurrentFallAngle = m_fTargetFallAngle * normalizedTime; // ?�형 보간
 
-		// 회전 변환 생성
-		// 1. 피봇으로 이동
+		// ?�전 변???�성
+		// 1. ?�봇?�로 ?�동
 		XMMATRIX R = XMMatrixIdentity();
-		if (Vector3::LengthSq(m_xmf3RotationPivot) > 0.001f) { // 피봇이 원점이 아니면
+		if (Vector3::LengthSq(m_xmf3RotationPivot) > 0.001f) { // ?�봇???�점???�니�?
 			R = XMMatrixTranslation(-m_xmf3RotationPivot.x, -m_xmf3RotationPivot.y, -m_xmf3RotationPivot.z);
 		}
-		// 2. 회전
+		// 2. ?�전
 		R = XMMatrixMultiply(R, XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3FallingAxis), m_fCurrentFallAngle));
-		// 3. 다시 원래 피봇 위치로
+		// 3. ?�시 ?�래 ?�봇 ?�치�?
 		if (Vector3::LengthSq(m_xmf3RotationPivot) > 0.001f) {
 			R = XMMatrixMultiply(R, XMMatrixTranslation(m_xmf3RotationPivot.x, m_xmf3RotationPivot.y, m_xmf3RotationPivot.z));
 		}
 
 
-		// 초기 변환 행렬에 회전 적용
+		// 초기 변???�렬???�전 ?�용
 		XMStoreFloat4x4(&m_xmf4x4ToParent, XMMatrixMultiply(R, XMLoadFloat4x4(&m_xmf4x4InitialToParent)));
 
 		if (normalizedTime >= 1.0f) {
 			m_bHasFallen = true;
 			m_bIsFalling = false;
 
-			CScene* pScene = m_pGameFramework->GetScene(); // CGameObject가 m_pGameFramework 멤버를 가져야 함
+			CScene* pScene = m_pGameFramework->GetScene(); // CGameObject가 m_pGameFramework 멤버�?가?�야 ??
 			if (pScene) {
-				int numBranchesToSpawn = 3 + (rand() % 2); // 3 또는 4개
+				int numBranchesToSpawn = 3 + (rand() % 2); // 3 ?�는 4�?
 				for (int i = 0; i < numBranchesToSpawn; ++i) {
 					XMFLOAT3 fallenTreePos = GetPosition(); 
 					XMFLOAT3 spawnOffsetLocal = XMFLOAT3(
@@ -1609,7 +1609,7 @@ void CTreeObject::Animate(float fTimeElapsed) {
 					);
 
 					XMFLOAT3 spawnPos = Vector3::Add(fallenTreePos, spawnOffsetLocal);
-					if (pScene->m_pTerrain) { // 지형 위에 스폰되도록 높이 보정
+					if (pScene->m_pTerrain) { // 지???�에 ?�폰?�도�??�이 보정
 						spawnPos.y = pScene->m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + spawnOffsetLocal.y;
 					}
 
@@ -1621,7 +1621,7 @@ void CTreeObject::Animate(float fTimeElapsed) {
 					pScene->SpawnBranch(spawnPos, ejectVelocity);
 				}
 			}
-			isRender = false; // 바로 사라지게 하거나, 일정 시간 후 사라지도록 CBranchObject 에서 처리
+			isRender = false; // 바로 ?�라지�??�거?? ?�정 ?�간 ???�라지?�록 CBranchObject ?�서 처리
 		}
 	}
 	UpdateTransform(NULL);
@@ -1635,40 +1635,40 @@ CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, "Model/Tree/FAE_Pine_A_LOD0.bin", "rb");
-	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마�?�??�자 추�?
 	SetChild(pGameObject);
 
 	m_objectType = GameObjectType::Tree;
 
-	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+	if (pInFile) fclose(pInFile); // ?�일 ?�기 추�?
 }
 
 CBirchObject::CBirchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, "Model/Tree/FAE_Birch_A_LOD0.bin", "rb");
-	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마�?�??�자 추�?
 	SetChild(pGameObject);
 
 	m_objectType = GameObjectType::Tree;
 
-	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+	if (pInFile) fclose(pInFile); // ?�일 ?�기 추�?
 }
 
 CWillowObject::CWillowObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, "Model/Tree/FAE_Willow_A_LOD0.bin", "rb");
-	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마�?�??�자 추�?
 	SetChild(pGameObject);
 
 	m_objectType = GameObjectType::Tree;
 
-	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+	if (pInFile) fclose(pInFile); // ?�일 ?�기 추�?
 }
 
 CBranchObject::CBranchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain)
-	: CGameObject(1, pGameFramework) { // 재질 1개 가정, 부모 생성자 호출
+	: CGameObject(1, pGameFramework) { // ?�질 1�?가?? 부�??�성???�출
 	m_pTerrainRef = pTerrain;
 
 	CLoadedModelInfo* pBranchModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch_A.bin", pGameFramework);
@@ -1686,40 +1686,40 @@ CBranchObject::CBranchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 }
 
 void CItemObject::Animate(float fTimeElapsed) {
-	if (!isRender) return; // 렌더링 안되면 업데이트도 안함
+	if (!isRender) return; // ?�더�??�되�??�데?�트???�함
 
 	if (m_bOnGround) {
 		m_fElapsedAfterLanding += fTimeElapsed;
 		if (m_fElapsedAfterLanding > m_fLifeTime) {
-			isRender = false; // 일정 시간 후 사라짐 (씬에서 실제로 제거하는 로직 필요)
+			isRender = false; // ?�정 ?�간 ???�라�?(?�에???�제�??�거?�는 로직 ?�요)
 		}
 		return;
 	}
 
-	// 중력 적용
+	// 중력 ?�용
     XMFLOAT3 gravityForceThisFrame = Vector3::ScalarProduct(m_xmf3Gravity, 10.0f);
     m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, gravityForceThisFrame);
 
-	// 위치 업데이트 (이동)
+	// ?�치 ?�데?�트 (?�동)
 	XMFLOAT3 xmf3Shift = Vector3::ScalarProduct(m_xmf3Velocity, 0.5f);
 	XMFLOAT3 oldPos = GetPosition();
 	XMFLOAT3 newPos = Vector3::Add(oldPos, xmf3Shift);;
 	SetPosition(newPos);
 
 
-	// 땅과의 충돌 체크
+	// ?�과??충돌 체크
 	if (m_pTerrainRef) {
 		XMFLOAT3 currentPos = GetPosition();
-		// 나뭇가지 모델의 바닥 부분을 기준으로 지형 높이와 비교
-		float branchHeightOffset = (m_localOBB.Extents.y > 0) ? m_localOBB.Extents.y : 0.5f; // 모델 바운딩 박스 높이의 절반 또는 기본값
+		// ?�뭇가지 모델??바닥 부분을 기�??�로 지???�이?� 비교
+		float branchHeightOffset = (m_localOBB.Extents.y > 0) ? m_localOBB.Extents.y : 0.5f; // 모델 바운??박스 ?�이???�반 ?�는 기본�?
 		float terrainHeight = m_pTerrainRef->GetHeight(currentPos.x, currentPos.z) + branchHeightOffset;
 
 		if (currentPos.y <= terrainHeight) {
 			currentPos.y = terrainHeight;
-			SetPosition(currentPos); // 지형 높이에 맞춤
-			m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f); // 땅에 닿으면 속도 0
+			SetPosition(currentPos); // 지???�이??맞춤
+			m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f); // ?�에 ?�으�??�도 0
 			m_bOnGround = true;
-			m_fElapsedAfterLanding = 0.0f; // 수명 타이머 시작
+			m_fElapsedAfterLanding = 0.0f; // ?�명 ?�?�머 ?�작
 		}
 	}
 }
@@ -1739,10 +1739,10 @@ CRockClusterAObject::CRockClusterAObject(ID3D12Device* pd3dDevice, ID3D12Graphic
 
 	m_objectType = GameObjectType::Rock;
 
-	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+	if (pInFile) fclose(pInFile); // ?�일 ?�기 추�?
 }
 
-// ------------------ 돌 ------------------
+// ------------------ ??------------------
 CRockClusterBObject::CRockClusterBObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
@@ -1755,7 +1755,7 @@ CRockClusterBObject::CRockClusterBObject(ID3D12Device* pd3dDevice, ID3D12Graphic
 
 	m_objectType = GameObjectType::Rock;
 
-	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+	if (pInFile) fclose(pInFile); // ?�일 ?�기 추�?
 }
 
 CRockClusterCObject::CRockClusterCObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
@@ -1770,7 +1770,7 @@ CRockClusterCObject::CRockClusterCObject(ID3D12Device* pd3dDevice, ID3D12Graphic
 
 	m_objectType = GameObjectType::Rock;
 
-	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+	if (pInFile) fclose(pInFile); // ?�일 ?�기 추�?
 }
 
 CCliffFObject::CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
@@ -1785,11 +1785,11 @@ CCliffFObject::CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 	m_objectType = GameObjectType::Rock;
 
-	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+	if (pInFile) fclose(pInFile); // ?�일 ?�기 추�?
 }
 
 CRockDropObject::CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain)
-	: CGameObject(1, pGameFramework) { // 재질 1개 가정, 부모 생성자 호출
+	: CGameObject(1, pGameFramework) { // ?�질 1�?가?? 부�??�성???�출
 	m_pTerrainRef = pTerrain;
 
 	CLoadedModelInfo* pBranchModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/RockCluster_B_LOD0.bin", pGameFramework);
@@ -1808,9 +1808,9 @@ CRockDropObject::CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 void CRockObject::EraseRock()
 {
-	CScene* pScene = m_pGameFramework->GetScene(); // CGameObject가 m_pGameFramework 멤버를 가져야 함
+	CScene* pScene = m_pGameFramework->GetScene(); // CGameObject가 m_pGameFramework 멤버�?가?�야 ??
 	if (pScene) {
-		int numBranchesToSpawn = 3 + (rand() % 2); // 3 또는 4개
+		int numBranchesToSpawn = 3 + (rand() % 2); // 3 ?�는 4�?
 		for (int i = 0; i < numBranchesToSpawn; ++i) {
 			XMFLOAT3 fallenTreePos = GetPosition();
 			XMFLOAT3 spawnOffsetLocal = XMFLOAT3(
@@ -1820,7 +1820,7 @@ void CRockObject::EraseRock()
 			);
 
 			XMFLOAT3 spawnPos = Vector3::Add(fallenTreePos, spawnOffsetLocal);
-			if (pScene->m_pTerrain) { // 지형 위에 스폰되도록 높이 보정
+			if (pScene->m_pTerrain) { // 지???�에 ?�폰?�도�??�이 보정
 				spawnPos.y = pScene->m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + spawnOffsetLocal.y;
 			}
 
@@ -1838,17 +1838,17 @@ void CRockObject::EraseRock()
 
 
 
-// ------------------ 꽃, 풀 ------------------
+// ------------------ �? ?� ------------------
 CBushAObject::CBushAObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, "Model/Vegetation/Bush_A_LOD0.bin", "rb");
-	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마�?�??�자 추�?
 	SetChild(pGameObject);
 
 	m_objectType = GameObjectType::Vegetation;
 
-	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+	if (pInFile) fclose(pInFile); // ?�일 ?�기 추�?
 }
 
 
@@ -1865,7 +1865,7 @@ CSwordObject::CSwordObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 
 	//m_objectType = GameObjectType::Rock;
 
-	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+	if (pInFile) fclose(pInFile); // ?�일 ?�기 추�?
 }
 
 CStaticObject::CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* modelname, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
@@ -1878,7 +1878,7 @@ CStaticObject::CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 		pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework);
 	SetChild(pGameObject);
 
-	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+	if (pInFile) fclose(pInFile); // ?�일 ?�기 추�?
 }
 
 UserObject::UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CLoadedModelInfo* pModel, int nAnimationTracks, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
@@ -1909,7 +1909,7 @@ void UserObject::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 		weapon->Rotate(0.0f, 0.0f, 0.0f);
 
 		handFrame->SetChild(weapon);
-		UpdateTransform(nullptr); // 변환 행렬 즉시 갱신
+		UpdateTransform(nullptr); // 변???�렬 즉시 갱신
 	}
 }
 void UserObject::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate = { 0,0,0 }, XMFLOAT3 scale = { 1,1,1 })
@@ -1922,7 +1922,7 @@ void UserObject::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 		weapon->Rotate(rotate.x, rotate.y, rotate.z);
 
 		handFrame->SetChild(weapon);
-		UpdateTransform(nullptr); // 변환 행렬 즉시 갱신
+		UpdateTransform(nullptr); // 변???�렬 즉시 갱신
 	}
 }
 
@@ -1973,9 +1973,9 @@ CConstructionObject::CConstructionObject(ID3D12Device* pd3dDevice, ID3D12Graphic
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, "Model/buildobject/pannel.bin", "rb");
-	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마지막 인자 추가
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // 마�?�??�자 추�?
 	SetChild(pGameObject);
 
 	
-	if (pInFile) fclose(pInFile); // 파일 닫기 추가
+	if (pInFile) fclose(pInFile); // ?�일 ?�기 추�?
 }
