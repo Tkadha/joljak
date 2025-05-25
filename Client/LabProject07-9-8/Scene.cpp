@@ -85,16 +85,16 @@ void CScene::BuildDefaultLightsAndMaterials()
 
 void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	// ShaderManager ∞°¡Æø¿±‚
+	// ShaderManager Í∞Ä?∏Ïò§Í∏?
 	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed!");
 	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
 	assert(pShaderManager != nullptr && "ShaderManager is not available!");
-	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); // ±‚¡∏ ƒ⁄µÂ ¿Ø¡ˆ
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); // Í∏∞Ï°¥ ÏΩîÎìú ?†Ï?
 
 	BuildDefaultLightsAndMaterials();
 
 	if (!pResourceManager) {
-		// ∏Æº“Ω∫ ∏≈¥œ¿˙∞° æ¯¥Ÿ∏È ∑Œµ˘ ∫“∞°! ø¿∑˘ √≥∏Æ
+		// Î¶¨ÏÜå??Îß§Îãà?ÄÍ∞Ä ?ÜÎã§Î©?Î°úÎî© Î∂àÍ?! ?§Î•ò Ï≤òÎ¶¨
 		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
 		return;
 	}
@@ -124,7 +124,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	octree.insert(std::move(t_obj));
 
 	for (auto obj : m_vGameObjects) {
-		obj->SetOBB();
+		obj->SetOBB(1.f,1.f,1.f,XMFLOAT3{0.f,0.f,0.f});
 		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 		if (obj->m_pSkinnedAnimationController) obj->PropagateAnimController(obj->m_pSkinnedAnimationController);
 	}
@@ -790,8 +790,6 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		m_pTerrain->Render(pd3dCommandList, pCamera); 
 	}
 
-
-	// octree ∑ª¥ı∏µ
 	//std::vector<tree_obj*> results;
 	//tree_obj player_obj{ -1, m_pPlayer->GetPosition() };
 	//octree.query(player_obj, XMFLOAT3{ 2500,1000,2500 }, results);
@@ -807,7 +805,6 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	//	}
 	//}
 
-	//server ±‚¡ÿ
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
 		for (auto& obj : m_vGameObjects) {
@@ -864,15 +861,11 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
             SetGraphicsState(pd3dCommandList, pOBBShader);
             
 
-            // ºˆ¡§«ÿæﬂ«‘
-            for (auto& obj_info : results) {
-                 if (obj_info->u_id < m_vGameObjects.size() && m_vGameObjects[obj_info->u_id]) {
-                    CGameObject* pGameObject = m_vGameObjects[obj_info->u_id];
-                    if (pGameObject->ShouldRenderOBB()) { 
-                        pGameObject->RenderOBB(pd3dCommandList, pCamera);
-                    }
-                }
-            }
+			for (auto& obj : m_vGameObjects) {
+				if (obj->ShouldRenderOBB()) {
+					obj->RenderOBB(pd3dCommandList, pCamera);
+				}
+			}
 
            
             for (auto& branch : m_listBranchObjects) {

@@ -85,7 +85,7 @@ public:
 	int								m_nMaterials = 0;
 	CMaterial						**m_ppMaterials = NULL;
 	int 							m_treecount{};
-	int								m_id{}; // server에서 관리하는 객체 고유 id
+	int								m_id{}; // server?�서 관리하??객체 고유 id
 	int								m_anitype;
 
 	XMFLOAT4 m_xmf4DebugColor = XMFLOAT4(1, 1, 1, 1);
