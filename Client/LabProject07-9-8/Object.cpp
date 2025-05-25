@@ -218,10 +218,10 @@ void CGameObject::ChangeAnimation(ANIMATION_TYPE type)
 			break;
 		}
 		break;
-	default:	// 잘못된 타입이다.
+	default:	// ?�못???�?�이??
 		break;
 	}
-	// 모든 애니메이션은 새로 시작하기전에 초기화
+	// 모든 ?�니메이?��? ?�로 ?�작?�기?�에 초기??
 	m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].SetPosition(-ANIMATION_CALLBACK_EPSILON);
 	m_pSkinnedAnimationController->SetTrackEnable(m_anitype, true);
 }
@@ -277,6 +277,10 @@ void CGameObject::SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMF
 	XMStoreFloat3(&m_localOBB.Center, XMLoadFloat3(&m_xmf3Position));
 	XMStoreFloat3(&m_localOBB.Extents, XMLoadFloat3(&m_xmf3Size));
 	XMStoreFloat4(&m_localOBB.Orientation, XMLoadFloat4(&orientation));
+
+
+	if (m_pSibling) m_pSibling->SetOBB(center, size, orientation);
+	if (m_pChild) m_pChild->SetOBB(center, size, orientation);
 }
 
 void CGameObject::SetOBB(float scalex, float scaley, float scalez, const XMFLOAT3& centerOffset)

@@ -85,16 +85,16 @@ void CScene::BuildDefaultLightsAndMaterials()
 
 void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	// ShaderManager ê°€?¸ì˜¤ê¸?
+	// ShaderManager åª›Â€?ëª„ì‚¤æ¹?
 	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed!");
 	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
 	assert(pShaderManager != nullptr && "ShaderManager is not available!");
-	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); // ê¸°ì¡´ ì½”ë“œ ? ì?
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); // æ¹²ê³—???„ë¶¾ë±??ì¢?
 
 	BuildDefaultLightsAndMaterials();
 
 	if (!pResourceManager) {
-		// ë¦¬ì†Œ??ë§¤ë‹ˆ?€ê°€ ?†ë‹¤ë©?ë¡œë”© ë¶ˆê?! ?¤ë¥˜ ì²˜ë¦¬
+		// ?±ÑŠëƒ¼??ï§ã…»???åª›Â€ ??¿ë–Žï§?æ¿¡ì’•ëµ??ºë‡?! ??»ìªŸ ï§£ì„Ž??
 		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
 		return;
 	}
@@ -195,6 +195,15 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		gameObj->m_treecount = tree_obj_count;
+
+		//XMFLOAT3 position = gameObj->GetPosition();
+		XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		//position.y += 50.0f;
+		XMFLOAT3 size = XMFLOAT3(1.0f, 10.0f, 1.0f);
+		XMFLOAT4 rotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+		gameObj->SetOBB(position, size, rotation);
+		gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+
 		m_vGameObjects.emplace_back(gameObj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
@@ -734,7 +743,7 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		for (auto obj : m_vGameObjects) {
 			if (obj->m_objectType != GameObjectType::Player&& obj->isRender) {
 				if (m_pPlayer->CheckCollisionOBB(obj)) {
-					m_pPlayer->checkmove = true; // Ãæµ¹ ¹ß»ý ½Ã ÀÌµ¿ ±ÝÁö
+					m_pPlayer->checkmove = true; // ì¶©ëŒ ë°œìƒ ???´ë™ ê¸ˆì?
 					break;
 				}
 			}
@@ -996,7 +1005,7 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 			}
 			
 			if (obj->m_objectType == GameObjectType::Rock) {
-				//printf("[Rock ì¶©ëŒ ?•ì¸])\n");
+				//printf("[Rock ?°â‘¸ë£??ëº¤ì”¤])\n");
 				//obj->isRender = false;
 
 				//int randValue = rand() % 100; // 0 ~ 99

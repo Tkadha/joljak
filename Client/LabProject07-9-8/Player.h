@@ -148,6 +148,9 @@ public:
 	void DecreaseHp(int value) { Playerhp -= value; }
 
 	const PlayerInputData& GetStateMachineInput() const;
+
+
+	void InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 };
 
 class CAirplanePlayer : public CPlayer
@@ -200,6 +203,7 @@ public:
 
 
 	CGameObject* FindObjectHitByAttack();
+
 	
 };
 

@@ -847,7 +847,13 @@ void CGameFramework::BuildObjects()
 	m_pPlayer->SetOwningScene(m_pScene);
 
 	pPlayer->SetOBB(1.0f,1.0f,1.0f,XMFLOAT3(0.0f,0.0f,0.0f));
-	pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+	
+
+	XMFLOAT3 position = XMFLOAT3(0.0f, 1.0f, 0.0f);
+	XMFLOAT3 size = XMFLOAT3(0.35f, 0.9f, 0.2f);
+	XMFLOAT4 rotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	m_pPlayer->SetOBB(position, size, rotation);
+	m_pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 
 
 	m_pd3dCommandList->Close();
@@ -2283,13 +2289,12 @@ bool CGameFramework::AllocateCbvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIP
 bool CGameFramework::AllocateSrvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle) {
 	// --- 로그 추가 ---
 	wchar_t buffer[128];
-	swprintf_s(buffer, L"AllocateSrvDescriptors: Requesting %u slots. Current offset: %u / Total SRV slots: %u\n",
-		nDescriptors, m_nNextSrvOffset, m_nTotalSrvDescriptors);
-	OutputDebugStringW(buffer);
+	//swprintf_s(buffer, L"AllocateSrvDescriptors: Requesting %u slots. Current offset: %u / Total SRV slots: %u\n",nDescriptors, m_nNextSrvOffset, m_nTotalSrvDescriptors);
+	//OutputDebugStringW(buffer);
 	// --- 로그 추가 ---
 
 	if (m_nNextSrvOffset + nDescriptors > m_nTotalSrvDescriptors) {
-		OutputDebugStringW(L"    --> Allocation FAILED: Not enough space in SRV heap!\n"); // 실패 로그
+		//OutputDebugStringW(L"    --> Allocation FAILED: Not enough space in SRV heap!\n"); // 실패 로그
 		return false; // 공간 부족!
 	}
 
@@ -2303,9 +2308,9 @@ bool CGameFramework::AllocateSrvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIP
 	m_nNextSrvOffset += nDescriptors;
 
 	// --- 성공 로그 추가 ---
-	swprintf_s(buffer, L"    --> Allocation SUCCEEDED. New offset: %u. Start GPU Handle: %p\n",
-		m_nNextSrvOffset, (void*)outGpuStartHandle.ptr);
-	OutputDebugStringW(buffer);
+	//swprintf_s(buffer, L"    --> Allocation SUCCEEDED. New offset: %u. Start GPU Handle: %p\n",
+	//	m_nNextSrvOffset, (void*)outGpuStartHandle.ptr);
+	//OutputDebugStringW(buffer);
 	// --- 성공 로그 추가 ---
 
 	return true;

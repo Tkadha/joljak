@@ -469,6 +469,68 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	if (pAngrybotModel) delete pAngrybotModel;
 }
 
+void CPlayer::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	// 메쉬 유효성 검사 등 추가 가능
+	{
+		// OBB 모서리 데이터
+		XMFLOAT3 corners[8];
+		m_localOBB.GetCorners(corners); // m_worldOBB가 유효한지 먼저 확인 필요
+
+		// 2. OBB 정점 버퍼 생성 (+ HRESULT 확인)
+		ID3D12Resource* pVertexUploadBuffer = nullptr; // 임시 업로드 버퍼 포인터
+		m_pOBBVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, corners, sizeof(XMFLOAT3) * 8, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &pVertexUploadBuffer);
+		if (!m_pOBBVertexBuffer) {
+			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Vertex Buffer! !!!!!!!!\n");
+			// 실패 시 이후 리소스 생성 중단 또는 다른 처리
+		}
+		else {
+			m_OBBVertexBufferView.BufferLocation = m_pOBBVertexBuffer->GetGPUVirtualAddress();
+			m_OBBVertexBufferView.StrideInBytes = sizeof(XMFLOAT3);
+			m_OBBVertexBufferView.SizeInBytes = sizeof(XMFLOAT3) * 8;
+		}
+
+		// 3. OBB 인덱스 데이터 정의 (변경 없음)
+		UINT indices[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
+		UINT indices_test[] = { 0, 1, 2, 0, 2, 3 };
+
+		// 4. OBB 인덱스 버퍼 생성 (+ HRESULT 확인)
+		ID3D12Resource* pIndexUploadBuffer = nullptr; // 임시 업로드 버퍼 포인터
+		m_pOBBIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, indices, sizeof(UINT) * 24, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &pIndexUploadBuffer);
+		if (!m_pOBBIndexBuffer) {
+			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Index Buffer! !!!!!!!!\n");
+		}
+		else {
+			m_OBBIndexBufferView.BufferLocation = m_pOBBIndexBuffer->GetGPUVirtualAddress();
+			m_OBBIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
+			m_OBBIndexBufferView.SizeInBytes = sizeof(UINT) * 24;
+		}
+
+		// 5. OBB 변환 행렬용 상수 버퍼 생성 (+ HRESULT 확인)
+		UINT ncbElementBytes = (((sizeof(XMFLOAT4X4)) + 255) & ~255);
+		m_pd3dcbOBBTransform = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+		if (!m_pd3dcbOBBTransform) {
+			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Transform CBV! !!!!!!!!\n");
+			m_pcbMappedOBBTransform = nullptr; // 맵핑 포인터도 null 처리
+		}
+		else {
+			// 맵핑된 포인터 저장 (+ HRESULT 확인)
+			HRESULT hr = m_pd3dcbOBBTransform->Map(0, NULL, (void**)&m_pcbMappedOBBTransform);
+			if (FAILED(hr) || !m_pcbMappedOBBTransform) {
+				OutputDebugString(L"!!!!!!!! ERROR: Failed to map OBB Transform CBV! !!!!!!!!\n");
+				m_pcbMappedOBBTransform = nullptr; // 실패 시 null 처리
+				// 필요시 m_pd3dcbOBBTransform Release 고려
+			}
+		}
+	}
+
+	// 자식/형제 객체 재귀 호출 (기존 코드 유지)
+	//if (m_pSibling) m_pSibling->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+	//if (m_pChild) m_pChild->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+
+}
+
+
 CTerrainPlayer::~CTerrainPlayer()
 {
 }
