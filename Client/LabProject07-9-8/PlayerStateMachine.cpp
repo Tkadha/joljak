@@ -811,8 +811,8 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
     }
     else if (hitObject->m_objectType == GameObjectType::Cow || hitObject->m_objectType == GameObjectType::Pig) {
         auto npc = dynamic_cast<CMonsterObject*>(hitObject);
-        if (npc->Gethp() <= 0);
-        if (npc->FSM_manager->GetInvincible());
+        if (npc->Gethp() <= 0) return;
+        if (npc->FSM_manager->GetInvincible()) return;
 
         switch (player->weaponType)
         {
