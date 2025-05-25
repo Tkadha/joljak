@@ -46,6 +46,7 @@ protected:
 	XMFLOAT4 playerRotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
 	CCamera						*m_pCamera = NULL;
+	const std::vector<CGameObject*>* m_pCollisionTargets = nullptr;
 
 
 public:
@@ -89,6 +90,7 @@ public:
 	void SetPosition(const XMFLOAT3& xmf3Position) { Move(XMFLOAT3(xmf3Position.x - m_xmf3Position.x, xmf3Position.y - m_xmf3Position.y, xmf3Position.z - m_xmf3Position.z), false); }
 
 	void SetScale(XMFLOAT3& xmf3Scale) { m_xmf3Scale = xmf3Scale; }
+	void SetCollisionTargets(const std::vector<CGameObject*>& targets);
 
 	const XMFLOAT3& GetVelocity() const { return(m_xmf3Velocity); }
 	float GetYaw() const { return(m_fYaw); }

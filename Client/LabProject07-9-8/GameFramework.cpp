@@ -772,13 +772,18 @@ void CGameFramework::BuildObjects()
 	m_pCamera = m_pPlayer->GetCamera();
 	m_pPlayer->SetOwningScene(m_pScene);
 
-	pPlayer->SetOBB();
+	pPlayer->SetOBB(1.0f,1.0f,1.0f,XMFLOAT3(0.0f,0.0f,0.0f));
 	pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 
 
 	m_pd3dCommandList->Close();
 	ID3D12CommandList *ppd3dCommandLists[] = { m_pd3dCommandList };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+
+	if (m_pScene && m_pPlayer)
+	{
+		m_pPlayer->SetCollisionTargets(m_pScene->m_vGameObjects);
+	}
 
 	WaitForGpuComplete();
 
@@ -807,164 +812,165 @@ void CGameFramework::ProcessInput()
 	static std::map<UCHAR, bool> keyPressed; // 키별로 눌림 상태를 저장하는 맵
 	static std::map<UCHAR, bool> toggleStates; // 키별로 토글 상태를 저장하는 맵
 	bool bProcessedByScene = false;
-
-	if (GetKeyboardState(pKeysBuffer) && m_pScene) bProcessedByScene = m_pScene->ProcessInput(pKeysBuffer);
-	if (!bProcessedByScene && m_pPlayer)
-	{
-		float cxDelta = 0.0f, cyDelta = 0.0f;
-		POINT ptCursorPos;
-		if (GetCapture() == m_hWnd)
+	if (ShowInventory == false && ShowCraftingUI == false && ShowFurnaceUI==false) {
+		if (GetKeyboardState(pKeysBuffer) && m_pScene) bProcessedByScene = m_pScene->ProcessInput(pKeysBuffer);
+		if (!bProcessedByScene && m_pPlayer)
 		{
-			SetCursor(NULL);
-			GetCursorPos(&ptCursorPos);
-			cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
-			cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
-			SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
-		}
-
-		PlayerInputData inputData;
-
-		inputData.MoveForward = (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0);
-		inputData.MoveBackward = (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0);
-		inputData.WalkLeft = (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0);
-		inputData.WalkRight = (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0);
-		inputData.Jump = (pKeysBuffer[VK_SPACE] & 0xF0);
-		inputData.Attack = (pKeysBuffer['F'] & 0xF0); // 'F' 키를 Attack 으로 매핑 (예시)
-		// inputData.Interact = (pKeysBuffer['E'] & 0xF0); // 'E' 키를 Interact 로 매핑 (필요시)
-		inputData.Run = (pKeysBuffer[VK_SHIFT] & 0xF0); // Shift 키를 Run 으로 매핑
-
-		if (m_pPlayer && m_pPlayer->m_pStateMachine) // 플레이어와 상태머신 유효성 검사
-		{
-			m_pPlayer->m_pStateMachine->HandleInput(inputData);
-		}
-
-		
-		DWORD dwDirection = 0;
-		if (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0) dwDirection |= DIR_FORWARD;
-		if (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
-		if (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0) dwDirection |= DIR_LEFT;
-		if (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
-		if (pKeysBuffer[VK_SPACE] & 0xF0) dwDirection |= DIR_UP;
-		if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
-		else m_pPlayer->keyInput(pKeysBuffer);
-		
-
-		// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
-		UCHAR toggleKeys[] = { 'R','1','2','3' /*, 다른 키들 */};
-		for (UCHAR key : toggleKeys)
-		{
-			if (pKeysBuffer[key] & 0xF0)
+			float cxDelta = 0.0f, cyDelta = 0.0f;
+			POINT ptCursorPos;
+			if (GetCapture() == m_hWnd)
 			{
-				if (!keyPressed[key])
+				SetCursor(NULL);
+				GetCursorPos(&ptCursorPos);
+				cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
+				cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
+				SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
+			}
+
+			PlayerInputData inputData;
+
+			inputData.MoveForward = (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0);
+			inputData.MoveBackward = (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0);
+			inputData.WalkLeft = (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0);
+			inputData.WalkRight = (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0);
+			inputData.Jump = (pKeysBuffer[VK_SPACE] & 0xF0);
+			inputData.Attack = (pKeysBuffer['F'] & 0xF0); // 'F' 키를 Attack 으로 매핑 (예시)
+			// inputData.Interact = (pKeysBuffer['E'] & 0xF0); // 'E' 키를 Interact 로 매핑 (필요시)
+			inputData.Run = (pKeysBuffer[VK_SHIFT] & 0xF0); // Shift 키를 Run 으로 매핑
+
+			if (m_pPlayer && m_pPlayer->m_pStateMachine) // 플레이어와 상태머신 유효성 검사
+			{
+				m_pPlayer->m_pStateMachine->HandleInput(inputData);
+			}
+
+
+			DWORD dwDirection = 0;
+			if (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0) dwDirection |= DIR_FORWARD;
+			if (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
+			if (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0) dwDirection |= DIR_LEFT;
+			if (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
+			if (pKeysBuffer[VK_SPACE] & 0xF0) dwDirection |= DIR_UP;
+			if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
+			else m_pPlayer->keyInput(pKeysBuffer);
+
+
+			// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
+			UCHAR toggleKeys[] = { 'R','1','2','3' /*, 다른 키들 */ };
+			for (UCHAR key : toggleKeys)
+			{
+				if (pKeysBuffer[key] & 0xF0)
 				{
-					toggleStates[key] = !toggleStates[key];
-					keyPressed[key] = true;
-					// 토글된 상태에 따른 동작 수행
-					if (key == 'R')
+					if (!keyPressed[key])
 					{
-						obbRender = toggleStates[key];
-					}
+						toggleStates[key] = !toggleStates[key];
+						keyPressed[key] = true;
+						// 토글된 상태에 따른 동작 수행
+						if (key == 'R')
+						{
+							obbRender = toggleStates[key];
+						}
 
-					if (key == '1')
-					{
-						m_pPlayer->m_pSword->isRender = true;
-						m_pPlayer->m_pAxe->isRender = false;
-						m_pPlayer->weaponType = WeaponType::Sword;
-					}
+						if (key == '1')
+						{
+							m_pPlayer->m_pSword->isRender = true;
+							m_pPlayer->m_pAxe->isRender = false;
+							m_pPlayer->weaponType = WeaponType::Sword;
+						}
 
-					if (key == '2')
-					{
-						m_pPlayer->m_pSword->isRender = false;
-						m_pPlayer->m_pAxe->isRender = true;
-						m_pPlayer->weaponType = WeaponType::Axe;
-					}
+						if (key == '2')
+						{
+							m_pPlayer->m_pSword->isRender = false;
+							m_pPlayer->m_pAxe->isRender = true;
+							m_pPlayer->weaponType = WeaponType::Axe;
+						}
 
-					// 다른 키에 대한 처리 추가
+						// 다른 키에 대한 처리 추가
+					}
+				}
+				else
+				{
+					keyPressed[key] = false;
 				}
 			}
-			else
-			{
-				keyPressed[key] = false;
-			}
-		}
 
-		for (int i = 0; i < 5; ++i)
-		{
-			if (GetAsyncKeyState('1' + i) & 0x8000)
+			for (int i = 0; i < 5; ++i)
 			{
-				m_SelectedHotbarIndex = i;
-				break;
-			}
-		}
-		// 카메라 모드에 따른 입력 처리 (기존 코드와 동일)
-		if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
-		{
-			// 탑뷰: 마우스 휠로 줌인/줌아웃
-			// 실제로는 마우스 휠 이벤트를 처리하려면 별도의 메시지 처리가 필요할 수 있음
-			// 여기서는 예시로 키 입력으로 대체 (Q: 줌인, E: 줌아웃)
-			if (pKeysBuffer['Q'] & 0xF0) {
-				XMFLOAT3 offset = m_pCamera->GetOffset();
-				offset.y = max(20.0f, offset.y - 10.0f);
-				m_pCamera->SetOffset(offset);
-			}
-			if (pKeysBuffer['E'] & 0xF0) {
-				XMFLOAT3 offset = m_pCamera->GetOffset();
-				offset.y = min(200.0f, offset.y + 10.0f);  // 줌아웃, 최대 높이 200
-				m_pCamera->SetOffset(offset);
-			}
-		}
-		else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA || m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
-		{
-			// 자유 시점: 마우스로 회전
-			if (beforeInput != inputData)
-			{
-				beforeInput = inputData;
-				auto& nwManager = NetworkManager::GetInstance();
-				INPUT_PACKET p;
-				// 변경
-				p.inputData.Attack = inputData.Attack;
-				p.inputData.Jump = inputData.Jump;
-				p.inputData.MoveBackward = inputData.MoveBackward;
-				p.inputData.MoveForward = inputData.MoveForward;
-				p.inputData.WalkLeft = inputData.WalkLeft;
-				p.inputData.WalkRight = inputData.WalkRight;
-				p.inputData.Run = inputData.Run;
-				p.inputData.Interact = inputData.Interact;
-				p.size = sizeof(INPUT_PACKET);
-				p.type = static_cast<char>(E_PACKET::E_P_INPUT);
-				nwManager.PushSendQueue(p, p.size);
-			}
-
-			if ( (cxDelta != 0.0f) || (cyDelta != 0.0f))
-			{
-				auto& nwManager = NetworkManager::GetInstance();
-
-				if (cxDelta || cyDelta)
+				if (GetAsyncKeyState('1' + i) & 0x8000)
 				{
-					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-						m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-					else
-						m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+					m_SelectedHotbarIndex = i;
+					break;
+				}
+			}
+			// 카메라 모드에 따른 입력 처리 (기존 코드와 동일)
+			if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
+			{
+				// 탑뷰: 마우스 휠로 줌인/줌아웃
+				// 실제로는 마우스 휠 이벤트를 처리하려면 별도의 메시지 처리가 필요할 수 있음
+				// 여기서는 예시로 키 입력으로 대체 (Q: 줌인, E: 줌아웃)
+				if (pKeysBuffer['Q'] & 0xF0) {
+					XMFLOAT3 offset = m_pCamera->GetOffset();
+					offset.y = max(20.0f, offset.y - 10.0f);
+					m_pCamera->SetOffset(offset);
+				}
+				if (pKeysBuffer['E'] & 0xF0) {
+					XMFLOAT3 offset = m_pCamera->GetOffset();
+					offset.y = min(200.0f, offset.y + 10.0f);  // 줌아웃, 최대 높이 200
+					m_pCamera->SetOffset(offset);
+				}
+			}
+			else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA || m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
+			{
+				// 자유 시점: 마우스로 회전
+				if (beforeInput != inputData)
+				{
+					beforeInput = inputData;
+					auto& nwManager = NetworkManager::GetInstance();
+					INPUT_PACKET p;
+					// 변경
+					p.inputData.Attack = inputData.Attack;
+					p.inputData.Jump = inputData.Jump;
+					p.inputData.MoveBackward = inputData.MoveBackward;
+					p.inputData.MoveForward = inputData.MoveForward;
+					p.inputData.WalkLeft = inputData.WalkLeft;
+					p.inputData.WalkRight = inputData.WalkRight;
+					p.inputData.Run = inputData.Run;
+					p.inputData.Interact = inputData.Interact;
+					p.size = sizeof(INPUT_PACKET);
+					p.type = static_cast<char>(E_PACKET::E_P_INPUT);
+					nwManager.PushSendQueue(p, p.size);
+				}
+
+				if ((cxDelta != 0.0f) || (cyDelta != 0.0f))
+				{
+					auto& nwManager = NetworkManager::GetInstance();
+
+					if (cxDelta || cyDelta)
 					{
-						ROTATE_PACKET p;
-						auto& lookv = m_pPlayer->GetLookVector();
-						p.look.x = lookv.x;
-						p.look.y = lookv.y;
-						p.look.z = lookv.z;
-						auto& rightv = m_pPlayer->GetRightVector();
-						p.right.x = rightv.x;
-						p.right.y = rightv.y;
-						p.right.z = rightv.z;
-						auto& upv = m_pPlayer->GetUpVector();
-						p.up.x = upv.x;
-						p.up.y = upv.y;
-						p.up.z = upv.z;
-						p.size = sizeof(ROTATE_PACKET);
-						p.type = static_cast<char>(E_PACKET::E_P_ROTATE);
+						if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+							m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+						else
+							m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+						{
+							ROTATE_PACKET p;
+							auto& lookv = m_pPlayer->GetLookVector();
+							p.look.x = lookv.x;
+							p.look.y = lookv.y;
+							p.look.z = lookv.z;
+							auto& rightv = m_pPlayer->GetRightVector();
+							p.right.x = rightv.x;
+							p.right.y = rightv.y;
+							p.right.z = rightv.z;
+							auto& upv = m_pPlayer->GetUpVector();
+							p.up.x = upv.x;
+							p.up.y = upv.y;
+							p.up.z = upv.z;
+							p.size = sizeof(ROTATE_PACKET);
+							p.type = static_cast<char>(E_PACKET::E_P_ROTATE);
 
-						nwManager.PushSendQueue(p, p.size);
+							nwManager.PushSendQueue(p, p.size);
+						}
+
 					}
-
 				}
 			}
 		}

@@ -32,7 +32,7 @@ CPlayer::CPlayer(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework
 	m_pPlayerUpdatedContext = NULL;
 	m_pCameraUpdatedContext = NULL;
 	//SetOBB(m_xmf3Position, playerSize, playerRotation);
-	SetOBB();
+	SetOBB(1.0f,1.0f,1.0f,XMFLOAT3(0.0f,0.0f,0.0f));
 }
 
 CPlayer::~CPlayer()
@@ -54,6 +54,12 @@ void CPlayer::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 void CPlayer::ReleaseShaderVariables()
 {
 	if (m_pCamera) m_pCamera->ReleaseShaderVariables();
+}
+
+void CPlayer::SetCollisionTargets(const std::vector<CGameObject*>& targets)
+{
+
+	m_pCollisionTargets = &targets;
 }
 
 void CPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
@@ -85,22 +91,36 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 	// 이동 전 위치 저장
 	XMFLOAT3 oldPosition = m_xmf3Position;
 
-	// 위치 적용
+	// 위치 이동
 	m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
 	m_pCamera->Move(xmf3Shift);
 	UpdateOBB(m_xmf3Position, playerSize, playerRotation);
 
-	// 충돌 여부 확인 (checkmove는 Scene에서 설정됨)
-	if (checkmove)
+	// 충돌 체크 (등록된 대상이 있다면)
+	bool bCollided = false;
+	if (m_pCollisionTargets)
 	{
-		// 충돌이면 위치 복구
+		for (auto& obj : *m_pCollisionTargets)
+		{
+			if (!obj || obj == this) continue;
+			if (CheckCollisionOBB(obj))
+			{
+				bCollided = true;
+				break;
+			}
+		}
+	}
+
+	// 충돌 시 위치 롤백
+	if (bCollided)
+	{
 		m_xmf3Position = oldPosition;
-		m_pCamera->Move(Vector3::ScalarProduct(XMFLOAT3(xmf3Shift), -1.0f, false)); // 카메라도 복구
+		m_pCamera->Move(Vector3::ScalarProduct(XMFLOAT3(xmf3Shift), -1.0f, false));
 		UpdateOBB(m_xmf3Position, playerSize, playerRotation);
 		return;
 	}
 
-	// 속도 적용
+	// 속도 업데이트
 	if (bUpdateVelocity)
 	{
 		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
@@ -297,7 +317,16 @@ void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 
 bool CPlayer::CheckCollisionOBB(CGameObject* other)
 {
-	return m_worldOBB.Intersects(other->m_worldOBB);
+	bool result = m_worldOBB.Intersects(other->m_worldOBB);
+
+	if (result)
+	{
+		OutputDebugStringA("🔴 충돌 발생: Player vs ");
+		  // 오브젝트 이름 표시
+		OutputDebugStringA("\n");
+	}
+
+	return result;
 }
 
 //void CPlayer::SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation)

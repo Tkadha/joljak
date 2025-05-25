@@ -35,13 +35,13 @@ struct tree_obj {
     }
 };
 
-// ��Ʈ�� ��� Ŭ����
+// ��Ʈ�� ���?Ŭ����
 class Octree {
 public:
-    XMFLOAT3 minBound, maxBound; // ���� ����� ���
-    std::vector<std::unique_ptr<tree_obj>> objects; // ���� ��忡 ���Ե� ��ü��
-    Octree* children[8] = { nullptr }; // 8���� ���� ���
-    int maxObjects = 6; // ��尡 ���ҵǱ� �� ���Ǵ� �ִ� ��ü ��
+    XMFLOAT3 minBound, maxBound; // ���� �����?���?
+    std::vector<std::unique_ptr<tree_obj>> objects; // ���� ���?���Ե� ��ü��
+    Octree* children[8] = { nullptr }; // 8���� ���� ���?
+    int maxObjects = 6; // ���?���ҵǱ� �� ���Ǵ� �ִ� ��ü ��
     int maxDepth = 5;   // �ִ� ���� ����
 
     Octree(const XMFLOAT3& min, const XMFLOAT3& max, int depth = 0)
@@ -58,11 +58,11 @@ public:
     void query(const tree_obj& obj, const XMFLOAT3& distance, std::vector<tree_obj*>& results);
 
 private:
-    int depth; // ���� ����� ����
+    int depth; // ���� �����?����
 
-    // ���� ��带 8���� ����
+    // ���� ���?8���� ����
     void subdivide();
 
-    // ���� ��尡 ������ �����ϴ��� Ȯ��
+    // ���� ���?������ �����ϴ��� Ȯ��
     bool intersects(const XMFLOAT3& queryMin, const XMFLOAT3& queryMax) const;
 };

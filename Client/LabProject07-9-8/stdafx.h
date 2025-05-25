@@ -1,12 +1,12 @@
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN             // 거의 사용되지 않는 내용은 Windows 헤더에서 제외합니다.
-// Windows 헤더 파일:
+#define WIN32_LEAN_AND_MEAN             // 거의 ?�용?��? ?�는 ?�용?� Windows ?�더?�서 ?�외?�니??
+// Windows ?�더 ?�일:
 #define NOMINMAX
 
 #include <windows.h>
 
-// C�� ��Ÿ�� ��� �����Դϴ�.
+// C�� ��Ÿ�� ���?�����Դϴ�.
 #include <stdlib.h>
 #include <malloc.h>
 #include <memory.h>
@@ -69,7 +69,7 @@ extern HINSTANCE						ghAppInstance;
 
 #pragma comment(lib, "dxguid.lib")
 
-// TODO: ���α׷��� �ʿ��� �߰� ����� ���⿡�� �����մϴ�.
+// TODO: ���α׷��� �ʿ��� �߰� �����?���⿡�� �����մϴ�.
 
 extern UINT	gnCbvSrvDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;
@@ -190,7 +190,7 @@ namespace Vector3
 	inline float LengthSq(const XMFLOAT3& v)
 	{
 		XMVECTOR vec = XMLoadFloat3(&v);
-		XMVECTOR lengthSqVec = XMVector3LengthSq(vec); // 각 성분 제곱합의 X 성분만 가져옴
+		XMVECTOR lengthSqVec = XMVector3LengthSq(vec); // �??�분 ?�곱?�의 X ?�분�?가?�옴
 		return XMVectorGetX(lengthSqVec);
 	}
 

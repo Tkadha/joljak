@@ -11,7 +11,7 @@
 #include <algorithm>
 
 
-// ?·â‘¦???ê³¸ë‹”æ¿??ê¾¨ë––???´ÑŠâ€œï§£?(HLSL??cbGameObjectInfo ?? ??±íŠ‚??ë¹ ??
+
 struct cbGameObjectInfo {
 	XMFLOAT4X4    gmtxGameObject;     // 16 DWORDS
 	struct MaterialInfoCpp {
@@ -27,7 +27,7 @@ struct cbGameObjectInfo {
 		XMFLOAT3   Padding;           // 3 => MaterialInfoCpp = 24 DWORDS
 	} gMaterialInfo;
 	UINT          gnTexturesMask;     // 1 DWORD
-	// ??16 + 24 + 1 = 41 DWORDS
+	
 };
 
 
@@ -139,9 +139,9 @@ void CGameObject::SetMaterial(int nIndex, CMaterial *pMaterial)
 
 	if (m_ppMaterials && (nIndex < m_nMaterials))
 	{
-		if (m_ppMaterials[nIndex]) m_ppMaterials[nIndex]->Release(); // æ¹²ê³—????ì­???ì £
+		if (m_ppMaterials[nIndex]) m_ppMaterials[nIndex]->Release(); 
 		m_ppMaterials[nIndex] = pMaterial;
-		if (m_ppMaterials[nIndex]) m_ppMaterials[nIndex]->AddRef(); // ????ì­?ï§¡ëª„??ï§ì•·?
+		if (m_ppMaterials[nIndex]) m_ppMaterials[nIndex]->AddRef(); 
 	}
 	else {
 		OutputDebugStringW(L"  --> SetMaterial FAILED: Invalid index or m_ppMaterials is null.\n");
@@ -150,7 +150,7 @@ void CGameObject::SetMaterial(int nIndex, CMaterial *pMaterial)
 
 bool CGameObject::CheckCollisionOBB(CGameObject* other)
 {
-	return m_localOBB.Intersects(other->m_localOBB);
+	return m_worldOBB.Intersects(other->m_worldOBB);
 }
 
 void CGameObject::SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation)
@@ -163,11 +163,10 @@ void CGameObject::SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMF
 	XMStoreFloat4(&m_localOBB.Orientation, XMLoadFloat4(&orientation));
 }
 
-// ï§ë¶¿???ê³—ì” ?ê³•ì¤ˆ è«›ë¶¿???è«›ëº¤??ï§ëš®ë±¾æ¹²?
-void CGameObject::SetOBB()
+void CGameObject::SetOBB(float scalex, float scaley, float scalez, const XMFLOAT3& centerOffset)
 {
 	if (m_pMesh) {
-		// ï§ë¶¿???ê³—ì” ?ê³•ì¤ˆ OBB ï§ëš®ë±¾æ¹²?
+		
 		XMFLOAT3 minPos = m_pMesh->m_pxmf3Positions[0];
 		XMFLOAT3 maxPos = m_pMesh->m_pxmf3Positions[0];
 		for (int i = 1; i < m_pMesh->m_nPositions; ++i) {
@@ -179,26 +178,26 @@ void CGameObject::SetOBB()
 			maxPos.z = max(maxPos.z, m_pMesh->m_pxmf3Positions[i].z);
 		}
 		m_localOBB.Center = XMFLOAT3(
-			(minPos.x + maxPos.x) * 0.5f,
-			(minPos.y + maxPos.y) * 0.5f,
-			(minPos.z + maxPos.z) * 0.5f
+			(minPos.x + maxPos.x) * 0.5f+centerOffset.x,
+			(minPos.y + maxPos.y) * 0.5f+centerOffset.y,
+			(minPos.z + maxPos.z) * 0.5f+centerOffset.z
 		);
 		m_localOBB.Extents = XMFLOAT3(
-			(maxPos.x - minPos.x) * 0.5f,
-			(maxPos.y - minPos.y) * 0.5f,
-			(maxPos.z - minPos.z) * 0.5f
+			(maxPos.x - minPos.x) * 0.5f* scalex,
+			(maxPos.y - minPos.y) * 0.5f*scaley,
+			(maxPos.z - minPos.z) * 0.5f*scalez
 		);
-		m_localOBB.Orientation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);  // ?¥ë‡ë¦????Ÿ¾ ??ì“¬
+		m_localOBB.Orientation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);  
 	}
 
-	if (m_pSibling) m_pSibling->SetOBB();
-	if (m_pChild) m_pChild->SetOBB();
+	if (m_pSibling) m_pSibling->SetOBB(scalex, scaley, scalez,centerOffset);
+	if (m_pChild) m_pChild->SetOBB(scalex, scaley, scalez,centerOffset);
 }
 
 void CGameObject::SetOBB(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CShader* shader)
 {
 	if (m_pMesh) {
-		// ï§ë¶¿???ê³—ì” ?ê³•ì¤ˆ OBB ï§ëš®ë±¾æ¹²?
+		
 		XMFLOAT3 minPos = m_pMesh->m_pxmf3Positions[0];
 		XMFLOAT3 maxPos = m_pMesh->m_pxmf3Positions[0];
 		for (int i = 1; i < m_pMesh->m_nPositions; ++i) {
@@ -223,9 +222,10 @@ void CGameObject::SetOBB(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 		InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	}
-
+	/*
 	if (m_pSibling) m_pSibling->SetOBB();
 	if (m_pChild) m_pChild->SetOBB();
+	*/
 }
 
 void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)
@@ -233,21 +233,21 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)
 	//m_OBBShader.Render(pd3dCommandList, NULL);
 	m_OBBMaterial->m_pShader->Render(pd3dCommandList, NULL);
 
-	// OBB ?ì¢ì“£ æ´¹ëªƒ?æ¹²??ê¾ªë¸³ ??¼ì ™
+	
 	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
 	pd3dCommandList->IASetVertexBuffers(0, 1, &m_OBBVertexBufferView);
 	pd3dCommandList->IASetIndexBuffer(&m_OBBIndexBufferView);
 
-	// ??Line) OBB æ´¹ëªƒ?æ¹²?
-	pd3dCommandList->DrawIndexedInstanced(24, 1, 0, 0, 0); // 12åª???= 24åª??ëªƒëœ³??
+	
+	pd3dCommandList->DrawIndexedInstanced(24, 1, 0, 0, 0); 
 }
 
 void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	// ì¹´ë©”??? íš¨??ê²€?¬ëŠ” ?„ìˆ˜
+	
 	if (!pCamera) return;
 
-	// 1. ?„ì¬ ?¤ë¸Œ?íŠ¸??OBBë¥?ê·¸ë¦´ ???ˆëŠ”ì§€ ?•ì¸?˜ê³ , ê·¸ë¦´ ???ˆë‹¤ë©?ê·¸ë¦½?ˆë‹¤.
+	
 	bool bCanRenderCurrentObjectOBB = m_pOBBVertexBuffer &&
 		m_pOBBIndexBuffer &&
 		m_pd3dcbOBBTransform &&
@@ -255,56 +255,55 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 
 	if (bCanRenderCurrentObjectOBB) {
 
-		// 1. OBB??WVP(World * View * Projection) ?‰ë ¬ ê³„ì‚°
+		
 		XMMATRIX world = XMLoadFloat4x4(&m_xmf4x4World);
 		XMMATRIX view = XMLoadFloat4x4(&pCamera->GetViewMatrix());
 		XMMATRIX proj = XMLoadFloat4x4(&pCamera->GetProjectionMatrix());
 		XMFLOAT4X4 wvpMatrix;
-		// HLSL?€ row-major ê¸°ë³¸, C++??row-major -> HLSL?ì„œ transpose ???˜ë ¤ë©??¬ê¸°??transpose
+		
 		XMStoreFloat4x4(&wvpMatrix, XMMatrixTranspose(world * view * proj));
 
-		// 2. OBB ?ìˆ˜ ë²„í¼ ?…ë°?´íŠ¸ (b0)
+		
 		memcpy(m_pcbMappedOBBTransform, &wvpMatrix, sizeof(XMFLOAT4X4));
 
-		// 3. ?ìˆ˜ ë²„í¼ ë°”ì¸??(OBB ë£¨íŠ¸ ?œëª…???Œë¼ë¯¸í„° ?¸ë±??0ë²?
 		pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbOBBTransform->GetGPUVirtualAddress());
 
-		// 4. IA(Input Assembler) ?¤ì •
-		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST); // ?¼ì¸ ë¦¬ìŠ¤??
-		pd3dCommandList->IASetVertexBuffers(0, 1, &m_OBBVertexBufferView);        // ?•ì  ë²„í¼
-		pd3dCommandList->IASetIndexBuffer(&m_OBBIndexBufferView);              // ?¸ë±??ë²„í¼
+		
+		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST); 
+		pd3dCommandList->IASetVertexBuffers(0, 1, &m_OBBVertexBufferView);        
+		pd3dCommandList->IASetIndexBuffer(&m_OBBIndexBufferView);              
 
-		// 5. ê·¸ë¦¬ê¸?
-		pd3dCommandList->DrawIndexedInstanced(24, 1, 0, 0, 0); // ?¸ë±??24ê°?(??12ê°?
+		
+		pd3dCommandList->DrawIndexedInstanced(24, 1, 0, 0, 0); 
 	}
 
 	if (m_pSibling) {
-        //if (m_pSibling->ShouldRenderOBB()) { // ?•ì œê°€ OBB ?Œë”ë§??€?ì¸ì§€ ?•ì¸
+        
             m_pSibling->RenderOBB(pd3dCommandList, pCamera);
-        //}
+        
     }
     if (m_pChild) {
-        //if (m_pChild->ShouldRenderOBB()) { // ?ì‹??OBB ?Œë”ë§??€?ì¸ì§€ ?•ì¸
+       
             m_pChild->RenderOBB(pd3dCommandList, pCamera);
-        //}
+     
     }
 }
 
 	void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 	{
-		// ë©”ì‰¬ ? íš¨??ê²€????ì¶”ê? ê°€??
+		
 		if (m_pMesh)
 		{
-			// OBB ëª¨ì„œë¦??°ì´??
+			
 			XMFLOAT3 corners[8];
-			m_localOBB.GetCorners(corners); // m_worldOBBê°€ ? íš¨?œì? ë¨¼ì? ?•ì¸ ?„ìš”
+			m_localOBB.GetCorners(corners);
 
-			// 2. OBB ?•ì  ë²„í¼ ?ì„± (+ HRESULT ?•ì¸)
-			ID3D12Resource* pVertexUploadBuffer = nullptr; // ?„ì‹œ ?…ë¡œ??ë²„í¼ ?¬ì¸??
+			
+			ID3D12Resource* pVertexUploadBuffer = nullptr;
 			m_pOBBVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, corners, sizeof(XMFLOAT3) * 8, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &pVertexUploadBuffer);
 			if (!m_pOBBVertexBuffer) {
 				OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Vertex Buffer! !!!!!!!!\n");
-				// ?¤íŒ¨ ???´í›„ ë¦¬ì†Œ???ì„± ì¤‘ë‹¨ ?ëŠ” ?¤ë¥¸ ì²˜ë¦¬
+				
 			}
 			else {
 				m_OBBVertexBufferView.BufferLocation = m_pOBBVertexBuffer->GetGPUVirtualAddress();
@@ -312,12 +311,12 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 				m_OBBVertexBufferView.SizeInBytes = sizeof(XMFLOAT3) * 8;
 			}
 
-			// 3. OBB ?¸ë±???°ì´???•ì˜ (ë³€ê²??†ìŒ)
+			
 			UINT indices[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
 			UINT indices_test[] = { 0, 1, 2, 0, 2, 3 };
 
-			// 4. OBB ?¸ë±??ë²„í¼ ?ì„± (+ HRESULT ?•ì¸)
-			ID3D12Resource* pIndexUploadBuffer = nullptr; // ?„ì‹œ ?…ë¡œ??ë²„í¼ ?¬ì¸??
+			
+			ID3D12Resource* pIndexUploadBuffer = nullptr; 
 			m_pOBBIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, indices, sizeof(UINT) * 24, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &pIndexUploadBuffer);
 			if (!m_pOBBIndexBuffer) {
 				OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Index Buffer! !!!!!!!!\n");
@@ -328,25 +327,25 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 				m_OBBIndexBufferView.SizeInBytes = sizeof(UINT) * 24;
 			}
 
-			// 5. OBB ë³€???‰ë ¬???ìˆ˜ ë²„í¼ ?ì„± (+ HRESULT ?•ì¸)
+			
 			UINT ncbElementBytes = (((sizeof(XMFLOAT4X4)) + 255) & ~255);
 			m_pd3dcbOBBTransform = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 			if (!m_pd3dcbOBBTransform) {
 				OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Transform CBV! !!!!!!!!\n");
-				m_pcbMappedOBBTransform = nullptr; // ë§µí•‘ ?¬ì¸?°ë„ null ì²˜ë¦¬
+				m_pcbMappedOBBTransform = nullptr; 
 			}
 			else {
-				// ë§µí•‘???¬ì¸???€??(+ HRESULT ?•ì¸)
+				
 				HRESULT hr = m_pd3dcbOBBTransform->Map(0, NULL, (void**)&m_pcbMappedOBBTransform);
 				if (FAILED(hr) || !m_pcbMappedOBBTransform) {
 					OutputDebugString(L"!!!!!!!! ERROR: Failed to map OBB Transform CBV! !!!!!!!!\n");
-					m_pcbMappedOBBTransform = nullptr; // ?¤íŒ¨ ??null ì²˜ë¦¬
-					// ?„ìš”??m_pd3dcbOBBTransform Release ê³ ë ¤
+					m_pcbMappedOBBTransform = nullptr;
+					
 				}
 			}
 		}
 
-	// ?ë¨?–‡/?ëº¤ì £ åª›ì•¹ê»???? ?ëª„í…§ (æ¹²ê³—???„ë¶¾ë±??ì¢?)
+	
 	if (m_pSibling) m_pSibling->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	if (m_pChild) m_pChild->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 
@@ -388,7 +387,7 @@ void CGameObject::UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent)
 
 	
 	XMMATRIX rotationMatrix = worldMatrix;
-	rotationMatrix.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);  // ??€ë£??ê¹…í…‡ ??“êµ…
+	rotationMatrix.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);  
 	XMVECTOR orientation = XMQuaternionRotationMatrix(rotationMatrix);
 	XMStoreFloat4(&m_worldOBB.Orientation, orientation);
 
@@ -428,12 +427,12 @@ void CGameObject::Animate(float fTimeElapsed)
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	CScene* pScene = m_pGameFramework ? m_pGameFramework->GetScene() : nullptr;
-	if (!pScene) return; // ????ì‘ï§????œ‘ï§??ºë‡?
+	if (!pScene) return; 
 
 	if (!isRender) return;
 
-	// ??åª›ì•¹ê»œåª›? ï§ê³¸?????œ‘ï§ê³¹ë¸?ï§ë¶¿??? ï§?è¸°ë‰????ì­??ê³—ì” ?ë¶? åª›Â€ï§Â€????ˆë’—ï§Â€ ?ëº¤ì”¤
-	CMaterial* pPrimaryMaterial = GetMaterial(0); // ?ê³¹ê¹­ ??¼ì ™ æ¹²ê³—???°ì¤ˆ ï§?è¸°ë‰????ì­?????
+	
+	CMaterial* pPrimaryMaterial = GetMaterial(0); 
 
 
 	if (m_pMesh && pPrimaryMaterial && pPrimaryMaterial->m_pShader)
@@ -441,54 +440,49 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		pScene->SetGraphicsState(pd3dCommandList, pPrimaryMaterial->m_pShader);
 
 
-		// --- ?¨ë“¯??CBV è«›ë¶¿???---
-		// ç§»ë?ì°??CBV (b1 @ ?ëªƒëœ³??0)
+		
 		if (pCamera && pCamera->GetCameraConstantBuffer()) {
 			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress());
 		}
-		// è­°ê³•ì±?CBV (b4 @ ?ëªƒëœ³??2) - Standard/Skinned/Instancing ??å¯ƒìŒ??ë¨?­” è«›ë¶¿???
-		CShader* pCurrentShader = pPrimaryMaterial->m_pShader; // ?ëª„ì“½??
-		std::string shaderType = pCurrentShader->GetShaderType(); // GetShaderType() ??¥ë‹” ?ê¾©ìŠ‚
+		
+		CShader* pCurrentShader = pPrimaryMaterial->m_pShader; 
+		std::string shaderType = pCurrentShader->GetShaderType(); 
 		if (shaderType == "Standard" || shaderType == "Skinned" /* || shaderType == "Instancing" */) {
-			ID3D12Resource* pLightBuffer = pScene->GetLightsConstantBuffer(); // CScene ??¥ë‹” ???¹ ?ë¬ë 
+			ID3D12Resource* pLightBuffer = pScene->GetLightsConstantBuffer(); 
 			if (pLightBuffer) {
 				pd3dCommandList->SetGraphicsRootConstantBufferView(2, pLightBuffer->GetGPUVirtualAddress());
 			}
 		}
 
 
-		// ??GameObject????ë¸³ ï§â‘¤ë±?ï§ë¶¿????ì­???¿ë¿‰ ????è«›ì„??
+		
 		for (int i = 0; i < m_nMaterials; i++)
 		{
-			CMaterial* pMaterial = GetMaterial(i); // ?ê¾©ì˜± ??ì­?
-			// ?ê¾©ì˜± ??ì­æ€?Primary ??ì­???ê³—ì” ?ë¶? ??»â…¤ï§?SetGraphicsState ??¼ë–† ?ëª„í…§? (è¹‚ë“­???ï§ì•·?, ??°ë–’ ??¸ì™‚)
-			if (pMaterial && pMaterial->m_pShader == pCurrentShader) // åª›ìˆˆ? ?ê³—ì” ?ë¶? ?????ë’— ??ì­ï§?æ´¹ëªƒ??(??¥ë‹š??
+			CMaterial* pMaterial = GetMaterial(i); 
+			
+			if (pMaterial && pMaterial->m_pShader == pCurrentShader) 
 			{
-				// --- ?±ÑŠëƒ¼??è«›ë¶¿???---
-				// ?ê¾©ì˜± CShader (è«?RootSignature)??CScene::Render?ë¨?½Œ ??€? ??¼ì ™??
-				// 1. åª›ì•¹ê»œè¹‚??ê³¸ë‹” ??…ëœ²??„ë“ƒ (?·â‘¦???ê³¸ë‹” b2 ????
-				cbGameObjectInfo gameObjectInfo; // C++ ?´ÑŠâ€œï§£??ëª„ë’ª??ë’ª
+				
+				cbGameObjectInfo gameObjectInfo; 
 
-				// 1.1. ?ë¶¾ë±¶ è¹‚Â€????°ì ¹ ??¼ì ™
+				
 				XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
 
-				// 1.2. ??ì­??ëº£ë‚« ï§?¾©??¹²?
+				
 				gameObjectInfo.gMaterialInfo.AmbientColor = pMaterial->m_xmf4AmbientColor;
 				gameObjectInfo.gMaterialInfo.DiffuseColor = pMaterial->m_xmf4AlbedoColor;
 				gameObjectInfo.gMaterialInfo.SpecularColor = pMaterial->m_xmf4SpecularColor;
-				// ?? Specular Power??Alpha?????Î½ë»??»ãˆƒ gameObjectInfo.gMaterialInfo.SpecularColor.w = pMaterial->m_fGlossiness;
+				
 				gameObjectInfo.gMaterialInfo.EmissiveColor = pMaterial->m_xmf4EmissiveColor;
 				gameObjectInfo.gMaterialInfo.Glossiness = pMaterial->m_fGlossiness;
 				gameObjectInfo.gMaterialInfo.Smoothness = pMaterial->m_fSmoothness;
 				gameObjectInfo.gMaterialInfo.SpecularHighlight = pMaterial->m_fSpecularHighlight;
 				gameObjectInfo.gMaterialInfo.Metallic = pMaterial->m_fMetallic;
 				gameObjectInfo.gMaterialInfo.GlossyReflection = pMaterial->m_fGlossyReflection;
-				// Padding?? ?¥ë‡ë¦???ê¾©ìŠ‚ ??ì“¬
-
-				// 1.3. ??¿ë’ªï§?ï§ë‰?????¼ì ™
+				
 				gameObjectInfo.gnTexturesMask = 0;
 				for (int texIdx = 0; texIdx < pMaterial->GetTextureCount(); ++texIdx) {
-					// GetTexture ??¥ë‹”åª›Â€ shared_ptr è¸°â‰«ê½£ç‘œ??ëº¤ì”¤??í€?raw ?????è«›ì„‘??
+					
 					if (pMaterial->GetTexture(texIdx)) {
 						if (texIdx == 0) gameObjectInfo.gnTexturesMask |= MATERIAL_ALBEDO_MAP;
 						else if (texIdx == 1) gameObjectInfo.gnTexturesMask |= MATERIAL_SPECULAR_MAP;
@@ -499,50 +493,45 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 						else if (texIdx == 6) gameObjectInfo.gnTexturesMask |= MATERIAL_DETAIL_NORMAL_MAP;
 					}
 				}
-				// ... ??»â…¨ ??¿ë’ªï§?????†ì”  ??ˆë–ï§??°ë¶½? ...
-
-				// 1.4. ?·â‘¦???ê³¸ë‹” è«›ë¶¿???(Standard/Skinned ?·â‘¦????•ì±¸?????”ªèª˜ëª…ê½??ëªƒëœ³??1è¸?
+				
 				pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo, 0);
 
-				// 2. ??ì­???¿ë’ªï§?è«›ë¶¿???(Descriptor Table ????åª›Â€??
-				// Standard/Skinned ?·â‘¦????•ì±¸?????”ªèª˜ëª…ê½??ëªƒëœ³??3è¸°ë‰??t6-t12 ??¿ë’ªï§????” ?‰ë¶¿???‰ì“¬
-				D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle(); // ??ì­???ë¨?–Š????¿ë’ªï§????” ????–ì˜‰ ?ëªƒë±¾?????¸˜????(CTexture æ¿¡ì’•ëµ??¿Â€??????¼ì ™ ?ê¾©ìŠ‚)
+			
+				D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle(); 
 				if (textureTableHandle.ptr != 0) {
-					// ?·â‘¦?????”ªèª˜ëª…ê½??ëªƒëœ³??3è¸°ë‰ë¿???¿ë’ªï§????” ????–ì˜‰ ?ëªƒë±¾ è«›ë¶¿???
+					
 					pd3dCommandList->SetGraphicsRootDescriptorTable(3, textureTableHandle);
 				}
 
-				// 3. ??½ê¶???¿Â€??CBV è«›ë¶¿???(Skinned ?·â‘¦????•ì±¸ ??????
-		   // ?ê¾©ì˜± ?ê³—ì” ?ë¶? Skinned ?ëª? ?ëº¤ì”¤??ë’— æ¿¡ì’–ì­????‰ì‘ï§????«ë—­??(?? shader->GetType())
-				 // --- ??½ê¶??CBV è«›ë¶¿???(?ê³—ì” ??????"Skinned" ?ëº¤ì”¤ ?? ---
+				
 				if (shaderType == "Skinned") {
 					CSkinnedMesh* pSkinnedMesh = dynamic_cast<CSkinnedMesh*>(m_pMesh);
 					if (pSkinnedMesh) {
-						// 3.1. è¹???½ë´½??è¸°ê¾ª??è«›ë¶¿???(b7, ???”ªèª˜ëª…ê½??ëªƒëœ³??4)
+						
 						ID3D12Resource* pOffsetBuffer = pSkinnedMesh->m_pd3dcbBindPoseBoneOffsets;
                         if (pOffsetBuffer) {
                             pd3dCommandList->SetGraphicsRootConstantBufferView(4, pOffsetBuffer->GetGPUVirtualAddress());
                         }
-						// 3.2. è¹?è¹‚Â€??è¸°ê¾ª??è«›ë¶¿???(b8, ???”ªèª˜ëª…ê½??ëªƒëœ³??5)
-						if (m_pSharedAnimController && // ???ëªƒë±¶?????Î»ë§??Œâ‘¦?ƒæ¿¡?»ìœ­ ??????ëº¤ì”¤
+						
+						if (m_pSharedAnimController && 
 							m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms &&
 							m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]) {
 							pd3dCommandList->SetGraphicsRootConstantBufferView(5, m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]->GetGPUVirtualAddress());
 						}
 						else {
-							// æ¿¡ì’“???°ì’•?? ?Œâ‘¦?ƒæ¿¡?»ìœ­ ????ê³? null ?ëª?, ?ê¾¨ë•²ï§???€? è¸°ê¾ª?åª›? null ?ëª? ?ëº¤ì”¤
+							
 							OutputDebugStringW(L"!!! Render: Skinned - Failed to get valid Bone Transform buffer (b8) via m_pSharedAnimController!\n");
 							wchar_t dbgMsg[128];
-							swprintf_s(dbgMsg, L"    m_pSharedAnimController = %p\n", (void*)m_pSharedAnimController); // ?????åª?æ¿¡ì’“??
+							swprintf_s(dbgMsg, L"    m_pSharedAnimController = %p\n", (void*)m_pSharedAnimController); 
 							OutputDebugStringW(dbgMsg);
-							// ?ê¾©ìŠ‚??m_pSharedAnimController ??€? ????ê³•ë±¾???ëº¤ì”¤??ë’— æ¿¡ì’“???°ë¶½?
+							
 						}
 					}
 				}
 
 
 
-				// --- æ´¹ëªƒ?æ¹²?---
+				
 				m_pMesh->Render(pd3dCommandList, i); 
 			}
 		}
@@ -729,38 +718,38 @@ void CGameObject::Rotate(XMFLOAT4 *pxmf4Quaternion)
 
 std::shared_ptr<CTexture> CGameObject::FindReplicatedTexture(_TCHAR *pstrTextureName)
 {
-	std::shared_ptr<CTexture> pTexture = nullptr; // shared_ptræ¿?è¹‚Â€å¯?
+	std::shared_ptr<CTexture> pTexture = nullptr; 
 	
 	for (int i = 0; i < m_nMaterials; i++)
 	{
-		if (m_ppMaterials[i]) // CMaterial ?????è«›ê³—ë¿??ì¢? åª›Â€??
+		if (m_ppMaterials[i]) 
 		{
-			// m_ppMaterials[i]->m_vTextures åª›Â€ shared_ptr è¸°â‰«ê½??¨í€?åª›Â€??
-			for (int j = 0; j < m_ppMaterials[i]->GetTextureCount(); j++) // GetTextureCount ????
+			
+			for (int j = 0; j < m_ppMaterials[i]->GetTextureCount(); j++) // GetTextureCount
 			{
-				// ??¿ë’ªï§???€ì«???¾§??(m_ppstrTextureNames ?????ì¢?)
+				
 				if (!_tcsncmp(m_ppMaterials[i]->m_ppstrTextureNames[j], pstrTextureName, _tcslen(pstrTextureName)))
 				{
-					// CMaterial??m_vTextures?ë¨?½Œ shared_ptr åª›Â€?ëª„ì‚¤æ¹?
+					
 					if (j < m_ppMaterials[i]->m_vTextures.size()) {
-						return m_ppMaterials[i]->m_vTextures[j]; // shared_ptr è¹‚ë“­ê¶??ë¿¬ è«›ì„‘??(ï§¡ëª„??ç§»ëŒ???ï§ì•·?)
+						return m_ppMaterials[i]->m_vTextures[j]; 
 					}
 				}
 			}
 		}
 	}
 
-	// ?ë¨?–‡/?ëº¤ì £ ?ëªƒë±¶?ë¨?½Œ ï§¡ì–˜ë¦?(??? ?ëª„í…§)
+
 	if (m_pSibling) {
 		pTexture = m_pSibling->FindReplicatedTexture(pstrTextureName);
-		if (pTexture) return pTexture; // ï§¡ì– ?ï§?è«›ë¶¾ì¤?è«›ì„‘??
+		if (pTexture) return pTexture;
 	}
 	if (m_pChild) {
 		pTexture = m_pChild->FindReplicatedTexture(pstrTextureName);
-		if (pTexture) return pTexture; // ï§¡ì– ?ï§?è«›ë¶¾ì¤?è«›ì„‘??
+		if (pTexture) return pTexture; 
 	}
 
-	return nullptr; // ï§?ï§¡ì– ?ï§?nullptr (??shared_ptr) è«›ì„‘??
+	return nullptr; 
 }
 
 int ReadIntegerFromFile(FILE *pInFile)
@@ -790,7 +779,7 @@ BYTE ReadStringFromFile(FILE *pInFile, char *pstrToken)
 
 void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, FILE* pInFile, CGameFramework* pGameFramework)
 {
-	// ShaderManager è«?ResourceManager åª›Â€?ëª„ì‚¤æ¹?
+	
 	assert(pGameFramework != nullptr && "GameFramework pointer is needed!");
 	ShaderManager* pShaderManager = pGameFramework->GetShaderManager();
 	ResourceManager* pResourceManager = pGameFramework->GetResourceManager();
@@ -803,13 +792,13 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 
 	m_nMaterials = ReadIntegerFromFile(pInFile);
 
-	wchar_t buffer[128];// æ¿¡ì’“???è¸°ê¾ª??
+	wchar_t buffer[128];
 	swprintf_s(buffer, L"LoadMaterialsFromFile: Expecting %d materials.\n", m_nMaterials);
 	OutputDebugStringW(buffer);
 
-	if (m_nMaterials <= 0) return; // ??ì­???ì‘ï§??«ë‚…ì¦?
+	if (m_nMaterials <= 0) return; 
 
-	if (m_ppMaterials) delete[] m_ppMaterials; // ??€? ??ˆë–ï§???ì £ (??ë¸??è«›â‘¹?)
+	if (m_ppMaterials) delete[] m_ppMaterials; 
 	m_ppMaterials = new CMaterial*[m_nMaterials];
 	for (int i = 0; i < m_nMaterials; i++) m_ppMaterials[i] = NULL;
 
@@ -831,15 +820,15 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 			pMaterial = new CMaterial(7, pGameFramework); // Assume 7 textures for now
 			OutputDebugStringW((L"    new CMaterial result: " + std::wstring(pMaterial ? L"Success" : L"FAILED!") + L"\n").c_str());
 
-			if (!pMaterial) continue; // Material ??¹ê½¦ ??½ë™£ ????¼ì“¬ ?ì¢ê²™??°ì¤ˆ
+			if (!pMaterial) continue; 
 
-			// --- ?ê³—ì” ????¼ì ™ æ¿¡ì’–ì­?è¹‚Â€å¯?---
+			
 			UINT nMeshType = GetMeshType();
-			std::string shaderName = "Standard"; // æ¹²ê³•??ª›?
+			std::string shaderName = "Standard"; 
 
-			// ï§ë¶¿??????†ë¿‰ ?ê³•ì”ª ?ê¾©ìŠ‚???ê³—ì” ????€ì«?å¯ƒê³—??
-			if (nMeshType & VERTEXT_NORMAL_TANGENT_TEXTURE) { // æ¹²ê³•????¿ë’ªï§??ëª?/?ê¾©ì ¨????ë¸???
-				if (nMeshType & VERTEXT_BONE_INDEX_WEIGHT) { // è¹?åª›Â€ä»¥ë¬’????ë¸???
+		
+			if (nMeshType & VERTEXT_NORMAL_TANGENT_TEXTURE) { 
+				if (nMeshType & VERTEXT_BONE_INDEX_WEIGHT) {
 					shaderName = "Skinned";
 				}
 				else {
@@ -847,29 +836,28 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 				}
 			}
 			else {
-				// ??»â…¨ ï§ë¶¿??????†ë¿‰ ????ï§£ì„??(?? ??±ê¸½ï§???ˆë’— ï§ë¶¿????
-				// ?ê¾©ìŠ‚??ë–ï§???ë¦????»â…¨ ?ê³—ì” ????€ì«??ì¢Šë–¦ æ¿¡ì’–ì­??°ë¶½?
+				
 			}
 
-			// ShaderManageræ¿¡ì’•????ê³—ì” ??åª›Â€?ëª„ì‚¤æ¹?
+			
 			CShader* pMatShader = pShaderManager->GetShader(shaderName, pd3dCommandList);
 			if (pMatShader) {
-				pMaterial->SetShader(pMatShader); // CMaterial???ê³—ì” ????¼ì ™
-				// GetShader???ëª„í…§?ë¨? ?ê¾ªë¹ AddRef ??‰ì‘èª˜Â€æ¿? SetShader?ë¨?½Œ AddRef ??????ë¦??Release
+				pMaterial->SetShader(pMatShader); 
+				
 				pMatShader->Release();
 			}
 			else {
 				OutputDebugStringA(("Error: Could not get shader '" + shaderName + "' from ShaderManager! Assigning default Standard shader.\n").c_str());
-				// ??‰ì‡… ï§£ì„?? Standard ?ê³—ì” ?ë¶¾ì”ª????¼ë–† ??•ë£„
+				
 				pMatShader = pShaderManager->GetShader("Standard", pd3dCommandList);
 				if (pMatShader) {
 					pMaterial->SetShader(pMatShader);
 					pMatShader->Release();
 				}
 			}
-			// --- ?ê³—ì” ????¼ì ™ æ¿¡ì’–ì­???---
+			
 
-			SetMaterial(nMaterial, pMaterial); // ??ì­???¼ì ™
+			SetMaterial(nMaterial, pMaterial); 
 			OutputDebugStringW((L"    SetMaterial called for index: " + std::to_wstring(nMaterial) + L"\n").c_str());
 		}
 		else if (!strcmp(pstrToken, "<AlbedoColor>:"))
@@ -906,7 +894,7 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		}
 		else if (!strcmp(pstrToken, "<AlbedoMap>:"))
 		{
-			// LoadTextureFromFile ?ëª„í…§ ???ëªƒëœ³??0)?? ????MATERIAL_ALBEDO_MAP) ?ê¾¨ë––
+			
 			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 0, MATERIAL_ALBEDO_MAP, pParent, pInFile, pResourceManager);
 		}
 		else if (!strcmp(pstrToken, "<SpecularMap>:"))
@@ -940,7 +928,7 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		}
 	}
 
-	// ??¥ë‹” ?«ë‚…ì¦????ëº¤ì”¤ (?ë¶¾ì¾­æºë‚†??
+	
 	for (int i = 0; i < m_nMaterials; ++i) {
 		swprintf_s(buffer, L"LoadMaterialsFromFile: Final check - Material[%d] pointer: %p\n", i, (void*)m_ppMaterials[i]);
 		OutputDebugStringW(buffer);
@@ -1188,7 +1176,7 @@ CGameObject* CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, I
 	for (; ; )
 	{
 		nReads = (UINT)::fread(&nStrLength, sizeof(BYTE), 1, pInFile);
-		if (nReads != 1 || nStrLength >= sizeof(pstrToken))  // <-- ? ìŒ¨ëªŒì˜™ ? ì™?™í˜¸ ? ìŒ©ê³¤ì˜™
+		if (nReads != 1 || nStrLength >= sizeof(pstrToken))  
 		{
 			printf("Error: Invalid string length read (%d)\n", nStrLength);
 			return nullptr;
@@ -1199,7 +1187,7 @@ CGameObject* CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, I
 			printf("Error: Failed to read token string\n");
 			return nullptr;
 		}
-		pstrToken[nStrLength] = '\0';  // ? ì™?™å ?™ì˜™ ?¬å ?™ì˜™ ? ì‹­ê³¤ì˜™ ? ì™?™å ?™ì˜™
+		pstrToken[nStrLength] = '\0';  
 
 		if (!strcmp(pstrToken, "<Frame>:"))
 		{
@@ -1296,12 +1284,12 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
 }
 
  void CGameObject::PropagateAnimController(CAnimationController* controller) {
-     CAnimationController* controllerToUse = m_pSkinnedAnimationController ? m_pSkinnedAnimationController : controller; // ?ë¨?–Š????‰ì‘ï§??ë¨?–Š ?ê³—ê½‘
+     CAnimationController* controllerToUse = m_pSkinnedAnimationController ? m_pSkinnedAnimationController : controller; 
      if (m_pMesh && dynamic_cast<CSkinnedMesh*>(m_pMesh)) {
-         m_pSharedAnimController = controllerToUse; // ??½ê¶??ï§ë¶¿?©ï§??Œâ‘¦?ƒæ¿¡?»ìœ­ ????
+         m_pSharedAnimController = controllerToUse; 
      }
-     if (m_pChild) m_pChild->PropagateAnimController(controllerToUse); // ?ë¨?–‡?ë¨?¾¶ ?ê¾ªë™†
-     if (m_pSibling) m_pSibling->PropagateAnimController(controller);    // ?ëº¤ì £???ºÂ€ï§â‘£? ä»¥Â€ å¯??ê¾ªë™†
+     if (m_pChild) m_pChild->PropagateAnimController(controllerToUse); 
+     if (m_pSibling) m_pSibling->PropagateAnimController(controller);    
  }
 
 
@@ -1309,11 +1297,11 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList,
-	LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) // Material ????1åª?
+	LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) 
 {
 	assert(pGameFramework != nullptr && "GameFramework pointer is needed for CHeightMapTerrain!");
 	ResourceManager* pResourceManager = pGameFramework->GetResourceManager();
-	ShaderManager* pShaderManager = pGameFramework->GetShaderManager(); // ShaderManager åª›Â€?ëª„ì‚¤æ¹?
+	ShaderManager* pShaderManager = pGameFramework->GetShaderManager(); 
 	assert(pResourceManager != nullptr && pShaderManager != nullptr);
 
 	m_nWidth = nWidth;
@@ -1328,26 +1316,26 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	// ??ì­???¹ê½¦
+	
 	CMaterial* pTerrainMaterial = new CMaterial(2, pGameFramework);
 
-	// ??¿ë’ªï§?æ¿¡ì’•ë±?
+	
 	std::shared_ptr<CTexture> pTerrainBaseTexture = pResourceManager->GetTexture(L"Terrain/DemoTerrain3.dds", pd3dCommandList);
 	std::shared_ptr<CTexture> pTerrainDetailTexture = pResourceManager->GetTexture(L"Terrain/TerrainGrass_basecolor.dds", pd3dCommandList);
 	
-	// ??ì­????¿ë’ªï§??ì¢Šë–¦ è«?SRV ??¹ê½¦ ?ë¶¿ê»Œ
+	
 	if (pTerrainBaseTexture) {
-		pTerrainMaterial->AssignTexture(0, pTerrainBaseTexture, pd3dDevice); // 0è¸?????
+		pTerrainMaterial->AssignTexture(0, pTerrainBaseTexture, pd3dDevice); 
 	}
 	if (pTerrainDetailTexture) {
-		pTerrainMaterial->AssignTexture(1, pTerrainDetailTexture, pd3dDevice); // 1è¸?????
+		pTerrainMaterial->AssignTexture(1, pTerrainDetailTexture, pd3dDevice); 
 	}
 
-	// ?ê³—ì” ??åª›Â€?ëª„ì‚¤æ¹?è«???¼ì ™
+	
 	CShader* pTerrainShader = pShaderManager->GetShader("Terrain", pd3dCommandList); 
 	if (pTerrainShader) {
 		pTerrainMaterial->SetShader(pTerrainShader); 
-		pTerrainShader->Release(); // GetShaderæ¿???? ï§¡ëª„????ì £
+		pTerrainShader->Release(); 
 	}
 	else {
 		OutputDebugString(L"Error: Failed to get Terrain shader. Material will not have a shader.\n");
@@ -1368,41 +1356,40 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 	if (!pScene) return;
 
 
-	CMaterial* pMaterial = GetMaterial(0); // ï§Â€?ëº? ??ì­???êµ¹ åª›Â€??
+	CMaterial* pMaterial = GetMaterial(0); 
 	if (m_pMesh && pMaterial && pMaterial->m_pShader)
 	{
-		// --- ?ê³¹ê¹­ ??¼ì ™ ---
+		
 		pScene->SetGraphicsState(pd3dCommandList, pMaterial->m_pShader);
 
-		// --- ?¨ë“¯??CBV è«›ë¶¿???---
-		// ç§»ë?ì°??CBV (b1 @ ?ëªƒëœ³??0)
+		
 		if (pCamera && pCamera->GetCameraConstantBuffer()) {
 			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress());
 		}
 
-		UpdateTransform(NULL); // ï§Â€???ë¶¾ë±¶ ??°ì ¹ ??…ëœ²??„ë“ƒ
+		UpdateTransform(NULL); 
 
-		// 1. ï§Â€??åª›ì•¹ê»??ê³¸ë‹” è«›ë¶¿???(b2 @ Param 1 - ?ë¶¾ë±¶ ??°ì ¹ï§?
-		XMFLOAT4X4 gmtxGameObject; // ?ë¶¾ë±¶ ??°ì ¹ï§??ê¾©ìŠ‚
+		
+		XMFLOAT4X4 gmtxGameObject; 
 		XMStoreFloat4x4(&gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
-		// ?·â‘¦?????”ªèª˜ëª…ê½?1è¸°ë‰ë¿?16 DWORDS (??°ì ¹ ??ë¦? ??¼ì ™
+		
 		pd3dCommandList->SetGraphicsRoot32BitConstants(1, 16, &gmtxGameObject, 0);
 
-		// 2. ï§Â€????¿ë’ªï§????” ??è«›ë¶¿???(t1, t2 @ Param 2)
+		
 		D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle();
 		if (textureTableHandle.ptr != 0) {
-			// ?·â‘¦?????”ªèª˜ëª…ê½??ëªƒëœ³??2è¸°ë‰ë¿?è«›ë¶¿???
+			
 			pd3dCommandList->SetGraphicsRootDescriptorTable(2, textureTableHandle);
 		}
 		else {
 			OutputDebugString(L"Warning: Terrain material has null texture handle for binding.\n");
 		}
 
-		// --- æ´¹ëªƒ?æ¹²?---
+		
 		m_pMesh->Render(pd3dCommandList, 0);
 
 	}
-	// ï§Â€?ëº? ?ë¨?–‡/?ëº¤ì £ ??ì“¬
+	
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1411,7 +1398,7 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 {
 	assert(pGameFramework != nullptr && "GameFramework pointer is needed for CSkyBox!");
 	ResourceManager* pResourceManager = pGameFramework->GetResourceManager();
-	ShaderManager* pShaderManager = pGameFramework->GetShaderManager(); // ShaderManager åª›Â€?ëª„ì‚¤æ¹?
+	ShaderManager* pShaderManager = pGameFramework->GetShaderManager(); 
 	assert(pResourceManager != nullptr && pShaderManager != nullptr);
 
 	CSkyBoxMesh *pSkyBoxMesh = new CSkyBoxMesh(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 2.0f);
@@ -1419,20 +1406,20 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	// ??ì­???¹ê½¦
+	
 	CMaterial* pSkyBoxMaterial = new CMaterial(1, pGameFramework);
 
-	// ??¿ë’ªï§?æ¿¡ì’•ë±?
+	
 	std::shared_ptr<CTexture> pSkyBoxTexture = pResourceManager->GetTexture(L"SkyBox/SkyBox_1.dds", pd3dCommandList);
 	if (pSkyBoxTexture) {
-		pSkyBoxMaterial->AssignTexture(0, pSkyBoxTexture, pd3dDevice); // 0è¸??ëªƒëœ³??¼ë¿‰ ?ì¢Šë–¦
+		pSkyBoxMaterial->AssignTexture(0, pSkyBoxTexture, pd3dDevice); 
 	}
 	else {
-		// ??¿ë’ªï§?æ¿¡ì’•ëµ???½ë™£ ï§£ì„??
+		
 		OutputDebugString(L"Error: Failed to load SkyBox texture using ResourceManager.\n");
 	}
 
-	// 5. ?ê³—ì” ??åª›Â€?ëª„ì‚¤æ¹?è«???¼ì ™
+	
 	CShader* pSkyBoxShader = pShaderManager->GetShader("Skybox", pd3dCommandList);
 	if (pSkyBoxShader) {
 		pSkyBoxMaterial->SetShader(pSkyBoxShader);
@@ -1453,34 +1440,33 @@ void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 	CScene* pScene = m_pGameFramework ? m_pGameFramework->GetScene() : nullptr;
 	if (!pScene || !pCamera) return;
 
-	CMaterial* pMaterial = GetMaterial(0); // ??¼ë­…??€ì»??»ë’— ??ì­???êµ¹ åª›Â€??
+	CMaterial* pMaterial = GetMaterial(0); 
 	if (m_pMesh && pMaterial && pMaterial->m_pShader)
 	{
 		pScene->SetGraphicsState(pd3dCommandList, pMaterial->m_pShader);
 
-		// --- ?¨ë“¯??CBV è«›ë¶¿???---
-		// ç§»ë?ì°??CBV (b1 @ ?ëªƒëœ³??0)
-		if (pCamera->GetCameraConstantBuffer()) { // pCamera??null ?ê¾¨ë–‚
+		
+		if (pCamera->GetCameraConstantBuffer()) { 
 			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress());
 		}
 
-		// --- ??¼ë­…??€ì»???±ÑŠëƒ¼??è«›ë¶¿???---
+		
 		XMFLOAT3 xmf3CameraPos = pCamera->GetPosition();
 		SetPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
-		UpdateTransform(NULL); // ?ë¶¾ë±¶ ??°ì ¹ ??…ëœ²??„ë“ƒ
+		UpdateTransform(NULL); 
 
-		// ??¼ë­…??€ì»????¿ë’ªï§????” ??è«›ë¶¿???(t13 @ Param 1)
+		
 		D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle();
 		if (textureTableHandle.ptr != 0) {
-			// ?·â‘¦?????”ªèª˜ëª…ê½??ëªƒëœ³??1è¸°ë‰ë¿?è«›ë¶¿???
+			
 			pd3dCommandList->SetGraphicsRootDescriptorTable(1, textureTableHandle);
 		}
 		else {
 			OutputDebugString(L"Warning: Skybox material has null texture handle for binding.\n");
 		}
 
-		// --- æ´¹ëªƒ?æ¹²?---
-		m_pMesh->Render(pd3dCommandList, 0); // ï§ë¶¿?????œ‘ï§?
+		
+		m_pMesh->Render(pd3dCommandList, 0); 
 
 	}
 }
@@ -1560,69 +1546,63 @@ CHairObject::CHairObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	SetChild(pGameObject);
 
-	if (pInFile) fclose(pInFile); // ???”ª ??ªë¦° ?°ë¶½?
+	if (pInFile) fclose(pInFile); 
 }
 
 
-// ------------------ ??Ğ?------------------
+
 void CTreeObject::StartFalling(const XMFLOAT3& hitDirection) {
-	if (m_bIsFalling || m_bHasFallen) return; // ??€? ?ê³•ìœ­ï§Â€????‡êµ…???ê³•ìœ­è­°ëš¯?ï§?ä»¥ë¬????½ë»¾ è«›â‘¹?
+	if (m_bIsFalling || m_bHasFallen) return; 
 
 	m_bIsFalling = true;
 	m_fFallingTimer = 0.0f;
 	m_fCurrentFallAngle = 0.0f;
-	m_xmf4x4InitialToParent = m_xmf4x4ToParent; // ?ê¾©ì˜± ?ê³? è¹‚Â€????°ì ¹ ????
+	m_xmf4x4InitialToParent = m_xmf4x4ToParent; 
 
-	// ?ê³•ìœ­ï§Â€????å¯ƒê³—??
-	// ??‰ë–†: hitDirection (??? …??ë¼±->??Ğ?è¸°â‰«ê½??ë¨?’— ??? …??ë¼± Look è¸°â‰«ê½? ????ì­…???°ëº¤?æ¿¡???¼ì ™
-	// ??ë¦??•ë’— ??¥ë‹š??ì¾¶ X???ë¨?’— Z??ä»???êµ¹æ¿???•ëœ¡??ì¾¶ ?ë¨?’— ?¨ì¢???åª›ë??æ¿¡???¼ì ™
+	
 	XMFLOAT3 worldUp = XMFLOAT3(0.0f, 1.0f, 0.0f);
-	m_xmf3FallingAxis = Vector3::CrossProduct(worldUp, hitDirection); // hitDirection????ì­…??¿í€?è«›ë¶¾?????²ë»¾????
-	if (Vector3::LengthSq(m_xmf3FallingAxis) < 0.001f) { // hitDirection?????ê¾¨ì˜’ è«›â‘ºë¼??å¯ƒìŒ??????
-		m_xmf3FallingAxis = XMFLOAT3(1.0f, 0.0f, 0.0f); // æ¹²ê³•???°ëº¤?æ¿¡???¼ì ™
+	m_xmf3FallingAxis = Vector3::CrossProduct(worldUp, hitDirection); 
+	if (Vector3::LengthSq(m_xmf3FallingAxis) < 0.001f) { 
+		m_xmf3FallingAxis = XMFLOAT3(1.0f, 0.0f, 0.0f); 
 	}
 	m_xmf3FallingAxis = Vector3::Normalize(m_xmf3FallingAxis);
 
-	// ????ê¸½ ?¨ë“¦êº????ê³¸ì”  ?ê¾¨ë•²?ê¾¨ì¤‰ ??¼ì ™ (?ì¢ê¹®??
-	// isRender = false; // ?ê¾©ì­…?? ???œ‘ï§???ë¼±????
-	// ?ë¨?’— ?°â‘¸ë£ï§£???¾ª??ê¹Šì†• ??
+	
 }
 
 void CTreeObject::Animate(float fTimeElapsed) {
-	// ï§ëš¯ë¹?CGameObject ??m_pSkinnedAnimationController åª›Â€ ??‡í€???€? ?????•ë–ï§??’ì‡±? ?ëª„í…§
-	// if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+	
 
 	if (m_bIsFalling && !m_bHasFallen) {
 		m_fFallingTimer += fTimeElapsed;
 		float normalizedTime = std::min(m_fFallingTimer / m_fFallingDuration, 1.0f);
 
-		// ??“ì»™???ê³•ì”ª ???Ÿ¾ åª›ê³·ë£?è¹‚ë‹¿ì»?(Ease-Out ??£ë‚µ ?ê¹†ì“£ äºŒì‡°?????ë¨?¿°??»ìœ­??)
-		m_fCurrentFallAngle = m_fTargetFallAngle * normalizedTime; // ?ì¢ì‚ è¹‚ë‹¿ì»?
+		
+		m_fCurrentFallAngle = m_fTargetFallAngle * normalizedTime; 
 
-		// ???Ÿ¾ è¹‚Â€????¹ê½¦
-		// 1. ??°í¸??°ì¤ˆ ??€ë£?
+		
 		XMMATRIX R = XMMatrixIdentity();
-		if (Vector3::LengthSq(m_xmf3RotationPivot) > 0.001f) { // ??°í¸???ë¨? ???ê¾¨ë•²ï§?
+		if (Vector3::LengthSq(m_xmf3RotationPivot) > 0.001f) { 
 			R = XMMatrixTranslation(-m_xmf3RotationPivot.x, -m_xmf3RotationPivot.y, -m_xmf3RotationPivot.z);
 		}
-		// 2. ???Ÿ¾
+		
 		R = XMMatrixMultiply(R, XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3FallingAxis), m_fCurrentFallAngle));
-		// 3. ??¼ë–† ?ë¨?˜’ ??°í¸ ?ê¾©íŠ‚æ¿?
+		
 		if (Vector3::LengthSq(m_xmf3RotationPivot) > 0.001f) {
 			R = XMMatrixMultiply(R, XMMatrixTranslation(m_xmf3RotationPivot.x, m_xmf3RotationPivot.y, m_xmf3RotationPivot.z));
 		}
 
 
-		// ?¥ë‡ë¦?è¹‚Â€????°ì ¹?????Ÿ¾ ?ê³¸ìŠœ
+		
 		XMStoreFloat4x4(&m_xmf4x4ToParent, XMMatrixMultiply(R, XMLoadFloat4x4(&m_xmf4x4InitialToParent)));
 
 		if (normalizedTime >= 1.0f) {
 			m_bHasFallen = true;
 			m_bIsFalling = false;
 
-			CScene* pScene = m_pGameFramework->GetScene(); // CGameObjectåª›Â€ m_pGameFramework ï§ã…»ì¾?‘œ?åª›Â€?ëª„ë¹ ??
+			CScene* pScene = m_pGameFramework->GetScene(); 
 			if (pScene) {
-				int numBranchesToSpawn = 3 + (rand() % 2); // 3 ?ë¨?’— 4åª?
+				int numBranchesToSpawn = 3 + (rand() % 2); 
 				for (int i = 0; i < numBranchesToSpawn; ++i) {
 					XMFLOAT3 fallenTreePos = GetPosition(); 
 					XMFLOAT3 spawnOffsetLocal = XMFLOAT3(
@@ -1632,7 +1612,7 @@ void CTreeObject::Animate(float fTimeElapsed) {
 					);
 
 					XMFLOAT3 spawnPos = Vector3::Add(fallenTreePos, spawnOffsetLocal);
-					if (pScene->m_pTerrain) { // ï§Â€???ê¾©ë¿‰ ??½ë£¿??ë£„æ¿??ë¯ªì”  è¹‚ëŒ??
+					if (pScene->m_pTerrain) { 
 						spawnPos.y = pScene->m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + spawnOffsetLocal.y;
 					}
 
@@ -1644,7 +1624,7 @@ void CTreeObject::Animate(float fTimeElapsed) {
 					pScene->SpawnBranch(spawnPos, ejectVelocity);
 				}
 			}
-			isRender = false; // è«›ë¶¾ì¤????ªï§?å¯???êµ…?? ??±ì ™ ??“ì»™ ?????ªï§??ê¾¨ì¤‰ CBranchObject ?ë¨?½Œ ï§£ì„??
+			isRender = false; 
 		}
 	}
 	UpdateTransform(NULL);
@@ -1658,40 +1638,40 @@ CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, "Model/Tree/FAE_Pine_A_LOD0.bin", "rb");
-	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // ï§ë‰?ï§??ëª„ì˜„ ?°ë¶½?
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); 
 	SetChild(pGameObject);
 
 	m_objectType = GameObjectType::Tree;
 
-	if (pInFile) fclose(pInFile); // ???”ª ??ªë¦° ?°ë¶½?
+	if (pInFile) fclose(pInFile);
 }
 
 CBirchObject::CBirchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, "Model/Tree/FAE_Birch_A_LOD0.bin", "rb");
-	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // ï§ë‰?ï§??ëª„ì˜„ ?°ë¶½?
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); 
 	SetChild(pGameObject);
 
 	m_objectType = GameObjectType::Tree;
 
-	if (pInFile) fclose(pInFile); // ???”ª ??ªë¦° ?°ë¶½?
+	if (pInFile) fclose(pInFile);
 }
 
 CWillowObject::CWillowObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, "Model/Tree/FAE_Willow_A_LOD0.bin", "rb");
-	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // ï§ë‰?ï§??ëª„ì˜„ ?°ë¶½?
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework);
 	SetChild(pGameObject);
 
 	m_objectType = GameObjectType::Tree;
 
-	if (pInFile) fclose(pInFile); // ???”ª ??ªë¦° ?°ë¶½?
+	if (pInFile) fclose(pInFile); 
 }
 
 CBranchObject::CBranchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain)
-	: CGameObject(1, pGameFramework) { // ??ì­?1åª?åª›Â€?? ?ºÂ€ï§???¹ê½¦???ëª„í…§
+	: CGameObject(1, pGameFramework) { 
 	m_pTerrainRef = pTerrain;
 
 	CLoadedModelInfo* pBranchModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch_A.bin", pGameFramework);
@@ -1709,40 +1689,40 @@ CBranchObject::CBranchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 }
 
 void CItemObject::Animate(float fTimeElapsed) {
-	if (!isRender) return; // ???œ‘ï§???ˆë¦ºï§???…ëœ²??„ë“ƒ????Šë¸¿
+	if (!isRender) return; 
 
 	if (m_bOnGround) {
 		m_fElapsedAfterLanding += fTimeElapsed;
 		if (m_fElapsedAfterLanding > m_fLifeTime) {
-			isRender = false; // ??±ì ™ ??“ì»™ ?????ªï§?(??ë¿????¼ì £æ¿???“êµ…??ë’— æ¿¡ì’–ì­??ê¾©ìŠ‚)
+			isRender = false; 
 		}
 		return;
 	}
 
-	// ä»¥ë¬???ê³¸ìŠœ
+	
     XMFLOAT3 gravityForceThisFrame = Vector3::ScalarProduct(m_xmf3Gravity, 10.0f);
     m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, gravityForceThisFrame);
 
-	// ?ê¾©íŠ‚ ??…ëœ²??„ë“ƒ (??€ë£?
+	
 	XMFLOAT3 xmf3Shift = Vector3::ScalarProduct(m_xmf3Velocity, 0.5f);
 	XMFLOAT3 oldPos = GetPosition();
 	XMFLOAT3 newPos = Vector3::Add(oldPos, xmf3Shift);;
 	SetPosition(newPos);
 
 
-	// ??ƒë‚µ???°â‘¸ë£?ï§£ëŒ„ê²?
+	
 	if (m_pTerrainRef) {
 		XMFLOAT3 currentPos = GetPosition();
-		// ??ì¶ªåª›Â€ï§Â€ ï§â‘¤???è«›ë¶¾???ºÂ€?ºê¾©??æ¹²ê³—???°ì¤ˆ ï§Â€???ë¯ªì” ?? ??¾§??
-		float branchHeightOffset = (m_localOBB.Extents.y > 0) ? m_localOBB.Extents.y : 0.5f; // ï§â‘¤??è«›ë¶¿???è«›ëº¤???ë¯ªì” ????ˆì»² ?ë¨?’— æ¹²ê³•??ª›?
+		
+		float branchHeightOffset = (m_localOBB.Extents.y > 0) ? m_localOBB.Extents.y : 0.5f; 
 		float terrainHeight = m_pTerrainRef->GetHeight(currentPos.x, currentPos.z) + branchHeightOffset;
 
 		if (currentPos.y <= terrainHeight) {
 			currentPos.y = terrainHeight;
-			SetPosition(currentPos); // ï§Â€???ë¯ªì” ??ï§ìš??
-			m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f); // ??†ë¿‰ ??°ì‘ï§???¾ë£„ 0
+			SetPosition(currentPos); 
+			m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f); 
 			m_bOnGround = true;
-			m_fElapsedAfterLanding = 0.0f; // ??ì±¸ ????€????–ì˜‰
+			m_fElapsedAfterLanding = 0.0f; 
 		}
 	}
 }
@@ -1762,7 +1742,7 @@ CRockClusterAObject::CRockClusterAObject(ID3D12Device* pd3dDevice, ID3D12Graphic
 
 	m_objectType = GameObjectType::Rock;
 
-	if (pInFile) fclose(pInFile); // ???”ª ??ªë¦° ?°ë¶½?
+	if (pInFile) fclose(pInFile); 
 }
 
 // ------------------ ??------------------
@@ -1778,7 +1758,7 @@ CRockClusterBObject::CRockClusterBObject(ID3D12Device* pd3dDevice, ID3D12Graphic
 
 	m_objectType = GameObjectType::Rock;
 
-	if (pInFile) fclose(pInFile); // ???”ª ??ªë¦° ?°ë¶½?
+	if (pInFile) fclose(pInFile); 
 }
 
 CRockClusterCObject::CRockClusterCObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
@@ -1793,7 +1773,7 @@ CRockClusterCObject::CRockClusterCObject(ID3D12Device* pd3dDevice, ID3D12Graphic
 
 	m_objectType = GameObjectType::Rock;
 
-	if (pInFile) fclose(pInFile); // ???”ª ??ªë¦° ?°ë¶½?
+	if (pInFile) fclose(pInFile); 
 }
 
 CCliffFObject::CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
@@ -1808,11 +1788,11 @@ CCliffFObject::CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 	m_objectType = GameObjectType::Rock;
 
-	if (pInFile) fclose(pInFile); // ???”ª ??ªë¦° ?°ë¶½?
+	if (pInFile) fclose(pInFile); 
 }
 
 CRockDropObject::CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain)
-	: CGameObject(1, pGameFramework) { // ??ì­?1åª?åª›Â€?? ?ºÂ€ï§???¹ê½¦???ëª„í…§
+	: CGameObject(1, pGameFramework) { 
 	m_pTerrainRef = pTerrain;
 
 	CLoadedModelInfo* pBranchModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/RockCluster_B_LOD0.bin", pGameFramework);
@@ -1831,9 +1811,9 @@ CRockDropObject::CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 void CRockObject::EraseRock()
 {
-	CScene* pScene = m_pGameFramework->GetScene(); // CGameObjectåª›Â€ m_pGameFramework ï§ã…»ì¾?‘œ?åª›Â€?ëª„ë¹ ??
+	CScene* pScene = m_pGameFramework->GetScene(); 
 	if (pScene) {
-		int numBranchesToSpawn = 3 + (rand() % 2); // 3 ?ë¨?’— 4åª?
+		int numBranchesToSpawn = 3 + (rand() % 2); 
 		for (int i = 0; i < numBranchesToSpawn; ++i) {
 			XMFLOAT3 fallenTreePos = GetPosition();
 			XMFLOAT3 spawnOffsetLocal = XMFLOAT3(
@@ -1843,7 +1823,7 @@ void CRockObject::EraseRock()
 			);
 
 			XMFLOAT3 spawnPos = Vector3::Add(fallenTreePos, spawnOffsetLocal);
-			if (pScene->m_pTerrain) { // ï§Â€???ê¾©ë¿‰ ??½ë£¿??ë£„æ¿??ë¯ªì”  è¹‚ëŒ??
+			if (pScene->m_pTerrain) { 
 				spawnPos.y = pScene->m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + spawnOffsetLocal.y;
 			}
 
@@ -1861,17 +1841,17 @@ void CRockObject::EraseRock()
 
 
 
-// ------------------ ?? ?? ------------------
+
 CBushAObject::CBushAObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, "Model/Vegetation/Bush_A_LOD0.bin", "rb");
-	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // ï§ë‰?ï§??ëª„ì˜„ ?°ë¶½?
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); 
 	SetChild(pGameObject);
 
 	m_objectType = GameObjectType::Vegetation;
 
-	if (pInFile) fclose(pInFile); // ???”ª ??ªë¦° ?°ë¶½?
+	if (pInFile) fclose(pInFile); 
 }
 
 
@@ -1888,7 +1868,7 @@ CSwordObject::CSwordObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 
 	//m_objectType = GameObjectType::Rock;
 
-	if (pInFile) fclose(pInFile); // ???”ª ??ªë¦° ?°ë¶½?
+	if (pInFile) fclose(pInFile); 
 }
 
 CStaticObject::CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* modelname, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
@@ -1901,7 +1881,7 @@ CStaticObject::CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 		pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework);
 	SetChild(pGameObject);
 
-	if (pInFile) fclose(pInFile); // ???”ª ??ªë¦° ?°ë¶½?
+	if (pInFile) fclose(pInFile); 
 }
 
 UserObject::UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CLoadedModelInfo* pModel, int nAnimationTracks, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
@@ -1932,7 +1912,7 @@ void UserObject::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 		weapon->Rotate(0.0f, 0.0f, 0.0f);
 
 		handFrame->SetChild(weapon);
-		UpdateTransform(nullptr); // è¹‚Â€????°ì ¹ ï§ë±??åª›ê¹†??
+		UpdateTransform(nullptr); 
 	}
 }
 void UserObject::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate = { 0,0,0 }, XMFLOAT3 scale = { 1,1,1 })
@@ -1945,7 +1925,7 @@ void UserObject::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 		weapon->Rotate(rotate.x, rotate.y, rotate.z);
 
 		handFrame->SetChild(weapon);
-		UpdateTransform(nullptr); // è¹‚Â€????°ì ¹ ï§ë±??åª›ê¹†??
+		UpdateTransform(nullptr); 
 	}
 }
 
@@ -1996,9 +1976,9 @@ CConstructionObject::CConstructionObject(ID3D12Device* pd3dDevice, ID3D12Graphic
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, "Model/buildobject/pannel.bin", "rb");
-	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); // ï§ë‰?ï§??ëª„ì˜„ ?°ë¶½?
+	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); 
 	SetChild(pGameObject);
 
 	
-	if (pInFile) fclose(pInFile); // ???”ª ??ªë¦° ?°ë¶½?
+	if (pInFile) fclose(pInFile); 
 }
