@@ -146,4 +146,25 @@ public:
 	void SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 	void SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 
+
+	// 파도
+	void BuildWaves(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+	// 파도 업데이트 및 렌더링 로직 (Update, Render 함수에서 호출될 부분)
+	void UpdateWaves(float fTimeDelta, ID3D12GraphicsCommandList* pd3dCommandList);
+	void RenderWaves(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera); 
+
+
+	// 파도 관련 멤버 변수들
+	std::unique_ptr<Waves> m_pWaves;
+	// CWaveObject는 CGameObject를 상속하므로, m_vpGameObjects 같은 CGameObject 목록에 추가될 수 있음
+	// 또는 별도 멤버로 관리
+	std::unique_ptr<CWaveObject> m_pWaveObject;
+
+	// 컴퓨트 셰이더용 상수 버퍼
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_pWaveSimConstantBuffer;
+	// 상수 버퍼 CPU 매핑 주소 (업로드 힙을 직접 사용하거나, Default 힙에 업로드 힙을 통해 복사)
+	void* m_pMappedWaveSimConstantBuffer = nullptr; // 업로드 힙 직접 사용 시
+	UINT8* m_pConstantBufferBegin = nullptr; // Default 힙 + 업로드 힙 사용 시 (업로드 힙 포인터)
+	UINT m_alignedWaveSimCBSize = 0;
 };

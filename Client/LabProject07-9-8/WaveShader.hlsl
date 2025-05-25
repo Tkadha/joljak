@@ -44,6 +44,23 @@ PS_WAVE_INPUT VSWaveRender(VS_WAVE_INPUT input)
 {
     PS_WAVE_INPUT output = (PS_WAVE_INPUT) 0;
 
+    // 파도 높이 텍스처 대신 Y=0.0 으로 고정 (또는 input.PosL.y 사용)
+    float3 finalPosL = float3(input.PosL.x, 0.0f, input.PosL.z);
+
+    output.PosW = mul(float4(finalPosL, 1.0f), gmtxGameObject).xyz;
+    output.PosH = mul(float4(output.PosW, 1.0f), gmtxView);
+    output.PosH = mul(output.PosH, gmtxProjection);
+    
+    // 법선도 기본 법선 사용
+    output.NormalW = normalize(mul(input.NormalL, (float3x3) gmtxGameObject));
+    output.TexC = input.TexC;
+
+    return output;
+    //////// 테스트
+    
+    
+    PS_WAVE_INPUT output = (PS_WAVE_INPUT) 0;
+
     uint width, height;
     gWaveSolution.GetDimensions(width, height);
 
@@ -146,15 +163,7 @@ float4 PSWaveRender(PS_WAVE_INPUT input) : SV_TARGET
     float4 cIlluminationColor = Lighting(gMaterialInfo, input.PosW, normalW);
 
 
-    // 4. 최종 색상 조합
-    // Lighting() 결과는 이미 재질의 Ambient, Diffuse, Specular가 반영된 조명 색상입니다.
-    // 여기에 Albedo 텍스처 색상을 곱해주거나, Emissive 등을 추가할 수 있습니다.
-
-    // 현재 Lighting() 함수는 재질 색상을 이미 내부에서 곱하므로,
-    // cIlluminationColor를 기본으로 하고, 여기에 Albedo 텍스처의 영향을 추가로 반영할 수 있습니다.
-    // (또는 Lighting 함수가 순수 조명 값만 반환하도록 수정하고 여기서 재질색*조명색*텍스처색을 곱하는 방식도 가능)
-    
-    // 예시: 조명 결과에 텍스처 알베도 색상의 RGB를 곱함 (알파는 조명 결과의 알파 사용)
+    // 4. 최종 색상 조합    
     float4 finalColor = cIlluminationColor * float4(cAlbedoColor.rgb, 1.0f);
     finalColor.a = cAlbedoColor.a; // 최종 알파는 알베도에서
 
@@ -175,6 +184,8 @@ float4 PSWaveRender(PS_WAVE_INPUT input) : SV_TARGET
     
     // 최종 알파값은 원하는 대로 (예: 재질 알파, 또는 반투명 효과 시 조절)
     // finalColor.a = gMaterialInfo.DiffuseColor.a; // 또는 계산된 값
-
+    
+    return float4(0.0f, 0.2f, 0.8f, 1.0f); // 파란색 (R, G, B, Alpha)
+    
     return finalColor;
 }

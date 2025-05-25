@@ -2096,18 +2096,21 @@ void CWaveObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		return;
 	}
 
-	// 2. PSO 및 루트 시그니처 설정
 	pd3dCommandList->SetPipelineState(pShaderBase->GetPipelineState());
 	pd3dCommandList->SetGraphicsRootSignature(pShaderBase->GetRootSignature());
 
-	CGameObject::Render(pd3dCommandList, pCamera); 
+	// GameObject의 상수버퍼(b0, b1, b2) 업데이트는 계속 필요
+	CGameObject::Render(pd3dCommandList, pCamera);
 
-	/*if (m_pWavesLogicRef && m_pWavesLogicRef->m_hCurrSolSrvGPU.ptr != 0) { 
-		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pWavesLogicRef->m_hCurrSolSrvGPU);
+	// --- 파도 솔루션 SRV 바인딩 임시 주석 처리 ---
+	/*
+	if (m_pWavesLogicRef && m_pWavesLogicRef->GetCurrentCurrSolSRV_GPU().ptr != 0) {
+		// 루트 시그니처의 WaveSolution (t0) 슬롯 인덱스 가정 (예: 0번 파라미터)
+		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pWavesLogicRef->GetCurrentCurrSolSRV_GPU());
+	} else {
+		// OutputDebugStringA("Warning: Wave solution SRV not bound in CWaveObject::Render (blue color test).\n");
 	}
-	else {
-		OutputDebugStringA("Error: Invalid SRV GPU handle for wave solution in CWaveObject::Render.\n");
-	}*/
+	*/
 
 	pd3dCommandList->IASetVertexBuffers(0, 1, &m_VertexBufferView);
 	pd3dCommandList->IASetIndexBuffer(&m_IndexBufferView);
@@ -2115,6 +2118,5 @@ void CWaveObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 	pd3dCommandList->DrawIndexedInstanced(m_nIndices, 1, 0, 0, 0);
 
-
-	if (pShaderBase) pShaderBase->Release(); // GetShader에서 AddRef 했으므로 Release
+	if (pShaderBase) pShaderBase->Release();
 }

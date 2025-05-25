@@ -9,6 +9,8 @@
 #include "NonAtkState.h"
 #include "AtkState.h"
 
+#include "ComputeShader.h"
+
 
 CScene::CScene(CGameFramework* pFramework) : m_pGameFramework(pFramework)
 {
@@ -84,6 +86,214 @@ void CScene::BuildDefaultLightsAndMaterials()
 	}
 }
 
+struct WaveSimConstants
+{
+	float gWaveConstant0;
+	float gWaveConstant1;
+	float gWaveConstant2;
+	float gDisturbMag;
+	DirectX::XMINT2 gDisturbIndex; // HLSL의 int2와 유사
+	float gTimeStep;
+	float gSpatialStep;
+	// 필요시 패딩 추가하여 256 바이트 배수로 맞춤
+	float padding[1]; // 예시 (실제 크기 계산 필요)
+};
+
+void CScene::BuildWaves(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	// CGameFramework 포인터 유효성 검사 (생성자나 SetGameFramework에서 설정되었다고 가정)
+	assert(m_pGameFramework != nullptr && "CGameFramework pointer is null in CScene::BuildWaves. Call SetGameFramework first.");
+
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
+	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager(); // ShaderManager는 CGameFramework 멤버라고 가정
+
+	assert(pResourceManager != nullptr && "ResourceManager is null in CScene::BuildWaves.");
+	assert(pShaderManager != nullptr && "ShaderManager is null in CScene::BuildWaves.");
+
+	// 1. Waves 로직 객체 생성
+	int numRows = 200;
+	int numCols = 200;
+	float spatialStep = 0.25f; // 파티클 간 간격 (월드 단위)
+	float timeStep = 0.03f;    // 시뮬레이션 시간 간격
+	float speed = 3.25f;       // 파도 전파 속도
+	float damping = 0.05f;     // 감쇠 (파도가 점차 약해지는 정도)
+	m_pWaves = std::make_unique<Waves>(numRows, numCols, spatialStep, timeStep, speed, damping);
+
+	// 2. Waves 시뮬레이션용 UAV Texture2D 리소스 생성
+	UINT waveWidth = m_pWaves->ColumnCount();
+	UINT waveHeight = m_pWaves->RowCount();
+	DXGI_FORMAT waveFormat = DXGI_FORMAT_R32G32B32_FLOAT; // WaveSimCS.hlsl의 RWTexture2D<float3> 와 일치
+
+	//m_pWaves->m_pPrevSolTexture = pResourceManager->CreateUAVTexture2D(pd3dDevice, L"water1", waveWidth, waveHeight, waveFormat);
+	//m_pWaves->m_pPrevSolTexture = pResourceManager->CreateUAVTexture2D(pd3dDevice, L"water1", waveWidth, waveHeight, waveFormat);
+	//m_pWaves->m_pCurrSolTexture = pResourceManager->CreateUAVTexture2D(pd3dDevice, L"water1", waveWidth, waveHeight, waveFormat);
+	//m_pWaves->m_pNextSolTexture = pResourceManager->CreateUAVTexture2D(pd3dDevice, L"water1", waveWidth, waveHeight, waveFormat);
+
+	//if (!m_pWaves->m_pPrevSolTexture || !m_pWaves->m_pCurrSolTexture || !m_pWaves->m_pNextSolTexture) {
+	//	OutputDebugStringA("Error: Failed to create UAV textures for Waves simulation in CScene::BuildWaves.\n");
+	//	return; // 또는 예외 처리
+	//}
+
+	// 3. 해당 리소스에 대한 UAV 및 SRV 디스크립터 생성
+	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+	uavDesc.Format = waveFormat;
+	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+	uavDesc.Texture2D.MipSlice = 0;
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = waveFormat;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+
+	bool bAllocationSuccess = true;
+	// PrevSol UAV
+	bAllocationSuccess &= m_pGameFramework->AllocateSrvDescriptors(1, m_pWaves->m_hPrevSolUavCPU, m_pWaves->m_hPrevSolUavGPU);
+	if (bAllocationSuccess) pd3dDevice->CreateUnorderedAccessView(m_pWaves->m_pPrevSolTexture.Get(), nullptr, &uavDesc, m_pWaves->m_hPrevSolUavCPU);
+	// CurrSol UAV
+	bAllocationSuccess &= m_pGameFramework->AllocateSrvDescriptors(1, m_pWaves->m_hCurrSolUavCPU, m_pWaves->m_hCurrSolUavGPU);
+	if (bAllocationSuccess) pd3dDevice->CreateUnorderedAccessView(m_pWaves->m_pCurrSolTexture.Get(), nullptr, &uavDesc, m_pWaves->m_hCurrSolUavCPU);
+	// NextSol UAV
+	bAllocationSuccess &= m_pGameFramework->AllocateSrvDescriptors(1, m_pWaves->m_hNextSolUavCPU, m_pWaves->m_hNextSolUavGPU);
+	if (bAllocationSuccess) pd3dDevice->CreateUnorderedAccessView(m_pWaves->m_pNextSolTexture.Get(), nullptr, &uavDesc, m_pWaves->m_hNextSolUavCPU);
+	// CurrSol SRV (렌더링 시 사용)
+	bAllocationSuccess &= m_pGameFramework->AllocateSrvDescriptors(1, m_pWaves->m_hCurrSolSrvCPU, m_pWaves->m_hCurrSolSrvGPU);
+	if (bAllocationSuccess) pd3dDevice->CreateShaderResourceView(m_pWaves->m_pCurrSolTexture.Get(), &srvDesc, m_pWaves->m_hCurrSolSrvCPU);
+
+	if (!bAllocationSuccess) {
+		OutputDebugStringA("Error: Failed to allocate descriptors for Waves simulation in CScene::BuildWaves.\n");
+		return; // 또는 예외 처리
+	}
+
+	// 4. 파도 렌더링 객체(CWaveObject) 생성
+	m_pWaveObject = std::make_unique<CWaveObject>(pd3dDevice, m_pWaves.get(), pResourceManager, pShaderManager);
+
+
+	// 5. 컴퓨트 셰이더용 상수 버퍼 생성
+	m_alignedWaveSimCBSize = (sizeof(WaveSimConstants) + 255) & ~255; // 256바이트 정렬
+
+	auto heapPropsUpload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+	auto resourceDescBuffer = CD3DX12_RESOURCE_DESC::Buffer(m_alignedWaveSimCBSize);
+	HRESULT hr = pd3dDevice->CreateCommittedResource(
+		&heapPropsUpload,
+		D3D12_HEAP_FLAG_NONE,
+		&resourceDescBuffer,
+		D3D12_RESOURCE_STATE_GENERIC_READ, // 업로드 힙은 항상 GENERIC_READ 상태
+		nullptr,
+		IID_PPV_ARGS(&m_pWaveSimConstantBuffer));
+	if (FAILED(hr)) { OutputDebugStringA("Failed to create wave sim constant buffer (upload heap).\n"); return; }
+
+	// CPU에서 쓰기 위해 매핑 (한 번만 해두고 계속 사용)
+	CD3DX12_RANGE readRange(0, 0); // 읽지 않을 것이므로 범위 0
+	hr = m_pWaveSimConstantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_pMappedWaveSimConstantBuffer));
+	if (FAILED(hr)) { OutputDebugStringA("Failed to map wave sim constant buffer.\n"); return; }
+
+	// (옵션 2: Default 힙에 생성하고 매 프레임 업로드 힙을 통해 데이터 복사 - 더 일반적)
+	// 이 경우, m_pWaveSimConstantBuffer는 Default 힙, 별도의 업로드 힙 리소스 필요.
+	// m_pGameFramework 또는 ResourceManager에 상수 버퍼 생성/업데이트 헬퍼 함수가 있다면 그것을 사용.
+
+	OutputDebugStringA("Waves simulation objects and resources built successfully.\n");
+}
+
+void CScene::UpdateWaves(float fTimeDelta, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (!m_pWaves || !m_pGameFramework) // Waves 로직 객체와 프레임워크 유효성 확인
+		return;
+
+	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
+	if (!pShaderManager) return;
+
+	// 1. CPU 기반 로직 업데이트 (예: 사용자 입력에 따른 파동 생성 설정)
+	m_pWaves->Update(fTimeDelta); // 현재는 비어있거나 간단한 로직
+
+	// --- 컴퓨트 셰이더 실행 ---
+	CShader* pComputeShaderBase = pShaderManager->GetShader("WaveSimCompute", pd3dCommandList);
+	if (!pComputeShaderBase) return;
+
+	CComputeShaderWrapper* pComputeShader = static_cast<CComputeShaderWrapper*>(pComputeShaderBase);
+	if (!pComputeShader || !pComputeShader->GetComputePSO()) {
+		pComputeShaderBase->Release();
+		return;
+	}
+
+	// 2. 파이프라인 상태 및 루트 시그니처 설정
+	pd3dCommandList->SetPipelineState(pComputeShader->GetComputePSO());
+	pd3dCommandList->SetComputeRootSignature(pComputeShader->GetRootSignature());
+
+	// 3. 상수 버퍼 업데이트 및 바인딩
+	if (m_pWaveSimConstantBuffer && m_pMappedWaveSimConstantBuffer) {
+		WaveSimConstants simConstants;
+		simConstants.gWaveConstant0 = m_pWaves->mK1; // Waves 클래스에 mK1, mK2, mK3 멤버가 public이거나 getter 필요
+		simConstants.gWaveConstant1 = m_pWaves->mK2;
+		simConstants.gWaveConstant2 = m_pWaves->mK3;
+		simConstants.gTimeStep = m_pWaves->mTimeStep;     // Waves 클래스에 mTimeStep 멤버 필요
+		simConstants.gSpatialStep = m_pWaves->mSpatialStep; // Waves 클래스에 mSpatialStep 멤버 필요
+
+		memcpy(m_pMappedWaveSimConstantBuffer, &simConstants, sizeof(WaveSimConstants)); // 업로드 힙에 직접 복사
+
+		// 루트 파라미터 0에 CBV 바인딩 (b0)
+		pd3dCommandList->SetComputeRootConstantBufferView(0, m_pWaveSimConstantBuffer->GetGPUVirtualAddress());
+	}
+	else {
+		OutputDebugStringA("Error: Wave simulation constant buffer not initialized properly.\n");
+		pComputeShaderBase->Release();
+		return;
+	}
+
+	// 4. UAV 디스크립터 테이블 바인딩
+	// 루트 파라미터 1에 UAV 3개(Prev, Curr, Next 순서)를 위한 디스크립터 테이블 바인딩.
+	// GetCurrentPrevSolUAV_GPU()가 이 연속된 테이블의 시작 핸들을 반환한다고 가정합니다.
+	// (CScene::BuildWaves에서 연속 할당 및 Waves::SwapSimBuffersAndDescriptors에서 핸들 값 스왑이 중요)
+	D3D12_GPU_DESCRIPTOR_HANDLE uavTableStartGpuHandle = m_pWaves->GetCurrentPrevSolUAV_GPU();
+	if (uavTableStartGpuHandle.ptr != 0) { // 간단히 Prev 핸들을 테이블 시작으로 가정
+		pd3dCommandList->SetComputeRootDescriptorTable(1, uavTableStartGpuHandle);
+	}
+	else {
+		OutputDebugStringA("Error: Invalid GPU descriptor handle for UAV table start.\n");
+	}
+
+
+	// 5. 컴퓨트 셰이더 디스패치
+	UINT numGroupsX = (UINT)ceilf((float)m_pWaves->ColumnCount() / 16.0f); // 16은 WaveSimCS.hlsl의 numthreads X
+	UINT numGroupsY = (UINT)ceilf((float)m_pWaves->RowCount() / 16.0f);   // 16은 WaveSimCS.hlsl의 numthreads Y
+	pd3dCommandList->Dispatch(numGroupsX, numGroupsY, 1);
+
+	// 6. UAV 배리어 (출력 버퍼인 NextSol 텍스처에 대해)
+	ID3D12Resource* pOutputResource = m_pWaves->GetCurrentNextSolTexture();
+	if (pOutputResource) {
+		auto barrier = CD3DX12_RESOURCE_BARRIER::UAV(pOutputResource);
+		pd3dCommandList->ResourceBarrier(1, &barrier);
+	}
+
+	// 7. 다음 프레임을 위한 버퍼 및 디스크립터 스왑
+	m_pWaves->SwapSimBuffersAndDescriptors();
+
+	pComputeShaderBase->Release(); // ShaderManager::GetShader에서 AddRef 했으므로
+}
+
+// 이 함수는 주로 파도 렌더링에 필요한 리소스 상태를 전이합니다.
+// 실제 렌더링은 CScene::Render() 함수 내에서 게임 오브젝트 목록을 순회하며 CWaveObject::Render()가 호출될 때 이루어집니다.
+void CScene::RenderWaves(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (!m_pWaves || !m_pWaveObject) // 파도 관련 객체 유효성 확인
+		return;
+
+	// --- 파도 렌더링 전 리소스 상태 전이 ---
+	// 현재 시뮬레이션 결과가 담긴 텍스처 (CurrSol - 이전 프레임의 NextSol이었고, UpdateWaves에서 Curr로 스왑됨)를
+	// UAV 상태에서 SRV로 읽을 수 있는 상태로 변경합니다.
+	ID3D12Resource* pWaveSolutionResourceToRender = m_pWaves->GetCurrentCurrSolTextureForRendering();
+	if (pWaveSolutionResourceToRender) {
+		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+			pWaveSolutionResourceToRender,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,      // 컴퓨트 셰이더에서 쓰기 완료된 상태
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE // VS/PS에서 읽기 위한 상태
+		);
+		pd3dCommandList->ResourceBarrier(1, &barrier);
+	}
+}
+
+
 void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	// ShaderManager 가져오기
@@ -93,6 +303,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); // 기존 코드 유지
 
 	BuildDefaultLightsAndMaterials();
+
+	BuildWaves(pd3dDevice, pd3dCommandList);
 
 	if (!pResourceManager) {
 		// 리소스 매니저가 없다면 로딩 불가! 오류 처리
@@ -716,6 +928,21 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		m_pTerrain->Render(pd3dCommandList, pCamera); // Terrain::Render 내부에서 상태 설정 및 렌더링
 	}
 
+	if (m_pWaves && m_pWaveObject) { // 파도 관련 객체가 유효할 때만
+		// UAV -> SRV 상태 전이
+		/*ID3D12Resource* pWaveSolutionResourceToRender = m_pWaves->GetCurrentCurrSolTextureForRendering();
+		if (pWaveSolutionResourceToRender) {
+			auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+				pWaveSolutionResourceToRender,
+				D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
+			);
+			pd3dCommandList->ResourceBarrier(1, &barrier);
+		}*/
+		
+		//RenderWaves(pd3dCommandList, pCamera);
+	}
+
 
 	// octree 렌더링
 	std::vector<tree_obj*> results;
@@ -756,42 +983,13 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		}
 	}
 
-	//if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
+	if (m_pWaveObject) { 
+		// m_pWaveObject->Animate(m_fElapsedTime);
+		m_pWaveObject->Render(pd3dCommandList, pCamera);
+	}
+
 
 	if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
-
-	//// 5.3. 일반 게임 오브젝트 렌더링
-	//for (auto& obj : m_vGameObjects) {
-	//	if (obj /*&& obj->IsVisible()*/) {
-	//		if (obj->FSM_manager) obj->FSMUpdate();
-	//		if (obj->m_pSkinnedAnimationController) obj->Animate(m_fElapsedTime);
-	//		if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
-	//	}	
-	//	// 5.5. OBB 렌더링 (선택적)
-	//	//bool bRenderOBBs = true; // OBB 렌더링 여부 플래그 (예시)
-	//	//if (bRenderOBBs) {
-	//	//	CShader* pOBBShader = pShaderManager->GetShader("OBB", pd3dCommandList);
-	//	//	if (pOBBShader) {
-	//	//		// OBB 렌더링 시작 전에 상태 설정
-	//	//		SetGraphicsState(pd3dCommandList, pOBBShader); // CScene의 멤버 함수 호출
-	//	//
-	//	//		for (auto& obj : m_vGameObjects) {
-	//	//			if (obj /*&& obj->ShouldRenderOBB()*/) {
-	//	//				// RenderOBB 내부에서는 OBB용 CBV만 바인딩
-	//	//				obj->RenderOBB(pd3dCommandList, pCamera);
-	//	//				pOBBShader->Release();
-	//	//			}
-	//	//
-	//	//			// 플레이어 OBB 렌더링 등
-	//	//			if (m_pPlayer) {
-	//	//				m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
-	//	//			}
-	//	//
-	//	//			pOBBShader->Release();
-	//	//		}
-	//	//	}
-	//	//}
-	//}
 
 	// 5.5. 플레이어 렌더링
 	if (m_pPlayer) {
@@ -809,6 +1007,20 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		if (p.second->m_pSkinnedAnimationController) p.second->Animate(m_fElapsedTime);
 		if (p.second->isRender) p.second->Render(pd3dCommandList, pCamera);
 	}
+
+
+	//if (m_pWaves && m_pWaveObject) { // 파도 관련 객체가 유효할 때만
+	//	ID3D12Resource* pWaveSolutionResourceRendered = m_pWaves->GetCurrentCurrSolTextureForRendering();
+	//	if (pWaveSolutionResourceRendered) {
+	//		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+	//			pWaveSolutionResourceRendered,
+	//			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, // 현재 상태
+	//			D3D12_RESOURCE_STATE_UNORDERED_ACCESS                                                     // 다음 프레임 CS를 위한 상태
+	//		);
+	//		pd3dCommandList->ResourceBarrier(1, &barrier);
+	//	}
+	//}
+
 }
 
 void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader)

@@ -4,6 +4,8 @@
 #include <string>
 #include <map>
 #include <memory> 
+#include <wrl.h>
+
 
 // 필요한 클래스 전방 선언 (실제 헤더 include 필요할 수 있음)
 class CTexture;
@@ -45,7 +47,7 @@ public:
         D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_GENERIC_READ
     );
     // 동적 버퍼 업데이트 함수 (필요시)
-    void UpdateDynamicBuffer(ID3D12Resource* pBuffer, const void* pData, UINT uiSize);
+    void UpdateDynamicBuffer(ID3D12Resource* pBuffer, const void* pData, UINT uiSize, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Device* pd3dDevice);
 
 
 private:
@@ -54,3 +56,4 @@ private:
     // 텍스처 캐시 (파일 경로 -> CTexture 객체)
     std::map<std::wstring, std::shared_ptr<CTexture>> m_TextureCache;
 };
+
