@@ -255,7 +255,7 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 	bool bCanRenderCurrentObjectOBB = m_pOBBVertexBuffer &&
 		m_pOBBIndexBuffer &&
 		m_pd3dcbOBBTransform &&
-		m_pcbMappedOBBTransform && m_pMesh;
+		m_pcbMappedOBBTransform;
 
 	if (bCanRenderCurrentObjectOBB) {
 
@@ -294,61 +294,61 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
     }
 }
 
-	void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	// 메쉬 유효성 검사 등 추가 가능
+	if (m_pMesh)
 	{
-		// 메쉬 유효성 검사 등 추가 가능
-		if (m_pMesh)
-		{
-			// OBB 모서리 데이터
-			XMFLOAT3 corners[8];
-			m_localOBB.GetCorners(corners); // m_worldOBB가 유효한지 먼저 확인 필요
+		// OBB 모서리 데이터
+		XMFLOAT3 corners[8];
+		m_localOBB.GetCorners(corners); // m_worldOBB가 유효한지 먼저 확인 필요
 
-			// 2. OBB 정점 버퍼 생성 (+ HRESULT 확인)
-			ID3D12Resource* pVertexUploadBuffer = nullptr; // 임시 업로드 버퍼 포인터
-			m_pOBBVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, corners, sizeof(XMFLOAT3) * 8, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &pVertexUploadBuffer);
-			if (!m_pOBBVertexBuffer) {
-				OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Vertex Buffer! !!!!!!!!\n");
-				// 실패 시 이후 리소스 생성 중단 또는 다른 처리
-			}
-			else {
-				m_OBBVertexBufferView.BufferLocation = m_pOBBVertexBuffer->GetGPUVirtualAddress();
-				m_OBBVertexBufferView.StrideInBytes = sizeof(XMFLOAT3);
-				m_OBBVertexBufferView.SizeInBytes = sizeof(XMFLOAT3) * 8;
-			}
+		// 2. OBB 정점 버퍼 생성 (+ HRESULT 확인)
+		ID3D12Resource* pVertexUploadBuffer = nullptr; // 임시 업로드 버퍼 포인터
+		m_pOBBVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, corners, sizeof(XMFLOAT3) * 8, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &pVertexUploadBuffer);
+		if (!m_pOBBVertexBuffer) {
+			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Vertex Buffer! !!!!!!!!\n");
+			// 실패 시 이후 리소스 생성 중단 또는 다른 처리
+		}
+		else {
+			m_OBBVertexBufferView.BufferLocation = m_pOBBVertexBuffer->GetGPUVirtualAddress();
+			m_OBBVertexBufferView.StrideInBytes = sizeof(XMFLOAT3);
+			m_OBBVertexBufferView.SizeInBytes = sizeof(XMFLOAT3) * 8;
+		}
 
-			// 3. OBB 인덱스 데이터 정의 (변경 없음)
-			UINT indices[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
-			UINT indices_test[] = { 0, 1, 2, 0, 2, 3 };
+		// 3. OBB 인덱스 데이터 정의 (변경 없음)
+		UINT indices[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
+		UINT indices_test[] = { 0, 1, 2, 0, 2, 3 };
 
-			// 4. OBB 인덱스 버퍼 생성 (+ HRESULT 확인)
-			ID3D12Resource* pIndexUploadBuffer = nullptr; // 임시 업로드 버퍼 포인터
-			m_pOBBIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, indices, sizeof(UINT) * 24, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &pIndexUploadBuffer);
-			if (!m_pOBBIndexBuffer) {
-				OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Index Buffer! !!!!!!!!\n");
-			}
-			else {
-				m_OBBIndexBufferView.BufferLocation = m_pOBBIndexBuffer->GetGPUVirtualAddress();
-				m_OBBIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
-				m_OBBIndexBufferView.SizeInBytes = sizeof(UINT) * 24;
-			}
+		// 4. OBB 인덱스 버퍼 생성 (+ HRESULT 확인)
+		ID3D12Resource* pIndexUploadBuffer = nullptr; // 임시 업로드 버퍼 포인터
+		m_pOBBIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, indices, sizeof(UINT) * 24, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &pIndexUploadBuffer);
+		if (!m_pOBBIndexBuffer) {
+			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Index Buffer! !!!!!!!!\n");
+		}
+		else {
+			m_OBBIndexBufferView.BufferLocation = m_pOBBIndexBuffer->GetGPUVirtualAddress();
+			m_OBBIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
+			m_OBBIndexBufferView.SizeInBytes = sizeof(UINT) * 24;
+		}
 
-			// 5. OBB 변환 행렬용 상수 버퍼 생성 (+ HRESULT 확인)
-			UINT ncbElementBytes = (((sizeof(XMFLOAT4X4)) + 255) & ~255);
-			m_pd3dcbOBBTransform = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-			if (!m_pd3dcbOBBTransform) {
-				OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Transform CBV! !!!!!!!!\n");
-				m_pcbMappedOBBTransform = nullptr; // 맵핑 포인터도 null 처리
-			}
-			else {
-				// 맵핑된 포인터 저장 (+ HRESULT 확인)
-				HRESULT hr = m_pd3dcbOBBTransform->Map(0, NULL, (void**)&m_pcbMappedOBBTransform);
-				if (FAILED(hr) || !m_pcbMappedOBBTransform) {
-					OutputDebugString(L"!!!!!!!! ERROR: Failed to map OBB Transform CBV! !!!!!!!!\n");
-					m_pcbMappedOBBTransform = nullptr; // 실패 시 null 처리
-					// 필요시 m_pd3dcbOBBTransform Release 고려
-				}
+		// 5. OBB 변환 행렬용 상수 버퍼 생성 (+ HRESULT 확인)
+		UINT ncbElementBytes = (((sizeof(XMFLOAT4X4)) + 255) & ~255);
+		m_pd3dcbOBBTransform = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+		if (!m_pd3dcbOBBTransform) {
+			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Transform CBV! !!!!!!!!\n");
+			m_pcbMappedOBBTransform = nullptr; // 맵핑 포인터도 null 처리
+		}
+		else {
+			// 맵핑된 포인터 저장 (+ HRESULT 확인)
+			HRESULT hr = m_pd3dcbOBBTransform->Map(0, NULL, (void**)&m_pcbMappedOBBTransform);
+			if (FAILED(hr) || !m_pcbMappedOBBTransform) {
+				OutputDebugString(L"!!!!!!!! ERROR: Failed to map OBB Transform CBV! !!!!!!!!\n");
+				m_pcbMappedOBBTransform = nullptr; // 실패 시 null 처리
+				// 필요시 m_pd3dcbOBBTransform Release 고려
 			}
 		}
+	}
 
 	// 자식/형제 객체 재귀 호출 (기존 코드 유지)
 	if (m_pSibling) m_pSibling->InitializeOBBResources(pd3dDevice, pd3dCommandList);
@@ -535,10 +535,10 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 						}
 						else {
 							// 로그 출력: 컨트롤러 포인터가 null 인지, 아니면 내부 버퍼가 null 인지 확인
-							OutputDebugStringW(L"!!! Render: Skinned - Failed to get valid Bone Transform buffer (b8) via m_pSharedAnimController!\n");
+							//OutputDebugStringW(L"!!! Render: Skinned - Failed to get valid Bone Transform buffer (b8) via m_pSharedAnimController!\n");
 							wchar_t dbgMsg[128];
-							swprintf_s(dbgMsg, L"    m_pSharedAnimController = %p\n", (void*)m_pSharedAnimController); // 포인터 값 로깅
-							OutputDebugStringW(dbgMsg);
+							//swprintf_s(dbgMsg, L"    m_pSharedAnimController = %p\n", (void*)m_pSharedAnimController); // 포인터 값 로깅
+							//OutputDebugStringW(dbgMsg);
 							// 필요시 m_pSharedAnimController 내부 포인터들도 확인하는 로그 추가
 						}
 					}
