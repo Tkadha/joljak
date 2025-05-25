@@ -32,7 +32,7 @@ CPlayer::CPlayer(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework
 	m_pPlayerUpdatedContext = NULL;
 	m_pCameraUpdatedContext = NULL;
 	//SetOBB(m_xmf3Position, playerSize, playerRotation);
-	SetOBB();
+	SetOBB(1.0f,1.0f,1.0f,XMFLOAT3(0.0f,0.0f,0.0f));
 }
 
 CPlayer::~CPlayer()
@@ -56,8 +56,16 @@ void CPlayer::ReleaseShaderVariables()
 	if (m_pCamera) m_pCamera->ReleaseShaderVariables();
 }
 
+void CPlayer::SetCollisionTargets(const std::vector<CGameObject*>& targets)
+{
+
+	m_pCollisionTargets = &targets;
+}
+
 void CPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
 {
+	
+
 	if (dwDirection)
 	{
 		XMFLOAT3 xmf3Shift = XMFLOAT3(0, 0, 0);
@@ -71,27 +79,52 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
 			Playerstamina -= 2;
 		}
 		Move(xmf3Shift, bUpdateVelocity);
-		if (checkmove == true) {
-			checkmove = false;
-		}
+		
 		
 	}
 }
 
 void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 {
-	if (checkmove == false) {
-		if (bUpdateVelocity)
+	if (Vector3::Length(XMFLOAT3(xmf3Shift)) == 0.0f) return;
+
+	// 이동 전 위치 저장
+	XMFLOAT3 oldPosition = m_xmf3Position;
+
+	// 위치 이동
+	m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
+	m_pCamera->Move(xmf3Shift);
+	UpdateOBB(m_xmf3Position, playerSize, playerRotation);
+
+	// 충돌 체크 (등록된 대상이 있다면)
+	bool bCollided = false;
+	if (m_pCollisionTargets)
+	{
+		for (auto& obj : *m_pCollisionTargets)
 		{
-			m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
-		}
-		else
-		{
-			m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
-			m_pCamera->Move(xmf3Shift);
+			if (!obj || obj == this) continue;
+			if (CheckCollisionOBB(obj))
+			{
+				bCollided = true;
+				break;
+			}
 		}
 	}
-	UpdateOBB(m_xmf3Position, playerSize, playerRotation);
+
+	// 충돌 시 위치 롤백
+	if (bCollided)
+	{
+		m_xmf3Position = oldPosition;
+		m_pCamera->Move(Vector3::ScalarProduct(XMFLOAT3(xmf3Shift), -1.0f, false));
+		UpdateOBB(m_xmf3Position, playerSize, playerRotation);
+		return;
+	}
+
+	// 속도 업데이트
+	if (bUpdateVelocity)
+	{
+		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
+	}
 }
 
 void CPlayer::Rotate(float x, float y, float z)
@@ -284,7 +317,16 @@ void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 
 bool CPlayer::CheckCollisionOBB(CGameObject* other)
 {
-	return m_worldOBB.Intersects(other->m_worldOBB);
+	bool result = m_worldOBB.Intersects(other->m_worldOBB);
+
+	if (result)
+	{
+		OutputDebugStringA("🔴 충돌 발생: Player vs ");
+		  // 오브젝트 이름 표시
+		OutputDebugStringA("\n");
+	}
+
+	return result;
 }
 
 //void CPlayer::SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation)

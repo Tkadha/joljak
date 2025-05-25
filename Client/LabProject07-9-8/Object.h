@@ -99,9 +99,9 @@ public:
 	ID3D12Resource* m_pOBBIndexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW m_OBBVertexBufferView;
 	D3D12_INDEX_BUFFER_VIEW m_OBBIndexBufferView;
-	// OBB 변환 행렬용 상수 버퍼
+	// OBB 蹂????�젹???곸닔 踰꾪??
 	ID3D12Resource* m_pd3dcbOBBTransform = nullptr;
-	XMFLOAT4X4* m_pcbMappedOBBTransform = nullptr; // 맵핑된 포인터
+	XMFLOAT4X4* m_pcbMappedOBBTransform = nullptr; // 留듯�???????
 
 	CMaterial* m_OBBMaterial = NULL;
 	//COBBShader m_OBBShader;
@@ -120,12 +120,12 @@ public:
 
 	CGameFramework* m_pGameFramework;
 
-	// 바뀐 구조에서 계층 구조 처리를 위해 필요
+	// 諛붾???�ъ�?�?�� ?�꾩�??�ъ�?泥섎?�瑜??꾪빐 ?꾩슂
 	CAnimationController* m_pSharedAnimController = nullptr;
 	void PropagateAnimController(CAnimationController* controller); 
 
 
-	CScene* m_pScene = nullptr; // 자신을 소유한 Scene 포인터
+	CScene* m_pScene = nullptr; // ?�?��????????Scene ?????
 	GameObjectType m_objectType = GameObjectType::Unknown;
 
 	virtual void FSMUpdate() {}
@@ -193,23 +193,26 @@ public:
 
 	bool CheckCollisionOBB(CGameObject* other);
 	void SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
-	void SetOBB();
+	void SetOBB(float scalex, float scaley, float scalez, const XMFLOAT3& centerOffset);
 	void SetOBB(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CShader* shader);
 	void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList);
 	void InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void SetColor(const XMFLOAT4& color);
 
-	// --- 재질 접근자 추가 ---
+	virtual bool ShouldRenderOBB() const { return isRender; } // 기본?�으�??�더�??�?�이�?OBB??그림 (?�요???�라 ?�정)
+
+
+	// --- ?�질 ?�근??추�? ---
 	CMaterial* GetMaterial(int nIndex = 0) const {
-		// 인덱스 범위 및 포인터 유효성 검사
+		// ?몃뜳??踰붿??�???????좏슚??寃??
 		if (nIndex >= 0 && nIndex < m_nMaterials && m_ppMaterials) {
 			return m_ppMaterials[nIndex];
 		}
-		return nullptr; // 유효하지 않으면 nullptr 반환
+		return nullptr; // ?좏슚??? ??�쑝�?nullptr 諛섑??
 	}
 	int GetMaterialCount() const { return m_nMaterials; }
 
-	// --- OBB 렌더링 함수 선언 ---
+	// --- OBB ???���???�닔 ?좎뼵 ---
 	virtual void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 	void SetTerraindata(LPVOID pContext) {terraindata = pContext;}
@@ -369,22 +372,22 @@ class CItemObject : virtual public CGameObject
 {
 public:
 	XMFLOAT3 m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	XMFLOAT3 m_xmf3Gravity = XMFLOAT3(0.0f, -980.0f, 0.0f); // 중력 가속도 (조정 필요)
+	XMFLOAT3 m_xmf3Gravity = XMFLOAT3(0.0f, -980.0f, 0.0f); // 以묐??媛??�룄 (議곗???꾩슂)
 	bool m_bOnGround = false;
-	float m_fLifeTime = 15.0f; // 바닥에 떨어진 후 사라지기까지 시간 (초)
+	float m_fLifeTime = 15.0f; // 諛붾?????�뼱�??????�吏?湲곌?�吏? ??�컙 (??
 	float m_fElapsedAfterLanding = 0.0f;
 
-	CHeightMapTerrain* m_pTerrainRef = nullptr; // 지형 참조 (충돌 감지용)
+	CHeightMapTerrain* m_pTerrainRef = nullptr; // 吏??李몄??(?�⑸�?媛먯???
 
 	CItemObject() { m_objectType = GameObjectType::Item; };
 	virtual ~CItemObject() {};
 
-	virtual void Animate(float fTimeElapsed) override; // 물리 및 수명 처리
+	virtual void Animate(float fTimeElapsed) override; // ?�쇰??�???�챸 泥섎??
 	void SetInitialVelocity(const XMFLOAT3& velocity) { m_xmf3Velocity = velocity; }
 };
 
 
-// ------------------ 나무 ------------------
+// ------------------ ??��?------------------
 class CTreeObject : virtual public CGameObject
 {
 	int hp{ 30 };
@@ -399,30 +402,30 @@ public:
 	int getHp() { return hp; }
 	void setHp(int n) { hp = n; }
 
-// ------- 쓰러지는 애니메이션 -------
+// ------- ?곕윭吏???좊땲硫붿???-------
 
-	// 쓰러지는 애니메이션 시작 함수
-	void StartFalling(const XMFLOAT3& hitDirection); // 플레이어의 공격 방향 등을 받을 수 있음
+	// ?곕윭吏???좊땲硫붿?????�옉 ??�닔
+	void StartFalling(const XMFLOAT3& hitDirection); // ???��??�뼱???�듦�?諛⑺�??깆쓣 諛쏆??????�쓬
 
-	// 매 프레임 애니메이션 업데이트
+	// �??꾨젅???좊땲硫붿?????�뜲??�듃
 	virtual void Animate(float fTimeElapsed) override;
 
 	bool IsFalling() const { return	m_bIsFalling; }
 	bool HasFallen() const { return m_bHasFallen; }
 
-	bool m_bIsFalling = false;       // 현재 쓰러지는 애니메이션 중인가?
-	bool m_bHasFallen = false;       // 이미 쓰러진 상태인가?
-	float m_fFallingDuration = 2.5f;  // 쓰러지는 데 걸리는 시간 (초)
-	float m_fFallingTimer = 0.0f;     // 쓰러지기 시작한 후 지난 시간
-	XMFLOAT3 m_xmf3FallingAxis;       // 회전 축 (쓰러지는 방향 결정)
-	float m_fCurrentFallAngle = 0.0f; // 현재까지 회전한 각도
-	float m_fTargetFallAngle = XM_PIDIV2; // 목표 회전 각도 (90도)
+	bool m_bIsFalling = false;       // ?꾩옱 ?곕윭吏???좊땲硫붿???以묒?�媛??
+	bool m_bHasFallen = false;       // ??�? ?곕윭�??곹깭?�??
+	float m_fFallingDuration = 2.5f;  // ?곕윭吏????嫄몃?????�컙 (??
+	float m_fFallingTimer = 0.0f;     // ?곕윭吏�???�옉????吏????�컙
+	XMFLOAT3 m_xmf3FallingAxis;       // ???�� ??(?곕윭吏??諛⑺�?寃곗??
+	float m_fCurrentFallAngle = 0.0f; // ?꾩옱源뚯? ???��??媛곷�?
+	float m_fTargetFallAngle = XM_PIDIV2; // 紐⑺�????�� 媛곷�?(90??
 
-	// 쓰러지기 시작할 때의 초기 m_xmf4x4ToParent 값을 저장 (상대 변환 기준)
+	// ?곕윭吏�???�옉?????�� ?�덇�?m_xmf4x4ToParent 媛�???????(?�? 蹂??湲곗?)
 	XMFLOAT4X4 m_xmf4x4InitialToParent;
 
-	// 회전의 중심점 (나무 밑동 부분, 로컬 좌표계 기준)
-	// 모델의 원점이 이미 밑동이라면 (0,0,0) 사용 가능
+	// ???��??以묒???(??��?諛묐�??�?? 濡쒖�??�뚰몴�?湲곗?)
+	// 紐⑤????�?��????�? 諛묐�??�?�硫?(0,0,0) ????媛??
 	XMFLOAT3 m_xmf3RotationPivot = XMFLOAT3(0.0f, 0.0f, 0.0f);
 };
 
@@ -448,7 +451,7 @@ public:
 	virtual ~CPineObject() {}
 };
 
-// 나뭇가지(드롭 아이템)
+// ??�춪媛吏(??�∼ ?꾩씠??
 class CBranchObject : public CItemObject {
 public:
 	CBranchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain);
@@ -456,7 +459,7 @@ public:
 };
 
 
-// ------------------ 돌 ------------------
+// ------------------ ??------------------
 class CRockObject : virtual public CGameObject
 {
 	int hp{ 30 };
@@ -499,7 +502,7 @@ public:
 	virtual ~CCliffFObject() {}
 };
 
-// 돌 파편(드롭 아이템)
+// ????�렪(??�∼ ?꾩씠??
 class CRockDropObject : public CItemObject {
 public:
 	CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain);
@@ -508,7 +511,7 @@ public:
 };
 
 
-// ------------------ 꽃, 풀 ------------------
+// ------------------ ?? ?? ------------------
 class VegetationObject : virtual public CGameObject
 {
 public:

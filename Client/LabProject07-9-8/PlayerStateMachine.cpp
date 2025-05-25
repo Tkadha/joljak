@@ -479,11 +479,13 @@ public:
         float currentPosition = stateMachine->GetTrackPosition(m_nAnimTrack);
         float animLength = stateMachine->GetAnimationLength(m_nAnimTrack);
 
-        if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) { 
-            m_bAttackFinished = true;
-
+        if (!m_bAttackFinished && currentPosition >= animLength * 0.66f) {
             CGameObject* hitObject = player->FindObjectHitByAttack();
             CollisionUpdate(player, hitObject);
+        }
+
+        if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) { 
+            m_bAttackFinished = true;
         }
 
         // 애니메이션이 끝나면 Idle 상태로 전환
@@ -804,6 +806,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
                 else {
                     player->m_pGameFramework->AddItem("iron_material", 1);
                 }
+                rock->isRender = false;
                 //rock->EraseRock();
                 //player->m_pGameFramework->AddItem("rock", 5); // 예시: 쓰러뜨리면 많이 획득
             }

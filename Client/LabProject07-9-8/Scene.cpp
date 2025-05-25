@@ -34,13 +34,13 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[0].m_xmf3Position = XMFLOAT3(230.0f, 330.0f, 480.0f);
 	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
 
-	// 2. 주요 방향광 (태양) 설정
+	
 	m_pLights[2].m_bEnable = true;
 	m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f); // 방향광 자체의 약한 주변광
-	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.75f, 0.7f, 1.0f); // 약간 따뜻한 느낌의 태양광
-	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f); // 반사광
-	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.5f, -0.707f, 0.5f); // 남동쪽 위에서 비추는 느낌 (벡터 정규화 필요할 수 있음)
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f); 
+	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.75f, 0.7f, 1.0f); 
+	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f); 
+	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.5f, -0.707f, 0.5f); 
 
 
 	m_pLights[1].m_bEnable = false;
@@ -85,16 +85,16 @@ void CScene::BuildDefaultLightsAndMaterials()
 
 void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	// ShaderManager 가져오기
+	// ShaderManager ��������
 	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed!");
 	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
 	assert(pShaderManager != nullptr && "ShaderManager is not available!");
-	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); // 기존 코드 유지
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); // ���� �ڵ� ����
 
 	BuildDefaultLightsAndMaterials();
 
 	if (!pResourceManager) {
-		// 리소스 매니저가 없다면 로딩 불가! 오류 처리
+		// ���ҽ� �Ŵ����� ���ٸ� �ε� �Ұ�! ���� ó��
 		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
 		return;
 	}
@@ -133,16 +133,15 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 }
 void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// ShaderManager 가져오기
+	
 	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed!");
 	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
 	assert(pShaderManager != nullptr && "ShaderManager is not available!");
-	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); // 기존 코드 유지
-
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); 
 	BuildDefaultLightsAndMaterials();
 
 	if (!pResourceManager) {
-		// 리소스 매니저가 없다면 로딩 불가! 오류 처리
+		
 		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
 		return;
 	}
@@ -156,7 +155,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	m_pTerrain->m_xmf4x4World = Matrix4x4::Identity();
 	m_pTerrain->m_xmf4x4ToParent = Matrix4x4::Identity();
 
-	// 랜덤 엔진
+	
 	std::random_device rd;
 	std::mt19937 gen(rd());
 
@@ -542,10 +541,19 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	}
 
 
+	//m_pPlayer->SetCollisionTargets(m_vGameObjects);
 
 	for (auto obj : m_vGameObjects) {
-		obj->SetOBB();
-		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+		if (obj->m_objectType == GameObjectType::Tree) {
+			obj->SetOBB(0.1f, 1.0f, 0.1f,XMFLOAT3(0.0f,0.0f,0.0f));
+		}
+		else if (obj->m_objectType == GameObjectType::Pig) {
+			obj->SetOBB(1.0f, 0.8f, 1.0f, XMFLOAT3(0.0f, 1.0f, -1.0f));
+		}
+		else {
+			obj->SetOBB(1.0f,1.0f,1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
+		}
+		
 		if (obj->m_pSkinnedAnimationController) obj->PropagateAnimController(obj->m_pSkinnedAnimationController);
 
 		switch (obj->m_objectType)
@@ -579,10 +587,13 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 			break;
 		case GameObjectType::Pig:
 			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_localOBB.Center.y += 30.0f;
 			break;
-		default:	// 잘못된 타입이다.
+		default:	
 			break;
 		}
+
+		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	}
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -604,21 +615,21 @@ void CScene::ReleaseObjects()
 
 void CScene::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256�� ���
+	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); 
 	m_pd3dcbLights = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbLights->Map(0, NULL, (void**)&m_pcbMappedLights);
 
 
-	// 인스턴싱
+	
 	UINT m_nObjects = 100;
-	//인스턴스 정보를 저장할 정점 버퍼를 업로드 힙 유형으로 생성한다. 
+	
 	m_pd3dcbGameObjects = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL,
 		sizeof(VS_VB_INSTANCE) * m_nObjects, D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-	//정점 버퍼(업로드 힙)에 대한 포인터를 저장한다. 
+	
 	m_pd3dcbGameObjects->Map(0, NULL, (void**)&m_pcbMappedGameObjects);
-	//정점 버퍼에 대한 뷰를 생성한다. 
+	
 	m_d3dInstancingBufferView.BufferLocation =
 		m_pd3dcbGameObjects->GetGPUVirtualAddress();
 	m_d3dInstancingBufferView.StrideInBytes = sizeof(VS_VB_INSTANCE);
@@ -631,7 +642,7 @@ void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 		assert(m_nLights >= 0 && m_nLights <= MAX_LIGHTS && "Invalid number of lights!");
 		if (m_nLights < 0 || m_nLights > MAX_LIGHTS) {
 			OutputDebugStringA("!!!!!!!! ERROR: Invalid m_nLights value detected! Clamping to 0. !!!!!!!!\n");
-			m_nLights = 0; //임시
+			m_nLights = 0; 
 		}
 		::memcpy(m_pcbMappedLights->m_pLights, m_pLights, sizeof(LIGHT) * m_nLights);
 		::memcpy(&m_pcbMappedLights->m_xmf4GlobalAmbient, &m_xmf4GlobalAmbient, sizeof(XMFLOAT4));
@@ -687,6 +698,8 @@ void CScene::AnimateObjects(float fTimeElapsed)
 {
 	m_fElapsedTime = fTimeElapsed;
 
+	if (m_pPlayer) m_pPlayer->checkmove = false;
+
 	for (auto& obj : m_listBranchObjects) {
 		if (CollisionCheck(m_pPlayer, obj)) {
 			auto branch = dynamic_cast<CBranchObject*>(obj);
@@ -716,7 +729,18 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		}
 	}
 
-
+	/*
+	if (m_pPlayer) {
+		for (auto obj : m_vGameObjects) {
+			if (obj->m_objectType != GameObjectType::Player&& obj->isRender) {
+				if (m_pPlayer->CheckCollisionOBB(obj)) {
+					m_pPlayer->checkmove = true; // �浹 �߻� �� �̵� ����
+					break;
+				}
+			}
+		}
+	}
+	*/
 	if (m_pLights)
 	{
 		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
@@ -727,47 +751,47 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	// ShaderManager 가져오기 (매번 호출하는 대신 멤버 변수로 캐싱해도 좋음)
+	
 	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed in CScene!");
 	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
 	assert(pShaderManager != nullptr && "ShaderManager is not available!");
 
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
-	// 카메라 상수 버퍼(b1) 업데이트
+	
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 
-	// 3. 전역 조명 상수 버퍼 업데이트 
+	
 	UpdateShaderVariables(pd3dCommandList);
 
-	// 디스크립터 힙 설정 
-	ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() }; // CBV/SRV/UAV 힙 가져오기
-	if (ppHeaps[0]) { // 힙 포인터 유효성 검사
+	
+	ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() }; 
+	if (ppHeaps[0]) {
 		pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 	}
 	else {
 		assert(!"CBV/SRV Descriptor Heap is NULL in CScene::Render!");
-		return; // 힙 없으면 렌더링 불가
+		return; 
 	}
 
-	// --- 4. 렌더링 상태 추적 변수 ---
+	
 	m_pCurrentRootSignature = nullptr;
 	m_pCurrentPSO = nullptr;
 	m_pCurrentShader = nullptr;
 
 
 
-	// 5.1. 스카이박스 렌더링
+	
 	if (m_pSkyBox) {
-		m_pSkyBox->Render(pd3dCommandList, pCamera); // SkyBox::Render 내부에서 상태 설정 및 렌더링
+		m_pSkyBox->Render(pd3dCommandList, pCamera); 
 	}
 
-	// 5.2. 지형 렌더링
+	
 	if (m_pTerrain) {
-		m_pTerrain->Render(pd3dCommandList, pCamera); // Terrain::Render 내부에서 상태 설정 및 렌더링
+		m_pTerrain->Render(pd3dCommandList, pCamera); 
 	}
 
 
-	// octree 렌더링
+	// octree ������
 	//std::vector<tree_obj*> results;
 	//tree_obj player_obj{ -1, m_pPlayer->GetPosition() };
 	//octree.query(player_obj, XMFLOAT3{ 2500,1000,2500 }, results);
@@ -783,7 +807,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	//	}
 	//}
 
-	//server 기준
+	//server ����
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
 		for (auto& obj : m_vGameObjects) {
@@ -792,25 +816,17 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		}
 	}
 
-	//for (auto it = m_listBranchObjects.begin(); it != m_listBranchObjects.end(); ) {
-	//	(*it)->Animate(m_fElapsedTime);
-	//	if (!(*it)->isRender) { // isRender가 false이면 (수명이 다하면) 리스트에서 제거
-	//		it = m_listBranchObjects.erase(it);
-	//	}
-	//	else {
-	//		++it;
-	//	}
-	//}
+	
 
 	for (auto branch : m_listBranchObjects) {
-		if (branch->isRender) { // 렌더링 플래그 확인
+		if (branch->isRender) { 
 			branch->Animate(m_fElapsedTime);
 			branch->Render(pd3dCommandList, pCamera);
 		}
 	}
 
 	for (auto branch : m_listRockObjects) {
-		if (branch->isRender) { // 렌더링 플래그 확인
+		if (branch->isRender) { 
 			branch->Animate(m_fElapsedTime);
 			branch->Render(pd3dCommandList, pCamera);
 		}
@@ -820,47 +836,14 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 	if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
 
-	//// 5.3. 일반 게임 오브젝트 렌더링
-	//for (auto& obj : m_vGameObjects) {
-	//	if (obj /*&& obj->IsVisible()*/) {
-	//		if (obj->FSM_manager) obj->FSMUpdate();
-	//		if (obj->m_pSkinnedAnimationController) obj->Animate(m_fElapsedTime);
-	//		if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
-	//	}	
-	//	// 5.5. OBB 렌더링 (선택적)
-	//	//bool bRenderOBBs = true; // OBB 렌더링 여부 플래그 (예시)
-	//	//if (bRenderOBBs) {
-	//	//	CShader* pOBBShader = pShaderManager->GetShader("OBB", pd3dCommandList);
-	//	//	if (pOBBShader) {
-	//	//		// OBB 렌더링 시작 전에 상태 설정
-	//	//		SetGraphicsState(pd3dCommandList, pOBBShader); // CScene의 멤버 함수 호출
-	//	//
-	//	//		for (auto& obj : m_vGameObjects) {
-	//	//			if (obj /*&& obj->ShouldRenderOBB()*/) {
-	//	//				// RenderOBB 내부에서는 OBB용 CBV만 바인딩
-	//	//				obj->RenderOBB(pd3dCommandList, pCamera);
-	//	//				pOBBShader->Release();
-	//	//			}
-	//	//
-	//	//			// 플레이어 OBB 렌더링 등
-	//	//			if (m_pPlayer) {
-	//	//				m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
-	//	//			}
-	//	//
-	//	//			pOBBShader->Release();
-	//	//		}
-	//	//	}
-	//	//}
-	//}
-
-	// 5.5. 플레이어 렌더링
+	
 	if (m_pPlayer) {
 		if (m_pPlayer->invincibility) {
 			auto endtime = std::chrono::system_clock::now();
 			auto exectime = endtime - m_pPlayer->starttime;
 			auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
-			if (exec_ms > 1000.f) { // 무적시간이 1초가 경과되면
-				m_pPlayer->SetInvincibility();	// 변경
+			if (exec_ms > 1000.f) { 
+				m_pPlayer->SetInvincibility();	
 			}
 		}
 		m_pPlayer->Render(pd3dCommandList, pCamera);
@@ -869,33 +852,90 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		if (p.second->m_pSkinnedAnimationController) p.second->Animate(m_fElapsedTime);
 		if (p.second->isRender) p.second->Render(pd3dCommandList, pCamera);
 	}
+
+
+
+	
+    bool bRenderOBBs = true; 
+    if (bRenderOBBs) {
+        CShader* pOBBShader = pShaderManager->GetShader("OBB",pd3dCommandList);
+        if (pOBBShader) {
+            
+            SetGraphicsState(pd3dCommandList, pOBBShader);
+            
+
+            // �����ؾ���
+            for (auto& obj_info : results) {
+                 if (obj_info->u_id < m_vGameObjects.size() && m_vGameObjects[obj_info->u_id]) {
+                    CGameObject* pGameObject = m_vGameObjects[obj_info->u_id];
+                    if (pGameObject->ShouldRenderOBB()) { 
+                        pGameObject->RenderOBB(pd3dCommandList, pCamera);
+                    }
+                }
+            }
+
+           
+            for (auto& branch : m_listBranchObjects) {
+                if (branch->ShouldRenderOBB()) {
+                    branch->RenderOBB(pd3dCommandList, pCamera);
+                }
+            }
+            for (auto& rock : m_listRockObjects) {
+                if (rock->ShouldRenderOBB()) {
+                    rock->RenderOBB(pd3dCommandList, pCamera);
+                }
+            }
+
+            if(m_pPreviewPine && m_pPreviewPine->ShouldRenderOBB()) {
+                 m_pPreviewPine->RenderOBB(pd3dCommandList, pCamera);
+            }
+
+
+            
+            if (m_pPlayer && m_pPlayer->ShouldRenderOBB()) {
+                m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
+            }
+
+          
+            //for (auto& entry : PlayerList) {
+            //    CPlayer* pOtherPlayer = entry.second;
+            //    if (pOtherPlayer && pOtherPlayer->ShouldRenderOBB()) {
+            //        pOtherPlayer->RenderOBB(pd3dCommandList, pCamera);
+            //    }
+            //}
+        } else {
+            assert(!"OBB Shader (named 'OBB') not found in ShaderManager!");
+        }
+       
+    }
+    
 }
 
 void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader)
 {
 	if (!pShader || !pd3dCommandList) return;
 
-	// 셰이더 객체 자체가 바뀌었는지 확인
+	
 	if (pShader != m_pCurrentShader)
 	{
-		m_pCurrentShader = pShader; // 현재 셰이더 업데이트
+		m_pCurrentShader = pShader;
 
-		// 루트 서명 설정 (셰이더에 저장된 루트 서명 사용)
+		
 		ID3D12RootSignature* pRootSig = pShader->GetRootSignature();
 		if (pRootSig && pRootSig != m_pCurrentRootSignature) {
 			pd3dCommandList->SetGraphicsRootSignature(pRootSig);
 			m_pCurrentRootSignature = pRootSig;
-			// !!! 여기서 공통 CBV 바인딩 로직은 제거됨 !!!
+			
 		}
 
-		// PSO 설정 (셰이더에 저장된 PSO 사용)
+		
 		ID3D12PipelineState* pPSO = pShader->GetPipelineState();
 		if (pPSO && pPSO != m_pCurrentPSO) {
 			pd3dCommandList->SetPipelineState(pPSO);
 			m_pCurrentPSO = pPSO;
 		}
 	}
-	// 이미 같은 셰이더(같은 RS, 같은 PSO)라면 아무것도 변경 안 함
+	
 }
 
 ShaderManager* CScene::GetShaderManager() const {
@@ -909,41 +949,41 @@ bool CScene::CollisionCheck(CGameObject* a, CGameObject* b)
 		return false;
 	}
 
-	// a 모든 OBB 수집
+	
 	std::vector<DirectX::BoundingOrientedBox> obbListA;
 	CollectHierarchyObjects(a, obbListA);
 
-	//b 모든 OBB 수집
+	
 	std::vector<DirectX::BoundingOrientedBox> obbListB;
 	CollectHierarchyObjects(b, obbListB);
 
-	// 충돌 검사
+	
 	for (const auto& obbA : obbListA) { 
 		for (const auto& obbB : obbListB) {
 			if (obbA.Intersects(obbB)) {
-				return true; // 충돌 시 즉시 true 반환
+				return true; 
 			}
 		}
 	}
 
-	// 충돌 없으면 false 반환
+	
 	return false;
 
 }
 
 void CScene::CollectHierarchyObjects(CGameObject* obj, std::vector<BoundingOrientedBox>& obbList) {
 	if (!obj) {
-		return; // 재귀 탈출 조건
+		return; 
 	}
 
 	if(obj->m_pMesh)
 		obbList.push_back(obj->m_worldOBB);
 
-	// 재귀 호출
+	
 	CGameObject* currentChild = obj->m_pChild;
 	while (currentChild) {
-		CollectHierarchyObjects(currentChild, obbList); // 자식 노드에 대해 
-		currentChild = currentChild->m_pSibling;        // 다음 형제 자식
+		CollectHierarchyObjects(currentChild, obbList); 
+		currentChild = currentChild->m_pSibling;        
 	}
 }
 
@@ -956,14 +996,14 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 	for (auto& obj : m_vGameObjects) {
 		if (CollisionCheck(m_pPlayer, obj)) {
 			if (!obj->isRender)   continue;
-			// 나무 충돌처리
+			
 			if (obj->m_objectType == GameObjectType::Tree) {
 				//obj->isRender = false;
 				//m_pGameFramework->AddItem("wood", 3);
 			}
-			// 돌 충돌처리
+			
 			if (obj->m_objectType == GameObjectType::Rock) {
-				//printf("[Rock 충돌 확인])\n");
+				//printf("[Rock 충돌 ?�인])\n");
 				//obj->isRender = false;
 
 				//int randValue = rand() % 100; // 0 ~ 99
@@ -1025,7 +1065,7 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 
 
 void CScene::SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVelocity) {
-	if (!m_pGameFramework || !m_pTerrain) return; // 프레임워크와 지형 포인터 유효성 검사
+	if (!m_pGameFramework || !m_pTerrain) return; 
 
 	CBranchObject* newBranch = new CBranchObject(
 		m_pGameFramework->GetDevice(),
@@ -1035,8 +1075,8 @@ void CScene::SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVeloci
 	);
 	newBranch->SetPosition(position);
 	newBranch->SetInitialVelocity(initialVelocity);
-	// 필요시 초기 회전 등 설정
-	newBranch->Rotate(0, (float)(rand() % 360), 0); // Y축으로 랜덤 회전
+	
+	newBranch->Rotate(0, (float)(rand() % 360), 0); 
 
 	m_listBranchObjects.emplace_back(newBranch);
 	//auto t_obj = std::make_unique<newBranch>(tree_obj_count++, gameObj->m_worldOBB.Center);
@@ -1044,7 +1084,7 @@ void CScene::SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVeloci
 }
 
 void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity) {
-	if (!m_pGameFramework || !m_pTerrain) return; // 프레임워크와 지형 포인터 유효성 검사
+	if (!m_pGameFramework || !m_pTerrain) return; 
 
 	CRockDropObject* newBranch = new CRockDropObject(
 		m_pGameFramework->GetDevice(),
@@ -1054,8 +1094,8 @@ void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity
 	);
 	newBranch->SetPosition(position);
 	newBranch->SetInitialVelocity(initialVelocity);
-	// 필요시 초기 회전 등 설정
-	newBranch->Rotate(0, (float)(rand() % 360), 0); // Y축으로 랜덤 회전
+	
+	newBranch->Rotate(0, (float)(rand() % 360), 0); 
 
 	m_listRockObjects.emplace_back(newBranch);
 	//auto t_obj = std::make_unique<newBranch>(tree_obj_count++, gameObj->m_worldOBB.Center);

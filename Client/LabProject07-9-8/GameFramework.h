@@ -1,7 +1,7 @@
 ﻿#pragma once
 
-#define FRAME_BUFFER_WIDTH		1600
-#define FRAME_BUFFER_HEIGHT		1280
+#define FRAME_BUFFER_WIDTH		1900
+#define FRAME_BUFFER_HEIGHT		1100
 
 #include "Timer.h"
 #include "Player.h"

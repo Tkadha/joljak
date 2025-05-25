@@ -2,13 +2,13 @@
 
 std::vector<std::shared_ptr<Item>> ItemManager::m_Items;
 
-// Item 생성자
+// Item ?�성??
 Item::Item(int id, const std::string& name)
     : m_ID(id), m_Name(name)
 {
 }
 
-// 아이템 리스트 초기화
+// ?�이??리스??초기??
 void ItemManager::Initialize()
 {
     m_Items.clear();
@@ -49,39 +49,39 @@ void ItemManager::Initialize()
 
 
 
-    /*m_Items.push_back(std::make_shared<Item>(id++, std::string("제작대")));
-    m_Items.push_back(std::make_shared<Item>(id++, std::string("화로")));
+    /*m_Items.push_back(std::make_shared<Item>(id++, std::string("?�작?�")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("?�로")));
     m_Items.push_back(std::make_shared<Item>(id++, std::string("그릇")));
-    m_Items.push_back(std::make_shared<Item>(id++, std::string("횃불")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("?�불")));
 
-    m_Items.push_back(std::make_shared<Item>(id++, std::string("나무곡괭이")));
-    m_Items.push_back(std::make_shared<Item>(id++, std::string("나무도끼")));
-    m_Items.push_back(std::make_shared<Item>(id++, std::string("나무검")));
-    m_Items.push_back(std::make_shared<Item>(id++, std::string("나무망치")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("?�무곡괭??)));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("?�무?�끼")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("?�무검")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("?�무망치")));
 
-    m_Items.push_back(std::make_shared<Item>(id++, std::string("돌 곡괭이")));
-    m_Items.push_back(std::make_shared<Item>(id++, std::string("돌 도끼")));
-    m_Items.push_back(std::make_shared<Item>(id++, std::string("돌 검")));
-    m_Items.push_back(std::make_shared<Item>(id++, std::string("돌 망치")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("??곡괭??)));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("???�끼")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("??검")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("??망치")));
 
-    m_Items.push_back(std::make_shared<Item>(id++, std::string("철괴 곡괭이")));
-    m_Items.push_back(std::make_shared<Item>(id++, std::string("철괴 도끼")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("철괴 곡괭??)));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("철괴 ?�끼")));
     m_Items.push_back(std::make_shared<Item>(id++, std::string("철괴 검")));
     m_Items.push_back(std::make_shared<Item>(id++, std::string("철괴 망치")));
 
-    m_Items.push_back(std::make_shared<Item>(id++, std::string("나무")));
-    m_Items.push_back(std::make_shared<Item>(id++, std::string("돌")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("?�무")));
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("??)));
     m_Items.push_back(std::make_shared<Item>(id++, std::string("철괴")));
-    m_Items.push_back(std::make_shared<Item>(id++, std::string("석탄")));*/
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("?�탄")));*/
 }
 
-// 아이템 리스트 반환
+// ?�이??리스??반환
 const std::vector<std::shared_ptr<Item>>& ItemManager::GetItems()
 {
     return m_Items;
 }
 
-// ID로 아이템 찾기
+// ID�??�이??찾기
 std::shared_ptr<Item> ItemManager::GetItemByID(int id)
 {
     for (auto& item : m_Items)
