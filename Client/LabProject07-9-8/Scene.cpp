@@ -148,6 +148,15 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		gameObj->m_treecount = tree_obj_count;
+
+		//XMFLOAT3 position = gameObj->GetPosition();
+		XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		//position.y += 50.0f;
+		XMFLOAT3 size = XMFLOAT3(1.0f, 10.0f, 1.0f);
+		XMFLOAT4 rotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+		gameObj->SetOBB(position, size, rotation);
+		gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+
 		m_vGameObjects.emplace_back(gameObj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
@@ -496,8 +505,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 	for (auto obj : m_vGameObjects) {
-		obj->SetOBB();
-		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+		//obj->SetOBB();
+		//obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 		if (obj->m_pSkinnedAnimationController) obj->PropagateAnimController(obj->m_pSkinnedAnimationController);
 
 		switch (obj->m_objectType)

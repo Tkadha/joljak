@@ -1272,6 +1272,7 @@ PlayerStateID PlayerStateMachine::DetermineAttackState() {
             // 타입별 처리
             switch (pOtherObject->m_objectType) { // m_eObjectType 멤버가 있다고 가정
             case GameObjectType::Tree:
+                OutputDebugString(L"나무 충돌!");
                 return PlayerStateID::AttackAxe; // 나무 발견 시 즉시 반환
             case GameObjectType::Rock:
                 return PlayerStateID::AttackPick; // 바위 발견 시 즉시 반환

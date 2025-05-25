@@ -161,6 +161,10 @@ void CGameObject::SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMF
 	XMStoreFloat3(&m_localOBB.Center, XMLoadFloat3(&m_xmf3Position));
 	XMStoreFloat3(&m_localOBB.Extents, XMLoadFloat3(&m_xmf3Size));
 	XMStoreFloat4(&m_localOBB.Orientation, XMLoadFloat4(&orientation));
+
+
+	if (m_pSibling) m_pSibling->SetOBB(center, size, orientation);
+	if (m_pChild) m_pChild->SetOBB(center, size, orientation);
 }
 
 // 메쉬 데이터로 바운딩 박스 만들기
@@ -251,7 +255,7 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 	bool bCanRenderCurrentObjectOBB = m_pOBBVertexBuffer &&
 		m_pOBBIndexBuffer &&
 		m_pd3dcbOBBTransform &&
-		m_pcbMappedOBBTransform;
+		m_pcbMappedOBBTransform && m_pMesh;
 
 	if (bCanRenderCurrentObjectOBB) {
 
