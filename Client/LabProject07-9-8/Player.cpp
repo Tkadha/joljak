@@ -738,7 +738,7 @@ void CPlayer::PerformActionInteractionCheck() {
 		return;
 	}
 
-	m_pScene->CheckPlayerInteraction(this);
+	//m_pScene->CheckPlayerInteraction(this);
 
 }
 

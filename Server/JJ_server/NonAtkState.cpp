@@ -21,6 +21,18 @@ void NonAtkNPCGlobalState::Execute(std::shared_ptr<GameObject> npc)
 		auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
 		if (exec_ms > 1.5f * 1000) {
 			is_invincible = false;
+			
+			std::vector<tree_obj*> results;
+			XMFLOAT3 oct_distance{ 2500,1000,2500 };
+			tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
+			Octree::PlayerOctree.query(n_obj, oct_distance, results);
+			for (auto& p_obj : results) {
+				for (auto& cl : PlayerClient::PlayerClients) {
+					if (cl.second->state != PC_INGAME) continue;
+					if (cl.second->m_id != p_obj->u_id) continue;
+					cl.second->SendInvinciblePacket(npc->GetID(), is_invincible);
+				}
+			}
 		}
 	}
 }
@@ -222,13 +234,13 @@ void NonAtkNPCRunAwayState::Execute(std::shared_ptr<GameObject> npc)
 		{
 		case 0:
 			// 전진
-			npc->MoveForward(0.9f);
+			npc->MoveForward(0.7f);
 			break;
 		case 1:
 			// 회전하면서 전진
 			if (rotate_type == 0) npc->Rotate(0.f, -1.0f, 0.f);
 			else if (rotate_type == 1) npc->Rotate(0.f, 1.0f, 0.f);
-			npc->MoveForward(0.7f);
+			npc->MoveForward(0.5f);
 			break;
 		}
 	}
@@ -239,13 +251,13 @@ void NonAtkNPCRunAwayState::Execute(std::shared_ptr<GameObject> npc)
 		{
 		case 0:
 			// 전진
-			npc->MoveForward(0.9f);
+			npc->MoveForward(0.7f);
 			break;
 		case 1:
 			// 회전하면서 전진
 			if (rotate_type == 0) npc->Rotate(0.f, -1.0f, 0.f);
 			else if (rotate_type == 1) npc->Rotate(0.f, 1.0f, 0.f);
-			npc->MoveForward(0.7f);
+			npc->MoveForward(0.5f);
 			break;
 		}
 	}

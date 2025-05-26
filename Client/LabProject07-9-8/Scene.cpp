@@ -85,16 +85,14 @@ void CScene::BuildDefaultLightsAndMaterials()
 
 void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	// ShaderManager 가?�오�?
 	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed!");
 	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
 	assert(pShaderManager != nullptr && "ShaderManager is not available!");
-	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); // 기존 코드 ?��?
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); 
 
 	BuildDefaultLightsAndMaterials();
 
 	if (!pResourceManager) {
-		// 리소??매니?�가 ?�다�?로딩 불�?! ?�류 처리
 		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
 		return;
 	}
@@ -117,7 +115,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	m_pPreviewPine->SetScale(10, 10, 10);
 	
 	m_pPreviewPine->isRender = false;
-
+	m_pPreviewPine->m_id = -1;
 	m_pPreviewPine->m_treecount = tree_obj_count;
 	m_vGameObjects.emplace_back(m_pPreviewPine);
 	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, m_pPreviewPine->m_worldOBB.Center);

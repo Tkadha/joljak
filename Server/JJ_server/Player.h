@@ -122,6 +122,8 @@ public:
 	void BroadCastPosPacket();
 	void BroadCastRotatePacket();
 	void BroadCastInputPacket();
+	void SendHpPacket(int,int);
+	void SendInvinciblePacket(int, bool);
 	void SendAddPacket(shared_ptr<GameObject>);
 	void SendRemovePacket(shared_ptr<GameObject>);
 	void SendMovePacket(shared_ptr<GameObject>);

@@ -288,6 +288,26 @@ void PlayerClient::BroadCastInputPacket()
     }
 }
 
+void PlayerClient::SendHpPacket(int oid, int hp)
+{
+    OBJ_HP_PACKET s_packet;
+    s_packet.size = sizeof(OBJ_HP_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_O_SETHP);
+    s_packet.oid = oid;
+    s_packet.hp = hp;
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
+void PlayerClient::SendInvinciblePacket(int oid, bool invin_type)
+{
+	OBJ_INVINCIBLE_PACKET s_packet;
+	s_packet.size = sizeof(OBJ_INVINCIBLE_PACKET);
+	s_packet.type = static_cast<char>(E_PACKET::E_O_INVINCIBLE);
+	s_packet.oid = oid;
+	s_packet.invincible = invin_type ? 1 : 0;
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
 void PlayerClient::SendAddPacket(shared_ptr<GameObject> obj)
 {
     if (false == obj->is_alive) return; // 리스폰 중 상태라면

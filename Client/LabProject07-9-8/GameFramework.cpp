@@ -15,7 +15,7 @@
 #include "NonAtkState.h"
 #include "AtkState.h"
 // 서버 연결 여부
-//#define ONLINE
+#define ONLINE
 
 void CGameFramework::NerworkThread()
 {
@@ -43,6 +43,7 @@ void CGameFramework::NerworkThread()
 }
 void CGameFramework::ProcessPacket(char* packet)
 {
+	int loopcount = 0;
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
@@ -112,8 +113,7 @@ void CGameFramework::ProcessPacket(char* packet)
 		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
 			return obj->m_id == id;
 			});
-		if (it != m_pScene->m_vGameObjects.end()) {	// 해당 객체가 있다면 삭제
-			//delete* it;
+		if (it != m_pScene->m_vGameObjects.end()) {	
 			m_pScene->m_vGameObjects.erase(it);
 		}
 	}
@@ -125,7 +125,7 @@ void CGameFramework::ProcessPacket(char* packet)
 		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
 			return obj->m_id == id;
 			});
-		if (it != m_pScene->m_vGameObjects.end()) {	// 해당 객체가 있다면 이동
+		if (it != m_pScene->m_vGameObjects.end()) {	
 			CGameObject* Found_obj = *it;
 			Found_obj->SetLook(XMFLOAT3(recv_p->look.x, recv_p->look.y, recv_p->look.z));
 			Found_obj->SetUp(XMFLOAT3(recv_p->up.x, recv_p->up.y, recv_p->up.z));
@@ -141,12 +141,36 @@ void CGameFramework::ProcessPacket(char* packet)
 		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
 			return obj->m_id == id;
 			});
-		if (it != m_pScene->m_vGameObjects.end()) {	// 해당 객체가 있다면 이동
+		if (it != m_pScene->m_vGameObjects.end()) {
 			CGameObject* Found_obj = *it;
 			Found_obj->ChangeAnimation(recv_p->a_type);
 		}
 	}
 		break;
+	break;
+	case E_PACKET::E_O_SETHP: {
+		OBJ_HP_PACKET* recv_p = reinterpret_cast<OBJ_HP_PACKET*>(packet);
+		int id = recv_p->oid;
+		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
+			return obj->m_id == id;
+			});
+		if (it != m_pScene->m_vGameObjects.end()) {	
+			CGameObject* Found_obj = *it;
+			Found_obj->Sethp(recv_p->hp);
+		}
+	}
+	break;
+	case E_PACKET::E_O_INVINCIBLE: {
+		OBJ_INVINCIBLE_PACKET* recv_p = reinterpret_cast<OBJ_INVINCIBLE_PACKET*>(packet);
+		int id = recv_p->oid;
+		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
+			return obj->m_id == id;
+			});
+		if (it != m_pScene->m_vGameObjects.end()) {	
+			CGameObject* Found_obj = *it;
+			Found_obj->SetInvincible(recv_p->invincible);
+		}
+	}
 	break;
 	default:
 		break;
@@ -827,10 +851,11 @@ void CGameFramework::BuildObjects()
 
 	auto& nwManager = NetworkManager::GetInstance();
 	if (m_pScene) {
-		if(serverConnected == false)
-			m_pScene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
-		else
+#ifdef ONLINE
 			m_pScene->ServerBuildObjects(m_pd3dDevice, m_pd3dCommandList);
+#else
+			m_pScene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
+#endif
 	}
 
 	
@@ -945,7 +970,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
 			}
 
-			gameObj->SetOwningScene(m_pScene);
+			gameObj->SetOwningScene(m_pScene);;
 			//gameObj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
 			//gameObj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 

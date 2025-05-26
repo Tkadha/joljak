@@ -148,6 +148,8 @@ void NetworkManager::Process_Packet(char* packet)
 	case E_PACKET::E_O_REMOVE:
 	case E_PACKET::E_O_MOVE:
 	case E_PACKET::E_O_CHANGEANIMATION:
+	case E_PACKET::E_O_HIT:
+	case E_PACKET::E_O_INVINCIBLE:
 		PushRecvQueue(packet, static_cast<short>(packet[0]));
 		break;
 	default:

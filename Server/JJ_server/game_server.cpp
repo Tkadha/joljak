@@ -14,6 +14,10 @@
 #include "Octree.h"
 #include <vector>
 
+
+#include "NonAtkState.h"
+#include "AtkState.h"
+
 using namespace std;
 
 #define LOBBY_PORT 8999
@@ -173,6 +177,29 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		client->BroadCastInputPacket();
 	}
 	break;
+	case E_PACKET::E_O_HIT:
+	{
+		OBJ_HIT_PACKET* r_packet = reinterpret_cast<OBJ_HIT_PACKET*>(packet);
+		if (gameObjects.size() <= r_packet->oid) return; // Àß¸øµÈ id
+		auto& obj = gameObjects[r_packet->oid];
+		obj->Decreasehp(r_packet->damage); // hp--
+		if (obj->GetType() == OBJECT_TYPE::OB_PIG || obj->GetType() == OBJECT_TYPE::OB_COW) {
+			if (obj->FSM_manager) {
+				obj->FSM_manager->SetInvincible();
+				if (obj->Gethp() <= 0) obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCDieState>());
+				else obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCRunAwayState>());
+			}
+		}
+		else if (obj->GetType() == OBJECT_TYPE::OB_TREE || obj->GetType() == OBJECT_TYPE::OB_STONE) {
+			
+		}
+		for(auto& cl : PlayerClient::PlayerClients) {
+			if (cl.second->state != PC_INGAME) continue;
+			cl.second->SendHpPacket(r_packet->oid, obj->Gethp());
+			cl.second->SendInvinciblePacket(r_packet->oid, true);
+		}		
+	}
+		break;
 	default:
 		break;
 	}
@@ -278,6 +305,7 @@ void ProcessAccept()
 			for (auto& obj : results) {
 				remoteClient->viewlist.insert(obj->u_id); // ºä¸®½ºÆ® »ðÀÔ
 				remoteClient->SendAddPacket(gameObjects[obj->u_id]);
+				//remoteClient->SendAnimationPacket(gameObjects[obj->u_id]);
 			}				
 		}
 		auto p_obj = std::make_unique<tree_obj>(remoteClient->m_id, remoteClient->GetPosition());
@@ -305,9 +333,6 @@ void ProcessAccept()
 }
 
 
-#include "NonAtkState.h"
-#include "AtkState.h"
-
 void BuildObject()
 {
 	std::random_device rd;
@@ -316,7 +341,7 @@ void BuildObject()
 	float objectMinSize = 15, objectMaxSize = 20;
 
 	int obj_id = 0;
-	int TreeCount = 50;
+	int TreeCount = 0;
 	for (int i = 0; i < TreeCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 
@@ -332,7 +357,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int RockCount = 10;
+	int RockCount = 0;
 	for (int i = 0; i < RockCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);

@@ -16,6 +16,9 @@ enum class E_PACKET
 	E_O_REMOVE = 10,
 	E_O_CHANGEANIMATION = 11,
 	E_O_MOVE = 12,
+	E_O_HIT = 13,
+	E_O_INVINCIBLE = 14, 
+	E_O_SETHP = 15, 
 
 
 	E_DB_REGISTER = 100,
@@ -94,7 +97,7 @@ class PACKET
 public:
 	unsigned char size;
 	char type;
-	PACKET() : size(sizeof(PACKET)),type(static_cast<char>(E_PACKET::E_P_UNKNOWN)) {}
+	PACKET() : size(sizeof(PACKET)), type(static_cast<char>(E_PACKET::E_P_UNKNOWN)) {}
 };
 
 class CHAT_PACKET : public PACKET
@@ -184,7 +187,6 @@ public:
 		type = static_cast<char>(E_PACKET::E_O_ADD);
 	}
 };
-
 class REMOVE_PACKET : public PACKET
 {
 public:
@@ -195,7 +197,6 @@ public:
 		type = static_cast<char>(E_PACKET::E_O_REMOVE);
 	}
 };
-
 class CHANGEANIMATION_PACKET : public PACKET
 {
 public:
@@ -207,7 +208,6 @@ public:
 		type = static_cast<char>(E_PACKET::E_O_CHANGEANIMATION);
 	}
 };
-
 class MOVE_PACKET : public PACKET
 {
 public:
@@ -222,6 +222,44 @@ public:
 	}
 };
 
+class OBJ_HIT_PACKET : public PACKET
+{
+public:
+	int oid;
+	int damage;
+	OBJ_HIT_PACKET() {
+		oid = -1;
+		damage = 0;
+		size = sizeof(OBJ_HIT_PACKET);
+		type = static_cast<char>(E_PACKET::E_O_HIT);
+	}
+};
+
+class OBJ_HP_PACKET : public PACKET
+{
+public:
+	int oid;
+	int hp;
+	OBJ_HP_PACKET() {
+		oid = -1;
+		hp = 0;
+		size = sizeof(OBJ_HP_PACKET);
+		type = static_cast<char>(E_PACKET::E_O_SETHP);
+	}
+};
+
+class OBJ_INVINCIBLE_PACKET : public PACKET
+{
+	public:
+	int oid;
+	char invincible; // 1: 公利, 0: 公利 秦力
+	OBJ_INVINCIBLE_PACKET() {
+		oid = -1;
+		invincible = 0;
+		size = sizeof(OBJ_INVINCIBLE_PACKET);
+		type = static_cast<char>(E_PACKET::E_O_INVINCIBLE);
+	}
+};
 
 
 
