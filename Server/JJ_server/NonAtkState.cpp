@@ -181,6 +181,8 @@ void NonAtkNPCMoveState::Execute(std::shared_ptr<GameObject> npc)
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME)continue;
 			if (cl.second->m_id != p_obj->u_id) continue;
+			if (cl.second->viewlist.find(npc->GetID()) == cl.second->viewlist.end())
+				cl.second->SendAddPacket(npc);
 			cl.second->SendMovePacket(npc);
 		}
 	}
@@ -234,13 +236,13 @@ void NonAtkNPCRunAwayState::Execute(std::shared_ptr<GameObject> npc)
 		{
 		case 0:
 			// 전진
-			npc->MoveForward(0.7f);
+			npc->MoveForward(0.6f);
 			break;
 		case 1:
 			// 회전하면서 전진
 			if (rotate_type == 0) npc->Rotate(0.f, -1.0f, 0.f);
 			else if (rotate_type == 1) npc->Rotate(0.f, 1.0f, 0.f);
-			npc->MoveForward(0.5f);
+			npc->MoveForward(0.45f);
 			break;
 		}
 	}
@@ -251,13 +253,13 @@ void NonAtkNPCRunAwayState::Execute(std::shared_ptr<GameObject> npc)
 		{
 		case 0:
 			// 전진
-			npc->MoveForward(0.7f);
+			npc->MoveForward(0.6f);
 			break;
 		case 1:
 			// 회전하면서 전진
 			if (rotate_type == 0) npc->Rotate(0.f, -1.0f, 0.f);
 			else if (rotate_type == 1) npc->Rotate(0.f, 1.0f, 0.f);
-			npc->MoveForward(0.5f);
+			npc->MoveForward(0.45f);
 			break;
 		}
 	}
@@ -274,6 +276,8 @@ void NonAtkNPCRunAwayState::Execute(std::shared_ptr<GameObject> npc)
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME)continue;
 			if (cl.second->m_id != p_obj->u_id) continue;
+			if (cl.second->viewlist.find(npc->GetID()) == cl.second->viewlist.end())
+				cl.second->SendAddPacket(npc);
 			cl.second->SendMovePacket(npc);
 		}
 	}
@@ -336,6 +340,19 @@ void NonAtkNPCRespawnState::Enter(std::shared_ptr<GameObject> npc)
 	npc->is_alive = false;
 	starttime = std::chrono::system_clock::now();
 	duration_time = 20 * 1000; // 20초간 안보이도록
+
+	std::vector<tree_obj*> results;
+	XMFLOAT3 oct_distance{ 2500,1000,2500 };
+	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
+	Octree::PlayerOctree.query(n_obj, oct_distance, results);
+
+	for (auto& p_obj : results) {
+		for (auto& cl : PlayerClient::PlayerClients) {
+			if (cl.second->state != PC_INGAME)continue;
+			if (cl.second->m_id != p_obj->u_id) continue;
+			cl.second->SendRemovePacket(npc);
+		}
+	}
 }
 
 void NonAtkNPCRespawnState::Execute(std::shared_ptr<GameObject> npc)
@@ -358,17 +375,6 @@ void NonAtkNPCRespawnState::Execute(std::shared_ptr<GameObject> npc)
 
 		Octree::GameObjectOctree.update(npc->GetID(), npc->GetPosition());
 
-		std::vector<tree_obj*> results;
-		XMFLOAT3 oct_distance{ 2500,1000,2500 };
-		tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
-		Octree::PlayerOctree.query(n_obj, oct_distance, results);
-		for (auto& p_obj : results) {
-			for (auto& cl : PlayerClient::PlayerClients) {
-				if (cl.second->state != PC_INGAME)continue;
-				if (cl.second->m_id != p_obj->u_id) continue;
-				cl.second->SendMovePacket(npc);
-			}
-		}
 		// 상태 전환
 		npc->FSM_manager->ChangeState(std::make_shared<NonAtkNPCStandingState>());
 		return;
@@ -378,4 +384,17 @@ void NonAtkNPCRespawnState::Execute(std::shared_ptr<GameObject> npc)
 void NonAtkNPCRespawnState::Exit(std::shared_ptr<GameObject> npc)
 {
 	npc->is_alive = true;
+
+	std::vector<tree_obj*> results;
+	XMFLOAT3 oct_distance{ 2500,1000,2500 };
+	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
+	Octree::PlayerOctree.query(n_obj, oct_distance, results);
+
+	for (auto& p_obj : results) {
+		for (auto& cl : PlayerClient::PlayerClients) {
+			if (cl.second->state != PC_INGAME)continue;
+			if (cl.second->m_id != p_obj->u_id) continue;
+			cl.second->SendAddPacket(npc);
+		}
+	}
 }
