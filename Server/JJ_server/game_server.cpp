@@ -303,9 +303,8 @@ void ProcessAccept()
 			tree_obj p_obj{ -1,remoteClient->GetPosition() };
 			Octree::GameObjectOctree.query(p_obj, XMFLOAT3{ 2500,100,2500 }, results);
 			for (auto& obj : results) {
-				remoteClient->viewlist.insert(obj->u_id); // 뷰리스트 삽입
+				if (gameObjects[obj->u_id]->is_alive == false) continue;
 				remoteClient->SendAddPacket(gameObjects[obj->u_id]);
-				//remoteClient->SendAnimationPacket(gameObjects[obj->u_id]);
 			}				
 		}
 		auto p_obj = std::make_unique<tree_obj>(remoteClient->m_id, remoteClient->GetPosition());
@@ -485,6 +484,7 @@ int main(int argc, char* argv[])
 				}
 				for (auto o_id : new_vl) {
 					if (0 == before_vl.count(o_id)) { //new에만 있다면 추가 패킷
+						if (gameObjects[o_id]->is_alive == false) continue;
 						std::cout << "add obj: " << o_id << std::endl;
 						cl.second->SendAddPacket(gameObjects[o_id]);
 					}

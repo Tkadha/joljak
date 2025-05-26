@@ -10,7 +10,6 @@ class GameObject
 	XMFLOAT4X4	xmf4x4; // 11 12 13 right, 21 22 23 up, 31 32 33 look, 41 42 43 position
 	int o_id{ -1 };
 
-
 public:
 	GameObject();
 	virtual ~GameObject();
@@ -91,5 +90,11 @@ public:
 	void Decreasehp(int num) { _hp -= num; }
 	int Gethp() { return _hp; }
 	int GetAtk() { return _atk; }
+
+public:
+	// 해당 부분에 bin파일의 정점만 불러와서 obb를 만드는 코드 필요
+
+
+
 };
 
