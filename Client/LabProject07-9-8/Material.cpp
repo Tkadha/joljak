@@ -220,7 +220,7 @@ bool CMaterial::AssignTexture(UINT nTextureIndex, std::shared_ptr<CTexture> pTex
     // shared_ptr 历厘 (氦磐 荤侩)
     m_vTextures[nTextureIndex] = pTexture;
 
-    // SRV 积己
+    // SRV 积己   
     if (pTexture && pTexture->GetResource(0)) {
         CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(m_d3dCpuSrvStartHandle);
         cpuHandle.Offset(nTextureIndex, m_nCbvSrvDescriptorIncrementSize);

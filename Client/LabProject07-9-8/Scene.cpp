@@ -9,6 +9,40 @@
 #include "NonAtkState.h"
 #include "AtkState.h"
 
+bool AssignTextureToChildObjectMaterial(
+	CGameObject* pParentGameObject,
+	int materialIndex,
+	UINT textureSlot,
+	const wchar_t* textureFilePath,
+	ResourceManager* pResourceManager,
+	ID3D12GraphicsCommandList* pd3dCommandList,
+	ID3D12Device* pd3dDevice)
+{
+	// 유효성 검사
+	if (!pParentGameObject || !pParentGameObject->m_pChild ||
+		!pResourceManager || !pd3dCommandList || !pd3dDevice ||
+		!textureFilePath || !*textureFilePath) { 
+		return false;
+	}
+
+	// 머티리얼 가져오기
+	CMaterial* pTargetMaterial = pParentGameObject->m_pChild->GetMaterial(materialIndex);
+	if (!pTargetMaterial) {
+		return false;
+	}
+
+	// 텍스처 로드
+	std::shared_ptr<CTexture> pTextureToAssign = pResourceManager->GetTexture(textureFilePath, pd3dCommandList);
+	if (!pTextureToAssign) {
+		return false;
+	}
+
+	// 텍스처 할당 및 결과 반환
+	return pTargetMaterial->AssignTexture(textureSlot, pTextureToAssign, pd3dDevice);
+}
+
+
+
 
 CScene::CScene(CGameFramework* pFramework) : m_pGameFramework(pFramework)
 {
@@ -118,8 +152,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	float spawnMin = 500, spawnMax = 9500;
 	float objectMinSize = 15, objectMaxSize = 20;
 
-	int nPineObjects = 100;
-	for (int i = 0; i < nPineObjects; ++i) {
+	int nTreeObjects = 100;
+	for (int i = 0; i < nTreeObjects; ++i) {
 		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
@@ -130,18 +164,25 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
 	}
-	for (int i = 0; i < nPineObjects; ++i) {
+	for (int i = 0; i < nTreeObjects; ++i) {
 		CGameObject* gameObj = new CBirchObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		gameObj->m_treecount = tree_obj_count;
+
+		int materialIndexToChange = 1;
+		UINT albedoTextureSlot = 0;
+		const wchar_t* textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
+
+		AssignTextureToChildObjectMaterial(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+
 		m_vGameObjects.emplace_back(gameObj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
 	}
-	for (int i = 0; i < nPineObjects; ++i) {
+	for (int i = 0; i < nTreeObjects; ++i) {
 		CGameObject* gameObj = new CWillowObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
@@ -149,13 +190,13 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		gameObj->SetScale(w, h, w);
 		gameObj->m_treecount = tree_obj_count;
 
-		//XMFLOAT3 position = gameObj->GetPosition();
-		XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		//position.y += 50.0f;
-		XMFLOAT3 size = XMFLOAT3(1.0f, 10.0f, 1.0f);
-		XMFLOAT4 rotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-		gameObj->SetOBB(position, size, rotation);
-		gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+		////XMFLOAT3 position = gameObj->GetPosition();
+		//XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		////position.y += 50.0f;
+		//XMFLOAT3 size = XMFLOAT3(1.0f, 10.0f, 1.0f);
+		//XMFLOAT4 rotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+		//gameObj->SetOBB(position, size, rotation);
+		//gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 
 		m_vGameObjects.emplace_back(gameObj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
@@ -171,6 +212,16 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		gameObj->m_treecount = tree_obj_count;
+
+		int materialIndexToChange = 0;
+		UINT albedoTextureSlot = 0;
+		const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
+
+		AssignTextureToChildObjectMaterial(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+
+		UINT albedoTextureSlot = 0; // 알베도 슬롯
+		pTargetMaterial->AssignTexture(albedoTextureSlot, pAlbedoTexture, pd3dDevice);
+
 		m_vGameObjects.emplace_back(gameObj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
@@ -182,6 +233,16 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		gameObj->m_treecount = tree_obj_count;
+
+		int materialIndexToChange = 0;
+		UINT albedoTextureSlot = 0;
+		const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
+
+		AssignTextureToChildObjectMaterial(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+
+		UINT albedoTextureSlot = 0; // 알베도 슬롯
+		pTargetMaterial->AssignTexture(albedoTextureSlot, pAlbedoTexture, pd3dDevice);
+
 		m_vGameObjects.emplace_back(gameObj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
@@ -193,6 +254,13 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		gameObj->m_treecount = tree_obj_count;
+
+		int materialIndexToChange = 0;
+		UINT albedoTextureSlot = 0;
+		const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
+
+		AssignTextureToChildObjectMaterial(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+
 		m_vGameObjects.emplace_back(gameObj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
@@ -208,6 +276,12 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		gameObj->SetScale(w, h, w);
 		gameObj->m_treecount = tree_obj_count;
+
+		int materialIndexToChange = 0;
+		UINT albedoTextureSlot = 0;
+		const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
+
+		AssignTextureToChildObjectMaterial( gameObj,	materialIndexToChange,albedoTextureSlot,textureFile,pResourceManager,pd3dCommandList, pd3dDevice);
 
 		m_vGameObjects.emplace_back(gameObj);
 
@@ -505,8 +579,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 	for (auto obj : m_vGameObjects) {
-		//obj->SetOBB();
-		//obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+		obj->SetOBB();
+		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 		if (obj->m_pSkinnedAnimationController) obj->PropagateAnimController(obj->m_pSkinnedAnimationController);
 
 		switch (obj->m_objectType)
