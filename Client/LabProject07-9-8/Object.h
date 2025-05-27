@@ -85,7 +85,7 @@ public:
 	int								m_nMaterials = 0;
 	CMaterial						**m_ppMaterials = NULL;
 	int 							m_treecount{};
-	int								m_id{}; // server?ì„œ ê´€ë¦¬í•˜??ê°ì²´ ê³ ìœ  id
+	int								m_id{}; 
 	int								m_anitype;
 
 	XMFLOAT4 m_xmf4DebugColor = XMFLOAT4(1, 1, 1, 1);
@@ -99,9 +99,9 @@ public:
 	ID3D12Resource* m_pOBBIndexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW m_OBBVertexBufferView;
 	D3D12_INDEX_BUFFER_VIEW m_OBBIndexBufferView;
-	// OBB è¹‚Â€????°ì ¹???ê³¸ë‹” è¸°ê¾ª??
+	
 	ID3D12Resource* m_pd3dcbOBBTransform = nullptr;
-	XMFLOAT4X4* m_pcbMappedOBBTransform = nullptr; // ï§ë“¯ë¸???????
+	XMFLOAT4X4* m_pcbMappedOBBTransform = nullptr; 
 
 	CMaterial* m_OBBMaterial = NULL;
 	//COBBShader m_OBBShader;
@@ -120,12 +120,12 @@ public:
 
 	CGameFramework* m_pGameFramework;
 
-	// è«›ë¶¾???´ÑŠâ€?ë¨?½Œ ?¨ê¾©ë§??´ÑŠâ€?ï§£ì„Ž?ç‘œ??ê¾ªë¹ ?ê¾©ìŠ‚
+	
 	CAnimationController* m_pSharedAnimController = nullptr;
 	void PropagateAnimController(CAnimationController* controller); 
 
 
-	CScene* m_pScene = nullptr; // ?ë¨?–Š????????Scene ?????
+	CScene* m_pScene = nullptr; 
 	GameObjectType m_objectType = GameObjectType::Unknown;
 
 	virtual void FSMUpdate() {}
@@ -199,20 +199,20 @@ public:
 	void InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void SetColor(const XMFLOAT4& color);
 
-	virtual bool ShouldRenderOBB() const { return isRender; } // ê¸°ë³¸?ìœ¼ë¡??Œë”ë§??€?ì´ë©?OBB??ê·¸ë¦¼ (?„ìš”???°ë¼ ?˜ì •)
+	virtual bool ShouldRenderOBB() const { return isRender; } 
 
 
-	// --- ?¬ì§ˆ ?‘ê·¼??ì¶”ê? ---
+	
 	CMaterial* GetMaterial(int nIndex = 0) const {
-		// ?ëªƒëœ³??è¸°ë¶¿??è«???????ì¢ìŠš??å¯ƒÂ€??
+		
 		if (nIndex >= 0 && nIndex < m_nMaterials && m_ppMaterials) {
 			return m_ppMaterials[nIndex];
 		}
-		return nullptr; // ?ì¢ìŠš??? ??†ì‘ï§?nullptr è«›ì„‘??
+		return nullptr; 
 	}
 	int GetMaterialCount() const { return m_nMaterials; }
 
-	// --- OBB ???œ‘ï§???¥ë‹” ?ì¢Žë¼µ ---
+	
 	virtual void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 	void SetTerraindata(LPVOID pContext) {terraindata = pContext;}
@@ -372,22 +372,21 @@ class CItemObject : virtual public CGameObject
 {
 public:
 	XMFLOAT3 m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	XMFLOAT3 m_xmf3Gravity = XMFLOAT3(0.0f, -980.0f, 0.0f); // ä»¥ë¬??åª›Â€??¾ë£„ (è­°ê³—???ê¾©ìŠ‚)
+	XMFLOAT3 m_xmf3Gravity = XMFLOAT3(0.0f, -980.0f, 0.0f); 
 	bool m_bOnGround = false;
-	float m_fLifeTime = 15.0f; // è«›ë¶¾?????¥ë¼±ï§??????ªï§ž?æ¹²ê³Œ?´ï§ž? ??“ì»™ (??
+	float m_fLifeTime = 15.0f; 
 	float m_fElapsedAfterLanding = 0.0f;
 
-	CHeightMapTerrain* m_pTerrainRef = nullptr; // ï§žÂ€??ï§¡ëª„??(?°â‘¸ë£?åª›ë¨¯???
+	CHeightMapTerrain* m_pTerrainRef = nullptr; 
 
 	CItemObject() { m_objectType = GameObjectType::Item; };
 	virtual ~CItemObject() {};
 
-	virtual void Animate(float fTimeElapsed) override; // ?¾ì‡°??è«???Žì±¸ ï§£ì„Ž??
+	virtual void Animate(float fTimeElapsed) override; 
 	void SetInitialVelocity(const XMFLOAT3& velocity) { m_xmf3Velocity = velocity; }
 };
 
 
-// ------------------ ??ŽÐ?------------------
 class CTreeObject : virtual public CGameObject
 {
 	int hp{ 30 };
@@ -402,30 +401,29 @@ public:
 	int getHp() { return hp; }
 	void setHp(int n) { hp = n; }
 
-// ------- ?ê³•ìœ­ï§žÂ€???ì¢Šë•²ï§Žë¶¿???-------
 
-	// ?ê³•ìœ­ï§žÂ€???ì¢Šë•²ï§Žë¶¿?????–ì˜‰ ??¥ë‹”
-	void StartFalling(const XMFLOAT3& hitDirection); // ??? …??ë¼±???¨ë“¦êº?è«›â‘ºë¼??ê¹†ì“£ è«›ì†??????‰ì“¬
 
-	// ï§??ê¾¨ì …???ì¢Šë•²ï§Žë¶¿?????…ëœ²??„ë“ƒ
+	
+	void StartFalling(const XMFLOAT3& hitDirection); 
+
+	
 	virtual void Animate(float fTimeElapsed) override;
 
 	bool IsFalling() const { return	m_bIsFalling; }
 	bool HasFallen() const { return m_bHasFallen; }
 
-	bool m_bIsFalling = false;       // ?ê¾©ì˜± ?ê³•ìœ­ï§žÂ€???ì¢Šë•²ï§Žë¶¿???ä»¥ë¬’?¤åª›??
-	bool m_bHasFallen = false;       // ??€? ?ê³•ìœ­ï§??ê³¹ê¹­?ë©??
-	float m_fFallingDuration = 2.5f;  // ?ê³•ìœ­ï§žÂ€????å«„ëªƒ?????“ì»™ (??
-	float m_fFallingTimer = 0.0f;     // ?ê³•ìœ­ï§žÂ€æ¹???–ì˜‰????ï§žÂ€????“ì»™
-	XMFLOAT3 m_xmf3FallingAxis;       // ???Ÿ¾ ??(?ê³•ìœ­ï§žÂ€??è«›â‘ºë¼?å¯ƒê³—??
-	float m_fCurrentFallAngle = 0.0f; // ?ê¾©ì˜±æºëš¯? ???Ÿ¾??åª›ê³·ë£?
-	float m_fTargetFallAngle = XM_PIDIV2; // ï§â‘ºëª????Ÿ¾ åª›ê³·ë£?(90??
+	bool m_bIsFalling = false;      
+	bool m_bHasFallen = false;       
+	float m_fFallingDuration = 2.5f;  
+	float m_fFallingTimer = 0.0f;    
+	XMFLOAT3 m_xmf3FallingAxis;       
+	float m_fCurrentFallAngle = 0.0f; 
+	float m_fTargetFallAngle = XM_PIDIV2; 
 
-	// ?ê³•ìœ­ï§žÂ€æ¹???–ì˜‰?????“½ ?¥ë‡ë¦?m_xmf4x4ToParent åª›ë???????(?ê³? è¹‚Â€??æ¹²ê³—?)
+	
 	XMFLOAT4X4 m_xmf4x4InitialToParent;
 
-	// ???Ÿ¾??ä»¥ë¬’???(??ŽÐ?è«›ë¬ë£??ºÂ€?? æ¿¡ì’–ëº??«ëš°ëª´æ€?æ¹²ê³—?)
-	// ï§â‘¤????ë¨? ????€? è«›ë¬ë£??€?ªï§Ž?(0,0,0) ????åª›Â€??
+	
 	XMFLOAT3 m_xmf3RotationPivot = XMFLOAT3(0.0f, 0.0f, 0.0f);
 };
 
@@ -451,7 +449,7 @@ public:
 	virtual ~CPineObject() {}
 };
 
-// ??Žì¶ªåª›Â€ï§žÂ€(??•âˆ¼ ?ê¾©ì” ??
+
 class CBranchObject : public CItemObject {
 public:
 	CBranchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain);
@@ -502,7 +500,7 @@ public:
 	virtual ~CCliffFObject() {}
 };
 
-// ????°ë ª(??•âˆ¼ ?ê¾©ì” ??
+
 class CRockDropObject : public CItemObject {
 public:
 	CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain);

@@ -218,10 +218,10 @@ void CGameObject::ChangeAnimation(ANIMATION_TYPE type)
 			break;
 		}
 		break;
-	default:	// ?˜ëª»???€?…ì´??
+	default:	
 		break;
 	}
-	// ëª¨ë“  ? ë‹ˆë©”ì´?˜ì? ?ˆë¡œ ?œìž‘?˜ê¸°?„ì— ì´ˆê¸°??
+	
 	m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].SetPosition(-ANIMATION_CALLBACK_EPSILON);
 	m_pSkinnedAnimationController->SetTrackEnable(m_anitype, true);
 }
@@ -409,8 +409,11 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
     }
 }
 
-	void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
-	{
+void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	
+	
+
 		
 		if (m_pMesh)
 		{
@@ -455,15 +458,17 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 				m_pcbMappedOBBTransform = nullptr; 
 			}
 			else {
-				
+
 				HRESULT hr = m_pd3dcbOBBTransform->Map(0, NULL, (void**)&m_pcbMappedOBBTransform);
 				if (FAILED(hr) || !m_pcbMappedOBBTransform) {
 					OutputDebugString(L"!!!!!!!! ERROR: Failed to map OBB Transform CBV! !!!!!!!!\n");
 					m_pcbMappedOBBTransform = nullptr;
-					
+
 				}
 			}
+		
 		}
+	
 
 	
 	if (m_pSibling) m_pSibling->InitializeOBBResources(pd3dDevice, pd3dCommandList);
@@ -639,12 +644,14 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 							pd3dCommandList->SetGraphicsRootConstantBufferView(5, m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]->GetGPUVirtualAddress());
 						}
 						else {
+
 							
 							OutputDebugStringW(L"!!! Render: Skinned - Failed to get valid Bone Transform buffer (b8) via m_pSharedAnimController!\n");
 							wchar_t dbgMsg[128];
 							swprintf_s(dbgMsg, L"    m_pSharedAnimController = %p\n", (void*)m_pSharedAnimController); 
 							OutputDebugStringW(dbgMsg);
-							
+						
+
 						}
 					}
 				}

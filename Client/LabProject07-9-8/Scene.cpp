@@ -85,16 +85,15 @@ void CScene::BuildDefaultLightsAndMaterials()
 
 void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	// ShaderManager 媛?몄삤�?
+	
 	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed!");
 	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
 	assert(pShaderManager != nullptr && "ShaderManager is not available!");
-	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); // 湲곗???�붾�??�?
-
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); 
 	BuildDefaultLightsAndMaterials();
 
 	if (!pResourceManager) {
-		// ?�ъ냼??留ㅻ???媛 ??�떎�?濡쒕�??�덇?! ??�쪟 泥섎??
+		
 		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
 		return;
 	}
@@ -113,7 +112,6 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 		pd3dDevice, pd3dCommandList, m_pGameFramework);
 	m_pPreviewPine->SetPosition(XMFLOAT3(0, 0, 0));
 	
-	//auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 	m_pPreviewPine->SetScale(10, 10, 10);
 	
 	m_pPreviewPine->isRender = false;

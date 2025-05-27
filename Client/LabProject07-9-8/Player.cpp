@@ -88,22 +88,21 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 {
 	if (Vector3::Length(XMFLOAT3(xmf3Shift)) == 0.0f) return;
 
-	// 이동 전 위치 저장
 	XMFLOAT3 oldPosition = m_xmf3Position;
-
-	// 위치 이동
 	m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
-	m_pCamera->Move(xmf3Shift);
-	UpdateOBB(m_xmf3Position, playerSize, playerRotation);
 
-	// 충돌 체크 (등록된 대상이 있다면)
+	// 예측 OBB 생성
+	BoundingOrientedBox predictedOBB = m_worldOBB;
+	predictedOBB.Center = Vector3::Add(predictedOBB.Center, xmf3Shift);
+
+	// 충돌 검사
 	bool bCollided = false;
 	if (m_pCollisionTargets)
 	{
 		for (auto& obj : *m_pCollisionTargets)
 		{
 			if (!obj || obj == this) continue;
-			if (CheckCollisionOBB(obj))
+			if (predictedOBB.Intersects(obj->m_worldOBB))
 			{
 				bCollided = true;
 				break;
@@ -111,16 +110,19 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 		}
 	}
 
-	// 충돌 시 위치 롤백
 	if (bCollided)
 	{
 		m_xmf3Position = oldPosition;
-		m_pCamera->Move(Vector3::ScalarProduct(XMFLOAT3(xmf3Shift), -1.0f, false));
+		//m_pCamera->Move(Vector3::ScalarProduct(XMFLOAT3(xmf3Shift), -1.0f, false));
+		SetPosition(m_xmf3Position);
 		UpdateOBB(m_xmf3Position, playerSize, playerRotation);
 		return;
 	}
 
-	// 속도 업데이트
+	// 이동 확정
+	m_pCamera->Move(xmf3Shift);
+	UpdateOBB(m_xmf3Position, playerSize, playerRotation);
+
 	if (bUpdateVelocity)
 	{
 		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
@@ -355,6 +357,7 @@ void CPlayer::UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFL
 		)
 	);
 	XMStoreFloat4(&m_localOBB.Orientation, qRotation);
+	UpdateTransform();
 }
 
 
