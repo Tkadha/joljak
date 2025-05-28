@@ -9,7 +9,7 @@
 #include "NonAtkState.h"
 #include "AtkState.h"
 
-bool AssignTextureToChildObjectMaterial(
+bool ChangeAlbedoTexture(
 	CGameObject* pParentGameObject,
 	int materialIndex,
 	UINT textureSlot,
@@ -176,7 +176,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		UINT albedoTextureSlot = 0;
 		const wchar_t* textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
 
-		AssignTextureToChildObjectMaterial(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+		ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
 
 		m_vGameObjects.emplace_back(gameObj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
@@ -217,10 +217,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		UINT albedoTextureSlot = 0;
 		const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
 
-		AssignTextureToChildObjectMaterial(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
-
-		UINT albedoTextureSlot = 0; // 알베도 슬롯
-		pTargetMaterial->AssignTexture(albedoTextureSlot, pAlbedoTexture, pd3dDevice);
+		ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
 
 		m_vGameObjects.emplace_back(gameObj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
@@ -238,10 +235,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		UINT albedoTextureSlot = 0;
 		const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
 
-		AssignTextureToChildObjectMaterial(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
-
-		UINT albedoTextureSlot = 0; // 알베도 슬롯
-		pTargetMaterial->AssignTexture(albedoTextureSlot, pAlbedoTexture, pd3dDevice);
+		ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
 
 		m_vGameObjects.emplace_back(gameObj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
@@ -259,7 +253,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		UINT albedoTextureSlot = 0;
 		const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
 
-		AssignTextureToChildObjectMaterial(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+		ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
 
 		m_vGameObjects.emplace_back(gameObj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
@@ -281,7 +275,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		UINT albedoTextureSlot = 0;
 		const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
 
-		AssignTextureToChildObjectMaterial( gameObj,	materialIndexToChange,albedoTextureSlot,textureFile,pResourceManager,pd3dCommandList, pd3dDevice);
+		ChangeAlbedoTexture( gameObj,materialIndexToChange,albedoTextureSlot,textureFile,pResourceManager,pd3dCommandList, pd3dDevice);
 
 		m_vGameObjects.emplace_back(gameObj);
 
@@ -895,23 +889,18 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 
 
-	// --- OBB 렌더링 시작 ---
-    bool bRenderOBBs = true; // 디버그 플래그 등으로 제어 가능 (예: m_bDebugRenderOBBs 멤버 변수)
-    if (bRenderOBBs) {
-        CShader* pOBBShader = pShaderManager->GetShader("OBB",pd3dCommandList); // 등록된 OBB 셰이더 가져오기
+	// OBB 렌더링 
+
+    if (obbRender) {
+        CShader* pOBBShader = pShaderManager->GetShader("OBB",pd3dCommandList);
         if (pOBBShader) {
-            // OBB 렌더링을 위한 상태 설정 (PSO, 루트 서명)
-            // SetGraphicsState가 셰이더 객체로부터 PSO와 루트 서명을 가져와 설정한다고 가정
             SetGraphicsState(pd3dCommandList, pOBBShader);
-            // 만약 CShader 클래스에 GetRootSignature()가 있고, 루트 서명을 별도로 설정해야 한다면:
-            // pd3dCommandList->SetGraphicsRootSignature(pOBBShader->GetRootSignature()); // CShader에 GetRootSignature() 구현 필요
-            // pd3dCommandList->SetPipelineState(pOBBShader->GetPipelineState()); // CShader에 GetPipelineState() 구현 필요
 
             // Octree 결과 오브젝트들의 OBB 렌더링
             for (auto& obj_info : results) {
                  if (obj_info->u_id < m_vGameObjects.size() && m_vGameObjects[obj_info->u_id]) {
                     CGameObject* pGameObject = m_vGameObjects[obj_info->u_id];
-                    if (pGameObject->ShouldRenderOBB()) { // isRender 체크는 ShouldRenderOBB 내부에서 고려 가능
+                    if (pGameObject->ShouldRenderOBB()) { 
                         pGameObject->RenderOBB(pd3dCommandList, pCamera);
                     }
                 }

@@ -500,6 +500,9 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				m_pConstructionSystem->ConfirmPlacement();
 
 				break;
+			case'T':
+				m_pScene->obbRender = m_pScene->obbRender ? false : true;
+				break;
 			}
 			break;
 		default:
