@@ -235,7 +235,7 @@ public:
 
 
 public:
-	int hp{ 30 };
+	int hp{ 20 };
 	int level = 0;
 	int atk = 3;
 

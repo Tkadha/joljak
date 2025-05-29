@@ -3,6 +3,8 @@
 #include <vector>
 #include <mutex>
 
+static XMFLOAT3 oct_distance{ 2500,1000,2500 };
+
 struct tree_obj {
     long long u_id;
     XMFLOAT3 position; 

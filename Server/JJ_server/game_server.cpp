@@ -180,9 +180,10 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 	case E_PACKET::E_O_HIT:
 	{
 		OBJ_HIT_PACKET* r_packet = reinterpret_cast<OBJ_HIT_PACKET*>(packet);
-		if (gameObjects.size() <= r_packet->oid) return; // 잘못된 id
+		if (gameObjects.size() < r_packet->oid) return; // 잘못된 id
 		auto& obj = gameObjects[r_packet->oid];
 		obj->Decreasehp(r_packet->damage); // hp--
+		std::cout << "Recv hit packet - damage: " << r_packet->damage << " hp: " << obj->Gethp() << std::endl;
 		if (obj->GetType() == OBJECT_TYPE::OB_PIG || obj->GetType() == OBJECT_TYPE::OB_COW) {
 			if (obj->FSM_manager) {
 				obj->FSM_manager->SetInvincible();
@@ -192,6 +193,13 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		}
 		else if (obj->GetType() == OBJECT_TYPE::OB_TREE || obj->GetType() == OBJECT_TYPE::OB_STONE) {
 			
+		}
+		else {
+			if (obj->FSM_manager) {
+				obj->FSM_manager->SetInvincible();
+				if (obj->Gethp() <= 0) obj->FSM_manager->ChangeState(std::make_shared<AtkNPCDieState>());
+				else obj->FSM_manager->ChangeState(std::make_shared<AtkNPCHitState>());
+			}
 		}
 		for(auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME) continue;
@@ -301,7 +309,7 @@ void ProcessAccept()
 		{
 			std::vector<tree_obj*> results; // 시야 범위 내 객체 찾기
 			tree_obj p_obj{ -1,remoteClient->GetPosition() };
-			Octree::GameObjectOctree.query(p_obj, XMFLOAT3{ 2500,100,2500 }, results);
+			Octree::GameObjectOctree.query(p_obj, oct_distance, results);
 			for (auto& obj : results) {
 				if (gameObjects[obj->u_id]->is_alive == false) continue;
 				remoteClient->SendAddPacket(gameObjects[obj->u_id]);
@@ -336,7 +344,7 @@ void BuildObject()
 {
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	float spawnmin = 1000, spawnmax = 2000;
+	float spawnmin = 1000, spawnmax = 3000;
 	float objectMinSize = 15, objectMaxSize = 20;
 
 	int obj_id = 0;
@@ -373,7 +381,7 @@ void BuildObject()
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
 
-	int CowCount = 10;
+	int CowCount = 20;
 	for (int i = 0; i < CowCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -393,7 +401,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int PigCount = 10;
+	int PigCount = 20;
 	for (int i = 0; i < PigCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -414,6 +422,26 @@ void BuildObject()
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
 
+	int SpiderCount = 0;
+	for (int i = 0; i < SpiderCount; ++i) {
+		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
+		obj->SetScale(8.f, 8.f, 8.f);
+		obj->SetID(obj_id++);
+
+		obj->SetType(OBJECT_TYPE::OB_SPIDER);
+		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
+
+		// fsm 추가 해야함
+		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
+
+		gameObjects.push_back(obj);
+
+		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
+		Octree::GameObjectOctree.insert(std::move(t_obj));
+	}
 }
 
 int main(int argc, char* argv[])
@@ -446,12 +474,16 @@ int main(int argc, char* argv[])
 
 		g_timer.Start();
 		while (true) {
-			g_timer.Tick(120.f);
-			float deltaTime = g_timer.GetTimeElapsed(); // 매 틱 동일한 deltaTime 사용
+			g_timer.Tick(144.f);
+			float deltaTime = g_timer.GetTimeElapsed(); // Use Tick same deltaTime
 
 			// fsm몬스터 로직
 			for (auto& obj : gameObjects) {
-				if (obj->FSM_manager) obj->FSMUpdate();
+				std::vector<tree_obj*> results;
+				tree_obj t_obj{ -1, obj->GetPosition() };
+				Octree::PlayerOctree.query(t_obj, oct_distance, results);
+				// Do not update if there is no player nearby
+				if (results.size() > 0 && obj->FSM_manager) obj->FSMUpdate();
 			}
 
 			for (auto& cl : PlayerClient::PlayerClients) {
@@ -471,9 +503,9 @@ int main(int argc, char* argv[])
 				cl.second->vl_mu.unlock();
 
 				std::unordered_set<int> new_vl;
-				std::vector<tree_obj*> results; // 시야 범위 내 객체 찾기
+				std::vector<tree_obj*> results; // find obj
 				tree_obj p_obj{ -1,pos };
-				Octree::GameObjectOctree.query(p_obj, XMFLOAT3{ 2500,1000,2500 }, results);
+				Octree::GameObjectOctree.query(p_obj, oct_distance, results);
 				for (auto& obj : results) new_vl.insert(obj->u_id);
 
 				for (auto o_id : before_vl) {

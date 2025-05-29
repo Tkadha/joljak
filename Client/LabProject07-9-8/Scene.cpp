@@ -851,7 +851,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 
 	
-    bool bRenderOBBs = true; 
+    bool bRenderOBBs = false; 
     if (bRenderOBBs) {
         CShader* pOBBShader = pShaderManager->GetShader("OBB",pd3dCommandList);
         if (pOBBShader) {

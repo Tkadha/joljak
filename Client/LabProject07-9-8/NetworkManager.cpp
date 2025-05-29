@@ -139,21 +139,9 @@ void NetworkManager::Process_Packet(char* packet)
 		}
 	}
 		break;
-	case E_PACKET::E_P_POSITION:
-	case E_PACKET::E_P_ROTATE:
-	case E_PACKET::E_P_INPUT:
-	case E_PACKET::E_P_LOGIN:
-	case E_PACKET::E_P_LOGOUT:
-	case E_PACKET::E_O_ADD:
-	case E_PACKET::E_O_REMOVE:
-	case E_PACKET::E_O_MOVE:
-	case E_PACKET::E_O_CHANGEANIMATION:
-	case E_PACKET::E_O_HIT:
-	case E_PACKET::E_O_INVINCIBLE:
+	default:
 		PushRecvQueue(packet, static_cast<short>(packet[0]));
 		break;
-	default:
-	break;
 	}
 }
 

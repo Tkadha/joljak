@@ -970,9 +970,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
 			}
 
-			gameObj->SetOwningScene(m_pScene);;
-			//gameObj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
-			//gameObj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+			gameObj->SetOwningScene(m_pScene);
 
 			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
 			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
@@ -1013,8 +1011,6 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			}
 
 			gameObj->SetOwningScene(m_pScene);
-			//gameObj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
-			//gameObj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
 			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
@@ -1031,6 +1027,47 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
 			if (pPigModel) delete(pPigModel);
+		}
+		break;
+		case OBJECT_TYPE::OB_SPIDER:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Spider.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pSpiderModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Spider;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			if (pSpiderModel) delete(pSpiderModel);
 		}
 		break;
 		default:

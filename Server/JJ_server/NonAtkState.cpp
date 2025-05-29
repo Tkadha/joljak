@@ -54,7 +54,6 @@ void NonAtkNPCStandingState::Enter(std::shared_ptr<GameObject> npc)
 
 	// 근처에 있는 플레이어에게 타입 보내기
 	std::vector<tree_obj*> results;
-	XMFLOAT3 oct_distance{ 2500,1000,2500 };
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 	for (auto& p_obj : results) {
@@ -98,7 +97,6 @@ void NonAtkNPCMoveState::Enter(std::shared_ptr<GameObject> npc)
 
 	// 근처에 있는 플레이어에게 타입 보내기
 	std::vector<tree_obj*> results;
-	XMFLOAT3 oct_distance{ 2500,1000,2500 };
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 	for (auto& p_obj : results) {
@@ -174,7 +172,6 @@ void NonAtkNPCMoveState::Execute(std::shared_ptr<GameObject> npc)
 	Octree::GameObjectOctree.update(npc->GetID(), npc->GetPosition());
 
 	std::vector<tree_obj*> results;
-	XMFLOAT3 oct_distance{ 2500,1000,2500 };
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 	for (auto& p_obj : results) {
@@ -205,7 +202,6 @@ void NonAtkNPCRunAwayState::Enter(std::shared_ptr<GameObject> npc)
 
 	// 근처에 있는 플레이어에게 타입 보내기
 	std::vector<tree_obj*> results;
-	XMFLOAT3 oct_distance{ 2500,1000,2500 };
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 	for (auto& p_obj : results) {
@@ -269,7 +265,6 @@ void NonAtkNPCRunAwayState::Execute(std::shared_ptr<GameObject> npc)
 	}
 	Octree::GameObjectOctree.update(npc->GetID(), npc->GetPosition());
 	std::vector<tree_obj*> results;
-	XMFLOAT3 oct_distance{ 2500,1000,2500 };
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 	for (auto& p_obj : results) {
@@ -305,7 +300,6 @@ void NonAtkNPCDieState::Enter(std::shared_ptr<GameObject> npc)
 	npc->SetAnimationType(ANIMATION_TYPE::DIE);
 	// 근처에 있는 플레이어에게 타입 보내기
 	std::vector<tree_obj*> results;
-	XMFLOAT3 oct_distance{ 2500,1000,2500 };
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 	for (auto& p_obj : results) {
@@ -342,7 +336,6 @@ void NonAtkNPCRespawnState::Enter(std::shared_ptr<GameObject> npc)
 	duration_time = 20 * 1000; // 20초간 안보이도록
 
 	std::vector<tree_obj*> results;
-	XMFLOAT3 oct_distance{ 2500,1000,2500 };
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 
@@ -386,7 +379,6 @@ void NonAtkNPCRespawnState::Exit(std::shared_ptr<GameObject> npc)
 	npc->is_alive = true;
 
 	std::vector<tree_obj*> results;
-	XMFLOAT3 oct_distance{ 2500,1000,2500 };
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 
