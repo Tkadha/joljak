@@ -880,7 +880,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 				m_pPlayer->SetInvincibility();	// 변경
 			}
 		}
-		m_pPlayer->Render(pd3dCommandList, pCamera);
+		m_pPlayer->m_pChild->m_pChild->m_pChild->Render(pd3dCommandList, pCamera);
 	}
 	for (auto& p : PlayerList) {
 		if (p.second->m_pSkinnedAnimationController) p.second->Animate(m_fElapsedTime);
