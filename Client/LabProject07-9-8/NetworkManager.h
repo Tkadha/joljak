@@ -8,7 +8,7 @@
 #pragma comment (lib, "WS2_32.LIB")
 #include "../../Server/Global.h"
 
-#define BUFSIZE 4*1024*1024 // 패킷(현재는 버퍼)크기
+#define BUFSIZE 1024 // 패킷(현재는 버퍼)크기
 
 
 using namespace std;

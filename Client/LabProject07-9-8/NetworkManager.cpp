@@ -48,7 +48,7 @@ void recv_callback(DWORD err, DWORD recv_size, LPWSAOVERLAPPED recv_over, DWORD 
 
 	memset(nwManager.server_s->m_recv_over.send_buf + nwManager.server_s->m_prev_remain, 0,
 		sizeof(nwManager.server_s->m_recv_over.send_buf) - nwManager.server_s->m_prev_remain);
-	memset(&nwManager.server_s->m_recv_over.wsabuf, 0, sizeof(nwManager.server_s->m_recv_over.over));
+	memset(&nwManager.server_s->m_recv_over.over, 0, sizeof(nwManager.server_s->m_recv_over.over));
 
 	// 다음 수신 준비
 	nwManager.do_recv();
@@ -91,8 +91,8 @@ void NetworkManager::Init()
 void NetworkManager::do_recv()
 {
 	server_s->m_readFlags = 0;
-	server_s->m_recv_over.wsabuf.len = BUFSIZE;
-	server_s->m_recv_over.wsabuf.buf = server_s->m_recv_over.send_buf;
+	server_s->m_recv_over.wsabuf.len = BUFSIZE - server_s->m_prev_remain;
+	server_s->m_recv_over.wsabuf.buf = server_s->m_recv_over.send_buf + server_s->m_prev_remain;
 	WSARecv(server_s->m_fd, &(server_s->m_recv_over.wsabuf), 1, nullptr, &server_s->m_readFlags, &(server_s->m_recv_over.over), recv_callback);
 }
 

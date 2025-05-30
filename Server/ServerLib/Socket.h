@@ -16,7 +16,7 @@
 typedef int SOCKET;
 #endif
 
-#define BUFSIZE 4*1024*1024 // 패킷(현재는 버퍼)크기
+#define BUFSIZE 1024 // 패킷(현재는 버퍼)크기
 
 //#define MAX_CLIENT 100 // 최대 접속가능한 클라이언트 수
 //#define MAX_WORKERTHREAD 4 // 쓰레드 풀(CP객체)에 넣을 쓰레드 수
