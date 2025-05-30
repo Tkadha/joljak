@@ -43,7 +43,10 @@ void CGameFramework::NerworkThread()
 }
 void CGameFramework::ProcessPacket(char* packet)
 {
-	int loopcount = 0;
+	int loop_count{ 0 };
+retry:
+	loop_count++;
+	if (loop_count > 10'000) return;
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
@@ -122,22 +125,25 @@ void CGameFramework::ProcessPacket(char* packet)
 	{
 		MOVE_PACKET* recv_p = reinterpret_cast<MOVE_PACKET*>(packet);
 		int id = recv_p->id;
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
 		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
 			return obj->m_id == id;
 			});
-		if (it != m_pScene->m_vGameObjects.end()) {	
+		if (it != m_pScene->m_vGameObjects.end()) {
 			CGameObject* Found_obj = *it;
 			Found_obj->SetLook(XMFLOAT3(recv_p->look.x, recv_p->look.y, recv_p->look.z));
 			Found_obj->SetUp(XMFLOAT3(recv_p->up.x, recv_p->up.y, recv_p->up.z));
 			Found_obj->SetRight(XMFLOAT3(recv_p->right.x, recv_p->right.y, recv_p->right.z));
 			Found_obj->SetPosition(recv_p->position.x, recv_p->position.y, recv_p->position.z);
 		}
+		else goto retry;
 	}
 	break;
 	case E_PACKET::E_O_CHANGEANIMATION:
 	{
 		CHANGEANIMATION_PACKET* recv_p = reinterpret_cast<CHANGEANIMATION_PACKET*>(packet);
 		int id = recv_p->oid;
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
 		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
 			return obj->m_id == id;
 			});
@@ -145,12 +151,14 @@ void CGameFramework::ProcessPacket(char* packet)
 			CGameObject* Found_obj = *it;
 			Found_obj->ChangeAnimation(recv_p->a_type);
 		}
+		else goto retry;
 	}
 		break;
 	break;
 	case E_PACKET::E_O_SETHP: {
 		OBJ_HP_PACKET* recv_p = reinterpret_cast<OBJ_HP_PACKET*>(packet);
 		int id = recv_p->oid;
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
 		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
 			return obj->m_id == id;
 			});
@@ -158,11 +166,13 @@ void CGameFramework::ProcessPacket(char* packet)
 			CGameObject* Found_obj = *it;
 			Found_obj->Sethp(recv_p->hp);
 		}
+		else goto retry;
 	}
 	break;
 	case E_PACKET::E_O_INVINCIBLE: {
 		OBJ_INVINCIBLE_PACKET* recv_p = reinterpret_cast<OBJ_INVINCIBLE_PACKET*>(packet);
 		int id = recv_p->oid;
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
 		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
 			return obj->m_id == id;
 			});
@@ -170,6 +180,7 @@ void CGameFramework::ProcessPacket(char* packet)
 			CGameObject* Found_obj = *it;
 			Found_obj->SetInvincible(recv_p->invincible);
 		}
+		else goto retry;
 	}
 	break;
 	default:
@@ -982,13 +993,13 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
 
 
-			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pCowModel) delete(pCowModel);
 		}
 		break;
@@ -1019,13 +1030,13 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
-			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pPigModel) delete(pPigModel);
 		}
 		break;
@@ -1060,13 +1071,13 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
 
 
-			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pSpiderModel) delete(pSpiderModel);
 		}
 		break;

@@ -86,6 +86,7 @@ void AtkNPCMoveState::Enter(std::shared_ptr<GameObject> npc)
 	move_type = rand_type(dre); // 랜덤한 이동 타입(0~2)
 	rotate_type = rand_type(dre) % 2; // 랜덤한 회전 타입(0~1)
 	npc->SetAnimationType(ANIMATION_TYPE::WALK);
+
 	std::vector<tree_obj*> results;
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
@@ -189,6 +190,7 @@ void AtkNPCChaseState::Enter(std::shared_ptr<GameObject> npc)
 			cl.second->SendAnimationPacket(npc);
 		}
 	}
+	std::cout << "enter chasestate\n";
 }
 
 void AtkNPCChaseState::Execute(std::shared_ptr<GameObject> npc)
@@ -196,6 +198,11 @@ void AtkNPCChaseState::Execute(std::shared_ptr<GameObject> npc)
 	std::vector<tree_obj*> results;
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, XMFLOAT3{ 500,1000,500 }, results);
+	if (results.size() <= 0)
+	{
+		npc->FSM_manager->ChangeState(std::make_shared<AtkNPCStandingState>());
+		return;
+	}
 	long long near_player_id{ 0 };
 	float near_player_distance{1000.f};
 	for (auto& t_obj : results) {
@@ -211,6 +218,8 @@ void AtkNPCChaseState::Execute(std::shared_ptr<GameObject> npc)
 			near_player_id = t_obj->u_id;
 		}
 	}
+
+
 	for (auto& cl : PlayerClient::PlayerClients) {
 		if (cl.second->m_id != near_player_id) continue;
 
@@ -249,18 +258,46 @@ void AtkNPCChaseState::Execute(std::shared_ptr<GameObject> npc)
 		}
 		// 목표 방향으로 회전
 		npc->Rotate(0.0f, deltaYaw * 2, 0.0f);
+
+
+
 		float attackRange = 30.0f;
 		float distanceToPlayer = sqrt(pow(playerPos.x - npcPos.x, 2) + pow(playerPos.y - npcPos.y, 2) + pow(playerPos.z - npcPos.z, 2));
 
 		if (distanceToPlayer < attackRange)
 		{
+			std::vector<tree_obj*> results;
+			tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
+			Octree::PlayerOctree.query(n_obj, oct_distance, results);
+			for (auto& p_obj : results) {
+				for (auto& cl : PlayerClient::PlayerClients) {
+					if (cl.second->state != PC_INGAME)continue;
+					if (cl.second->m_id != p_obj->u_id) continue;
+					if (cl.second->viewlist.find(npc->GetID()) == cl.second->viewlist.end())
+						cl.second->SendAddPacket(npc);
+					cl.second->SendMovePacket(npc);
+				}
+			}
 			auto obj = dynamic_cast<GameObject*> (npc.get());
 			if (obj->FSM_manager->GetAtkDelay() == false)
 				npc->FSM_manager->ChangeState(std::make_shared<AtkNPCAttackState>());
 			return;
 		}
-		npc->MoveForward(0.4f);
+		if (distanceToPlayer > attackRange)
+			npc->MoveForward(0.3f);
 		Octree::GameObjectOctree.update(npc->GetID(), npc->GetPosition());
+		std::vector<tree_obj*> results;
+		tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
+		Octree::PlayerOctree.query(n_obj, oct_distance, results);
+		for (auto& p_obj : results) {
+			for (auto& cl : PlayerClient::PlayerClients) {
+				if (cl.second->state != PC_INGAME)continue;
+				if (cl.second->m_id != p_obj->u_id) continue;
+				if (cl.second->viewlist.find(npc->GetID()) == cl.second->viewlist.end())
+					cl.second->SendAddPacket(npc);
+				cl.second->SendMovePacket(npc);
+			}
+		}
 		// 추격 중 멈춤 조건 (예: 플레이어가 너무 멀리 벗어남)
 		float loseRange = 700.f;
 		if (distanceToPlayer > loseRange)
@@ -412,10 +449,22 @@ void AtkNPCAttackState::Execute(std::shared_ptr<GameObject> npc)
 		return;
 	}
 	if (exec_ms < 0.25 * 1000.f) {
-		npc->MoveForward(1.5f);
+		npc->MoveForward(0.75f);
 	}
 	Octree::GameObjectOctree.update(npc->GetID(), npc->GetPosition());
 
+	std::vector<tree_obj*> results;
+	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
+	Octree::PlayerOctree.query(n_obj, oct_distance, results);
+	for (auto& p_obj : results) {
+		for (auto& cl : PlayerClient::PlayerClients) {
+			if (cl.second->state != PC_INGAME)continue;
+			if (cl.second->m_id != p_obj->u_id) continue;
+			if (cl.second->viewlist.find(npc->GetID()) == cl.second->viewlist.end())
+				cl.second->SendAddPacket(npc);
+			cl.second->SendMovePacket(npc);
+		}
+	}
 	// 플레이어 체력 감소 시키기
 	// 후 전송도 포함해야함
 
@@ -434,7 +483,6 @@ void AtkNPCAttackState::Execute(std::shared_ptr<GameObject> npc)
 
 void AtkNPCAttackState::Exit(std::shared_ptr<GameObject> npc)
 {
-
 	npc->FSM_manager->SetAtkDelay();
 }
 
@@ -466,7 +514,7 @@ void AtkNPCHitState::Execute(std::shared_ptr<GameObject> npc)
 		return;
 	}
 	if (exec_ms < 0.25 * 1000.f) {
-		npc->MoveForward(-1.5f);
+		npc->MoveForward(-0.75f);
 	}
 	Octree::GameObjectOctree.update(npc->GetID(), npc->GetPosition());
 
