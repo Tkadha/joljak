@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Player.h"
 #include "Terrain.h"
+#include "GameObject.h"
 #include <iostream>
 
 #define DIR_FORWARD					0x01
@@ -59,13 +60,13 @@ void PlayerClient::Update(float fTimeElapsed)
 	XMFLOAT3 xmf3Velocity = Vector3::ScalarProduct(m_Velocity, fTimeElapsed, false);
 	Move(xmf3Velocity, false);
 
-	if(m_pTerrain)
+	if(Terrain::terrain)
 	{		
-		XMFLOAT3 xmf3Scale = m_pTerrain->GetScale();
+		XMFLOAT3 xmf3Scale = Terrain::terrain->GetScale();
 		XMFLOAT3 xmf3PlayerPosition = GetPosition();
 		int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
 		bool bReverseQuad = ((z % 2) != 0);
-		float fHeight = m_pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
+		float fHeight = Terrain::terrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
 		if (xmf3PlayerPosition.y < fHeight)
 		{
 			XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
@@ -91,6 +92,7 @@ void PlayerClient::processInput(PlayerInput input)
 
 void PlayerClient::Update_test(float deltaTime)
 {
+    if (this->state != PC_INGAME) return;
     PlayerInput currentInput = m_lastReceivedInput;
     // 공격 상태 처리
     static float attackTimer = 0.0f; // 실제로는 멤버 변수로 관리
@@ -122,7 +124,9 @@ void PlayerClient::Update_test(float deltaTime)
         }
         else if (isGrounded && (currentInput.MoveForward || currentInput.MoveBackward || currentInput.WalkLeft || currentInput.WalkRight)) {
             // 땅에 있고 이동 입력이 있으면 Walking 또는 Running
-            m_currentState = (currentInput.Run && currentInput.MoveForward) ? ServerPlayerState::Running : ServerPlayerState::Walking;
+            if (currentInput.Run) m_currentState = ServerPlayerState::Running;
+            else m_currentState = ServerPlayerState::Walking;
+           // m_currentState = (currentInput.Run && currentInput.MoveForward) ? ServerPlayerState::Running : ServerPlayerState::Walking;
         }
         else if (isGrounded) {
             // 땅에 있고 다른 조건 없으면 Idle
@@ -155,7 +159,6 @@ void PlayerClient::Update_test(float deltaTime)
             moveVector = Vector3::Add(moveVector, right);
             isMovingInput = true;
         }
-
         if (isMovingInput) {
             moveVector = Vector3::Normalize(moveVector);
             float currentSpeed = (m_currentState == ServerPlayerState::Running) ? m_runSpeed : m_walkSpeed; // 상태별 속도
@@ -205,11 +208,12 @@ void PlayerClient::Update_test(float deltaTime)
 
 bool PlayerClient::CheckIfGrounded()
 {
-    XMFLOAT3 xmf3Scale = m_pTerrain->GetScale();
+    if (this->state != PC_INGAME) return false;
+    XMFLOAT3 xmf3Scale = Terrain::terrain->GetScale();
     XMFLOAT3 xmf3PlayerPosition = GetPosition();
     int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
     bool bReverseQuad = ((z % 2) != 0);
-    float fHeight = m_pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
+    float fHeight = Terrain::terrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
     if (xmf3PlayerPosition.y <= fHeight) return true;
     
     return false;
@@ -217,11 +221,12 @@ bool PlayerClient::CheckIfGrounded()
 
 void PlayerClient::SnapToGround()
 {
-    XMFLOAT3 xmf3Scale = m_pTerrain->GetScale();
+    if (this->state != PC_INGAME) return;
+    XMFLOAT3 xmf3Scale = Terrain::terrain->GetScale();
     XMFLOAT3 xmf3PlayerPosition = GetPosition();
     int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
     bool bReverseQuad = ((z % 2) != 0);
-    float fHeight = m_pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
+    float fHeight = Terrain::terrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
 
     if (xmf3PlayerPosition.y < fHeight) {
         XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
@@ -231,4 +236,147 @@ void PlayerClient::SnapToGround()
         xmf3PlayerPosition.y = fHeight;
         SetPosition(xmf3PlayerPosition);
     }
+    // 건축물이 생길 시 제거후 로직 변경하기
+    if (m_currentState != ServerPlayerState::Jumping) {
+        xmf3PlayerPosition.y = fHeight;
+        SetPosition(xmf3PlayerPosition);
+    }
+}
+
+void PlayerClient::BroadCastPosPacket()
+{
+    POSITION_PACKET s_packet;
+    s_packet.size = sizeof(POSITION_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_P_POSITION);
+    s_packet.uid = m_id;
+    s_packet.position.x = m_Position.x;
+    s_packet.position.y = m_Position.y;
+    s_packet.position.z = m_Position.z;
+
+    for (auto& client : PlayerClient::PlayerClients) {
+        if (client.second->state != PC_INGAME) continue;
+        client.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+    }
+}
+
+void PlayerClient::BroadCastRotatePacket()
+{
+    ROTATE_PACKET s_packet;
+    s_packet.size = sizeof(ROTATE_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_P_ROTATE);
+    s_packet.right = FLOAT3{ m_Right.x,m_Right.y,m_Right.z };
+    s_packet.up = FLOAT3{ m_Up.x,m_Up.y,m_Up.z };
+    s_packet.look = FLOAT3{ m_Look.x,m_Look.y,m_Look.z };
+    s_packet.uid = m_id;
+    for (auto& cl : PlayerClient::PlayerClients) {
+        if (cl.second->state != PC_INGAME) continue;
+        if (cl.second->m_id == m_id) continue; // 나 자신은 제외한다.
+        cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+    }
+}
+
+void PlayerClient::BroadCastInputPacket()
+{
+    INPUT_PACKET s_packet;
+    s_packet.size = sizeof(INPUT_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_P_INPUT);
+    s_packet.inputData = m_lastReceivedInput;
+    s_packet.uid = m_id;
+    for (auto& cl : PlayerClient::PlayerClients) {
+        if (cl.second->state != PC_INGAME) continue;
+        if (cl.second->m_id == m_id) continue; // 나 자신은 제외한다.
+        cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+    }
+}
+
+void PlayerClient::SendHpPacket(int oid, int hp)
+{
+    OBJ_HP_PACKET s_packet;
+    s_packet.size = sizeof(OBJ_HP_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_O_SETHP);
+    s_packet.oid = oid;
+    s_packet.hp = hp;
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
+void PlayerClient::SendInvinciblePacket(int oid, bool invin_type)
+{
+	OBJ_INVINCIBLE_PACKET s_packet;
+	s_packet.size = sizeof(OBJ_INVINCIBLE_PACKET);
+	s_packet.type = static_cast<char>(E_PACKET::E_O_INVINCIBLE);
+	s_packet.oid = oid;
+	s_packet.invincible = invin_type ? 1 : 0;
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
+void PlayerClient::SendAddPacket(shared_ptr<GameObject> obj)
+{
+    if (false == obj->is_alive) return; // 리스폰 중 상태라면
+    vl_mu.lock();
+    viewlist.insert(obj->GetID());
+    vl_mu.unlock();
+
+    ADD_PACKET s_packet;
+    s_packet.size = sizeof(ADD_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_O_ADD);
+    s_packet.position.x = obj->GetPosition().x;
+    s_packet.position.y = obj->GetPosition().y;
+    s_packet.position.z = obj->GetPosition().z;
+    s_packet.right.x = obj->GetNonNormalizeRight().x;
+    s_packet.right.y = obj->GetNonNormalizeRight().y;
+    s_packet.right.z = obj->GetNonNormalizeRight().z;
+    s_packet.up.x = obj->GetNonNormalizeUp().x;
+    s_packet.up.y = obj->GetNonNormalizeUp().y;
+    s_packet.up.z = obj->GetNonNormalizeUp().z;
+    s_packet.look.x = obj->GetNonNormalizeLook().x;
+    s_packet.look.y = obj->GetNonNormalizeLook().y;
+    s_packet.look.z = obj->GetNonNormalizeLook().z;
+    s_packet.o_type = obj->GetType();
+    s_packet.a_type = obj->GetAnimationType();
+    s_packet.id = obj->GetID();
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
+void PlayerClient::SendRemovePacket(shared_ptr<GameObject> obj)
+{
+    vl_mu.lock();
+    viewlist.erase(obj->GetID());
+    vl_mu.unlock();
+
+    REMOVE_PACKET s_packet;
+    s_packet.size = sizeof(REMOVE_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_O_REMOVE);
+    s_packet.id = obj->GetID();
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
+void PlayerClient::SendMovePacket(shared_ptr<GameObject> obj)
+{
+    MOVE_PACKET s_packet;
+    s_packet.size = sizeof(MOVE_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_O_MOVE);
+    s_packet.position.x = obj->GetPosition().x;
+    s_packet.position.y = obj->GetPosition().y;
+    s_packet.position.z = obj->GetPosition().z;
+    s_packet.right.x = obj->GetNonNormalizeRight().x;
+    s_packet.right.y = obj->GetNonNormalizeRight().y;
+    s_packet.right.z = obj->GetNonNormalizeRight().z;
+    s_packet.up.x = obj->GetNonNormalizeUp().x;
+    s_packet.up.y = obj->GetNonNormalizeUp().y;
+    s_packet.up.z = obj->GetNonNormalizeUp().z;
+    s_packet.look.x = obj->GetNonNormalizeLook().x;
+    s_packet.look.y = obj->GetNonNormalizeLook().y;
+    s_packet.look.z = obj->GetNonNormalizeLook().z;
+    s_packet.id = obj->GetID();
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
+void PlayerClient::SendAnimationPacket(shared_ptr<GameObject> obj)
+{
+    CHANGEANIMATION_PACKET s_packet;
+    s_packet.size = sizeof(CHANGEANIMATION_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_O_CHANGEANIMATION);
+    s_packet.oid = obj->GetID();
+    s_packet.a_type = obj->GetAnimationType();
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 }

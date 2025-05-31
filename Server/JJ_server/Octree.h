@@ -1,13 +1,14 @@
 #pragma once
-#include <iostream>
 #include "stdafx.h"
+#include <vector>
+#include <mutex>
 
+static XMFLOAT3 oct_distance{ 2500,1000,2500 };
 
-// ��ü Ŭ����
 struct tree_obj {
-    int u_id;
-    XMFLOAT3 position; // ��ü�� ��ġ
-    tree_obj(int id, const XMFLOAT3& pos) : u_id(id), position(pos) {}
+    long long u_id;
+    XMFLOAT3 position; 
+    tree_obj(long long id, const XMFLOAT3& pos) : u_id(id), position(pos) {}
 
     float distanceTo(const tree_obj& other) const {
         return std::sqrt((position.x - other.position.x) * (position.x - other.position.x) +
@@ -15,7 +16,7 @@ struct tree_obj {
             (position.z - other.position.z) * (position.z - other.position.z));
     }
 
-    // ���� Ư�� ���� ���� �ִ��� Ȯ��
+    
     bool isWithin(const XMFLOAT3& min, const XMFLOAT3& max) const {
         return position.x >= min.x && position.x <= max.x &&
             position.y >= min.y && position.y <= max.y &&
@@ -35,14 +36,18 @@ struct tree_obj {
     }
 };
 
-// ��Ʈ�� ���?Ŭ����
 class Octree {
 public:
-    XMFLOAT3 minBound, maxBound; // ���� �����?���?
-    std::vector<std::unique_ptr<tree_obj>> objects; // ���� ���?���Ե� ��ü��
-    Octree* children[8] = { nullptr }; // 8���� ���� ���?
-    int maxObjects = 6; // ���?���ҵǱ� �� ���Ǵ� �ִ� ��ü ��
-    int maxDepth = 5;   // �ִ� ���� ����
+    static Octree PlayerOctree;
+    static Octree GameObjectOctree;
+
+public:
+    XMFLOAT3 minBound, maxBound; 
+    std::vector<std::unique_ptr<tree_obj>> objects; 
+    std::mutex oct_mu;
+    Octree* children[8] = { nullptr }; 
+    int maxObjects = 6; 
+    int maxDepth = 5;   
 
     Octree(const XMFLOAT3& min, const XMFLOAT3& max, int depth = 0)
         : minBound(min), maxBound(max), depth(depth) {
@@ -52,17 +57,15 @@ public:
     ~Octree();
 
     void insert(std::unique_ptr<tree_obj> obj);
-    bool remove(int id);
-    void update(int id, const XMFLOAT3& newpos);
-    // Ư�� ���� �� ��ü �˻�
+    bool remove(long long id);
+    void update(long long id, const XMFLOAT3& newpos);
+
     void query(const tree_obj& obj, const XMFLOAT3& distance, std::vector<tree_obj*>& results);
 
 private:
-    int depth; // ���� �����?����
-
-    // ���� ���?8���� ����
+    int depth; 
+    
     void subdivide();
 
-    // ���� ���?������ �����ϴ��� Ȯ��
     bool intersects(const XMFLOAT3& queryMin, const XMFLOAT3& queryMax) const;
 };

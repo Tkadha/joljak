@@ -690,7 +690,7 @@ public:
 };
 
 
-
+#include "NetworkManager.h"
 
 void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObject)
 {
@@ -814,24 +814,33 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
     }
     else if (hitObject->m_objectType == GameObjectType::Cow || hitObject->m_objectType == GameObjectType::Pig) {
         auto npc = dynamic_cast<CMonsterObject*>(hitObject);
-        if (npc->Gethp() <= 0);
-        if (npc->FSM_manager->GetInvincible());
+        if (npc->_invincible) return;
+        if (npc->Gethp() <= 0) return;
+        if (npc->FSM_manager) if (npc->FSM_manager->GetInvincible()) return;
 
+        auto& nwManager = NetworkManager::GetInstance();
+        OBJ_HIT_PACKET packet;
+        packet.oid = npc->m_id;
         switch (player->weaponType)
         {
         case WeaponType::Sword:
             npc->Decreasehp(10);
+            packet.damage = 10;
             break;
         case WeaponType::Axe:
             npc->Decreasehp(8);
+            packet.damage = 8;
             break;
         case WeaponType::Pick:
             npc->Decreasehp(6);
+            packet.damage = 6;
             break;
         default:
             break;
         }
+        nwManager.PushSendQueue(packet, packet.size);
 
+        npc->SetInvincible(true); // set invincible
         if (npc->Gethp() <= 0) {
             player->m_pGameFramework->AddItem("pork", 2);
         }
@@ -845,24 +854,33 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
     else if (hitObject->m_objectType != GameObjectType::Unknown && hitObject->m_objectType != GameObjectType::Cow && hitObject->m_objectType != GameObjectType::Pig &&
         hitObject->m_objectType != GameObjectType::Rock && hitObject->m_objectType != GameObjectType::Tree && hitObject->m_objectType != GameObjectType::Player) {
         auto npc = dynamic_cast<CMonsterObject*>(hitObject);
+        if (npc->_invincible) return;
         if (npc->Gethp() <= 0) return;
-        if (npc->FSM_manager->GetInvincible()) return;
+        if (npc->FSM_manager) if (npc->FSM_manager->GetInvincible()) return;
+
+        auto& nwManager = NetworkManager::GetInstance();
+        OBJ_HIT_PACKET packet;
+        packet.oid = npc->m_id;
         switch (player->weaponType)
         {
         case WeaponType::Sword:
             npc->Decreasehp(10);
+            packet.damage = 10;
             break;
         case WeaponType::Axe:
             npc->Decreasehp(8);
+            packet.damage = 8;
             break;
         case WeaponType::Pick:
             npc->Decreasehp(6);
+            packet.damage = 6;
             break;
         default:
             break;
         }
+        nwManager.PushSendQueue(packet, packet.size);
 
-
+        npc->SetInvincible(true); // set invincible
         if (npc->Gethp() <= 0) {
             player->Playerxp += 20;
             if (player->Playerxp >= player->Totalxp) {

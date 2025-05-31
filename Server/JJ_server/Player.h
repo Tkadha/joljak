@@ -1,18 +1,24 @@
 #pragma once
 #include "../ServerLib/RemoteClient.h"
 #include "stdafx.h"
-
 #include "../Global.h"
-
+#include <unordered_set>
+#include "Terrain.h"
 // client 정보
 
-class Terrain;
+
+class GameObject;
+
+enum C_STATE { PC_FREE, PC_INGAME };
 
 class PlayerClient : public RemoteClient
 {
 public:
 	static unordered_map<PlayerClient*, shared_ptr<PlayerClient>> PlayerClients;
-
+	std::mutex c_mu;
+	C_STATE state;
+	std::mutex vl_mu;
+	std::unordered_set<int> viewlist;
 private:
 
 	XMFLOAT3					m_Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -31,14 +37,16 @@ private:
 	ServerPlayerState			m_currentState = ServerPlayerState::Idle; // 서버 측 플레이어 상태 (ServerPlayerState enum 정의 필요)
 
 	LPVOID						m_pPlayerUpdatedContext = NULL;
-	std::shared_ptr<Terrain>	m_pTerrain = nullptr;
+
 
 	float m_walkSpeed = 50.0f;
-	float m_runSpeed = 80.0f;
+	float m_runSpeed = 100.0f;
 
 public:
 	PlayerClient() : RemoteClient()
 	{
+		state = PC_FREE;
+
 		m_Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		m_Right = XMFLOAT3(1.0f, 0.0f, 0.0f);
 		m_Up = XMFLOAT3(0.0f, 1.0f, 0.0f);
@@ -57,6 +65,7 @@ public:
 	}
 	PlayerClient(SocketType socketType) :RemoteClient(socketType) 
 	{
+		state = PC_FREE;
 		m_Position = XMFLOAT3(1500.f, 0.0f, 1500.f);	// 테스트용 임의 지정
 		m_Right = XMFLOAT3(1.0f, 0.0f, 0.0f);
 		m_Up = XMFLOAT3(0.0f, 1.0f, 0.0f);
@@ -95,9 +104,6 @@ public:
 	XMFLOAT3 GetUp() const { return m_Up; }
 	XMFLOAT3 GetLook() const { return m_Look; }
 
-
-
-	void SetTerrain(std::shared_ptr<Terrain> pTerrain) { m_pTerrain = pTerrain; }
 	void Update(float fTimeElapsed);
 	
 	// 상태머신 적용 업데이트 테스트
@@ -105,15 +111,22 @@ public:
 	bool CheckIfGrounded();
 	void SnapToGround();
 
-
-
-
-
 	void processInput(PlayerInput input);
 
 	XMFLOAT3 GetLookVector() { return(m_Look); }
 	XMFLOAT3 GetUpVector() { return(m_Up); }
 	XMFLOAT3 GetRightVector() { return(m_Right); }
 
+
+public:
+	void BroadCastPosPacket();
+	void BroadCastRotatePacket();
+	void BroadCastInputPacket();
+	void SendHpPacket(int,int);
+	void SendInvinciblePacket(int, bool);
+	void SendAddPacket(shared_ptr<GameObject>);
+	void SendRemovePacket(shared_ptr<GameObject>);
+	void SendMovePacket(shared_ptr<GameObject>);
+	void SendAnimationPacket(shared_ptr<GameObject>);
 };
 

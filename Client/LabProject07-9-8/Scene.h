@@ -65,6 +65,7 @@ public:
 	virtual void ReleaseShaderVariables();
 
 	void BuildDefaultLightsAndMaterials();
+	void ServerBuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	void ReleaseObjects();
 
@@ -99,6 +100,7 @@ public:
 public:
 	float								m_fElapsedTime = 0.0f;
 
+	std::mutex							m_Mutex; // 멀티스레드 안전성을 위한 뮤텍스
 	vector<CGameObject*>				m_vGameObjects{};
 	std::unordered_map<std::string, CGameObject*> m_mapBuildPrefabs;
 	CGameObject* m_pPreviewPine = nullptr;
@@ -126,6 +128,7 @@ public:
 
 	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView;
 
+	int tree_obj_count{ 0 };
 	std::vector<tree_obj>				tree_objects;
 	Octree								octree{ XMFLOAT3 {0,0,0}, XMFLOAT3{10200,6000,10200} };
 	bool								checkTree = false;

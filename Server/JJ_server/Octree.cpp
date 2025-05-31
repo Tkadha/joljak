@@ -1,4 +1,8 @@
+#include "stdafx.h"
 #include "Octree.h"
+
+Octree Octree::PlayerOctree = { XMFLOAT3 {0,0,0}, XMFLOAT3{10200,6000,10200} };
+Octree Octree::GameObjectOctree{ XMFLOAT3 {0,0,0}, XMFLOAT3{10200,6000,10200} };
 
 Octree::~Octree() {
 
@@ -6,31 +10,28 @@ Octree::~Octree() {
         delete child;
 }
 
-// ��ü ����
 void Octree::insert(std::unique_ptr<tree_obj> obj) {
-    // ��ü�� ���� ���?������ ������ ����
+    std::unique_lock<std::mutex> oct_lock(oct_mu);
     if (!obj->isWithin(minBound, maxBound)) return;
 
-    // ���� ���� ���ҵ��� �ʾҰ�, ��ü ���� ������ �ʰ����� ������ �߰�
     if (objects.size() < maxObjects || depth >= maxDepth) {
         objects.push_back(std::move(obj));
         return;
     }
 
-    // ó������ ���� ���?����
     if (children[0] == nullptr) subdivide();
-
-    // ���� ���?��ü ���� �õ�
+    oct_lock.unlock();
     for (auto& child : children) {
         if (obj->isWithin(child->minBound, child->maxBound)) {
             child->insert(std::move(obj));
-            return;  // �ùٸ� ���� ���?���ԵǸ� ����
+            return;  
         }
     }
 }
 
-bool Octree::remove(int id)
+bool Octree::remove(long long id)
 {
+    std::unique_lock<std::mutex> oct_lock(oct_mu);
     auto it = std::find_if(objects.begin(), objects.end(), [id](const std::unique_ptr<tree_obj>& obj){
         return obj->u_id == id;
         });
@@ -38,7 +39,7 @@ bool Octree::remove(int id)
         objects.erase(it);
         return true;
     }
-    // �ڽ� ��忡��?���� �õ�
+    oct_lock.unlock();
     for (auto& child : children) {
         if (child != nullptr && child->remove(id)) {
             return true;
@@ -47,14 +48,13 @@ bool Octree::remove(int id)
     return false;
 }
 
-void Octree::update(int id, const XMFLOAT3& newpos)
+void Octree::update(long long id, const XMFLOAT3& newpos)
 {
     for (auto it = objects.begin(); it != objects.end(); ++it) {
         if ((*it)->u_id == id) {
             (*it)->position = newpos;
             if ((*it)->isWithin(minBound, maxBound)) return;
 
-            // ��ü�� �̵� �� ���� �� �����?
             std::unique_ptr<tree_obj> temp = std::move(*it);
             insert(std::move(temp));
             return;
@@ -67,21 +67,17 @@ void Octree::update(int id, const XMFLOAT3& newpos)
         }
     }
 }
-
-
 void Octree::query(const tree_obj& object, const XMFLOAT3& distance, std::vector<tree_obj*>& results) {
-   
+    std::unique_lock<std::mutex> oct_lock(oct_mu);
     if (!intersects(object.Sub_Pos_return(distance), object.Add_Pos_return(distance))) return;
 
-    
     for (auto& obj : objects) {
         if (obj->u_id == object.u_id) continue;
         if (obj->isWithin(object.Sub_Pos_return(distance), object.Add_Pos_return(distance))) {
             results.push_back(obj.get());
         }
     }
-
-   
+    oct_lock.unlock();
     for (auto& child : children) {
         if (child != nullptr) {
             child->query(object, distance, results);
@@ -104,7 +100,6 @@ void Octree::subdivide() {
     children[7] = new Octree(center, maxBound, depth + 1);
 }
 
-// ���� ���?������ �����ϴ��� Ȯ��
 bool Octree::intersects(const XMFLOAT3& queryMin, const XMFLOAT3& queryMax) const {
     return !(queryMax.x < minBound.x || queryMin.x > maxBound.x ||
         queryMax.y < minBound.y || queryMin.y > maxBound.y ||

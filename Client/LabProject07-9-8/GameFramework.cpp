@@ -4,22 +4,24 @@
 
 #include "stdafx.h"
 #include <thread>
-#include "GameFramework.h"
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
-#include "NetworkManager.h"
+#include "GameFramework.h"
 #include "PlayerStateDefs.h"
 #include "Player.h"
 
+#include "NetworkManager.h"
+#include "NonAtkState.h"
+#include "AtkState.h"
 // 서버 연결 여부
-//#define ONLINE
+#define ONLINE
 
 void CGameFramework::NerworkThread()
 {
 	auto& nwManager = NetworkManager::GetInstance();
 	nwManager.do_recv();
-	while (true)
+	while (b_running)
 	{
 
 		while (!nwManager.send_queue.empty())
@@ -41,6 +43,10 @@ void CGameFramework::NerworkThread()
 }
 void CGameFramework::ProcessPacket(char* packet)
 {
+	int loop_count{ 0 };
+retry:
+	loop_count++;
+	if (loop_count > 10'000) return;
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
@@ -89,10 +95,100 @@ void CGameFramework::ProcessPacket(char* packet)
 		m_logQueue.push(log_inout{ E_PACKET::E_P_LOGOUT ,recv_p->uid });
 	}
 	break;
+	case E_PACKET::E_O_ADD:
+	{
+		ADD_PACKET* recv_p = reinterpret_cast<ADD_PACKET*>(packet);
+		FLOAT3 right = recv_p->right;
+		FLOAT3 up = recv_p->up;
+		FLOAT3 look = recv_p->look;
+		FLOAT3 position = recv_p->position;
+		OBJECT_TYPE o_type = recv_p->o_type;
+		ANIMATION_TYPE a_type = recv_p->a_type;
+		int id = recv_p->id;
+		m_logQueue.push(log_inout{ E_PACKET::E_O_ADD,0,right,up,look,position,o_type,a_type,id });
+	}
+	break;
+	case E_PACKET::E_O_REMOVE:
+	{
+		REMOVE_PACKET* recv_p = reinterpret_cast<REMOVE_PACKET*>(packet);
+		int id = recv_p->id;
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
+			return obj->m_id == id;
+			});
+		if (it != m_pScene->m_vGameObjects.end()) {	
+			m_pScene->m_vGameObjects.erase(it);
+		}
+	}
+		break;
+	case E_PACKET::E_O_MOVE:
+	{
+		MOVE_PACKET* recv_p = reinterpret_cast<MOVE_PACKET*>(packet);
+		int id = recv_p->id;
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
+			return obj->m_id == id;
+			});
+		if (it != m_pScene->m_vGameObjects.end()) {
+			CGameObject* Found_obj = *it;
+			Found_obj->SetLook(XMFLOAT3(recv_p->look.x, recv_p->look.y, recv_p->look.z));
+			Found_obj->SetUp(XMFLOAT3(recv_p->up.x, recv_p->up.y, recv_p->up.z));
+			Found_obj->SetRight(XMFLOAT3(recv_p->right.x, recv_p->right.y, recv_p->right.z));
+			Found_obj->SetPosition(recv_p->position.x, recv_p->position.y, recv_p->position.z);
+		}
+		else goto retry;
+	}
+	break;
+	case E_PACKET::E_O_CHANGEANIMATION:
+	{
+		CHANGEANIMATION_PACKET* recv_p = reinterpret_cast<CHANGEANIMATION_PACKET*>(packet);
+		int id = recv_p->oid;
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
+			return obj->m_id == id;
+			});
+		if (it != m_pScene->m_vGameObjects.end()) {
+			CGameObject* Found_obj = *it;
+			Found_obj->ChangeAnimation(recv_p->a_type);
+		}
+		else goto retry;
+	}
+		break;
+	break;
+	case E_PACKET::E_O_SETHP: {
+		OBJ_HP_PACKET* recv_p = reinterpret_cast<OBJ_HP_PACKET*>(packet);
+		int id = recv_p->oid;
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
+			return obj->m_id == id;
+			});
+		if (it != m_pScene->m_vGameObjects.end()) {	
+			CGameObject* Found_obj = *it;
+			Found_obj->Sethp(recv_p->hp);
+		}
+		else goto retry;
+	}
+	break;
+	case E_PACKET::E_O_INVINCIBLE: {
+		OBJ_INVINCIBLE_PACKET* recv_p = reinterpret_cast<OBJ_INVINCIBLE_PACKET*>(packet);
+		int id = recv_p->oid;
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
+			return obj->m_id == id;
+			});
+		if (it != m_pScene->m_vGameObjects.end()) {	
+			CGameObject* Found_obj = *it;
+			Found_obj->SetInvincible(recv_p->invincible);
+		}
+		else goto retry;
+	}
+	break;
 	default:
 		break;
 	}
 }
+
+
 CGameFramework::CGameFramework()
 {
 	m_pdxgiFactory = NULL;
@@ -143,7 +239,14 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	CreateDepthStencilView();
 
 	CoInitialize(NULL);
-
+	
+	// 서버 연결
+#ifdef ONLINE
+	auto& nwManager = NetworkManager::GetInstance();
+	nwManager.Init();
+	serverConnected = true;
+	b_running = true;
+#endif
 
 	BuildObjects();
 	
@@ -175,11 +278,9 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	m_pConstructionSystem->Init(m_pd3dDevice, m_pd3dCommandList, this, m_pScene);
 	
 #ifdef ONLINE
-	auto& nwManager = NetworkManager::GetInstance();
-	nwManager.Init();
 	std::thread t(&CGameFramework::NerworkThread, this);
 	t.detach();
-#endif
+#endif	
 
 	//ChangeSwapChainState();
 
@@ -716,6 +817,7 @@ void CGameFramework::CreateIconDescriptorHeap()
 }
 void CGameFramework::OnDestroy()
 {
+	b_running = false;
 	WaitForGpu();
 	::CloseHandle(m_hFenceEvent);
 
@@ -760,7 +862,15 @@ void CGameFramework::BuildObjects()
 	m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
 
 	m_pScene = new CScene(this);
-	if (m_pScene) m_pScene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
+
+	auto& nwManager = NetworkManager::GetInstance();
+	if (m_pScene) {
+#ifdef ONLINE
+			m_pScene->ServerBuildObjects(m_pd3dDevice, m_pd3dCommandList);
+#else
+			m_pScene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
+#endif
+	}
 
 	
 
@@ -788,6 +898,11 @@ void CGameFramework::BuildObjects()
 	ID3D12CommandList *ppd3dCommandLists[] = { m_pd3dCommandList };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
+	if (m_pScene && m_pPlayer)
+	{
+		m_pPlayer->SetCollisionTargets(m_pScene->m_vGameObjects);
+	}
+
 	WaitForGpuComplete();
 
 	if (m_pScene) m_pScene->ReleaseUploadBuffers();
@@ -807,6 +922,212 @@ void CGameFramework::ReleaseObjects()
 	if (m_pScene) delete m_pScene;
 }
 
+
+
+void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id)
+{
+
+	if (m_pScene)
+	{
+		switch (o_type)
+		{
+		case OBJECT_TYPE::OB_TREE:
+		{
+			CGameObject* gameObj = new CBirchObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+		}
+			break;
+		case OBJECT_TYPE::OB_STONE:
+		{
+			CGameObject* gameObj = new CRockClusterAObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+
+		}
+			break;
+		case OBJECT_TYPE::OB_COW:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Cow.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pCowModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Cow;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pCowModel) delete(pCowModel);
+		}
+		break;
+		case OBJECT_TYPE::OB_PIG:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pPigModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Pig.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pPigModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Pig;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pPigModel) delete(pPigModel);
+		}
+		break;
+		case OBJECT_TYPE::OB_SPIDER:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Spider.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pSpiderModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Spider;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pSpiderModel) delete(pSpiderModel);
+		}
+		break;
+		default:
+			break;
+		}
+
+		/*{
+		case GameObjectType::Wasp:
+		case GameObjectType::Snail:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[5].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[6].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Snake:
+		case GameObjectType::Spider:
+		case GameObjectType::Bat:
+		case GameObjectType::Turtle:
+		case GameObjectType::Pig:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Wolf:
+		case GameObjectType::Cow:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		case GameObjectType::Toad:
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			break;
+		}*/
+	}
+	else
+	{
+		OutputDebugString(L"Error: Scene is not initialized.\n");
+	}
+}
+
 #include <map>
 
 void CGameFramework::ProcessInput()
@@ -815,164 +1136,165 @@ void CGameFramework::ProcessInput()
 	static std::map<UCHAR, bool> keyPressed; // 키별로 눌림 상태를 저장하는 맵
 	static std::map<UCHAR, bool> toggleStates; // 키별로 토글 상태를 저장하는 맵
 	bool bProcessedByScene = false;
-
-	if (GetKeyboardState(pKeysBuffer) && m_pScene) bProcessedByScene = m_pScene->ProcessInput(pKeysBuffer);
-	if (!bProcessedByScene && m_pPlayer)
-	{
-		float cxDelta = 0.0f, cyDelta = 0.0f;
-		POINT ptCursorPos;
-		if (GetCapture() == m_hWnd)
+	if (ShowInventory == false && ShowCraftingUI == false && ShowFurnaceUI==false) {
+		if (GetKeyboardState(pKeysBuffer) && m_pScene) bProcessedByScene = m_pScene->ProcessInput(pKeysBuffer);
+		if (!bProcessedByScene && m_pPlayer)
 		{
-			SetCursor(NULL);
-			GetCursorPos(&ptCursorPos);
-			cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
-			cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
-			SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
-		}
-
-		PlayerInputData inputData;
-
-		inputData.MoveForward = (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0);
-		inputData.MoveBackward = (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0);
-		inputData.WalkLeft = (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0);
-		inputData.WalkRight = (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0);
-		inputData.Jump = (pKeysBuffer[VK_SPACE] & 0xF0);
-		inputData.Attack = (pKeysBuffer['F'] & 0xF0); // 'F' 키를 Attack 으로 매핑 (예시)
-		// inputData.Interact = (pKeysBuffer['E'] & 0xF0); // 'E' 키를 Interact 로 매핑 (필요시)
-		inputData.Run = (pKeysBuffer[VK_SHIFT] & 0xF0); // Shift 키를 Run 으로 매핑
-
-		if (m_pPlayer && m_pPlayer->m_pStateMachine) // 플레이어와 상태머신 유효성 검사
-		{
-			m_pPlayer->m_pStateMachine->HandleInput(inputData);
-		}
-
-		
-		DWORD dwDirection = 0;
-		if (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0) dwDirection |= DIR_FORWARD;
-		if (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
-		if (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0) dwDirection |= DIR_LEFT;
-		if (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
-		if (pKeysBuffer[VK_SPACE] & 0xF0) dwDirection |= DIR_UP;
-		if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
-		else m_pPlayer->keyInput(pKeysBuffer);
-		
-
-		// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
-		UCHAR toggleKeys[] = { 'R','1','2','3' /*, 다른 키들 */};
-		for (UCHAR key : toggleKeys)
-		{
-			if (pKeysBuffer[key] & 0xF0)
+			float cxDelta = 0.0f, cyDelta = 0.0f;
+			POINT ptCursorPos;
+			if (GetCapture() == m_hWnd)
 			{
-				if (!keyPressed[key])
+				SetCursor(NULL);
+				GetCursorPos(&ptCursorPos);
+				cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
+				cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
+				SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
+			}
+
+			PlayerInputData inputData;
+
+			inputData.MoveForward = (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0);
+			inputData.MoveBackward = (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0);
+			inputData.WalkLeft = (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0);
+			inputData.WalkRight = (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0);
+			inputData.Jump = (pKeysBuffer[VK_SPACE] & 0xF0);
+			inputData.Attack = (pKeysBuffer['F'] & 0xF0); // 'F' 키를 Attack 으로 매핑 (예시)
+			// inputData.Interact = (pKeysBuffer['E'] & 0xF0); // 'E' 키를 Interact 로 매핑 (필요시)
+			inputData.Run = (pKeysBuffer[VK_SHIFT] & 0xF0); // Shift 키를 Run 으로 매핑
+
+			if (m_pPlayer && m_pPlayer->m_pStateMachine) // 플레이어와 상태머신 유효성 검사
+			{
+				m_pPlayer->m_pStateMachine->HandleInput(inputData);
+			}
+
+
+			DWORD dwDirection = 0;
+			if (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0) dwDirection |= DIR_FORWARD;
+			if (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
+			if (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0) dwDirection |= DIR_LEFT;
+			if (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
+			if (pKeysBuffer[VK_SPACE] & 0xF0) dwDirection |= DIR_UP;
+			if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
+			else m_pPlayer->keyInput(pKeysBuffer);
+
+
+			// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
+			UCHAR toggleKeys[] = { 'R','1','2','3' /*, 다른 키들 */ };
+			for (UCHAR key : toggleKeys)
+			{
+				if (pKeysBuffer[key] & 0xF0)
 				{
-					toggleStates[key] = !toggleStates[key];
-					keyPressed[key] = true;
-					// 토글된 상태에 따른 동작 수행
-					if (key == 'R')
+					if (!keyPressed[key])
 					{
-						obbRender = toggleStates[key];
-					}
+						toggleStates[key] = !toggleStates[key];
+						keyPressed[key] = true;
+						// 토글된 상태에 따른 동작 수행
+						if (key == 'R')
+						{
+							obbRender = toggleStates[key];
+						}
 
-					if (key == '1')
-					{
-						m_pPlayer->m_pSword->isRender = true;
-						m_pPlayer->m_pAxe->isRender = false;
-						m_pPlayer->weaponType = WeaponType::Sword;
-					}
+						if (key == '1')
+						{
+							m_pPlayer->m_pSword->isRender = true;
+							m_pPlayer->m_pAxe->isRender = false;
+							m_pPlayer->weaponType = WeaponType::Sword;
+						}
 
-					if (key == '2')
-					{
-						m_pPlayer->m_pSword->isRender = false;
-						m_pPlayer->m_pAxe->isRender = true;
-						m_pPlayer->weaponType = WeaponType::Axe;
-					}
+						if (key == '2')
+						{
+							m_pPlayer->m_pSword->isRender = false;
+							m_pPlayer->m_pAxe->isRender = true;
+							m_pPlayer->weaponType = WeaponType::Axe;
+						}
 
-					// 다른 키에 대한 처리 추가
+						// 다른 키에 대한 처리 추가
+					}
+				}
+				else
+				{
+					keyPressed[key] = false;
 				}
 			}
-			else
-			{
-				keyPressed[key] = false;
-			}
-		}
 
-		for (int i = 0; i < 5; ++i)
-		{
-			if (GetAsyncKeyState('1' + i) & 0x8000)
+			for (int i = 0; i < 5; ++i)
 			{
-				m_SelectedHotbarIndex = i;
-				break;
-			}
-		}
-		// 카메라 모드에 따른 입력 처리 (기존 코드와 동일)
-		if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
-		{
-			// 탑뷰: 마우스 휠로 줌인/줌아웃
-			// 실제로는 마우스 휠 이벤트를 처리하려면 별도의 메시지 처리가 필요할 수 있음
-			// 여기서는 예시로 키 입력으로 대체 (Q: 줌인, E: 줌아웃)
-			if (pKeysBuffer['Q'] & 0xF0) {
-				XMFLOAT3 offset = m_pCamera->GetOffset();
-				offset.y = max(20.0f, offset.y - 10.0f);
-				m_pCamera->SetOffset(offset);
-			}
-			if (pKeysBuffer['E'] & 0xF0) {
-				XMFLOAT3 offset = m_pCamera->GetOffset();
-				offset.y = min(200.0f, offset.y + 10.0f);  // 줌아웃, 최대 높이 200
-				m_pCamera->SetOffset(offset);
-			}
-		}
-		else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA || m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
-		{
-			// 자유 시점: 마우스로 회전
-			if (beforeInput != inputData)
-			{
-				beforeInput = inputData;
-				auto& nwManager = NetworkManager::GetInstance();
-				INPUT_PACKET p;
-				// 변경
-				p.inputData.Attack = inputData.Attack;
-				p.inputData.Jump = inputData.Jump;
-				p.inputData.MoveBackward = inputData.MoveBackward;
-				p.inputData.MoveForward = inputData.MoveForward;
-				p.inputData.WalkLeft = inputData.WalkLeft;
-				p.inputData.WalkRight = inputData.WalkRight;
-				p.inputData.Run = inputData.Run;
-				p.inputData.Interact = inputData.Interact;
-				p.size = sizeof(INPUT_PACKET);
-				p.type = static_cast<char>(E_PACKET::E_P_INPUT);
-				nwManager.PushSendQueue(p, p.size);
-			}
-
-			if ( (cxDelta != 0.0f) || (cyDelta != 0.0f))
-			{
-				auto& nwManager = NetworkManager::GetInstance();
-
-				if (cxDelta || cyDelta)
+				if (GetAsyncKeyState('1' + i) & 0x8000)
 				{
-					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-						m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-					else
-						m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+					m_SelectedHotbarIndex = i;
+					break;
+				}
+			}
+			// 카메라 모드에 따른 입력 처리 (기존 코드와 동일)
+			if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
+			{
+				// 탑뷰: 마우스 휠로 줌인/줌아웃
+				// 실제로는 마우스 휠 이벤트를 처리하려면 별도의 메시지 처리가 필요할 수 있음
+				// 여기서는 예시로 키 입력으로 대체 (Q: 줌인, E: 줌아웃)
+				if (pKeysBuffer['Q'] & 0xF0) {
+					XMFLOAT3 offset = m_pCamera->GetOffset();
+					offset.y = max(20.0f, offset.y - 10.0f);
+					m_pCamera->SetOffset(offset);
+				}
+				if (pKeysBuffer['E'] & 0xF0) {
+					XMFLOAT3 offset = m_pCamera->GetOffset();
+					offset.y = min(200.0f, offset.y + 10.0f);  // 줌아웃, 최대 높이 200
+					m_pCamera->SetOffset(offset);
+				}
+			}
+			else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA || m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
+			{
+				// 자유 시점: 마우스로 회전
+				if (beforeInput != inputData)
+				{
+					beforeInput = inputData;
+					auto& nwManager = NetworkManager::GetInstance();
+					INPUT_PACKET p;
+					// 변경
+					p.inputData.Attack = inputData.Attack;
+					p.inputData.Jump = inputData.Jump;
+					p.inputData.MoveBackward = inputData.MoveBackward;
+					p.inputData.MoveForward = inputData.MoveForward;
+					p.inputData.WalkLeft = inputData.WalkLeft;
+					p.inputData.WalkRight = inputData.WalkRight;
+					p.inputData.Run = inputData.Run;
+					p.inputData.Interact = inputData.Interact;
+					p.size = sizeof(INPUT_PACKET);
+					p.type = static_cast<char>(E_PACKET::E_P_INPUT);
+					nwManager.PushSendQueue(p, p.size);
+				}
+
+				if ((cxDelta != 0.0f) || (cyDelta != 0.0f))
+				{
+					auto& nwManager = NetworkManager::GetInstance();
+
+					if (cxDelta || cyDelta)
 					{
-						ROTATE_PACKET p;
-						auto& lookv = m_pPlayer->GetLookVector();
-						p.look.x = lookv.x;
-						p.look.y = lookv.y;
-						p.look.z = lookv.z;
-						auto& rightv = m_pPlayer->GetRightVector();
-						p.right.x = rightv.x;
-						p.right.y = rightv.y;
-						p.right.z = rightv.z;
-						auto& upv = m_pPlayer->GetUpVector();
-						p.up.x = upv.x;
-						p.up.y = upv.y;
-						p.up.z = upv.z;
-						p.size = sizeof(ROTATE_PACKET);
-						p.type = static_cast<char>(E_PACKET::E_P_ROTATE);
+						if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+							m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+						else
+							m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+						{
+							ROTATE_PACKET p;
+							auto& lookv = m_pPlayer->GetLookVector();
+							p.look.x = lookv.x;
+							p.look.y = lookv.y;
+							p.look.z = lookv.z;
+							auto& rightv = m_pPlayer->GetRightVector();
+							p.right.x = rightv.x;
+							p.right.y = rightv.y;
+							p.right.z = rightv.z;
+							auto& upv = m_pPlayer->GetUpVector();
+							p.up.x = upv.x;
+							p.up.y = upv.y;
+							p.up.z = upv.z;
+							p.size = sizeof(ROTATE_PACKET);
+							p.type = static_cast<char>(E_PACKET::E_P_ROTATE);
 
-						nwManager.PushSendQueue(p, p.size);
+							nwManager.PushSendQueue(p, p.size);
+						}
+
 					}
-
 				}
 			}
 		}
@@ -1052,6 +1374,12 @@ void CGameFramework::FrameAdvance()
 				}
 			}
 			break;
+			case E_PACKET::E_O_ADD:
+			{
+				std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+				AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id);
+			}
+				break;
 			default:
 				break;
 			}
@@ -1062,13 +1390,17 @@ void CGameFramework::FrameAdvance()
 
 		WaitForGpuComplete();
 
+		for (auto& obj : m_pScene->m_vGameObjects) {
+			if (obj) obj->ReleaseUploadBuffers();
+		}
+
 		for(auto& player : m_pScene->PlayerList)
 		{
 			if (player.second) player.second->ReleaseUploadBuffers();
 		}
 	}
 
-	m_GameTimer.Tick(60.0f);
+	m_GameTimer.Tick(144.0f);
 
 	ProcessInput();
 	UpdateFurnace(m_GameTimer.GetTimeElapsed());

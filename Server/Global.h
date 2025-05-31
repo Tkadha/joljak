@@ -12,15 +12,48 @@ enum class E_PACKET
 	E_P_POSITION = 6,
 	E_P_LOGIN = 7,
 	E_P_LOGOUT = 8,
+	E_O_ADD = 9,
+	E_O_REMOVE = 10,
+	E_O_CHANGEANIMATION = 11,
+	E_O_MOVE = 12,
+	E_O_HIT = 13,
+	E_O_INVINCIBLE = 14, 
+	E_O_SETHP = 15, 
+
 
 	E_DB_REGISTER = 100,
 	E_DB_LOGIN = 101,
 	E_DB_SUCCESS_FAIL = 102,
 };
 
+enum class OBJECT_TYPE
+{
+	OB_UNKNOWN = 0,
+	OB_PLAYER = 1,
+	OB_TREE = 2,
+	OB_STONE = 3,
+	OB_PIG = 4,
+	OB_COW = 5,
+	OB_WOLF = 6,
+	OB_TOAD = 7,
+	OB_WASP = 8,
+	OB_BAT = 9,
+	OB_SNAKE = 10,
+	OB_TURTLE = 11,
+	OB_SNAIL = 12,
+	OB_SPIDER = 13
+};
 
-
-
+enum class ANIMATION_TYPE
+{
+	UNKNOWN = 0,
+	IDLE,
+	WALK,
+	RUN,
+	DIE,
+	ATTACK,
+	HIT,
+};
 
 const int MAX_BUF_SIZE = 1024; // 버퍼 최대 크기
 
@@ -38,7 +71,17 @@ struct PlayerInput {
 	char Run = false; // 예: Shift 키
 	// 필요시 다른 키나 마우스 입력 추가
 
-	
+	void clear()
+	{
+		MoveForward = false;
+		MoveBackward = false;
+		WalkLeft = false;
+		WalkRight = false;
+		Jump = false;
+		Attack = false; 
+		Interact = false;
+		Run = false; 
+	}
 };
 
 class FLOAT3
@@ -54,7 +97,7 @@ class PACKET
 public:
 	unsigned char size;
 	char type;
-	PACKET() : size(sizeof(PACKET)),type(static_cast<char>(E_PACKET::E_P_UNKNOWN)) {}
+	PACKET() : size(sizeof(PACKET)), type(static_cast<char>(E_PACKET::E_P_UNKNOWN)) {}
 };
 
 class CHAT_PACKET : public PACKET
@@ -80,8 +123,9 @@ class CHANGEPORT_PACKET : public PACKET
 {
 public:
 	short port;
-	char addr[15];
+	char addr[15] {};
 	CHANGEPORT_PACKET() {
+		port = -1;
 		size = sizeof(CHANGEPORT_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_CHANGEPORT);
 	}
@@ -90,62 +134,170 @@ public:
 class INPUT_PACKET : public PACKET
 {
 public:
-	PlayerInput inputData;
-	ULONGLONG uid;
+	PlayerInput inputData {};
+	unsigned long long uid;
 	INPUT_PACKET() {
+		inputData.clear();
+		uid = -1;
 		size = sizeof(INPUT_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_INPUT);
 	}
 };
 
 class ROTATE_PACKET : public PACKET
-{	
-	public:
-		FLOAT3 right;
-		FLOAT3 up;
-		FLOAT3 look;
-		ULONGLONG uid;
-		ROTATE_PACKET() {
+{
+public:
+	FLOAT3 right {};
+	FLOAT3 up {};
+	FLOAT3 look {};
+	unsigned long long uid;
+	ROTATE_PACKET() {
+		uid = -1;
 		size = sizeof(ROTATE_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_ROTATE);
 	}
 };
 class POSITION_PACKET : public PACKET
 {
-	public:
-	FLOAT3 position;
-	ULONGLONG uid;
+public:
+	FLOAT3 position {};
+	unsigned long long uid;
 	POSITION_PACKET() {
+		uid = -1;
 		size = sizeof(POSITION_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_POSITION);
 	}
 };
 
-class LOGIN_PACKET : public PACKET
+class ADD_PACKET : public PACKET 
+{
+public:
+	FLOAT3 right{};
+	FLOAT3 up{};
+	FLOAT3 look{};
+	FLOAT3 position{};
+	int id;
+	OBJECT_TYPE o_type;
+	ANIMATION_TYPE a_type;
+	ADD_PACKET() {
+		id = -1;
+		o_type = OBJECT_TYPE::OB_UNKNOWN;
+		a_type = ANIMATION_TYPE::UNKNOWN;
+		size = sizeof(ADD_PACKET);
+		type = static_cast<char>(E_PACKET::E_O_ADD);
+	}
+};
+class REMOVE_PACKET : public PACKET
+{
+public:
+	int id;
+	REMOVE_PACKET() {
+		id = -1;
+		size = sizeof(REMOVE_PACKET);
+		type = static_cast<char>(E_PACKET::E_O_REMOVE);
+	}
+};
+class CHANGEANIMATION_PACKET : public PACKET
+{
+public:
+	int oid;
+	ANIMATION_TYPE a_type;
+	CHANGEANIMATION_PACKET() {
+		a_type = ANIMATION_TYPE::UNKNOWN;
+		size = sizeof(CHANGEANIMATION_PACKET);
+		type = static_cast<char>(E_PACKET::E_O_CHANGEANIMATION);
+	}
+};
+class MOVE_PACKET : public PACKET
+{
+public:
+	FLOAT3 right{};
+	FLOAT3 up{};
+	FLOAT3 look{};
+	FLOAT3 position{};
+	int id;
+	MOVE_PACKET() {
+		size = sizeof(MOVE_PACKET);
+		type = static_cast<char>(E_PACKET::E_O_MOVE);
+	}
+};
+
+class OBJ_HIT_PACKET : public PACKET
+{
+public:
+	int oid;
+	int damage;
+	OBJ_HIT_PACKET() {
+		oid = -1;
+		damage = 0;
+		size = sizeof(OBJ_HIT_PACKET);
+		type = static_cast<char>(E_PACKET::E_O_HIT);
+	}
+};
+
+class OBJ_HP_PACKET : public PACKET
+{
+public:
+	int oid;
+	int hp;
+	OBJ_HP_PACKET() {
+		oid = -1;
+		hp = 0;
+		size = sizeof(OBJ_HP_PACKET);
+		type = static_cast<char>(E_PACKET::E_O_SETHP);
+	}
+};
+
+class OBJ_INVINCIBLE_PACKET : public PACKET
 {
 	public:
-	ULONGLONG uid;
+	int oid;
+	char invincible; // 1: 무적, 0: 무적 해제
+	OBJ_INVINCIBLE_PACKET() {
+		oid = -1;
+		invincible = 0;
+		size = sizeof(OBJ_INVINCIBLE_PACKET);
+		type = static_cast<char>(E_PACKET::E_O_INVINCIBLE);
+	}
+};
+
+
+
+
+
+
+
+
+
+
+class LOGIN_PACKET : public PACKET
+{
+public:
+	unsigned long long uid;
 	LOGIN_PACKET() {
+		uid = -1;
 		size = sizeof(LOGIN_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_LOGIN);
 	}
 };
 class LOGOUT_PACKET : public PACKET
 {
-	public:
-	ULONGLONG uid;
+public:
+	unsigned long long uid;
 	LOGOUT_PACKET() {
+		uid = -1;
 		size = sizeof(LOGOUT_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_LOGOUT);
 	}
 };
 class DB_REGISTER_PACKET : public PACKET
 {
-	public:
-	char id[20];
-	char pw[20];
-	ULONGLONG uid;
+public:
+	char id[20]{};
+	char pw[20]{};
+	unsigned long long uid;
 	DB_REGISTER_PACKET() {
+		uid = -1;
 		size = sizeof(DB_REGISTER_PACKET);
 		type = static_cast<char>(E_PACKET::E_DB_REGISTER);
 	}
@@ -153,21 +305,23 @@ class DB_REGISTER_PACKET : public PACKET
 class DB_LOGIN_PACKET : public PACKET
 {
 public:
-	char id[20];
-	char pw[20];
-	ULONGLONG uid;
+	char id[20]{};
+	char pw[20]{};
+	unsigned long long uid;
 	DB_LOGIN_PACKET() {
+		uid = -1;
 		size = sizeof(DB_LOGIN_PACKET);
 		type = static_cast<char>(E_PACKET::E_DB_LOGIN);
 	}
 };
 class DB_SUCCESS_FAIL_PACKET : public PACKET
 {
-	public:
-	char kind;	// E_DB_REGISTER, E_DB_LOGIN
-	char result;	//1: 성공, 0: 실패
-	ULONGLONG uid;
+public:
+	char kind{};	// E_DB_REGISTER, E_DB_LOGIN
+	char result{};	//1: 성공, 0: 실패
+	unsigned long long uid;
 	DB_SUCCESS_FAIL_PACKET() {
+		uid = -1;
 		size = sizeof(DB_SUCCESS_FAIL_PACKET);
 		type = static_cast<char>(E_PACKET::E_DB_SUCCESS_FAIL);
 	}

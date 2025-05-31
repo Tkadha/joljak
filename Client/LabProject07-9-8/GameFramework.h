@@ -15,7 +15,10 @@
 #include "ResourceManager.h"
 #include "ShaderManager.h"
 #include "ConstructionSystem.h"
+#include "../../Server/Global.h"
 using namespace Microsoft::WRL; // 추가
+
+
 
 struct CraftMaterial
 {
@@ -45,9 +48,20 @@ struct FurnaceSlot
 #include <queue>
 
 enum class E_PACKET;
+class FLOAT3;
+enum class OBJECT_TYPE;
+enum class ANIMATION_TYPE;
+
 struct log_inout {
 	E_PACKET packetType;
 	ULONGLONG ID;
+	FLOAT3 right;
+	FLOAT3 up;
+	FLOAT3 look;
+	FLOAT3 position;
+	OBJECT_TYPE o_type;
+	ANIMATION_TYPE a_type;
+	int id;
 };
 
 class CGameFramework
@@ -100,6 +114,8 @@ public:
 
 	void NerworkThread();
 	void ProcessPacket(char* packet);
+
+	void AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id);
 private:
 	HINSTANCE					m_hInstance;
 	HWND						m_hWnd; 
@@ -221,5 +237,9 @@ public:
 	ULONGLONG					_MyID = -1;
 
 	std::queue<log_inout> 	m_logQueue;
+
+	// 서버연결 확인코드
+	bool serverConnected = false;
+	std::atomic_bool b_running;
 };
 

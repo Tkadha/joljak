@@ -10,11 +10,11 @@ void CConstructionSystem::Init(ID3D12Device* device, ID3D12GraphicsCommandList* 
 
 void CConstructionSystem::EnterBuildMode()
 {
-    if (m_bBuildMode) return; // 이미 진입했으면 무시
+    if (m_bBuildMode) return; // ?��? 진입?�으�?무시
     m_pPreviewObject = m_pScene->m_pPreviewPine;
     m_pPreviewObject->SetPosition(previewPos);
     m_pPreviewObject->isRender = true;
-    // 더미 오브젝트 생성
+    // ?��? ?�브?�트 ?�성
    
 
     m_bBuildMode = true;
@@ -33,7 +33,7 @@ void CConstructionSystem::UpdatePreviewPosition(const CCamera* pCamera)
     
     if (!m_bBuildMode || !m_pPreviewObject) return;
 
-    // 카메라 기준 위치 계산 (앞으로 500만큼)
+    // 카메??기�? ?�치 계산 (?�으�?500만큼)
     XMFLOAT3 camPos = pCamera->GetPosition();
     XMFLOAT3 camLook = pCamera->GetLookVector();
 
