@@ -972,16 +972,28 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 		}
 		else if (!strcmp(pstrToken, "<Transform>:"))
 		{
-			XMFLOAT3 xmf3Position, xmf3Rotation, xmf3Scale;
-			XMFLOAT4 xmf4Rotation;
+			XMFLOAT3 xmf3Position, xmf3EulerRotation, xmf3Scale;
+			XMFLOAT4 xmf4QuaternionRotation;
+
 			nReads = (UINT)::fread(&xmf3Position, sizeof(float), 3, pInFile);
-			nReads = (UINT)::fread(&xmf3Rotation, sizeof(float), 3, pInFile); //Euler Angle
+			nReads = (UINT)::fread(&xmf3EulerRotation, sizeof(float), 3, pInFile); // Euler Angle
 			nReads = (UINT)::fread(&xmf3Scale, sizeof(float), 3, pInFile);
-			nReads = (UINT)::fread(&xmf4Rotation, sizeof(float), 4, pInFile); //Quaternion
+			nReads = (UINT)::fread(&xmf4QuaternionRotation, sizeof(float), 4, pInFile); // Quaternion
+
+			XMMATRIX mtxScale = XMMatrixScaling(xmf3Scale.x, xmf3Scale.y, xmf3Scale.z);
+			XMMATRIX mtxRotate = XMMatrixRotationQuaternion(XMLoadFloat4(&xmf4QuaternionRotation));
+			XMMATRIX mtxTranslate = XMMatrixTranslation(xmf3Position.x, xmf3Position.y, xmf3Position.z);
+
+			XMStoreFloat4x4(&pGameObject->m_xmf4x4ToParent, XMMatrixMultiply(XMMatrixMultiply(mtxScale, mtxRotate), mtxTranslate));
+
+
 		}
 		else if (!strcmp(pstrToken, "<TransformMatrix>:"))
 		{
-			nReads = (UINT)::fread(&pGameObject->m_xmf4x4ToParent, sizeof(float), 16, pInFile);
+			//nReads = (UINT)::fread(&pGameObject->m_xmf4x4ToParent, sizeof(float), 16, pInFile);
+			XMFLOAT4X4 xmf4x4TempWorldMatrix; // 임시 변수
+			nReads = (UINT)::fread(&xmf4x4TempWorldMatrix, sizeof(float), 16, pInFile);
+
 		}
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{

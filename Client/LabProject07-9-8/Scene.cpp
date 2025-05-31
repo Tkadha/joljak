@@ -485,6 +485,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		gameobj->SetScale(10.0f, 10.0f, 10.0f);
 		gameobj->SetTerraindata(m_pTerrain);
 		gameobj->m_treecount = tree_obj_count;
+
 		m_vGameObjects.emplace_back(gameobj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
@@ -880,7 +881,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 				m_pPlayer->SetInvincibility();	// 변경
 			}
 		}
-		m_pPlayer->m_pChild->m_pChild->m_pChild->Render(pd3dCommandList, pCamera);
+		m_pPlayer->Render(pd3dCommandList, pCamera);
 	}
 	for (auto& p : PlayerList) {
 		if (p.second->m_pSkinnedAnimationController) p.second->Animate(m_fElapsedTime);

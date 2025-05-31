@@ -374,8 +374,21 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 
 	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList,
-	"Model/DemoPlayer.bin", pGameFramework);
+	"Model/Player.bin", pGameFramework);
 	SetChild(pAngrybotModel->m_pModelRootObject, true);
+
+	AddObject(pd3dDevice, pd3dCommandList, "Helmet", "Model/Hair_01.bin", pGameFramework, XMFLOAT3(0, 0.1, 0));
+
+
+	CLoadedModelInfo* pCapeModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList,
+		"Model/Hu_M_Cape_Peasant_Rd_test.bin", pGameFramework);
+	//pCapeModel->m_pModelRootObject->SetPosition(0, 10, 20);
+	SetChild(pCapeModel->m_pModelRootObject);
+
+	CLoadedModelInfo* pBootsModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList,
+		"Model/Hu_M_Chest_Peasant_03_Rd.bin", pGameFramework);
+	//pCapeModel->m_pModelRootObject->SetPosition(0, 10, 20);
+	SetChild(pBootsModel->m_pModelRootObject);
 
 	/*m_pSword = AddObject(pd3dDevice, pd3dCommandList, "thumb_02_r", "Model/Sword_01.bin", pGameFramework, XMFLOAT3(0.05, 0.00, -0.05));
 	m_pAxe = AddObject(pd3dDevice, pd3dCommandList, "thumb_01_r", "Model/Axe.bin", pGameFramework, XMFLOAT3(0.05, 0.25, -0.05), XMFLOAT3(90, 0, 00));
@@ -383,10 +396,9 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pSword->isRender = true;	
 	m_pAxe->isRender = false;
 
-	AddObject(pd3dDevice, pd3dCommandList, "Helmet", "Model/Hair_01.bin", pGameFramework, XMFLOAT3(0, 0.1, 0));
 	AddObject(pd3dDevice, pd3dCommandList, "Boots_Peasant_Armor", "Model/Hu_M_Boots_Peasant_Rd.bin", pGameFramework);
 	AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, XMFLOAT3(-0.25, 0.1, 0), XMFLOAT3(90, 0, 90));*/
-	//AddObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "spine_03", "Model/Torso_Peasant_03_Armor.bin", XMFLOAT3(0, 0, 0), XMFLOAT3(90, 0, 90));
+	//AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, XMFLOAT3(-0.25, 0.1, 0), XMFLOAT3(90, 0, 90));
 
 
 	int nAnimation{10};

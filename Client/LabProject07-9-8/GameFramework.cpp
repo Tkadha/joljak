@@ -774,7 +774,7 @@ void CGameFramework::BuildObjects()
 	m_pScene->m_pPlayer = m_pPlayer = pPlayer;
 	m_pCamera = m_pPlayer->GetCamera();
 	m_pPlayer->SetOwningScene(m_pScene);
-
+	
 	m_pPlayer->SetOBB();
 
 	XMFLOAT3 position = XMFLOAT3(0.0f, 1.0f, 0.0f);

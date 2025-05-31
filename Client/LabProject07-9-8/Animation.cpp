@@ -17,7 +17,8 @@ void CLoadedModelInfo::PrepareSkinning()
 	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
 	m_pModelRootObject->FindAndSetSkinnedMesh(m_ppSkinnedMeshes, &nSkinnedMesh);
 
-	for (int i = 0; i < m_nSkinnedMeshes; i++) m_ppSkinnedMeshes[i]->PrepareSkinning(m_pModelRootObject);
+	for (int i = 0; i < m_nSkinnedMeshes; i++) 
+		m_ppSkinnedMeshes[i]->PrepareSkinning(m_pModelRootObject);
 }
 
 
