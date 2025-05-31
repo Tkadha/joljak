@@ -18,31 +18,28 @@ bool ChangeAlbedoTexture(
 	ID3D12GraphicsCommandList* pd3dCommandList,
 	ID3D12Device* pd3dDevice)
 {
-	// À¯È¿¼º °Ë»ç
+	// ? íš¨??ê²€??
 	if (!pParentGameObject || !pParentGameObject->m_pChild ||
 		!pResourceManager || !pd3dCommandList || !pd3dDevice ||
 		!textureFilePath || !*textureFilePath) { 
 		return false;
 	}
 
-	// ¸ÓÆ¼¸®¾ó °¡Á®¿À±â
+	// ë¨¸í‹°ë¦¬ì–¼ ê°€?¸ì˜¤ê¸?
 	CMaterial* pTargetMaterial = pParentGameObject->m_pChild->GetMaterial(materialIndex);
 	if (!pTargetMaterial) {
 		return false;
 	}
 
-	// ÅØ½ºÃ³ ·Îµå
+	// ?ìŠ¤ì²?ë¡œë“œ
 	std::shared_ptr<CTexture> pTextureToAssign = pResourceManager->GetTexture(textureFilePath, pd3dCommandList);
 	if (!pTextureToAssign) {
 		return false;
 	}
 
-	// ÅØ½ºÃ³ ÇÒ´ç ¹× °á°ú ¹İÈ¯
+	// ?ìŠ¤ì²?? ë‹¹ ë°?ê²°ê³¼ ë°˜í™˜
 	return pTargetMaterial->AssignTexture(textureSlot, pTextureToAssign, pd3dDevice);
 }
-
-
-
 
 CScene::CScene(CGameFramework* pFramework) : m_pGameFramework(pFramework)
 {
@@ -827,43 +824,43 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	
+
 	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed in CScene!");
 	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
 	assert(pShaderManager != nullptr && "ShaderManager is not available!");
 
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
-	
+
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 
-	
+
 	UpdateShaderVariables(pd3dCommandList);
 
-	
-	ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() }; 
+
+	ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() };
 	if (ppHeaps[0]) {
 		pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 	}
 	else {
 		assert(!"CBV/SRV Descriptor Heap is NULL in CScene::Render!");
-		return; 
+		return;
 	}
 
-	
+
 	m_pCurrentRootSignature = nullptr;
 	m_pCurrentPSO = nullptr;
 	m_pCurrentShader = nullptr;
 
 
 
-	
+
 	if (m_pSkyBox) {
-		m_pSkyBox->Render(pd3dCommandList, pCamera); 
+		m_pSkyBox->Render(pd3dCommandList, pCamera);
 	}
 
-	
+
 	if (m_pTerrain) {
-		m_pTerrain->Render(pd3dCommandList, pCamera); 
+		m_pTerrain->Render(pd3dCommandList, pCamera);
 	}
 
 	//std::vector<tree_obj*> results;
@@ -889,17 +886,17 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		}
 	}
 
-	
+
 
 	for (auto branch : m_listBranchObjects) {
-		if (branch->isRender) { 
+		if (branch->isRender) {
 			branch->Animate(m_fElapsedTime);
 			branch->Render(pd3dCommandList, pCamera);
 		}
 	}
 
 	for (auto branch : m_listRockObjects) {
-		if (branch->isRender) { 
+		if (branch->isRender) {
 			branch->Animate(m_fElapsedTime);
 			branch->Render(pd3dCommandList, pCamera);
 		}
@@ -907,16 +904,16 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 	//if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
 
-	if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
+	if (m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
 
-	
+
 	if (m_pPlayer) {
 		if (m_pPlayer->invincibility) {
 			auto endtime = std::chrono::system_clock::now();
 			auto exectime = endtime - m_pPlayer->starttime;
 			auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
-			if (exec_ms > 1000.f) { 
-				m_pPlayer->SetInvincibility();	
+			if (exec_ms > 1000.f) {
+				m_pPlayer->SetInvincibility();
 			}
 		}
 		m_pPlayer->Render(pd3dCommandList, pCamera);
@@ -928,58 +925,48 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 
 
-	// OBB ·»´õ¸µ 
 
-    if (obbRender) {
-        CShader* pOBBShader = pShaderManager->GetShader("OBB",pd3dCommandList);
-        if (pOBBShader) {
-            SetGraphicsState(pd3dCommandList, pOBBShader);
-
-            // Octree °á°ú ¿ÀºêÁ§Æ®µéÀÇ OBB ·»´õ¸µ
-            for (auto& obj_info : results) {
-                 if (obj_info->u_id < m_vGameObjects.size() && m_vGameObjects[obj_info->u_id]) {
-                    CGameObject* pGameObject = m_vGameObjects[obj_info->u_id];
-                    if (pGameObject->ShouldRenderOBB()) { 
-                        pGameObject->RenderOBB(pd3dCommandList, pCamera);
-                    }
-                }
-            }
-
-           
-            for (auto& branch : m_listBranchObjects) {
-                if (branch->ShouldRenderOBB()) {
-                    branch->RenderOBB(pd3dCommandList, pCamera);
-                }
-            }
-            for (auto& rock : m_listRockObjects) {
-                if (rock->ShouldRenderOBB()) {
-                    rock->RenderOBB(pd3dCommandList, pCamera);
-                }
-            }
-
-            if(m_pPreviewPine && m_pPreviewPine->ShouldRenderOBB()) {
-                 m_pPreviewPine->RenderOBB(pd3dCommandList, pCamera);
-            }
+	if (obbRender) {
+		for (auto& obj : m_vGameObjects) {
+			if (obj->ShouldRenderOBB()) {
+				obj->RenderOBB(pd3dCommandList, pCamera);
+			}
+		}
 
 
-            
-            if (m_pPlayer && m_pPlayer->ShouldRenderOBB()) {
-                m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
-            }
+		for (auto& branch : m_listBranchObjects) {
+			if (branch->ShouldRenderOBB()) {
+				branch->RenderOBB(pd3dCommandList, pCamera);
+			}
+		}
+		for (auto& rock : m_listRockObjects) {
+			if (rock->ShouldRenderOBB()) {
+				rock->RenderOBB(pd3dCommandList, pCamera);
+			}
+		}
 
-          
-            //for (auto& entry : PlayerList) {
-            //    CPlayer* pOtherPlayer = entry.second;
-            //    if (pOtherPlayer && pOtherPlayer->ShouldRenderOBB()) {
-            //        pOtherPlayer->RenderOBB(pd3dCommandList, pCamera);
-            //    }
-            //}
-        } else {
-            assert(!"OBB Shader (named 'OBB') not found in ShaderManager!");
-        }
-       
-    }
-    
+		if (m_pPreviewPine && m_pPreviewPine->ShouldRenderOBB()) {
+			m_pPreviewPine->RenderOBB(pd3dCommandList, pCamera);
+		}
+
+
+
+		if (m_pPlayer && m_pPlayer->ShouldRenderOBB()) {
+			m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
+		}
+
+
+		//for (auto& entry : PlayerList) {
+		//    CPlayer* pOtherPlayer = entry.second;
+		//    if (pOtherPlayer && pOtherPlayer->ShouldRenderOBB()) {
+		//        pOtherPlayer->RenderOBB(pd3dCommandList, pCamera);
+		//    }
+		//}
+	}
+	else {
+		assert(!"OBB Shader (named 'OBB') not found in ShaderManager!");
+	}
+
 }
 
 void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader)
