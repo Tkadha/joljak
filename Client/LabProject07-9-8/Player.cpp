@@ -56,6 +56,8 @@ void CPlayer::ReleaseShaderVariables()
 	if (m_pCamera) m_pCamera->ReleaseShaderVariables();
 }
 
+
+
 void CPlayer::SetCollisionTargets(const std::vector<CGameObject*>& targets)
 {
 
@@ -88,39 +90,63 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 {
 	if (Vector3::Length(XMFLOAT3(xmf3Shift)) == 0.0f) return;
 
-	// 이동 전 위치 저장
-	XMFLOAT3 oldPosition = m_xmf3Position;
+	XMFLOAT3 originalPosition = m_xmf3Position;
 
-	// 위치 이동
-	m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
-	m_pCamera->Move(xmf3Shift);
-	UpdateOBB(m_xmf3Position, playerSize, playerRotation);
+	// X축 이동 시도
+	XMFLOAT3 testPosX = originalPosition;
+	testPosX.x += xmf3Shift.x;
+	BoundingOrientedBox testOBBX;
+	XMMATRIX matX = XMMatrixTranslation(testPosX.x, testPosX.y, testPosX.z);
+	m_localOBB.Transform(testOBBX, matX);
 
-	// 충돌 체크 (등록된 대상이 있다면)
-	bool bCollided = false;
+	bool bCollidedX = false;
 	if (m_pCollisionTargets)
 	{
 		for (auto& obj : *m_pCollisionTargets)
 		{
 			if (!obj || obj == this) continue;
-			if (CheckCollisionOBB(obj))
+			if (testOBBX.Intersects(obj->m_worldOBB))
 			{
-				bCollided = true;
+				bCollidedX = true;
 				break;
 			}
 		}
 	}
+	if (!bCollidedX) m_xmf3Position.x = testPosX.x;
 
-	// 충돌 시 위치 롤백
-	if (bCollided)
+	// Z축 이동 시도
+	XMFLOAT3 testPosZ = m_xmf3Position;
+	testPosZ.z += xmf3Shift.z;
+	BoundingOrientedBox testOBBZ;
+	XMMATRIX matZ = XMMatrixTranslation(testPosZ.x, testPosZ.y, testPosZ.z);
+	m_localOBB.Transform(testOBBZ, matZ);
+
+	bool bCollidedZ = false;
+	if (m_pCollisionTargets)
 	{
-		m_xmf3Position = oldPosition;
-		m_pCamera->Move(Vector3::ScalarProduct(XMFLOAT3(xmf3Shift), -1.0f, false));
-		UpdateOBB(m_xmf3Position, playerSize, playerRotation);
-		return;
+		for (auto& obj : *m_pCollisionTargets)
+		{
+			if (!obj || obj == this) continue;
+			if (testOBBZ.Intersects(obj->m_worldOBB))
+			{
+				bCollidedZ = true;
+				break;
+			}
+		}
 	}
+	if (!bCollidedZ) m_xmf3Position.z = testPosZ.z;
 
-	// 속도 업데이트
+	
+	m_xmf3Position.y += xmf3Shift.y;
+
+	
+
+	m_pCamera->Move(xmf3Shift);
+	// 최종 적용
+	SetPosition(m_xmf3Position);
+	UpdateOBB(m_xmf3Position, playerSize, playerRotation);
+	//m_pCamera->SetPosition(m_xmf3Position);
+
 	if (bUpdateVelocity)
 	{
 		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
@@ -355,6 +381,7 @@ void CPlayer::UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFL
 		)
 	);
 	XMStoreFloat4(&m_localOBB.Orientation, qRotation);
+	UpdateTransform();
 }
 
 

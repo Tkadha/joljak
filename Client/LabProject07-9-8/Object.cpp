@@ -218,10 +218,10 @@ void CGameObject::ChangeAnimation(ANIMATION_TYPE type)
 			break;
 		}
 		break;
-	default:	// 잘못된 타입이다.
+	default:	
 		break;
 	}
-	// 모든 애니메이션은 새로 시작하기전에 초기화
+	
 	m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].SetPosition(-ANIMATION_CALLBACK_EPSILON);
 	m_pSkinnedAnimationController->SetTrackEnable(m_anitype, true);
 }
@@ -1095,7 +1095,7 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 		else if (!strcmp(pstrToken, "<TransformMatrix>:"))
 		{
 			//nReads = (UINT)::fread(&pGameObject->m_xmf4x4ToParent, sizeof(float), 16, pInFile);
-			XMFLOAT4X4 xmf4x4TempWorldMatrix; // 임시 변수
+			XMFLOAT4X4 xmf4x4TempWorldMatrix; // �ӽ� ����
 			nReads = (UINT)::fread(&xmf4x4TempWorldMatrix, sizeof(float), 16, pInFile);
 
 		}

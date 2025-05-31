@@ -143,7 +143,6 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 		pd3dDevice, pd3dCommandList, m_pGameFramework);
 	m_pPreviewPine->SetPosition(XMFLOAT3(0, 0, 0));
 	
-	//auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 	m_pPreviewPine->SetScale(10, 10, 10);
 	
 	m_pPreviewPine->isRender = false;
@@ -807,7 +806,7 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		for (auto obj : m_vGameObjects) {
 			if (obj->m_objectType != GameObjectType::Player&& obj->isRender) {
 				if (m_pPlayer->CheckCollisionOBB(obj)) {
-					m_pPlayer->checkmove = true; // Ãæµ¹ ¹ß»ı ½Ã ÀÌµ¿ ±İÁö
+					m_pPlayer->checkmove = true; // ì¶©ëŒ ë°œìƒ ???´ë™ ê¸ˆì?
 					break;
 				}
 			}
@@ -1061,7 +1060,7 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 			}
 			
 			if (obj->m_objectType == GameObjectType::Rock) {
-				//printf("[Rock ì¶©ëŒ ?•ì¸])\n");
+				//printf("[Rock ?°â‘¸ë£??ëº¤ì”¤])\n");
 				//obj->isRender = false;
 
 				//int randValue = rand() % 100; // 0 ~ 99

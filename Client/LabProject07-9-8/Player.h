@@ -47,6 +47,7 @@ protected:
 
 	CCamera						*m_pCamera = NULL;
 	const std::vector<CGameObject*>* m_pCollisionTargets = nullptr;
+	
 
 
 public:
@@ -69,8 +70,7 @@ public:
 	int Playerxp = 0;
 	int Totalxp = 20;
 	bool invincibility = false;
-	std::chrono::time_point<std::chrono::system_clock> starttime; // Î¨¥Ï†Å ?úÏûë?úÍ∞Ñ
-
+	std::chrono::time_point<std::chrono::system_clock> starttime; 
 	WeaponType weaponType;
 
 	CGameObject* m_pSword;
@@ -88,6 +88,7 @@ public:
 	void SetMaxVelocityY(float fMaxVelocity) { m_fMaxVelocityY = fMaxVelocity; }
 	void SetVelocity(const XMFLOAT3& xmf3Velocity) { m_xmf3Velocity = xmf3Velocity; }
 	void SetPosition(const XMFLOAT3& xmf3Position) { Move(XMFLOAT3(xmf3Position.x - m_xmf3Position.x, xmf3Position.y - m_xmf3Position.y, xmf3Position.z - m_xmf3Position.z), false); }
+	
 
 	void SetScale(XMFLOAT3& xmf3Scale) { m_xmf3Scale = xmf3Scale; }
 	void SetCollisionTargets(const std::vector<CGameObject*>& targets);
@@ -130,7 +131,7 @@ public:
 	//void SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
 	void UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
 
-	// ?•ÎπÑ
+
 	CGameObject* AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework);
 	CGameObject* AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate, XMFLOAT3 scale);
 	CGameObject* FindFrame(char* framename);
