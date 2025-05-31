@@ -124,7 +124,9 @@ void PlayerClient::Update_test(float deltaTime)
         }
         else if (isGrounded && (currentInput.MoveForward || currentInput.MoveBackward || currentInput.WalkLeft || currentInput.WalkRight)) {
             // 땅에 있고 이동 입력이 있으면 Walking 또는 Running
-            m_currentState = (currentInput.Run && currentInput.MoveForward) ? ServerPlayerState::Running : ServerPlayerState::Walking;
+            if (currentInput.Run) m_currentState = ServerPlayerState::Running;
+            else m_currentState = ServerPlayerState::Walking;
+           // m_currentState = (currentInput.Run && currentInput.MoveForward) ? ServerPlayerState::Running : ServerPlayerState::Walking;
         }
         else if (isGrounded) {
             // 땅에 있고 다른 조건 없으면 Idle
@@ -157,7 +159,6 @@ void PlayerClient::Update_test(float deltaTime)
             moveVector = Vector3::Add(moveVector, right);
             isMovingInput = true;
         }
-
         if (isMovingInput) {
             moveVector = Vector3::Normalize(moveVector);
             float currentSpeed = (m_currentState == ServerPlayerState::Running) ? m_runSpeed : m_walkSpeed; // 상태별 속도

@@ -60,7 +60,7 @@ void AtkNPCStandingState::Execute(std::shared_ptr<GameObject> npc)
 			);
 
 			// 300 범위 내에 있다면 Chase 상태로 전환
-			float detectionRange = 300.f;
+			float detectionRange = 200.f;
 			if (distance < detectionRange)
 			{
 				npc->FSM_manager->ChangeState(std::make_shared<AtkNPCChaseState>());
@@ -161,7 +161,7 @@ void AtkNPCMoveState::Execute(std::shared_ptr<GameObject> npc)
 			);
 
 			// 300 범위 내에 있다면 Chase 상태로 전환
-			float detectionRange = 300.f;
+			float detectionRange = 200.f;
 			if (distance < detectionRange)
 			{
 				npc->FSM_manager->ChangeState(std::make_shared<AtkNPCChaseState>());
@@ -284,7 +284,7 @@ void AtkNPCChaseState::Execute(std::shared_ptr<GameObject> npc)
 			return;
 		}
 		if (distanceToPlayer > attackRange)
-			npc->MoveForward(0.3f);
+			npc->MoveForward(0.2f);
 		Octree::GameObjectOctree.update(npc->GetID(), npc->GetPosition());
 		std::vector<tree_obj*> results;
 		tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
@@ -299,7 +299,7 @@ void AtkNPCChaseState::Execute(std::shared_ptr<GameObject> npc)
 			}
 		}
 		// 추격 중 멈춤 조건 (예: 플레이어가 너무 멀리 벗어남)
-		float loseRange = 700.f;
+		float loseRange = 600.f;
 		if (distanceToPlayer > loseRange)
 		{
 			npc->FSM_manager->ChangeState(std::make_shared<AtkNPCStandingState>());

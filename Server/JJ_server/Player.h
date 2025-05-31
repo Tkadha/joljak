@@ -40,7 +40,7 @@ private:
 
 
 	float m_walkSpeed = 50.0f;
-	float m_runSpeed = 80.0f;
+	float m_runSpeed = 100.0f;
 
 public:
 	PlayerClient() : RemoteClient()

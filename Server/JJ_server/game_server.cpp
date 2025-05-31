@@ -474,7 +474,7 @@ int main(int argc, char* argv[])
 
 		g_timer.Start();
 		while (true) {
-			g_timer.Tick(144.f);
+			g_timer.Tick(80.f);
 			float deltaTime = g_timer.GetTimeElapsed(); // Use Tick same deltaTime
 
 			// fsm몬스터 로직
