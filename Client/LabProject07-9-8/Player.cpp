@@ -56,6 +56,8 @@ void CPlayer::ReleaseShaderVariables()
 	if (m_pCamera) m_pCamera->ReleaseShaderVariables();
 }
 
+
+
 void CPlayer::SetCollisionTargets(const std::vector<CGameObject*>& targets)
 {
 
@@ -88,40 +90,62 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 {
 	if (Vector3::Length(XMFLOAT3(xmf3Shift)) == 0.0f) return;
 
-	XMFLOAT3 oldPosition = m_xmf3Position;
-	m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
+	XMFLOAT3 originalPosition = m_xmf3Position;
 
-	// 예측 OBB 생성
-	BoundingOrientedBox predictedOBB = m_worldOBB;
-	predictedOBB.Center = Vector3::Add(predictedOBB.Center, xmf3Shift);
+	// X축 이동 시도
+	XMFLOAT3 testPosX = originalPosition;
+	testPosX.x += xmf3Shift.x;
+	BoundingOrientedBox testOBBX;
+	XMMATRIX matX = XMMatrixTranslation(testPosX.x, testPosX.y, testPosX.z);
+	m_localOBB.Transform(testOBBX, matX);
 
-	// 충돌 검사
-	bool bCollided = false;
+	bool bCollidedX = false;
 	if (m_pCollisionTargets)
 	{
 		for (auto& obj : *m_pCollisionTargets)
 		{
 			if (!obj || obj == this) continue;
-			if (predictedOBB.Intersects(obj->m_worldOBB))
+			if (testOBBX.Intersects(obj->m_worldOBB))
 			{
-				bCollided = true;
+				bCollidedX = true;
 				break;
 			}
 		}
 	}
+	if (!bCollidedX) m_xmf3Position.x = testPosX.x;
 
-	if (bCollided)
+	// Z축 이동 시도
+	XMFLOAT3 testPosZ = m_xmf3Position;
+	testPosZ.z += xmf3Shift.z;
+	BoundingOrientedBox testOBBZ;
+	XMMATRIX matZ = XMMatrixTranslation(testPosZ.x, testPosZ.y, testPosZ.z);
+	m_localOBB.Transform(testOBBZ, matZ);
+
+	bool bCollidedZ = false;
+	if (m_pCollisionTargets)
 	{
-		m_xmf3Position = oldPosition;
-		//m_pCamera->Move(Vector3::ScalarProduct(XMFLOAT3(xmf3Shift), -1.0f, false));
-		SetPosition(m_xmf3Position);
-		UpdateOBB(m_xmf3Position, playerSize, playerRotation);
-		return;
+		for (auto& obj : *m_pCollisionTargets)
+		{
+			if (!obj || obj == this) continue;
+			if (testOBBZ.Intersects(obj->m_worldOBB))
+			{
+				bCollidedZ = true;
+				break;
+			}
+		}
 	}
+	if (!bCollidedZ) m_xmf3Position.z = testPosZ.z;
 
-	// 이동 확정
+	
+	m_xmf3Position.y += xmf3Shift.y;
+
+	
+
 	m_pCamera->Move(xmf3Shift);
+	// 최종 적용
+	SetPosition(m_xmf3Position);
 	UpdateOBB(m_xmf3Position, playerSize, playerRotation);
+	//m_pCamera->SetPosition(m_xmf3Position);
 
 	if (bUpdateVelocity)
 	{
