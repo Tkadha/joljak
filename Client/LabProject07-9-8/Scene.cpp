@@ -923,8 +923,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 
 
-
-
+	obbRender = true;
 	if (obbRender) {
 		for (auto& obj : m_vGameObjects) {
 			if (obj->ShouldRenderOBB()) {

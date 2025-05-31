@@ -113,6 +113,7 @@ public:
 
 	virtual void OnCameraUpdateCallback(float fTimeElapsed) { }
 	void SetCameraUpdatedContext(LPVOID pContext) { m_pCameraUpdatedContext = pContext; }
+	LPVOID GetCameraUpdatedContext() { return m_pCameraUpdatedContext; }
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
@@ -189,13 +190,13 @@ public:
 	virtual ~CTerrainPlayer();
 
 public:
-	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
+	virtual CCamera* ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
 
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
 	virtual void OnCameraUpdateCallback(float fTimeElapsed);
 
 	//virtual void Move(DWORD nDirection, float fDistance, bool bVelocity = false);
-	
+
 	virtual void Update(float fTimeElapsed);
 
 	int nAni{};
@@ -205,6 +206,6 @@ public:
 
 	CGameObject* FindObjectHitByAttack();
 
-	
+
 };
 

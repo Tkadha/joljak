@@ -113,6 +113,35 @@ void CGameObject::SetChild(CGameObject *pChild, bool bReferenceUpdate)
 		m_pChild = pChild;
 	}
 }
+void CGameObject::Check_attack()
+{
+	switch (m_objectType)
+	{
+	case GameObjectType::Spider:
+	case GameObjectType::Bat:
+	case GameObjectType::Turtle:
+	case GameObjectType::Pig:
+	case GameObjectType::Snake:
+		if (m_anitype != 11) return;
+	case GameObjectType::Snail:
+	case GameObjectType::Wasp:
+		if (m_anitype != 7) return;
+		break;
+	case GameObjectType::Wolf:
+	case GameObjectType::Cow:
+		if (m_anitype != 10) return;
+		break;
+	case GameObjectType::Toad:
+		if (m_anitype != 9) return;
+		break;
+	default:
+		break;
+	}
+	// if attack animation
+	// check hit player
+
+
+}
 
 void CGameObject::ChangeAnimation(ANIMATION_TYPE type)
 {
@@ -1165,6 +1194,8 @@ void CGameObject::PrintFrameInfo(CGameObject *pGameObject, CGameObject *pParent)
 	if (pGameObject->m_pSibling) CGameObject::PrintFrameInfo(pGameObject->m_pSibling, pParent);
 	if (pGameObject->m_pChild) CGameObject::PrintFrameInfo(pGameObject->m_pChild, pGameObject);
 }
+
+
 
 void CGameObject::LoadAnimationFromFile(FILE *pInFile, CLoadedModelInfo *pLoadedModel)
 {

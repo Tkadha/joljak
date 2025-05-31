@@ -160,6 +160,13 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
+	case E_PACKET::E_P_POSITION:
+	{
+		POSITION_PACKET* r_packet = reinterpret_cast<POSITION_PACKET*>(packet);
+		client->SetPosition(XMFLOAT3{ r_packet->position.x, r_packet->position.y, r_packet->position.z });
+		client->BroadCastPosPacket();
+	}
+	break;
 	case E_PACKET::E_P_ROTATE:
 	{
 		ROTATE_PACKET* r_packet = reinterpret_cast<ROTATE_PACKET*>(packet);
@@ -348,7 +355,7 @@ void BuildObject()
 	float objectMinSize = 15, objectMaxSize = 20;
 
 	int obj_id = 0;
-	int TreeCount = 0;
+	int TreeCount = 10;
 	for (int i = 0; i < TreeCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 
@@ -392,7 +399,6 @@ void BuildObject()
 		obj->SetType(OBJECT_TYPE::OB_COW);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
 
-		// fsm 추가 해야함
 		obj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 
@@ -412,7 +418,6 @@ void BuildObject()
 		obj->SetType(OBJECT_TYPE::OB_PIG);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
 
-		// fsm 추가 해야함
 		obj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 
@@ -433,7 +438,6 @@ void BuildObject()
 		obj->SetType(OBJECT_TYPE::OB_SPIDER);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
 
-		// fsm 추가 해야함
 		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
@@ -510,14 +514,12 @@ int main(int argc, char* argv[])
 
 				for (auto o_id : before_vl) {
 					if (0 == new_vl.count(o_id)) {	// before에만 있다면 제거 패킷
-						std::cout << "delete obj: " << o_id << std::endl;
 						cl.second->SendRemovePacket(gameObjects[o_id]);
 					}
 				}
 				for (auto o_id : new_vl) {
 					if (0 == before_vl.count(o_id)) { //new에만 있다면 추가 패킷
 						if (gameObjects[o_id]->is_alive == false) continue;
-						std::cout << "add obj: " << o_id << std::endl;
 						cl.second->SendAddPacket(gameObjects[o_id]);
 					}
 				}

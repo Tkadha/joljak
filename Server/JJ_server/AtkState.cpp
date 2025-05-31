@@ -190,7 +190,6 @@ void AtkNPCChaseState::Enter(std::shared_ptr<GameObject> npc)
 			cl.second->SendAnimationPacket(npc);
 		}
 	}
-	std::cout << "enter chasestate\n";
 }
 
 void AtkNPCChaseState::Execute(std::shared_ptr<GameObject> npc)
