@@ -15,7 +15,6 @@
 #include "NonAtkState.h"
 #include "AtkState.h"
 // 서버 연결 여부
-#define ONLINE
 
 void CGameFramework::NerworkThread()
 {

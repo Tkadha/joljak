@@ -1614,8 +1614,11 @@ CMonsterObject::CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	SetChild(pMonsterModel->m_pModelRootObject, true);
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pMonsterModel);
 
+#ifdef ONLINE
 	FSM_manager = nullptr;
-	//FSM_manager = std::make_shared<FSMManager<CGameObject>>(this);
+#else
+	FSM_manager = std::make_shared<FSMManager<CGameObject>>(this);
+#endif
 
 }
 
