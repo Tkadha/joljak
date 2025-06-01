@@ -106,6 +106,8 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 		{
 			if (!obj || obj == this) continue;
 			if (obj->m_id < 0) continue;
+			if (obj->getHp() <= 0) continue;
+
 			if (testOBBX.Intersects(obj->m_worldOBB))
 			{
 				bCollidedX = true;
@@ -130,6 +132,7 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 		{
 			if (!obj || obj == this) continue;
 			if (obj->m_id < 0) continue;
+			if (obj->getHp() <= 0) continue;
 			if (testOBBZ.Intersects(obj->m_worldOBB))
 			{
 				bCollidedZ = true;
@@ -837,6 +840,7 @@ CGameObject* CTerrainPlayer::FindObjectHitByAttack() {
 
 	for (const auto& obj : pScene->m_vGameObjects) {
 		if (obj->m_id == -1) continue;
+		if (obj->isRender == false) continue;
 		std::vector<DirectX::BoundingOrientedBox> obbList;
 		pScene->CollectHierarchyObjects(obj, obbList);
 		for (const auto& obb : obbList) {

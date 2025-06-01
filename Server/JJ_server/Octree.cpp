@@ -51,6 +51,7 @@ bool Octree::remove(long long id)
 void Octree::update(long long id, const XMFLOAT3& newpos)
 {
     for (auto it = objects.begin(); it != objects.end(); ++it) {
+        if (!*it) continue;
         if ((*it)->u_id == id) {
             (*it)->position = newpos;
             if ((*it)->isWithin(minBound, maxBound)) return;

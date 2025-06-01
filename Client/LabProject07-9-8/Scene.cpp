@@ -18,26 +18,21 @@ bool ChangeAlbedoTexture(
 	ID3D12GraphicsCommandList* pd3dCommandList,
 	ID3D12Device* pd3dDevice)
 {
-	// ? íš¨??ê²€??
 	if (!pParentGameObject || !pParentGameObject->m_pChild ||
 		!pResourceManager || !pd3dCommandList || !pd3dDevice ||
 		!textureFilePath || !*textureFilePath) { 
 		return false;
 	}
 
-	// ë¨¸í‹°ë¦¬ì–¼ ê°€?¸ì˜¤ê¸?
 	CMaterial* pTargetMaterial = pParentGameObject->m_pChild->GetMaterial(materialIndex);
 	if (!pTargetMaterial) {
 		return false;
 	}
 
-	// ?ìŠ¤ì²?ë¡œë“œ
 	std::shared_ptr<CTexture> pTextureToAssign = pResourceManager->GetTexture(textureFilePath, pd3dCommandList);
 	if (!pTextureToAssign) {
 		return false;
 	}
-
-	// ?ìŠ¤ì²?? ë‹¹ ë°?ê²°ê³¼ ë°˜í™˜
 	return pTargetMaterial->AssignTexture(textureSlot, pTextureToAssign, pd3dDevice);
 }
 

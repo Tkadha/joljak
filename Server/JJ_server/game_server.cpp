@@ -224,6 +224,7 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		obj->Sethp(r_packet->hp);
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME) continue;
+			if (cl.second->m_id == client->m_id) continue;
 			cl.second->SendHpPacket(obj->GetID(), obj->Gethp());
 		}
 	}
@@ -333,6 +334,7 @@ void ProcessAccept()
 			Octree::GameObjectOctree.query(p_obj, oct_distance, results);
 			for (auto& obj : results) {
 				if (gameObjects[obj->u_id]->is_alive == false) continue;
+				if (gameObjects[obj->u_id]->Gethp() <= 0) continue;
 				remoteClient->SendAddPacket(gameObjects[obj->u_id]);
 			}				
 		}
@@ -365,11 +367,11 @@ void BuildObject()
 {
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	float spawnmin = 1000, spawnmax = 3000;
+	float spawnmin = 1000, spawnmax = 10000;
 	float objectMinSize = 15, objectMaxSize = 20;
 
 	int obj_id = 0;
-	int TreeCount = 10;
+	int TreeCount = 350;
 	for (int i = 0; i < TreeCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 
@@ -385,7 +387,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int RockCount = 0;
+	int RockCount = 300;
 	for (int i = 0; i < RockCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -402,7 +404,7 @@ void BuildObject()
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
 
-	int CowCount = 20;
+	int CowCount = 50;
 	for (int i = 0; i < CowCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -421,7 +423,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int PigCount = 20;
+	int PigCount = 50;
 	for (int i = 0; i < PigCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -441,7 +443,7 @@ void BuildObject()
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
 
-	int SpiderCount = 20;
+	int SpiderCount = 50;
 	for (int i = 0; i < SpiderCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -450,6 +452,44 @@ void BuildObject()
 		obj->SetID(obj_id++);
 
 		obj->SetType(OBJECT_TYPE::OB_SPIDER);
+		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
+
+		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
+
+		gameObjects.push_back(obj);
+
+		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
+		Octree::GameObjectOctree.insert(std::move(t_obj));
+	}
+	int WolfCount = 50;
+	for (int i = 0; i < WolfCount; ++i) {
+		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
+		obj->SetScale(10.f, 10.f, 10.f);
+		obj->SetID(obj_id++);
+
+		obj->SetType(OBJECT_TYPE::OB_WOLF);
+		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
+
+		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
+
+		gameObjects.push_back(obj);
+
+		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
+		Octree::GameObjectOctree.insert(std::move(t_obj));
+	}
+	int ToadCount = 20;
+	for (int i = 0; i < ToadCount; ++i) {
+		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
+		obj->SetScale(8.f, 8.f, 8.f);
+		obj->SetID(obj_id++);
+
+		obj->SetType(OBJECT_TYPE::OB_TOAD);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
 
 		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
@@ -534,6 +574,7 @@ int main(int argc, char* argv[])
 				for (auto o_id : new_vl) {
 					if (0 == before_vl.count(o_id)) { //new에만 있다면 추가 패킷
 						if (gameObjects[o_id]->is_alive == false) continue;
+						if (gameObjects[o_id]->Gethp() <= 0) continue;
 						cl.second->SendAddPacket(gameObjects[o_id]);
 					}
 				}

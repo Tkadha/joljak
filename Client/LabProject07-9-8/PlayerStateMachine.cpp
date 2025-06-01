@@ -793,6 +793,13 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
                 //rock->EraseRock();
                 //player->m_pGameFramework->AddItem("rock", 5); // ¿¹½Ã: ¾²·¯¶ß¸®¸é ¸¹ÀÌ È¹µæ
             }
+#ifdef ONLINE
+            auto& nwManager = NetworkManager::GetInstance();
+            OBJ_HP_PACKET p;
+            p.oid = rock->m_id;
+            p.hp = rock->getHp();
+            nwManager.PushSendQueue(p, p.size);
+#endif
         }
     }
     else if (hitObject->m_objectType == GameObjectType::Cow || hitObject->m_objectType == GameObjectType::Pig) {

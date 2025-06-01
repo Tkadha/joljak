@@ -51,6 +51,16 @@ struct VS_VB_INSTANCE
 	XMFLOAT4X4 m_xmf4x4Transform;
 };
 
+
+bool ChangeAlbedoTexture(
+	CGameObject* pParentGameObject,
+	int materialIndex,
+	UINT textureSlot,
+	const wchar_t* textureFilePath,
+	ResourceManager* pResourceManager,
+	ID3D12GraphicsCommandList* pd3dCommandList,
+	ID3D12Device* pd3dDevice);
+
 class CScene
 {
 public:
