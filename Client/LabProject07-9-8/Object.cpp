@@ -7,7 +7,7 @@
 #include "Shader.h"
 #include "Scene.h"
 #include "GameFramework.h"
-
+#include "NetworkManager.h"
 #include <algorithm>
 
 
@@ -147,6 +147,25 @@ void CGameObject::Check_attack()
 				auto obj = dynamic_cast<CMonsterObject*> (this);
 				p_info->DecreaseHp(obj->GetAtk());
 				p_info->SetInvincibility();
+
+				// 밀려나기
+				XMFLOAT3 monsterlook = obj->GetLook();
+				const float KnockBackDistance = 10.f;
+				XMFLOAT3 playerPos = p_info->GetPosition();
+
+				XMFLOAT3 newPlayerPos;
+				newPlayerPos.x = playerPos.x + monsterlook.x * KnockBackDistance;
+				newPlayerPos.y = playerPos.y + monsterlook.y * KnockBackDistance;
+				newPlayerPos.z = playerPos.z + monsterlook.z * KnockBackDistance;
+				p_info->SetPosition(newPlayerPos);
+
+				auto& nwManager = NetworkManager::GetInstance();
+				auto pos = p_info->GetPosition();
+				POSITION_PACKET p;
+				p.position.x = pos.x;
+				p.position.y = pos.y;
+				p.position.z = pos.z;
+				nwManager.PushSendQueue(p, p.size);
 			}
 		}
 	}
@@ -847,7 +866,6 @@ void CGameObject::MoveForward(float fDistance)
 	float fHeight = pTerrain->GetHeight(xmf3Position.x, xmf3Position.z, bReverseQuad) + 0.0f;
 	xmf3Position.y = fHeight;
 	CGameObject::SetPosition(xmf3Position);
-
 }
 
 void CGameObject::Rotate(float fPitch, float fYaw, float fRoll)
