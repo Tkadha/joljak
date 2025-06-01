@@ -374,8 +374,13 @@ void BuildObject()
 	int TreeCount = 200;
 	for (int i = 0; i < TreeCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
-
-		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		std::pair<float, float> randompos;
+		while (true) {
+			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+			if (randompos.first < 7800 || randompos.first > 8200)
+				if (randompos.second < 7800 || randompos.second > 8200)
+					break;			
+		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		std::pair<float, float> randomsize = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
 		obj->SetScale(randomsize.first, randomsize.second, randomsize.first);
@@ -407,7 +412,13 @@ void BuildObject()
 	int CowCount = 100;
 	for (int i = 0; i < CowCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
-		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		std::pair<float, float> randompos;
+		while (true) {
+			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+			if (randompos.first < 7800 || randompos.first > 8200)
+				if (randompos.second < 7800 || randompos.second > 8200)
+					break;
+		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(12.f, 12.f, 12.f);
 		obj->SetID(obj_id++);
@@ -426,7 +437,13 @@ void BuildObject()
 	int PigCount = 100;
 	for (int i = 0; i < PigCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
-		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		std::pair<float, float> randompos;
+		while (true) {
+			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+			if (randompos.first < 7800 || randompos.first > 8200)
+				if (randompos.second < 7800 || randompos.second > 8200)
+					break;
+		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(10.f, 10.f, 10.f);
 		obj->SetID(obj_id++);
@@ -446,7 +463,13 @@ void BuildObject()
 	int SpiderCount = 70;
 	for (int i = 0; i < SpiderCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
-		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		std::pair<float, float> randompos;
+		while (true) {
+			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+			if (randompos.first < 7800 || randompos.first > 8200)
+				if (randompos.second < 7800 || randompos.second > 8200)
+					break;
+		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(8.f, 8.f, 8.f);
 		obj->SetID(obj_id++);
@@ -465,7 +488,13 @@ void BuildObject()
 	int WolfCount = 70;
 	for (int i = 0; i < WolfCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
-		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		std::pair<float, float> randompos;
+		while (true) {
+			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+			if (randompos.first < 7800 || randompos.first > 8200)
+				if (randompos.second < 7800 || randompos.second > 8200)
+					break;
+		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(10.f, 10.f, 10.f);
 		obj->SetID(obj_id++);
@@ -484,7 +513,13 @@ void BuildObject()
 	int ToadCount = 70;
 	for (int i = 0; i < ToadCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
-		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		std::pair<float, float> randompos;
+		while (true) {
+			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+			if (randompos.first < 7800 || randompos.first > 8200)
+				if (randompos.second < 7800 || randompos.second > 8200)
+					break;
+		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(8.f, 8.f, 8.f);
 		obj->SetID(obj_id++);
