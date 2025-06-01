@@ -53,56 +53,6 @@ retry:
 	{
 		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
 		if (recv_p->uid == _MyID) {
-
-			//XMFLOAT3 originalPosition = m_pPlayer->GetPosition();
-
-			//// X축 이동 시도
-			//XMFLOAT3 testPosX = originalPosition;
-			//testPosX.x = recv_p->position.x;
-			//BoundingOrientedBox testOBBX;
-			//XMMATRIX matX = XMMatrixTranslation(testPosX.x, testPosX.y, testPosX.z);
-			//m_pPlayer->m_localOBB.Transform(testOBBX, matX);
-
-			//bool bCollidedX = false;
-			//for (auto& obj : m_pScene->m_vGameObjects)
-			//{
-			//	if (!obj) continue;
-			//	if (testOBBX.Intersects(obj->m_worldOBB))
-			//	{
-			//		bCollidedX = true;
-			//		break;
-			//	}
-			//}			
-			//if (!bCollidedX) m_pPlayer->SetPosition(testPosX);
-
-			//// Z축 이동 시도
-			//XMFLOAT3 testPosZ = m_pPlayer->GetPosition();
-			//testPosZ.z = recv_p->position.z;
-			//BoundingOrientedBox testOBBZ;
-			//XMMATRIX matZ = XMMatrixTranslation(testPosZ.x, testPosZ.y, testPosZ.z);
-			//m_pPlayer->m_localOBB.Transform(testOBBZ, matZ);
-
-			//bool bCollidedZ = false;
-			//for (auto& obj : m_pScene->m_vGameObjects)
-			//{
-			//	if (!obj) continue;
-			//	if (testOBBZ.Intersects(obj->m_worldOBB))
-			//	{
-			//		bCollidedZ = true;
-			//		break;
-			//	}
-			//}
-			//if (!bCollidedZ) m_pPlayer->SetPosition(testPosZ);
-			//if (bCollidedX || bCollidedZ) {
-			//	auto& nwManager = NetworkManager::GetInstance();
-			//	auto pos = m_pPlayer->GetPosition();
-			//	POSITION_PACKET p;
-			//	p.position.x = pos.x;
-			//	p.position.y = pos.y;
-			//	p.position.z = pos.z;
-			//	nwManager.PushSendQueue(p, p.size);
-			//}
-
 			m_pPlayer->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z});
 		}
 		else if (m_pScene->PlayerList.find(recv_p->uid) != m_pScene->PlayerList.end()) {
@@ -215,6 +165,14 @@ retry:
 		if (it != m_pScene->m_vGameObjects.end()) {	
 			CGameObject* Found_obj = *it;
 			Found_obj->Sethp(recv_p->hp);
+
+			if (Found_obj->m_objectType == GameObjectType::Tree) {
+				auto tree = dynamic_cast<CTreeObject*>(Found_obj);
+				int hp = Found_obj->getHp();
+				if (hp <= 0)
+					tree->StartFalling(m_pPlayer->GetLookVector());
+			}
+
 		}
 		else goto retry;
 	}
@@ -1399,7 +1357,7 @@ void CGameFramework::FrameAdvance()
 			{
 			case E_PACKET::E_P_LOGIN:
 			{
-				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Hu_M_FullBody.bin", this);
+				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/Player.bin", this);
 				int animate_count = 15;
 				m_pScene->PlayerList[log.ID] = std::make_unique<UserObject>(m_pd3dDevice, m_pd3dCommandList, pUserModel, animate_count, this);
 				m_pScene->PlayerList[log.ID]->m_objectType = GameObjectType::Player;

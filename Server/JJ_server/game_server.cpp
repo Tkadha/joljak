@@ -215,6 +215,20 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		}		
 	}
 		break;
+
+	case E_PACKET::E_O_SETHP:
+	{
+		OBJ_HP_PACKET* r_packet = reinterpret_cast<OBJ_HP_PACKET*>(packet);
+		if (gameObjects.size() < r_packet->oid) return; // Àß¸øµÈ id
+		auto& obj = gameObjects[r_packet->oid];
+		obj->Sethp(r_packet->hp);
+		for (auto& cl : PlayerClient::PlayerClients) {
+			if (cl.second->state != PC_INGAME) continue;
+			cl.second->SendHpPacket(obj->GetID(), obj->Gethp());
+		}
+	}
+	break;
+
 	default:
 		break;
 	}

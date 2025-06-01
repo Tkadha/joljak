@@ -123,6 +123,7 @@ void CGameObject::Check_attack()
 	case GameObjectType::Pig:
 	case GameObjectType::Snake:
 		if (m_anitype != 11) return;
+		break;
 	case GameObjectType::Snail:
 	case GameObjectType::Wasp:
 		if (m_anitype != 7) return;
@@ -139,6 +140,16 @@ void CGameObject::Check_attack()
 	}
 	// if attack animation
 	// check hit player
+	auto p_info = m_pScene->GetPlayerInfo();
+	if (p_info) {
+		if (m_pScene->CollisionCheck(this, p_info)) {
+			if (false == p_info->invincibility) {
+				auto obj = dynamic_cast<CMonsterObject*> (this);
+				p_info->DecreaseHp(obj->GetAtk());
+				p_info->SetInvincibility();
+			}
+		}
+	}
 
 
 }
