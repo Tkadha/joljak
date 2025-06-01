@@ -45,7 +45,7 @@ void CGameFramework::ProcessPacket(char* packet)
 	int loop_count{ 0 };
 retry:
 	loop_count++;
-	if (loop_count > 10'000) return;
+	if (loop_count > 100) return;
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
@@ -134,6 +134,7 @@ retry:
 			Found_obj->SetUp(XMFLOAT3(recv_p->up.x, recv_p->up.y, recv_p->up.z));
 			Found_obj->SetRight(XMFLOAT3(recv_p->right.x, recv_p->right.y, recv_p->right.z));
 			Found_obj->SetPosition(recv_p->position.x, recv_p->position.y, recv_p->position.z);
+			Found_obj->Check_attack();
 		}
 		else goto retry;
 	}
@@ -164,6 +165,41 @@ retry:
 		if (it != m_pScene->m_vGameObjects.end()) {	
 			CGameObject* Found_obj = *it;
 			Found_obj->Sethp(recv_p->hp);
+
+			if (Found_obj->m_objectType == GameObjectType::Tree) {
+				auto tree = dynamic_cast<CTreeObject*>(Found_obj);
+				int hp = Found_obj->getHp();
+				if (hp <= 0)
+					tree->StartFalling(m_pPlayer->GetLookVector());
+			}
+			else if (Found_obj->m_objectType == GameObjectType::Rock) {
+				auto rock = dynamic_cast<CRockObject*>(Found_obj);
+				if (rock->Gethp() <= 0) {
+					rock->isRender = false;
+
+				}
+				else {
+					rock->SetScale(0.9f, 0.9f, 0.9f);
+
+					XMFLOAT3 treePos = rock->GetPosition();
+
+					XMFLOAT3 spawnOffsetLocal = XMFLOAT3(
+						((float)(rand() % 200) - 100.0f) * 0.1f, // X -10 ~ +10
+						(rand() % 10) + 10.0f,                     // Y 10~19
+						((float)(rand() % 200) - 100.0f) * 0.1f  // Z -10 ~ +10
+					);
+					XMFLOAT3 spawnPos = Vector3::Add(treePos, spawnOffsetLocal);
+					if (m_pScene->m_pTerrain) { // 지형 위에 스폰되도록 높이 보정
+						spawnPos.y = m_pScene->m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + spawnOffsetLocal.y + 20;
+					}
+
+					XMFLOAT3 ejectVelocity = XMFLOAT3(
+						((float)(rand() % 100) - 50.0f),
+						((float)(rand() % 60) + 50.0f),
+						((float)(rand() % 100) - 50.0f)
+					);
+				}
+			}
 		}
 		else goto retry;
 	}
@@ -1006,7 +1042,20 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		{
 		case OBJECT_TYPE::OB_TREE:
 		{
-			CGameObject* gameObj = new CBirchObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
+			CGameObject* gameObj;
+			int tree_type = rand() % 2;
+			if (tree_type == 0) {
+				gameObj = new CBirchObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
+				int materialIndexToChange = 1;
+				UINT albedoTextureSlot = 0;
+				const wchar_t* textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
+				ResourceManager* pResourceManager = GetResourceManager();
+				ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, m_pd3dCommandList, m_pd3dDevice);
+			}
+			else if (tree_type == 1)
+				gameObj = new CPineObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
+
+			
 			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
 			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
@@ -1019,13 +1068,20 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
 
-			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->SetOBB(0.2f, 1.f, 0.2f, XMFLOAT3{ 0.f,0.f,0.f });
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 		}
 			break;
 		case OBJECT_TYPE::OB_STONE:
 		{
 			CGameObject* gameObj = new CRockClusterAObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
+			int materialIndexToChange = 0;
+			UINT albedoTextureSlot = 0;
+			const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
+			ResourceManager* pResourceManager = GetResourceManager();
+			ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, m_pd3dCommandList, m_pd3dDevice);
+
+
 			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
 			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
@@ -1114,7 +1170,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
 
-			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->SetOBB(1.f, 0.8f, 1.f, XMFLOAT3{ 0.f,1.f,-1.f });
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
@@ -1160,6 +1216,88 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pSpiderModel) delete(pSpiderModel);
+		}
+		break;
+		case OBJECT_TYPE::OB_TOAD:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pToadModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Toad.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pToadModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Toad;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pToadModel) delete(pToadModel);
+		}
+		break;
+		case OBJECT_TYPE::OB_SNAKE:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pSnakeModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Snake.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pSnakeModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Toad;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pSnakeModel) delete(pSnakeModel);
 		}
 		break;
 		default:
@@ -1455,7 +1593,7 @@ void CGameFramework::FrameAdvance()
 			{
 			case E_PACKET::E_P_LOGIN:
 			{
-				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Hu_M_FullBody.bin", this);
+				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/Player.bin", this);
 				int animate_count = 15;
 				m_pScene->PlayerList[log.ID] = std::make_unique<UserObject>(m_pd3dDevice, m_pd3dCommandList, pUserModel, animate_count, this);
 				m_pScene->PlayerList[log.ID]->m_objectType = GameObjectType::Player;

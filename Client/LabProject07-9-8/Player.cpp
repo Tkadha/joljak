@@ -8,6 +8,7 @@
 #include "Scene.h"
 #include "GameFramework.h"
 
+#include "NetworkManager.h"
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CPlayer
 static void RecursiveProcessAndChangeTexture(
@@ -191,13 +192,16 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 	BoundingOrientedBox testOBBX;
 	XMMATRIX matX = XMMatrixTranslation(testPosX.x, testPosX.y, testPosX.z);
 	m_localOBB.Transform(testOBBX, matX);
-
+	testOBBX.Orientation.w = 1.f;
 	bool bCollidedX = false;
 	if (m_pCollisionTargets)
 	{
 		for (auto& obj : *m_pCollisionTargets)
 		{
 			if (!obj || obj == this) continue;
+			if (obj->m_id < 0) continue;
+			if (obj->getHp() <= 0) continue;
+
 			if (testOBBX.Intersects(obj->m_worldOBB))
 			{
 				bCollidedX = true;
@@ -213,6 +217,7 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 	BoundingOrientedBox testOBBZ;
 	XMMATRIX matZ = XMMatrixTranslation(testPosZ.x, testPosZ.y, testPosZ.z);
 	m_localOBB.Transform(testOBBZ, matZ);
+	testOBBZ.Orientation.w = 1.f;
 
 	bool bCollidedZ = false;
 	if (m_pCollisionTargets)
@@ -220,6 +225,8 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 		for (auto& obj : *m_pCollisionTargets)
 		{
 			if (!obj || obj == this) continue;
+			if (obj->m_id < 0) continue;
+			if (obj->getHp() <= 0) continue;
 			if (testOBBZ.Intersects(obj->m_worldOBB))
 			{
 				bCollidedZ = true;
@@ -229,6 +236,7 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 	}
 	if (!bCollidedZ) m_xmf3Position.z = testPosZ.z;
 
+	
 	
 	m_xmf3Position.y += xmf3Shift.y;
 
@@ -240,6 +248,15 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 	UpdateOBB(m_xmf3Position, playerSize, playerRotation);
 	//m_pCamera->SetPosition(m_xmf3Position);
 
+	if (!bUpdateVelocity && (bCollidedX || bCollidedZ)) {
+		auto& nwManager = NetworkManager::GetInstance();
+		auto pos = m_xmf3Position;
+		POSITION_PACKET p;
+		p.position.x = pos.x;
+		p.position.y = pos.y;
+		p.position.z = pos.z;
+		nwManager.PushSendQueue(p, p.size);
+	}
 	if (bUpdateVelocity)
 	{
 		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
@@ -933,8 +950,9 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 	// --- 3. 최종 이동 적용 ---
 	// 계산된 최종 속도를 기반으로 플레이어 위치를 이동시킵니다.
 	XMFLOAT3 xmf3VelocityDelta = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
+#ifndef ONLINE
 	Move(xmf3VelocityDelta, false); // Move 함수는 위치(m_xmf3Position)를 직접 변경
-
+#endif
 	// --- 4. 지형 충돌/높이 보정 (콜백) ---
 	// 플레이어 위치가 지형 아래로 내려가지 않도록 조정합니다.
 	if (m_pPlayerUpdatedContext) OnPlayerUpdateCallback(fTimeElapsed);
@@ -1015,7 +1033,8 @@ CGameObject* CTerrainPlayer::FindObjectHitByAttack() {
 
 
 	for (const auto& obj : pScene->m_vGameObjects) {
-
+		if (obj->m_id == -1) continue;
+		if (obj->isRender == false) continue;
 		std::vector<DirectX::BoundingOrientedBox> obbList;
 		pScene->CollectHierarchyObjects(obj, obbList);
 		for (const auto& obb : obbList) {

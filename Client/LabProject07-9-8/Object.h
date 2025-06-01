@@ -242,10 +242,12 @@ public:
 	int getHp() { return hp; }
 	void setHp(int n) { hp = n; }
 
-	void Sethp(int hp) { hp = hp; }
+	void Sethp(int ghp) { hp = ghp; }
 	void Decreasehp(int num) { hp -= num; }
 	int Gethp() { return hp; }
 	int GetAtk() { return atk; }
+
+	void Check_attack();
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

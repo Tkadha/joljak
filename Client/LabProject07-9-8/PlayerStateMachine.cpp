@@ -783,34 +783,17 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
                     break;
                 }
                 tree->setHp(hp);
-
-                CScene* pScene = player->m_pGameFramework->GetScene();
-
-                if (pScene) {
-                    XMFLOAT3 treePos = tree->GetPosition();
-
-                    XMFLOAT3 spawnOffsetLocal = XMFLOAT3(
-                        ((float)(rand() % 200) - 100.0f) * 0.1f, // X -10 ~ +10
-                        (rand() % 10) + 10.0f,                     // Y 10~19
-                        ((float)(rand() % 200) - 100.0f) * 0.1f  // Z -10 ~ +10
-                    );
-                    
-                    XMFLOAT3 spawnPos = Vector3::Add(spawnPos, spawnOffsetLocal);
-                    if (pScene->m_pTerrain) { // 지형 위에 스폰되도록 높이 보정
-                        spawnPos.y = pScene->m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + spawnOffsetLocal.y;
-                    }
-
-                    XMFLOAT3 ejectVelocity = XMFLOAT3(
-                        ((float)(rand() % 100) - 50.0f),
-                        ((float)(rand() % 60) + 50.0f),
-                        ((float)(rand() % 100) - 50.0f)
-                    );
-                    pScene->SpawnRock(spawnPos, ejectVelocity);
-                }
             }
             if (hp <= 0) {
                 tree->StartFalling(player->GetLookVector()); // 플레이어가 바라보는 방향으로 쓰러지도록 (또는 다른 방향)
             }
+#ifdef ONLINE
+            auto& nwManager = NetworkManager::GetInstance();
+            OBJ_HP_PACKET p;
+            p.oid = tree->m_id;
+            p.hp = tree->getHp();
+            nwManager.PushSendQueue(p, p.size);
+#endif
         }
     }
     else if (hitObject->m_objectType == GameObjectType::Rock) {
@@ -878,6 +861,13 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
                 //rock->EraseRock();
                 //player->m_pGameFramework->AddItem("rock", 5); // 예시: 쓰러뜨리면 많이 획득
             }
+#ifdef ONLINE
+            auto& nwManager = NetworkManager::GetInstance();
+            OBJ_HP_PACKET p;
+            p.oid = rock->m_id;
+            p.hp = rock->getHp();
+            nwManager.PushSendQueue(p, p.size);
+#endif
         }
     }
     else if (hitObject->m_objectType == GameObjectType::Cow || hitObject->m_objectType == GameObjectType::Pig) {

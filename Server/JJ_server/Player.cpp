@@ -198,6 +198,12 @@ void PlayerClient::Update_test(float deltaTime)
     //XMFLOAT3 deltaPos = Vector3::ScalarProduct(m_Velocity, deltaTime);
     XMFLOAT3 deltaPos = Vector3::ScalarProduct(m_Velocity, 0.75f);
     /* 面倒 贸府*/
+    if (m_currentState == ServerPlayerState::Running)
+    {
+        deltaPos.x *= 1.5f;
+        deltaPos.y *= 1.5f;
+        deltaPos.z *= 1.5f;
+    }
     XMFLOAT3 finalDeltaPos = deltaPos; // 面倒 贸府 利侩
     // 困摹 诀单捞飘
     m_Position = Vector3::Add(m_Position, finalDeltaPos);

@@ -1,7 +1,7 @@
 #pragma once
 
 ///---------¼­¹ö ¿¬°á------------
-//#define ONLINE
+#define ONLINE
 
 
 #define WIN32_LEAN_AND_MEAN             // ê±°ì˜ ?¬ìš©?˜ì? ?ŠëŠ” ?´ìš©?€ Windows ?¤ë”?ì„œ ?œì™¸?©ë‹ˆ??
