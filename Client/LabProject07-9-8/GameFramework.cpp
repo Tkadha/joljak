@@ -45,7 +45,7 @@ void CGameFramework::ProcessPacket(char* packet)
 	int loop_count{ 0 };
 retry:
 	loop_count++;
-	if (loop_count > 10'000) return;
+	if (loop_count > 100) return;
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{

@@ -3,7 +3,7 @@
 #include <vector>
 #include <mutex>
 
-static XMFLOAT3 oct_distance{ 1800,1000,1800 };
+static XMFLOAT3 oct_distance{ 2000,1000,2000 };
 
 struct tree_obj {
     long long u_id;
@@ -51,7 +51,7 @@ public:
 
     Octree(const XMFLOAT3& min, const XMFLOAT3& max, int depth = 0)
         : minBound(min), maxBound(max), depth(depth) {
-        maxObjects = 200 * (depth + 1);
+        maxObjects = 400 * (depth + 1);
         objects.reserve(maxObjects);
     }
     ~Octree();

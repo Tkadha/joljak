@@ -73,6 +73,7 @@ void Octree::query(const tree_obj& object, const XMFLOAT3& distance, std::vector
     if (!intersects(object.Sub_Pos_return(distance), object.Add_Pos_return(distance))) return;
 
     for (auto& obj : objects) {
+        if (!obj) continue;
         if (obj->u_id == object.u_id) continue;
         if (obj->isWithin(object.Sub_Pos_return(distance), object.Add_Pos_return(distance))) {
             results.push_back(obj.get());
