@@ -139,9 +139,16 @@ void CGameObject::Check_attack()
 	default:
 		break;
 	}
-	CAnimationSet* pAnimationSet = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_nAnimationSet];
-	auto animation_pos = m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_fPosition;
-	if (animation_pos < pAnimationSet->m_fLength / 2) return;
+	if (GameObjectType::Toad == m_objectType) {
+		CAnimationSet* pAnimationSet = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_nAnimationSet];
+		auto animation_pos = m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_fPosition;
+		if (animation_pos < pAnimationSet->m_fLength / 4) return;
+	}
+	else {
+		CAnimationSet* pAnimationSet = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_nAnimationSet];
+		auto animation_pos = m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_fPosition;
+		if (animation_pos < pAnimationSet->m_fLength / 2) return;
+	}
 	// if attack animation
 	// check hit player
 	auto p_info = m_pScene->GetPlayerInfo();
