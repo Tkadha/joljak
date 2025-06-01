@@ -648,9 +648,10 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				break;
 
 			case 'L':
-				m_pPlayer->observe = true;
+				m_pPlayer->observe = m_pPlayer->observe ? false : true;
 				break;
-			case '6':
+			
+			/*case '6':
 				m_pPlayer->offset.x += 0.01;
 				m_pPlayer->m_pSword->SetPosition(m_pPlayer->offset);
 				break;
@@ -711,7 +712,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				wchar_t dbgMsg[128];
 				swprintf_s(dbgMsg, L"scale = %f, %f, %f\n", m_pPlayer->scale.x, m_pPlayer->scale.y, m_pPlayer->scale.z);
 				OutputDebugStringW(dbgMsg);
-				break;
+				break;*/
 
 			}
 			break;

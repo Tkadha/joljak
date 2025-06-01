@@ -162,6 +162,11 @@ void CGameObject::Check_attack()
 				newPlayerPos.z = playerPos.z + monsterlook.z * KnockBackDistance;
 				p_info->SetPosition(newPlayerPos);
 
+				PlayerStateID currentState = p_info->m_pStateMachine->GetCurrentStateID();
+				if (currentState != PlayerStateID::HitReaction && currentState != PlayerStateID::Dead) {
+					p_info->m_pStateMachine->PerformStateChange(PlayerStateID::HitReaction, true);
+				}
+
 				auto& nwManager = NetworkManager::GetInstance();
 				auto pos = p_info->GetPosition();
 				POSITION_PACKET p;
@@ -2099,7 +2104,10 @@ UserObject::UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3d
 	AddObject(pd3dDevice, pd3dCommandList, "thumb_02_r", "Model/Sword_01.bin", pGameFramework, XMFLOAT3(0.05, 0.00, -0.05), XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
 	AddObject(pd3dDevice, pd3dCommandList, "Helmet", "Model/Hair_01.bin", pGameFramework, XMFLOAT3(0, 0.1, 0), XMFLOAT3(0,0,0), XMFLOAT3(1, 1, 1));
 	//AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Boots_Peasant_Armor", "Model/Boots_Peasant_Armor.bin");
-	AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, XMFLOAT3(-0.25, 0.1, 0), XMFLOAT3(90, 0, 90), XMFLOAT3(1, 1, 1));
+	//AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, XMFLOAT3(-0.25, 0.1, 0), XMFLOAT3(90, 0, 90), XMFLOAT3(1, 1, 1));
+
+	XMFLOAT3 offset{ -0.230000, 0.040000, -0.010000 }, scale{ 1.10000, 1.250000, 1.150000 };
+	AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, offset, XMFLOAT3(85, 0, 90), scale);
 
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pUserModel);
 }

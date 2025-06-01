@@ -547,11 +547,6 @@ CGameObject* CPlayer::FindFrame(char* framename)
 	return nullptr;
 } 
 
-void CTerrainPlayer::ChangeSkinColor()
-{
-
-}
-
 CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, void *pContext, CGameFramework* pGameFramework) : CPlayer(pGameFramework)
 {
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
@@ -567,7 +562,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pAxe = AddObject(pd3dDevice, pd3dCommandList, "thumb_01_r", "Model/Axe.bin", pGameFramework, XMFLOAT3(0.05, 0.25, -0.05), XMFLOAT3(90, 0, 00));
 	m_pAxe->isRender = false;
 	weaponType = WeaponType::Sword;
-	
+
 	AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, offset, XMFLOAT3(85, 0, 90), scale);
 
 
