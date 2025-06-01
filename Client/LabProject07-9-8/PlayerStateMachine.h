@@ -31,6 +31,10 @@ public:
 
     // 공격 키 입력 시 호출
     PlayerStateID DetermineAttackState();
+
+
+    // 상태 전환 처리 (내부 헬퍼 함수) - public 이동
+    void PerformStateChange(PlayerStateID newStateID, bool forceImmediate = false);
 private:
     CTerrainPlayer* m_pOwner = nullptr;                // 상태 머신을 소유한 플레이어 객체
     CAnimationController* m_pAnimController = nullptr; // 애니메이션 제어기
@@ -52,8 +56,6 @@ private:
 
     // 상태 객체 가져오기 (내부 헬퍼 함수)
     IPlayerState* GetState(PlayerStateID id);
-    // 상태 전환 처리 (내부 헬퍼 함수)
-    void PerformStateChange(PlayerStateID newStateID, bool forceImmediate = false);
     // 블렌딩 업데이트 처리 (내부 헬퍼 함수)
     void UpdateBlend(float deltaTime);
 

@@ -689,6 +689,74 @@ public:
     }
 };
 
+class HitReactionState : public IPlayerState {
+private:
+    bool m_bAnimFinished = false;
+    int m_nAnimTrack = BlendConfig::PRIMARY_TRACK; // 피격 애니메이션 재생 트랙 (즉시 전환 시 주 트랙)
+    float m_fStateDuration = 0.0f; // 상태 지속시간 (애니메이션 길이에 따라 설정)
+    float m_fElapsedTimeInState = 0.0f; // 이 상태에 머문 시간
+
+public:
+    PlayerStateID GetID() const override { return PlayerStateID::HitReaction; }
+
+    void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
+        std::cout << "Entering HitReaction State\n";
+        m_bAnimFinished = false;
+        m_fElapsedTimeInState = 0.0f;
+        m_nAnimTrack = BlendConfig::PRIMARY_TRACK; // 즉시 전환이므로 주 트랙 사용
+
+        // 애니메이션 길이를 가져와서 상태 지속시간으로 사용 (또는 고정값 사용)
+        m_fStateDuration = stateMachine->GetAnimationLength(m_nAnimTrack);
+        if (m_fStateDuration <= 0.0f) { // 애니메이션 길이 못가져오면 기본 지속시간
+            m_fStateDuration = 0.5f; // 예: 0.5초
+        }
+
+
+        // 피격 시 이동 속도 0으로
+        player->SetVelocity({0.0f, player->GetVelocity().y, 0.0f}); // Y축 속도는 유지할 수 있음 (공중 피격 등)
+        // 또는 아주 짧은 넉백 효과를 줄 수도 있습니다.
+
+    }
+
+    PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
+        m_fElapsedTimeInState += deltaTime;
+
+        // 애니메이션 재생 완료 확인 (시간 기반 또는 GetTrackPosition 기반)
+        // GetTrackPosition 이 ANIMATION_TYPE_ONCE 종료 후에도 계속 증가하지 않는다는 보장이 있다면 사용 가능
+        // 여기서는 시간 기반으로 먼저 처리 (더 안정적일 수 있음)
+        if (!m_bAnimFinished && m_fElapsedTimeInState >= m_fStateDuration*0.45f) {
+            m_bAnimFinished = true;
+        }
+
+        // 또는 트랙 위치 기반 (주석 처리된 부분은 이전 방식)
+        
+        float currentPosition = stateMachine->GetTrackPosition(m_nAnimTrack);
+        // animLength는 Enter에서 m_fStateDuration 으로 이미 가져왔으므로 재활용 가능
+        //if (!m_bAnimFinished && currentPosition >= m_fStateDuration * 0.90f) {
+        //    m_bAnimFinished = true;
+        //}
+        
+
+        // TODO: 플레이어 HP 체크하여 0 이하면 Dead 상태로 전환하는 로직 추가
+        // if (player->GetCurrentHP() <= 0) { // 플레이어 HP 가져오는 함수 필요
+        //     return PlayerStateID::Dead;
+        // }
+
+        // 애니메이션이 끝나면 Idle 상태로 전환
+        if (m_bAnimFinished) {
+            return PlayerStateID::Idle;
+        }
+
+        // 피격 애니메이션 중에는 다른 입력 무시하고 현재 상태 유지
+        return PlayerStateID::HitReaction;
+    }
+
+    void Exit(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
+        std::cout << "Exiting HitReaction State\n";
+        // 필요시 입력 제한 해제 등
+    }
+};
+
 
 #include "NetworkManager.h"
 
@@ -932,6 +1000,8 @@ PlayerStateMachine::PlayerStateMachine(CTerrainPlayer* owner, CAnimationControll
     m_vStates.push_back(std::make_unique<RunBackwardState>()); 
     m_vStates.push_back(std::make_unique<RunLeftState>());     
     m_vStates.push_back(std::make_unique<RunRightState>());    
+
+    m_vStates.push_back(std::make_unique<HitReactionState>());
     // ... 다른 모든 상태들도 여기에 추가 ...
 
     // 초기 상태 설정
@@ -1091,6 +1161,12 @@ void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool force
             animIndex = AnimIndices::RUN_RIGHT;
             trackType = ANIMATION_TYPE_LOOP;
             break;
+
+
+        case PlayerStateID::HitReaction:
+            animIndex = AnimIndices::HIT_REACTION;
+            trackType = ANIMATION_TYPE_ONCE; // 피격 애니메이션은 한 번 재생
+            break;
             // ... 다른 상태들에 대한 애니메이션 인덱스 매핑 추가 ...
         default: std::cerr << "Warning: No animation index mapped for state " << (int)newStateID << std::endl; break;
         }
@@ -1190,6 +1266,12 @@ void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool force
         case PlayerStateID::RunRight:
             animIndex = AnimIndices::RUN_RIGHT;
             trackType = ANIMATION_TYPE_LOOP;
+            break;
+
+
+        case PlayerStateID::HitReaction:
+            animIndex = AnimIndices::HIT_REACTION;
+            trackType = ANIMATION_TYPE_ONCE; // 피격 애니메이션은 한 번 재생
             break;
             // ... 다른 상태들에 대한 애니메이션 인덱스 매핑 추가 ...
         default: OutputDebugString(L"Warning: No animation index mapped for state ");

@@ -13,12 +13,44 @@ CLoadedModelInfo::~CLoadedModelInfo()
 
 void CLoadedModelInfo::PrepareSkinning()
 {
-	int nSkinnedMesh = 0;
-	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
-	m_pModelRootObject->FindAndSetSkinnedMesh(m_ppSkinnedMeshes, &nSkinnedMesh);
+	//int nSkinnedMesh = 0;
+	//m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
+	//m_pModelRootObject->FindAndSetSkinnedMesh(m_ppSkinnedMeshes, &nSkinnedMesh);
 
 	for (int i = 0; i < m_nSkinnedMeshes; i++) 
 		m_ppSkinnedMeshes[i]->PrepareSkinning(m_pModelRootObject);
+}
+
+void CLoadedModelInfo::FindAndCacheSkinnedMeshes()
+{
+	if (m_nSkinnedMeshes == 0 || !m_pModelRootObject)
+	{
+		if (m_ppSkinnedMeshes) { // 이미 할당되었다면 이전 것 해제
+			delete[] m_ppSkinnedMeshes;
+			m_ppSkinnedMeshes = nullptr;
+		}
+		return;
+	}
+
+	// m_ppSkinnedMeshes가 이미 할당되었는지 확인
+	if (m_ppSkinnedMeshes) delete[] m_ppSkinnedMeshes;
+
+	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
+	for (int i = 0; i < m_nSkinnedMeshes; ++i) m_ppSkinnedMeshes[i] = nullptr; // 초기화
+
+	int nFoundSkinnedMeshes = 0; // 실제로 찾은 스킨드 메쉬 개수
+	m_pModelRootObject->FindAndSetSkinnedMesh(m_ppSkinnedMeshes, &nFoundSkinnedMeshes);
+
+	if (nFoundSkinnedMeshes != m_nSkinnedMeshes)
+	{
+		// 예상했던 개수와 실제로 찾은 개수가 다르면 로그를 남기거나 처리할 수 있습니다.
+		// 예를 들어 m_nSkinnedMeshes = nFoundSkinnedMeshes; 로 업데이트 할 수도 있습니다.
+		// 여기서는 일단 m_nSkinnedMeshes가 정확한 용량이라고 가정합니다.
+		// 만약 nFoundSkinnedMeshes가 더 적다면, m_ppSkinnedMeshes의 뒷부분은 nullptr로 남아있을 것입니다.
+		// 또는, 실제 찾은 개수만큼만 유효하다고 간주하고 m_nSkinnedMeshes 값을 업데이트합니다.
+		// 안전하게는 m_nSkinnedMeshes = nFoundSkinnedMeshes; 로 설정하는 것이 좋습니다.
+		m_nSkinnedMeshes = nFoundSkinnedMeshes;
+	}
 }
 
 

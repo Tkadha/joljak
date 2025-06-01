@@ -1014,7 +1014,6 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		}
 		else if (!strcmp(pstrToken, "<AlbedoMap>:"))
 		{
-			
 			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 0, MATERIAL_ALBEDO_MAP, pParent, pInFile, pResourceManager);
 		}
 		else if (!strcmp(pstrToken, "<SpecularMap>:"))
@@ -1154,7 +1153,7 @@ void CGameObject::PrintFrameInfo(CGameObject *pGameObject, CGameObject *pParent)
 	_stprintf_s(pstrDebug, 256, _T("(Frame: %p) (Parent: %p)\n"), pGameObject, pParent);
 	OutputDebugString(pstrDebug);
 	
-	ofstream fout("Player_weapon_Frame.txt", ios::app);
+	ofstream fout("Player.txt", ios::app);
 	
 	if (pGameObject)
 		fout << pGameObject->m_pstrFrameName << " ";
@@ -1265,11 +1264,18 @@ CLoadedModelInfo *CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device *pd
 			{
 				pLoadedModel->m_pModelRootObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, &pLoadedModel->m_nSkinnedMeshes, pGameFramework);
 				::ReadStringFromFile(pInFile, pstrToken); //"</Hierarchy>"
+
+
+				// 스킨드 메쉬 정보 준비
+				if (pLoadedModel->m_pModelRootObject && pLoadedModel->m_nSkinnedMeshes > 0) {
+					pLoadedModel->FindAndCacheSkinnedMeshes();
+				}
 			}
 			else if (!strcmp(pstrToken, "<Animation>:"))
 			{
 				CGameObject::LoadAnimationFromFile(pInFile, pLoadedModel);
 				pLoadedModel->PrepareSkinning();
+
 			}
 			else if (!strcmp(pstrToken, "</Animation>:"))
 			{

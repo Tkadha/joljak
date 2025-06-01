@@ -53,6 +53,8 @@ protected:
 public:
 	PlayerStateMachine* m_pStateMachine = nullptr;
 
+	XMFLOAT3 offset{ -0.230000, 0.040000, -0.010000 }, scale{ 1.10000, 1.250000, 1.150000 };
+	bool observe = false;
 
 	CPlayer(CGameFramework* pGameFramework);
 	virtual ~CPlayer();
@@ -205,6 +207,6 @@ public:
 
 	CGameObject* FindObjectHitByAttack();
 
-	
+	void ChangeSkinColor();
 };
 

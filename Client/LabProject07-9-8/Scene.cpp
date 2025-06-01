@@ -18,26 +18,22 @@ bool ChangeAlbedoTexture(
 	ID3D12GraphicsCommandList* pd3dCommandList,
 	ID3D12Device* pd3dDevice)
 {
-	// ? íš¨??ê²€??
 	if (!pParentGameObject || !pParentGameObject->m_pChild ||
 		!pResourceManager || !pd3dCommandList || !pd3dDevice ||
 		!textureFilePath || !*textureFilePath) { 
 		return false;
 	}
 
-	// ë¨¸í‹°ë¦¬ì–¼ ê°€?¸ì˜¤ê¸?
 	CMaterial* pTargetMaterial = pParentGameObject->m_pChild->GetMaterial(materialIndex);
 	if (!pTargetMaterial) {
 		return false;
 	}
 
-	// ?ìŠ¤ì²?ë¡œë“œ
 	std::shared_ptr<CTexture> pTextureToAssign = pResourceManager->GetTexture(textureFilePath, pd3dCommandList);
 	if (!pTextureToAssign) {
 		return false;
 	}
 
-	// ?ìŠ¤ì²?? ë‹¹ ë°?ê²°ê³¼ ë°˜í™˜
 	return pTargetMaterial->AssignTexture(textureSlot, pTextureToAssign, pd3dDevice);
 }
 
@@ -612,6 +608,13 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		if (pWolfModel) delete pWolfModel;
 	}
 
+	// ÇÃ·¹ÀÌ¾î Ä¿½ºÅÍ¸¶ÀÌÂ¡(ÀÓ½Ã)
+
+	//int materialIndexToChange = 0;
+	//UINT albedoTextureSlot = 0;
+	//const wchar_t* textureFile = L"Model/Textures/T_HU_M_Body_04_D.dds";
+	//CGameObject* gameObj = m_pPlayer->FindFrame("Bracers_Naked");
+	//ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
 
 	//m_pPlayer->SetCollisionTargets(m_vGameObjects);
 
@@ -926,44 +929,48 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 
 	if (obbRender) {
-		for (auto& obj : m_vGameObjects) {
-			if (obj->ShouldRenderOBB()) {
-				obj->RenderOBB(pd3dCommandList, pCamera);
+		CShader* pOBBShader = pShaderManager->GetShader("OBB", pd3dCommandList);
+		if (pOBBShader) {
+			SetGraphicsState(pd3dCommandList, pOBBShader);
+			for (auto& obj : m_vGameObjects) {
+				if (obj->ShouldRenderOBB()) {
+					obj->RenderOBB(pd3dCommandList, pCamera);
+				}
 			}
-		}
 
 
-		for (auto& branch : m_listBranchObjects) {
-			if (branch->ShouldRenderOBB()) {
-				branch->RenderOBB(pd3dCommandList, pCamera);
+			for (auto& branch : m_listBranchObjects) {
+				if (branch->ShouldRenderOBB()) {
+					branch->RenderOBB(pd3dCommandList, pCamera);
+				}
 			}
-		}
-		for (auto& rock : m_listRockObjects) {
-			if (rock->ShouldRenderOBB()) {
-				rock->RenderOBB(pd3dCommandList, pCamera);
+			for (auto& rock : m_listRockObjects) {
+				if (rock->ShouldRenderOBB()) {
+					rock->RenderOBB(pd3dCommandList, pCamera);
+				}
 			}
+
+			if (m_pPreviewPine && m_pPreviewPine->ShouldRenderOBB()) {
+				m_pPreviewPine->RenderOBB(pd3dCommandList, pCamera);
+			}
+
+
+
+			if (m_pPlayer && m_pPlayer->ShouldRenderOBB()) {
+				m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
+			}
+
+
+			//for (auto& entry : PlayerList) {
+			//    CPlayer* pOtherPlayer = entry.second;
+			//    if (pOtherPlayer && pOtherPlayer->ShouldRenderOBB()) {
+			//        pOtherPlayer->RenderOBB(pd3dCommandList, pCamera);
+			//    }
+			//}
 		}
-
-		if (m_pPreviewPine && m_pPreviewPine->ShouldRenderOBB()) {
-			m_pPreviewPine->RenderOBB(pd3dCommandList, pCamera);
+		else {
+			assert(!"OBB Shader (named 'OBB') not found in ShaderManager!");
 		}
-
-
-
-		if (m_pPlayer && m_pPlayer->ShouldRenderOBB()) {
-			m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
-		}
-
-
-		//for (auto& entry : PlayerList) {
-		//    CPlayer* pOtherPlayer = entry.second;
-		//    if (pOtherPlayer && pOtherPlayer->ShouldRenderOBB()) {
-		//        pOtherPlayer->RenderOBB(pd3dCommandList, pCamera);
-		//    }
-		//}
-	}
-	else {
-		assert(!"OBB Shader (named 'OBB') not found in ShaderManager!");
 	}
 
 }

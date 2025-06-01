@@ -583,7 +583,6 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				ShowInventory = !ShowInventory;
 				break;
 			case 'I':
-				
 				break;
 			case 'O':
 				ShowCraftingUI = !ShowCraftingUI;
@@ -598,11 +597,86 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				BuildMode = false;
 				bPrevBuildMode = BuildMode;
 				m_pConstructionSystem->ConfirmPlacement();
-
 				break;
 			case 'T':
 				m_pScene->obbRender = m_pScene->obbRender ? false : true;
 				break;
+
+			case 'G':
+			{
+				PlayerStateID currentState = m_pPlayer->m_pStateMachine->GetCurrentStateID();
+				if (currentState != PlayerStateID::HitReaction && currentState != PlayerStateID::Dead) {
+					m_pPlayer->m_pStateMachine->PerformStateChange(PlayerStateID::HitReaction, true);
+				}
+			}
+				break;
+
+			case 'L':
+				m_pPlayer->observe = true;
+				break;
+			case '6':
+				m_pPlayer->offset.x += 0.01;
+				m_pPlayer->m_pSword->SetPosition(m_pPlayer->offset);
+				break;
+			case '7':
+				m_pPlayer->offset.x -= 0.01;
+				m_pPlayer->m_pSword->SetPosition(m_pPlayer->offset);
+				break;
+			case '8':
+				m_pPlayer->offset.y += 0.01;
+				m_pPlayer->m_pSword->SetPosition(m_pPlayer->offset);
+				break;
+			case '9':
+				m_pPlayer->offset.y -= 0.01;
+				m_pPlayer->m_pSword->SetPosition(m_pPlayer->offset);
+				break;
+			case '0':
+				m_pPlayer->offset.z += 0.01;
+				m_pPlayer->m_pSword->SetPosition(m_pPlayer->offset);
+				break;
+			case 'P':
+				m_pPlayer->offset.z -= 0.01;
+				m_pPlayer->m_pSword->SetPosition(m_pPlayer->offset);
+				{
+					wchar_t dbgMsg[128];
+					swprintf_s(dbgMsg, L"offset = %f, %f, %f\n", m_pPlayer->offset.x, m_pPlayer->offset.y, m_pPlayer->offset.z);
+					OutputDebugStringW(dbgMsg);
+				}
+				break;
+			case 'Z':
+				m_pPlayer->m_pSword->SetScale(1 / m_pPlayer->scale.x, 1 / m_pPlayer->scale.y, 1 / m_pPlayer->scale.z);
+				m_pPlayer->scale.x += 0.01;
+				m_pPlayer->m_pSword->SetScale(m_pPlayer->scale.x, m_pPlayer->scale.y, m_pPlayer->scale.z);
+				break;
+			case 'X':
+				m_pPlayer->m_pSword->SetScale(1 / m_pPlayer->scale.x, 1 / m_pPlayer->scale.y, 1 / m_pPlayer->scale.z);
+				m_pPlayer->scale.x -= 0.01;
+				m_pPlayer->m_pSword->SetScale(m_pPlayer->scale.x, m_pPlayer->scale.y, m_pPlayer->scale.z);
+				break;
+			case 'C':
+				m_pPlayer->m_pSword->SetScale(1 / m_pPlayer->scale.x, 1 / m_pPlayer->scale.y, 1 / m_pPlayer->scale.z);
+				m_pPlayer->scale.y += 0.01;
+				m_pPlayer->m_pSword->SetScale(m_pPlayer->scale.x, m_pPlayer->scale.y, m_pPlayer->scale.z);
+				break;
+			case 'V':
+				m_pPlayer->m_pSword->SetScale(1 / m_pPlayer->scale.x, 1 / m_pPlayer->scale.y, 1 / m_pPlayer->scale.z);
+				m_pPlayer->scale.y -= 0.01;
+				m_pPlayer->m_pSword->SetScale(m_pPlayer->scale.x, m_pPlayer->scale.y, m_pPlayer->scale.z);
+				break;
+			case 'N':
+				m_pPlayer->m_pSword->SetScale(1 / m_pPlayer->scale.x, 1 / m_pPlayer->scale.y, 1 / m_pPlayer->scale.z);
+				m_pPlayer->scale.z += 0.01;
+				m_pPlayer->m_pSword->SetScale(m_pPlayer->scale.x, m_pPlayer->scale.y, m_pPlayer->scale.z);
+				break;
+			case 'M':
+				m_pPlayer->m_pSword->SetScale(1 / m_pPlayer->scale.x, 1 / m_pPlayer->scale.y, 1 / m_pPlayer->scale.z);
+				m_pPlayer->scale.z -= 0.01;
+				m_pPlayer->m_pSword->SetScale(m_pPlayer->scale.x, m_pPlayer->scale.y, m_pPlayer->scale.z);
+				wchar_t dbgMsg[128];
+				swprintf_s(dbgMsg, L"scale = %f, %f, %f\n", m_pPlayer->scale.x, m_pPlayer->scale.y, m_pPlayer->scale.z);
+				OutputDebugStringW(dbgMsg);
+				break;
+
 			}
 			break;
 		default:
@@ -1269,10 +1343,42 @@ void CGameFramework::ProcessInput()
 
 					if (cxDelta || cyDelta)
 					{
-						if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-							m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-						else
-							m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+						//if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+						//	m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+						//else
+						//	m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+
+
+						float inputPitch = cyDelta; // 마우스 수직 이동으로 카메라 Pitch 제어
+						float inputYaw = cxDelta;   // 마우스 수평 이동으로 카메라 Yaw 제어
+						float inputRoll = 0.0f;     // Roll은 사용하지 않는다고 가정
+
+						// 이전 답변에서 제안한 카메라 회전각 업데이트 및 Rotate 함수 호출 로직
+						float deltaCamPitch = 0.0f;
+						float deltaCamYaw = 0.0f;
+						float deltaCamRoll = 0.0f; // 필요시 Roll도 추가
+
+						if (inputPitch != 0.0f)
+						{
+							float previousCamPitch = m_pCamera->GetPitch();
+							m_pCamera->GetPitch() += inputPitch;
+							if (m_pCamera->GetPitch() > +89.0f) { m_pCamera->GetPitch() = +89.0f; }
+							if (m_pCamera->GetPitch() < -89.0f) { m_pCamera->GetPitch() = -89.0f; }
+							deltaCamPitch = m_pCamera->GetPitch() - previousCamPitch;
+						}
+						if (inputYaw != 0.0f)
+						{
+							m_pCamera->GetYaw() += inputYaw;
+							if (m_pCamera->GetYaw() > 360.0f) m_pCamera->GetYaw() -= 360.0f;
+							if (m_pCamera->GetYaw() < 0.0f) m_pCamera->GetYaw() += 360.0f;
+							deltaCamYaw = inputYaw;
+						}
+						// inputRoll에 대한 처리도 필요하다면 여기에 추가
+
+						// 수정된 CThirdPersonCamera::Rotate 함수 호출
+						m_pCamera->Rotate(deltaCamPitch, deltaCamYaw, deltaCamRoll);
+
+
 						{
 							ROTATE_PACKET p;
 							auto& lookv = m_pPlayer->GetLookVector();

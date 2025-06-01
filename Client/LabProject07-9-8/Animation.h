@@ -21,6 +21,7 @@ public:
 
 public:
 	void PrepareSkinning();
+	void FindAndCacheSkinnedMeshes();
 };
 
 struct CALLBACKKEY
