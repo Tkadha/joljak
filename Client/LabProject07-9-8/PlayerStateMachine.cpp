@@ -725,7 +725,7 @@ public:
         // GetTrackPosition 이 ANIMATION_TYPE_ONCE 종료 후에도 계속 증가하지 않는다는 보장이 있다면 사용 가능
         // 여기서는 시간 기반으로 먼저 처리 (더 안정적일 수 있음)
         if (!m_bAnimFinished && m_fElapsedTimeInState >= m_fStateDuration*0.45f) {
-            m_bAnimFinished = true;
+                m_bAnimFinished = true;
         }
 
         // 또는 트랙 위치 기반 (주석 처리된 부분은 이전 방식)

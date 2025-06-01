@@ -1343,40 +1343,41 @@ void CGameFramework::ProcessInput()
 
 					if (cxDelta || cyDelta)
 					{
-						//if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-						//	m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-						//else
-						//	m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+						if (m_pPlayer->observe) {
+							float inputPitch = cyDelta; // 마우스 수직 이동으로 카메라 Pitch 제어
+							float inputYaw = cxDelta;   // 마우스 수평 이동으로 카메라 Yaw 제어
+							float inputRoll = 0.0f;     // Roll은 사용하지 않는다고 가정
 
+							float deltaCamPitch = 0.0f;
+							float deltaCamYaw = 0.0f;
+							float deltaCamRoll = 0.0f; // 필요시 Roll도 추가
 
-						float inputPitch = cyDelta; // 마우스 수직 이동으로 카메라 Pitch 제어
-						float inputYaw = cxDelta;   // 마우스 수평 이동으로 카메라 Yaw 제어
-						float inputRoll = 0.0f;     // Roll은 사용하지 않는다고 가정
+							if (inputPitch != 0.0f)
+							{
+								float previousCamPitch = m_pCamera->GetPitch();
+								m_pCamera->GetPitch() += inputPitch;
+								if (m_pCamera->GetPitch() > +89.0f) { m_pCamera->GetPitch() = +89.0f; }
+								if (m_pCamera->GetPitch() < -89.0f) { m_pCamera->GetPitch() = -89.0f; }
+								deltaCamPitch = m_pCamera->GetPitch() - previousCamPitch;
+							}
+							if (inputYaw != 0.0f)
+							{
+								m_pCamera->GetYaw() += inputYaw;
+								if (m_pCamera->GetYaw() > 360.0f) m_pCamera->GetYaw() -= 360.0f;
+								if (m_pCamera->GetYaw() < 0.0f) m_pCamera->GetYaw() += 360.0f;
+								deltaCamYaw = inputYaw;
+							}
+							// inputRoll에 대한 처리도 필요하다면 여기에 추가
 
-						// 이전 답변에서 제안한 카메라 회전각 업데이트 및 Rotate 함수 호출 로직
-						float deltaCamPitch = 0.0f;
-						float deltaCamYaw = 0.0f;
-						float deltaCamRoll = 0.0f; // 필요시 Roll도 추가
-
-						if (inputPitch != 0.0f)
-						{
-							float previousCamPitch = m_pCamera->GetPitch();
-							m_pCamera->GetPitch() += inputPitch;
-							if (m_pCamera->GetPitch() > +89.0f) { m_pCamera->GetPitch() = +89.0f; }
-							if (m_pCamera->GetPitch() < -89.0f) { m_pCamera->GetPitch() = -89.0f; }
-							deltaCamPitch = m_pCamera->GetPitch() - previousCamPitch;
+							// 수정된 CThirdPersonCamera::Rotate 함수 호출
+							m_pCamera->Rotate(deltaCamPitch, deltaCamYaw, deltaCamRoll);
 						}
-						if (inputYaw != 0.0f)
-						{
-							m_pCamera->GetYaw() += inputYaw;
-							if (m_pCamera->GetYaw() > 360.0f) m_pCamera->GetYaw() -= 360.0f;
-							if (m_pCamera->GetYaw() < 0.0f) m_pCamera->GetYaw() += 360.0f;
-							deltaCamYaw = inputYaw;
+						else{
+							if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+								m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+							else
+								m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 						}
-						// inputRoll에 대한 처리도 필요하다면 여기에 추가
-
-						// 수정된 CThirdPersonCamera::Rotate 함수 호출
-						m_pCamera->Rotate(deltaCamPitch, deltaCamYaw, deltaCamRoll);
 
 
 						{
