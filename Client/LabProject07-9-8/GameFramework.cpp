@@ -968,13 +968,20 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		{
 		case OBJECT_TYPE::OB_TREE:
 		{
-			CGameObject* gameObj = new CBirchObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
-			int materialIndexToChange = 1;
-			UINT albedoTextureSlot = 0;
-			const wchar_t* textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
-			ResourceManager* pResourceManager = GetResourceManager();
-			ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, m_pd3dCommandList, m_pd3dDevice);
+			CGameObject* gameObj;
+			int tree_type = rand() % 2;
+			if (tree_type == 0) {
+				gameObj = new CBirchObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
+				int materialIndexToChange = 1;
+				UINT albedoTextureSlot = 0;
+				const wchar_t* textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
+				ResourceManager* pResourceManager = GetResourceManager();
+				ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, m_pd3dCommandList, m_pd3dDevice);
+			}
+			else if (tree_type == 1)
+				gameObj = new CPineObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
 
+			
 			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
 			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
