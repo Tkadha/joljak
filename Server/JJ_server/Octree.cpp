@@ -33,6 +33,7 @@ bool Octree::remove(long long id)
 {
     std::unique_lock<std::mutex> oct_lock(oct_mu);
     auto it = std::find_if(objects.begin(), objects.end(), [id](const std::unique_ptr<tree_obj>& obj){
+        if (!obj)return false;
         return obj->u_id == id;
         });
     if (it != objects.end()) {

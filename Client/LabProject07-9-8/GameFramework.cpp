@@ -1260,12 +1260,12 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			if (pToadModel) delete(pToadModel);
 		}
 		break;
-		case OBJECT_TYPE::OB_SNAKE:
+		case OBJECT_TYPE::OB_WOLF:
 		{
 			int animate_count = 13;
-			CLoadedModelInfo* pSnakeModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Snake.bin", this);
-			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pSnakeModel, animate_count, this);
-			gameObj->m_objectType = GameObjectType::Toad;
+			CLoadedModelInfo* pWolfModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Wolf.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pWolfModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Wolf;
 			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 			gameObj->m_anitype = 0;
 			for (int j = 1; j < animate_count; ++j) {
@@ -1274,9 +1274,9 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			}
 
 			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
 				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
 				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
-				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
 			}
 
 			gameObj->SetOwningScene(m_pScene);
@@ -1298,7 +1298,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
-			if (pSnakeModel) delete(pSnakeModel);
+			if (pWolfModel) delete(pWolfModel);
 		}
 		break;
 		default:

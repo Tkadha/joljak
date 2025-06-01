@@ -115,6 +115,7 @@ void CGameObject::SetChild(CGameObject *pChild, bool bReferenceUpdate)
 }
 void CGameObject::Check_attack()
 {
+
 	switch (m_objectType)
 	{
 	case GameObjectType::Spider:
@@ -140,7 +141,7 @@ void CGameObject::Check_attack()
 	}
 	CAnimationSet* pAnimationSet = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_nAnimationSet];
 	auto animation_pos = m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_fPosition;
-	if (animation_pos < pAnimationSet->m_fLength /2) return;
+	if (animation_pos < pAnimationSet->m_fLength / 2) return;
 	// if attack animation
 	// check hit player
 	auto p_info = m_pScene->GetPlayerInfo();
@@ -1364,7 +1365,7 @@ CLoadedModelInfo *CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device *pd
 
 	CGameObject::PrintFrameInfo(pGameObject, NULL);
 #endif
-
+	if (pInFile) fclose(pInFile);
 	return(pLoadedModel);
 }
 
