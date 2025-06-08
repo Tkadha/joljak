@@ -13,6 +13,8 @@
 #include <unordered_map>
 #include <mutex>
 
+#include "ShadowMap.h"
+
 #define MAX_LIGHTS						16 
 
 #define POINT_LIGHT						1
@@ -132,6 +134,10 @@ public:
 	ID3D12Resource						*m_pd3dcbLights = NULL;
 	LIGHTS								*m_pcbMappedLights = NULL;
 
+	// 그림자매핑을 위한 임시 카메라
+	ID3D12Resource* m_pd3dcbLightCamera = nullptr;
+	VS_CB_CAMERA_INFO* m_pcbMappedLightCamera = nullptr;
+
 	// 인스턴싱
 	ID3D12Resource* m_pd3dcbGameObjects = NULL;
 	VS_VB_INSTANCE* m_pcbMappedGameObjects = NULL;
@@ -160,4 +166,29 @@ public:
 	void SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 	void SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 
+
+
+	// 그림자
+	std::unique_ptr<ShadowMap> m_pShadowMap;
+
+	DirectX::BoundingSphere mSceneBounds;
+
+	float mLightNearZ = 0.0f;
+	float mLightFarZ = 0.0f;
+	XMFLOAT3 mLightPosW;
+	DirectX::XMFLOAT4X4 mLightView = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 mLightProj = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 mShadowTransform = MathHelper::Identity4x4();
+
+	float mLightRotationAngle = 0.0f;
+	XMFLOAT3 mBaseLightDirections[3] = {
+		XMFLOAT3(0.57735f, -0.57735f, 0.57735f),
+		XMFLOAT3(-0.57735f, -0.57735f, 0.57735f),
+		XMFLOAT3(0.0f, -0.707f, -0.707f)
+	};
+	XMFLOAT3 mRotatedLightDirections[3];
+
+	POINT mLastMousePos;
+
+	void UpdateShadowTransform(const XMFLOAT3& focusPoint);
 };

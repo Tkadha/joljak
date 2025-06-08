@@ -29,10 +29,14 @@ cbuffer cbCameraInfo : register(b1)
     matrix gmtxView; // 뷰 행렬
     matrix gmtxProjection; // 투영 행렬
     float3 gvCameraPosition; // 카메라 월드 위치
-    // 필요시 패딩
+    float gCameraPadding; // 패딩 추가
+    
     float4 gFogColor; // 안개 색상 (r, g, b, 안개 강도와 무관한 alpha)
     float gFogStart; // 안개가 시작되는 카메라로부터의 거리
     float gFogRange; // 안개가 FogStart부터 완전히 불투명해지기까지의 거리 범위
+    float2 gFogPadding; // 패딩 추가
+    
+    matrix gmtxShadowTransform; 
 };
 
 // 조명 정보 (조명이 필요한 PS에서 사용, Light.hlsl 에서 정의된 구조체 사용 가정)
@@ -66,6 +70,7 @@ cbuffer cbCameraInfo : register(b1)
 
 SamplerState gssWrap : register(s0); // Wrap 모드 샘플러
 SamplerState gssClamp : register(s1); // Clamp 모드 샘플러
+SamplerComparisonState gsamShadow : register(s2); // 비교 샘플러
 
 // SamplerComparisonState gssShadow : register(s6); // 그림자 샘플러 등
 

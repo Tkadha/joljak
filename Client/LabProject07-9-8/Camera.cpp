@@ -173,6 +173,17 @@ void CCamera::SetViewportsAndScissorRects(ID3D12GraphicsCommandList *pd3dCommand
 	pd3dCommandList->RSSetScissorRects(1, &m_d3dScissorRect);
 }
 
+// 그림자
+void CCamera::UpdateShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4ShadowTransform)
+{
+	// m_pcbMappedCamera는 UpdateShaderVariables에서 이미 매핑되어 있다고 가정합니다.
+	if (m_pcbMappedCamera)
+	{
+		// VS_CB_CAMERA_INFO 구조체에 있는 m_xmf4x4ShadowTransform 멤버에 값을 복사합니다.
+		m_pcbMappedCamera->m_xmf4x4ShadowTransform = xmf4x4ShadowTransform;
+	}
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CSpaceShipCamera
 

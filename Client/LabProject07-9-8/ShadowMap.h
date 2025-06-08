@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../../Common/d3dUtil.h"
+#include "d3dUtil.h"
 
 class ShadowMap
 {
@@ -31,6 +31,10 @@ public:
 		CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuDsv);
 
 	void OnResize(UINT newWidth, UINT newHeight);
+
+	// 함수 추가
+	void SetRenderTarget(ID3D12GraphicsCommandList* cmdList);
+	void TransitionToReadable(ID3D12GraphicsCommandList* cmdList);
 
 private:
 	void BuildDescriptors();

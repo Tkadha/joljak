@@ -39,6 +39,9 @@ bool ChangeAlbedoTexture(
 
 CScene::CScene(CGameFramework* pFramework) : m_pGameFramework(pFramework)
 {
+	UINT ncbElementBytes = ((sizeof(VS_CB_CAMERA_INFO) + 255) & ~255); // 256의 배수
+	m_pd3dcbLightCamera = ::CreateBufferResource(pFramework->GetDevice(), nullptr, nullptr, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr);
+	m_pd3dcbLightCamera->Map(0, nullptr, (void**)&m_pcbMappedLightCamera);
 }
 
 CScene::~CScene()
@@ -181,6 +184,24 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	m_pTerrain->m_xmf4x4ToParent = Matrix4x4::Identity();
 
 	
+	// 1. 그림자 맵 객체 생성
+	m_pShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 2048, 2048);
+
+	// 2. SRV 핸들 할당: Framework의 AllocateSrvDescriptors 함수를 사용합니다.
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandle;
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuSrvHandle;
+	m_pGameFramework->AllocateSrvDescriptors(1, cpuSrvHandle, gpuSrvHandle);
+
+	// 3. DSV 핸들 가져오기: 방금 Framework에 만든 그림자용 DSV 힙의 시작 핸들을 가져옵니다.
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuDsvHandle = m_pGameFramework->GetShadowDsvHeap()->GetCPUDescriptorHandleForHeapStart();
+
+	// 4. ShadowMap에 모든 핸들을 전달하여 최종 리소스 생성
+	m_pShadowMap->BuildDescriptors(
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuSrvHandle),
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(gpuSrvHandle), 
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuDsvHandle) 
+	);
+
 	std::random_device rd;
 	std::mt19937 gen(rd());
 
@@ -831,6 +852,40 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
 	assert(pShaderManager != nullptr && "ShaderManager is not available!");
 
+
+	UpdateShadowTransform(m_pPlayer->GetPosition()); // 빛의 위치/방향에 따라 ShadowTransform 행렬 계산
+	pCamera->UpdateShadowTransform(mShadowTransform); // 카메라에 ShadowTransform 전달하여 상수 버퍼 업데이트 준비
+
+	// =================================================================
+	// Pass 1: 그림자 맵 생성
+	// =================================================================
+	{
+		// 렌더 타겟을 그림자 맵으로 설정
+		m_pShadowMap->SetRenderTarget(pd3dCommandList);
+
+		// 그림자 생성을 위한 전용 셰이더 설정
+		CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Shadow", pd3dCommandList);
+		pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
+		pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature()); // Shadow 셰이더용 루트 서명
+
+		// --- 빛 카메라 상수 버퍼 업데이트 및 바인딩 ---
+		XMMATRIX view = XMLoadFloat4x4(&mLightView);
+		XMMATRIX proj = XMLoadFloat4x4(&mLightProj);
+
+		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4View, XMMatrixTranspose(view));
+		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4Projection, XMMatrixTranspose(proj));
+
+
+		pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbLightCamera->GetGPUVirtualAddress());
+
+
+		// 기존 Render 함수를 호출하되, Shadow 셰이더는 재질/조명 정보를 무시할 것임
+		for (auto& obj : m_vGameObjects) {
+			if (obj) obj->Render(pd3dCommandList, nullptr);
+		}
+	}
+
+
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 
 	pCamera->UpdateShaderVariables(pd3dCommandList);
@@ -1162,4 +1217,58 @@ void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity
 	m_listRockObjects.emplace_back(newBranch);
 	//auto t_obj = std::make_unique<newBranch>(tree_obj_count++, gameObj->m_worldOBB.Center);
 	//octree.insert(std::move(t_obj));
+}
+
+
+
+
+
+
+void CScene::UpdateShadowTransform(const XMFLOAT3& focusPoint)
+{
+	LIGHT* pMainLight = nullptr;
+	for (int i = 0; i < m_nLights; ++i) {
+		if (m_pLights[i].m_nType == DIRECTIONAL_LIGHT) {
+			pMainLight = &m_pLights[i];
+			break;
+		}
+	}
+	if (!pMainLight) return;
+
+	XMVECTOR lightDir = XMLoadFloat3(&pMainLight->m_xmf3Direction);
+	XMVECTOR lightPos = XMLoadFloat3(&focusPoint) - 2000.0f * lightDir;
+	XMVECTOR targetPos = XMLoadFloat3(&focusPoint);
+	XMVECTOR lightUp;
+
+	// --- 여기에 예외 처리 코드를 추가합니다 ---
+	// 빛의 방향과 World Up 벡터(0,1,0)의 내적 값을 계산합니다.
+	float dot = fabsf(XMVectorGetY(lightDir));
+
+	// 만약 두 벡터가 거의 평행하다면 (내적 값이 0.99 이상)
+	if (dot > 0.99f) {
+		// Up 벡터를 World의 X축 방향으로 설정합니다.
+		lightUp = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+	}
+	else {
+		// 평행하지 않다면 기존처럼 World의 Y축을 Up 벡터로 사용합니다.
+		lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	}
+	// --- 예외 처리 끝 ---
+
+	XMMATRIX view = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
+
+	float sceneRadius = 2500.0f;
+	XMMATRIX proj = XMMatrixOrthographicLH(sceneRadius * 2.0f, sceneRadius * 2.0f, 0.0f, 5000.0f);
+
+	XMMATRIX T(
+		0.5f, 0.0f, 0.0f, 0.0f,
+		0.0f, -0.5f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.5f, 0.5f, 0.0f, 1.0f);
+
+	XMMATRIX S = view * proj * T;
+
+	XMStoreFloat4x4(&mLightView, view);
+	XMStoreFloat4x4(&mLightProj, proj);
+	XMStoreFloat4x4(&mShadowTransform, S);
 }

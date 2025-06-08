@@ -130,3 +130,27 @@ void ShadowMap::BuildResource()
 		&optClear,
 		IID_PPV_ARGS(&mShadowMap)));
 }
+
+
+// 함수 추가
+// 그림자 맵을 렌더 타겟으로 설정하는 모든 과정을 캡슐화합니다.
+void ShadowMap::SetRenderTarget(ID3D12GraphicsCommandList* cmdList)
+{
+	cmdList->RSSetViewports(1, &mViewport);
+	cmdList->RSSetScissorRects(1, &mScissorRect);
+
+	// 리소스를 렌더링 가능한 상태(DEPTH_WRITE)로 변경합니다.
+	cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mShadowMap.Get(),
+		D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+
+	// 렌더 타겟을 설정하고, 깊이/스텐실 버퍼를 초기화합니다.
+	cmdList->ClearDepthStencilView(mhCpuDsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+	cmdList->OMSetRenderTargets(0, nullptr, false, &mhCpuDsv);
+}
+
+// 그림자 맵을 셰이더에서 읽을 수 있는 상태로 변경합니다.
+void ShadowMap::TransitionToReadable(ID3D12GraphicsCommandList* cmdList)
+{
+	cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mShadowMap.Get(),
+		D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
+}

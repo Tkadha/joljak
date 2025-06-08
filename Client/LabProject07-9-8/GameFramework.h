@@ -168,6 +168,10 @@ private:
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dCbvGpuHandleStart;
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCpuHandleStart;
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dSrvGpuHandleStart;
+	
+
+	// 그림자
+	ID3D12DescriptorHeap* m_pd3dShadowDsvHeap = nullptr;
 
 	// 샘플러 힙 크기도 필요할 수 있음
 	UINT m_nSamplerDescriptorIncrementSize = 0; 
@@ -207,6 +211,8 @@ public:
 	ID3D12DescriptorHeap* m_pd3dSrvDescriptorHeapForImGui = nullptr;
 	ID3D12DescriptorHeap* m_pd3dSrvDescriptorHeapForIcons = nullptr;
 
+	// 그림자
+	ID3D12DescriptorHeap* GetShadowDsvHeap() { return m_pd3dShadowDsvHeap; }
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;
 #endif

@@ -187,13 +187,19 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 	XMFLOAT3 originalPosition = m_xmf3Position;
 
 	// X축 이동 시도
-	XMFLOAT3 testPosX = originalPosition;
+	// 
+	// 현재 플레이어의 회전값과 크기를 가져옵니다.
+	XMFLOAT4 currentRotation = m_worldOBB.Orientation;
+	XMFLOAT3 currentExtents = m_worldOBB.Extents;
+
+	// X축 이동 테스트
+	XMFLOAT3 testPosX = m_xmf3Position;
 	testPosX.x += xmf3Shift.x;
-	BoundingOrientedBox testOBBX;
-	XMMATRIX matX = XMMatrixTranslation(testPosX.x, testPosX.y, testPosX.z);
-	m_localOBB.Transform(testOBBX, matX);
-	testOBBX.Orientation.w = 1.f;
+
+	// testPosX 위치에 현재 플레이어와 동일한 크기/회전을 가진 OBB 생성
+	BoundingOrientedBox testOBBX(testPosX, currentExtents, currentRotation);
 	bool bCollidedX = false;
+
 	if (m_pCollisionTargets)
 	{
 		for (auto& obj : *m_pCollisionTargets)
@@ -212,12 +218,11 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 	if (!bCollidedX) m_xmf3Position.x = testPosX.x;
 
 	// Z축 이동 시도
-	XMFLOAT3 testPosZ = m_xmf3Position;
+	XMFLOAT3 testPosZ = m_xmf3Position; // X축 이동이 적용된 현재 위치에서 시작
 	testPosZ.z += xmf3Shift.z;
-	BoundingOrientedBox testOBBZ;
-	XMMATRIX matZ = XMMatrixTranslation(testPosZ.x, testPosZ.y, testPosZ.z);
-	m_localOBB.Transform(testOBBZ, matZ);
-	testOBBZ.Orientation.w = 1.f;
+
+	// testPosZ 위치에 현재 플레이어와 동일한 크기/회전을 가진 OBB 생성
+	BoundingOrientedBox testOBBZ(testPosZ, currentExtents, currentRotation);
 
 	bool bCollidedZ = false;
 	if (m_pCollisionTargets)
