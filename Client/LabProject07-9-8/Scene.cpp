@@ -185,6 +185,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	std::mt19937 gen(rd());
 
 
+	m_pShadowMap = std::make_unique<ShadowMap>(pd3dDevice, 2048, 2048);
+
 	float spawnMin = 500, spawnMax = 9500;
 	float objectMinSize = 15, objectMaxSize = 20;
 
@@ -824,12 +826,58 @@ void CScene::AnimateObjects(float fTimeElapsed)
 }
 
 
-void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, FrameResource* pFrameResource)
 {
 
 	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed in CScene!");
 	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
 	assert(pShaderManager != nullptr && "ShaderManager is not available!");
+
+	// 사용할 상수 버퍼들을 가져옵니다.
+	auto passCB = pFrameResource->PassCB->Resource();
+	auto objectCB = pFrameResource->ObjectCB->Resource();
+
+	// =================================================================
+	// Pass 1: 그림자 맵 생성 (빛의 시점)
+	// =================================================================
+	{
+		// --- 렌더 타겟을 그림자 맵으로 설정 ---
+		pd3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_pShadowMap->Resource(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+
+		pd3dCommandList->RSSetViewports(1, &m_pShadowMap->Viewport());
+		pd3dCommandList->RSSetScissorRects(1, &m_pShadowMap->ScissorRect());
+		pd3dCommandList->ClearDepthStencilView(m_pShadowMap->Dsv(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+		pd3dCommandList->OMSetRenderTargets(0, nullptr, FALSE, &m_pShadowMap->Dsv());
+
+		// --- 그림자 생성을 위한 PSO와 루트 서명 설정 ---
+		// (참고: "Shadow" 셰이더와 PSO는 미리 생성되어 있어야 합니다)
+		CShader* pShadowShader = pShaderManager->GetShader("Shadow", pd3dCommandList);
+		pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
+		pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
+
+		// Pass 상수 버퍼를 바인딩합니다. (빛의 ViewProj 행렬 등이 필요)
+		pd3dCommandList->SetGraphicsRootConstantBufferView(0, passCB->GetGPUVirtualAddress());
+
+		// --- 그림자를 생성하는 모든 오브젝트를 그립니다 ---
+		// 여기서는 더 간단한 RenderShadow 함수를 호출합니다.
+		for (auto& pObject : m_vGameObjects) {
+			if (pObject) pObject->RenderShadow(pd3dCommandList, objectCB);
+		}
+		for (auto& pObject : PlayerList) {
+			if (pObject.second) pObject.second->RenderShadow(pd3dCommandList, objectCB);
+		}
+		if (m_pPlayer) m_pPlayer->RenderShadow(pd3dCommandList, objectCB);
+
+	}
+
+	// 그림자 맵을 셰이더에서 읽을 수 있도록 상태를 다시 변경합니다.
+	pd3dCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_pShadowMap->Resource(),
+		D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+	// =================================================================
+	// Pass 2: 메인 씬 렌더링 (카메라 시점)
+	// =================================================================
 
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 
@@ -879,6 +927,11 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	//		}
 	//	}
 	//}
+
+
+	// Pass 상수 버퍼와 그림자 맵을 바인딩합니다.
+	pd3dCommandList->SetGraphicsRootConstantBufferView(0, passCB->GetGPUVirtualAddress());
+	pd3dCommandList->SetGraphicsRootDescriptorTable(5, m_pShadowMap->SrvGpuHandle()); // 루트 파라미터 5번 슬롯에 그림자맵
 
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
@@ -1162,4 +1215,75 @@ void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity
 	m_listRockObjects.emplace_back(newBranch);
 	//auto t_obj = std::make_unique<newBranch>(tree_obj_count++, gameObj->m_worldOBB.Center);
 	//octree.insert(std::move(t_obj));
+}
+
+
+
+
+// 그림자
+void CScene::UpdateShadowTransform(const XMFLOAT3& focusPoint)
+{
+	// 주 directional light의 위치와 방향을 가져옵니다 (프로젝트에 맞게 수정)
+	// 예시: 빛이 -Y 방향으로 내려온다고 가정
+	LIGHT* pMainLight = &m_pLights[mMainLightIndex];
+	XMVECTOR lightDir = XMLoadFloat3(&pMainLight->m_xmf3Direction);
+	XMVECTOR lightPos = -2.0f * m_fSceneRadius * lightDir; // 씬의 크기에 맞춰 조절
+	XMVECTOR targetPos = XMLoadFloat3(&focusPoint); // 씬의 중심 또는 플레이어 위치
+	XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+	XMMATRIX view = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
+
+	// 빛의 시점에서 보이는 영역을 투영 행렬로 정의합니다.
+	XMFLOAT3 sceneCenter = focusPoint;
+	float x = sceneCenter.x, y = sceneCenter.y, z = sceneCenter.z;
+	float sceneRadius = m_fSceneRadius; // 씬 전체를 감싸는 경계구의 반지름
+	XMMATRIX proj = XMMatrixOrthographicLH(2.0f * sceneRadius, 2.0f * sceneRadius, 0.0f, 5.0f * sceneRadius);
+
+	// 텍스처 좌표계로 변환하기 위한 행렬
+	XMMATRIX T(
+		0.5f, 0.0f, 0.0f, 0.0f,
+		0.0f, -0.5f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.5f, 0.5f, 0.0f, 1.0f);
+
+	XMMATRIX S = view * proj * T;
+
+	XMStoreFloat4x4(&mLightView, view);
+	XMStoreFloat4x4(&mLightProj, proj);
+	XMStoreFloat4x4(&mShadowTransform, S);
+}
+
+
+UINT CScene::GetAllObjectCount()
+{
+	//UINT objectCount = m_vGameObjects.size();
+	return m_vGameObjects.size() + m_listBranchObjects.size() = m_listRockObjects.size();
+}
+
+
+XMMATRIX CScene::GetShadowTransform() const
+{
+	return XMLoadFloat4x4(&mShadowTransform);
+}
+
+// 모든 오브젝트를 순회하며 ObjectCB를 업데이트하는 함수
+void CScene::UpdateObjectConstantBuffers(UploadBuffer<ObjectConstants>* pObjectCB)
+{
+	int i = 0;
+	// GameObjects 업데이트
+	for (auto& pObject : m_vGameObjects)
+	{
+		if (pObject)
+		{
+			ObjectConstants objConstants;
+			// 월드 행렬 및 재질 정보를 채웁니다.
+			XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(XMLoadFloat4x4(&pObject->m_xmf4x4World)));
+			// ... pObject의 재질 정보를 objConstants에 복사 ...
+
+			pObject->SetObjectConstantIndex(i); // 각 오브젝트가 CB에서 자신의 인덱스를 기억하게 함
+			pObjectCB->CopyData(i++, objConstants);
+		}
+	}
+	// Player, PlayerList, 기타 다른 오브젝트 리스트들도 동일한 방식으로 업데이트합니다.
+	// ...
 }

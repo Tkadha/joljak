@@ -14,6 +14,7 @@ cbuffer cbGameObjectInfo : register(b2)
 };
 
 // --- 텍스처 (Standard, Skinned, Instancing 에서 사용) ---
+Texture2D gShadowMap : register(t3);
 Texture2D gtxtAlbedoTexture : register(t6);
 Texture2D gtxtSpecularTexture : register(t7);
 Texture2D gtxtNormalTexture : register(t8);
@@ -35,12 +36,47 @@ struct VS_STANDARD_INPUT
 struct VS_STANDARD_OUTPUT
 {
     float4 position : SV_POSITION; // 클립 공간 위치
-    float3 positionW : POSITION; // 월드 공간 위치
+    float3 positionW : POSITION1; // 월드 공간 위치
+    float4 shadowPosH : POSITION2; // 그림자 맵 좌표
     float3 normalW : NORMAL; // 월드 공간 노멀
     float3 tangentW : TANGENT; // 월드 공간 탄젠트
     float3 bitangentW : BITANGENT; // 월드 공간 바이탄젠트
     float2 uv : TEXCOORD; // UV 좌표
 };
+
+
+float CalcShadowFactor(float4 shadowPosH)
+{
+    // Complete projection by doing division by w.
+    shadowPosH.xyz /= shadowPosH.w;
+
+    // Depth in NDC space.
+    float depth = shadowPosH.z;
+
+    uint width, height, numMips;
+    gShadowMap.GetDimensions(0, width, height, numMips);
+
+    // Texel size.
+    float dx = 1.0f / (float) width;
+
+    float percentLit = 0.0f;
+    const float2 offsets[9] =
+    {
+        float2(-dx, -dx), float2(0.0f, -dx), float2(dx, -dx),
+        float2(-dx, 0.0f), float2(0.0f, 0.0f), float2(dx, 0.0f),
+        float2(-dx, +dx), float2(0.0f, +dx), float2(dx, +dx)
+    };
+
+    [unroll]
+    for (int i = 0; i < 9; ++i)
+    {
+        percentLit += gShadowMap.SampleCmpLevelZero(gsamShadow,
+            shadowPosH.xy + offsets[i], depth).r;
+    }
+    
+    return percentLit / 9.0f;
+}
+
 
 // --- Vertex Shader ---
 VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
@@ -157,27 +193,32 @@ float4 PSStandard3(VS_STANDARD_OUTPUT input) : SV_TARGET
     {
         normalW = normalize(input.normalW);
     }
+    
+    // 1. 그림자 계수 계산
+    float shadowFactor = CalcShadowFactor(input.shadowPosH);
+    
     float4 cIlluminationColor = Lighting(gMaterialInfo, input.positionW, normalW);
+    
+    float3 finalColor = gLights[0].m_cAmbient.rgb * cAlbedoColor.rgb; // 전역 주변광
+    finalColor += shadowFactor * (cIlluminationColor.rgb); // 직접광 (그림자 적용)
     
     float4 cColor = cAlbedoColor + cSpecularColor + cMetallicColor + cEmissionColor;
     
     // 안개
     float distToEye = distance(input.positionW, gvCameraPosition.xyz);
-
     float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);
-
-    float4 litColor = lerp(cColor, cIlluminationColor, 0.5f);
     
-    litColor.rgb = lerp(gFogColor.rgb, cColor.rgb, fogFactor);
+    finalColor = lerp(gFogColor.rgb, finalColor, fogFactor);
     
-    float normalizedDistance = saturate(distToEye / (gFogStart + gFogRange));
-    //return float4(normalizedDistance, normalizedDistance, normalizedDistance, 1.0f); // [수정된 디버깅 출력]
-
+    return float4(finalColor, cAlbedoColor.a);
     
-    // --- fogFactor 값 디버깅 ---
-    //return float4(fogFactor, fogFactor, fogFactor, 1.0f); 
+    //float4 litColor = lerp(cColor, cIlluminationColor, 0.5f);
     
-    cColor.rgb = lerp(cColor.rgb, gFogColor.rgb, normalizedDistance);
-    //return float4(fogFactor, fogFactor, fogFactor, 1.0f);
-    return (cColor);
+    //litColor.rgb = lerp(gFogColor.rgb, cColor.rgb, fogFactor);
+    
+    //float normalizedDistance = saturate(distToEye / (gFogStart + gFogRange));
+    
+    //cColor.rgb = lerp(cColor.rgb, gFogColor.rgb, normalizedDistance);
+    
+    //return (cColor);
 }

@@ -8,7 +8,7 @@
 class CShader;
 
 // 헬퍼 함수 선언 (ShaderManager.cpp 에서 정의)
-std::array<const CD3DX12_STATIC_SAMPLER_DESC, 2> GetStaticSamplers(); // 예시: Wrap, Clamp 샘플러 2개
+std::array<const CD3DX12_STATIC_SAMPLER_DESC, 3> GetStaticSamplers(); // 예시: Wrap, Clamp 샘플러 2개
 
 class ShaderManager
 {
@@ -31,7 +31,8 @@ private:
     ID3D12RootSignature* CreateTerrainRootSignature();
     ID3D12RootSignature* CreateSkyboxRootSignature();
     ID3D12RootSignature* CreateOBBRootSignature();
-    ID3D12RootSignature* CreateInstancingRootSignature(); // 필요시
+    ID3D12RootSignature* CreateInstancingRootSignature();
+    ID3D12RootSignature* CreateShadowMapRootSignature();
 
     // 셰이더 생성 함수
     CShader* CreateShaderInternal(const std::string& name, ID3D12GraphicsCommandList* pd3dCommandList);

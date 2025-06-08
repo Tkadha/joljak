@@ -3,7 +3,7 @@
 #include "Common.hlsl" // cbCameraInfo 필요
 
 // --- 텍스처 ---
-TextureCube gtxtSkyCubeTexture : register(t13); // 스카이박스 큐브맵
+TextureCube gtxtSkyCubeTexture : register(t3); // 스카이박스 큐브맵
 
 // --- VS 입출력 구조체 ---
 struct VS_SKYBOX_INPUT

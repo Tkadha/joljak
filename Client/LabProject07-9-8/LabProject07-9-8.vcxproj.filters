@@ -81,6 +81,9 @@
     <Filter Include="소스 파일\Object\Player\PlayerStateMachine">
       <UniqueIdentifier>{b468b9b6-15c6-4e72-ad25-76ecdd26a8f9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\ShadowMap">
+      <UniqueIdentifier>{e7c90b61-d863-45f8-b3ee-f5a96f879c38}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConstructionSystem.cpp" />
@@ -204,6 +207,12 @@
       <Filter>Utility</Filter>
     </ClCompile>
     <ClCompile Include="MathHelper.cpp">
+      <Filter>Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="ShadowMap.cpp">
+      <Filter>소스 파일\ShadowMap</Filter>
+    </ClCompile>
+    <ClCompile Include="FrameResource.cpp">
       <Filter>Utility</Filter>
     </ClCompile>
   </ItemGroup>
@@ -341,6 +350,12 @@
     <ClInclude Include="Scene.h">
       <Filter>소스 파일\Scene</Filter>
     </ClInclude>
+    <ClInclude Include="ShadowMap.h">
+      <Filter>소스 파일\ShadowMap</Filter>
+    </ClInclude>
+    <ClInclude Include="FrameResource.h">
+      <Filter>Utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LabProject07-9-8.rc" />
@@ -363,7 +378,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Common.hlsl" />
     <FxCompile Include="InstancingShaders.hlsl" />
     <FxCompile Include="Shaders.hlsl">
       <Filter>소스 파일\Shader</Filter>
@@ -382,6 +396,9 @@
     </FxCompile>
     <FxCompile Include="OBBShader.hlsl">
       <Filter>소스 파일\Shader\OBBShader</Filter>
+    </FxCompile>
+    <FxCompile Include="Common.hlsl">
+      <Filter>소스 파일\Shader</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

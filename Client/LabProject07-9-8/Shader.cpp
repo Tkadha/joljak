@@ -292,3 +292,5 @@ XMFLOAT3 RandomPositionInSphere(XMFLOAT3 xmf3Center, float fRadius, int nColumn,
 
 	return(xmf3Position);
 }
+
+

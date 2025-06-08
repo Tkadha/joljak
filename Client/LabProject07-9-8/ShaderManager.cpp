@@ -11,7 +11,7 @@
 // 예: #include "StandardShader.h", "SkinnedShader.h" 등 (아직 없다면 생성 필요)
 
 // --- 정적 샘플러 정의 ---
-std::array<const CD3DX12_STATIC_SAMPLER_DESC, 2> GetStaticSamplers()
+std::array<const CD3DX12_STATIC_SAMPLER_DESC, 3> GetStaticSamplers()
 {
     const CD3DX12_STATIC_SAMPLER_DESC wrapSampler(
         0, // shaderRegister (s0)
@@ -31,7 +31,19 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 2> GetStaticSamplers()
         D3D12_COMPARISON_FUNC_LESS_EQUAL
     );
 
-    return { wrapSampler, clampSampler };
+    const CD3DX12_STATIC_SAMPLER_DESC shadowSampler(
+        2, // shaderRegister
+        D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT, // filter
+        D3D12_TEXTURE_ADDRESS_MODE_BORDER,  // addressU
+        D3D12_TEXTURE_ADDRESS_MODE_BORDER,  // addressV
+        D3D12_TEXTURE_ADDRESS_MODE_BORDER,  // addressW
+        0.0f,                               // mipLODBias
+        16,                                 // maxAnisotropy
+        D3D12_COMPARISON_FUNC_LESS_EQUAL,
+        D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK);
+
+
+    return { wrapSampler, clampSampler, shadowSampler };
 }
 
 // --- 생성자, 소멸자, 정리 함수 ---
@@ -116,18 +128,25 @@ ID3D12RootSignature* ShaderManager::CreateStandardRootSignature()
 {
     HRESULT hr;
     ID3D12RootSignature* pd3dRootSignature = nullptr;
-    CD3DX12_DESCRIPTOR_RANGE descRangeSRV[1];
-    descRangeSRV[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 7, 6, 0); // t6-t12: Albedo, Spec, Normal, Metal, Emis, DetailAlb, DetailNrm
 
-    CD3DX12_ROOT_PARAMETER rootParameters[4]; // CBV(b1 Camera), Constants(b2 Object), CBV(b4 Lights), Table(t6-t12 Textures)
-    rootParameters[0].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL);
-    rootParameters[1].InitAsConstants(41, 2, 0, D3D12_SHADER_VISIBILITY_ALL); // 1 Matrix + 4 float4 Material + 1 uint Mask = 16 + 16 + 1 = 33 DWORDS
-    rootParameters[2].InitAsConstantBufferView(4, 0, D3D12_SHADER_VISIBILITY_ALL); // b4: Lights (이 레지스터를 사용한다고 가정)
-    rootParameters[3].InitAsDescriptorTable(1, &descRangeSRV[0], D3D12_SHADER_VISIBILITY_PIXEL);
+    // 디스크립터 레인지가 두 종류 필요합니다. (기존 재질용, 그림자맵 용)
+    CD3DX12_DESCRIPTOR_RANGE descRangeSRV[2];
+    descRangeSRV[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 7, 6, 0); // t6-t12: Albedo, Spec, Normal, Metal, Emis, DetailAlb, DetailNrm
+    descRangeSRV[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3, 0); // t3: 그림자 맵
+
+
+    CD3DX12_ROOT_PARAMETER rootParameters[6];
+    rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL);      // b0: Pass CBV (View, Proj, ShadowTransform)
+    rootParameters[1].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL);      // b1: Camera
+    rootParameters[2].InitAsConstants(41, 2, 0, D3D12_SHADER_VISIBILITY_ALL);           // b2: Object
+    rootParameters[3].InitAsConstantBufferView(4, 0, D3D12_SHADER_VISIBILITY_ALL);      // b4: Lights
+    rootParameters[4].InitAsDescriptorTable(1, &descRangeSRV[0], D3D12_SHADER_VISIBILITY_PIXEL); // t6-t12: Material
+    rootParameters[5].InitAsDescriptorTable(1, &descRangeSRV[1], D3D12_SHADER_VISIBILITY_PIXEL); // t3: Shadow Map
+
 
     auto staticSamplers = GetStaticSamplers(); // Wrap(s0), Clamp(s1) 가져옴
     CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(_countof(rootParameters), rootParameters,
-        1, &staticSamplers[0], // Standard 셰이더는 Wrap 샘플러(s0)만 사용한다고 가정
+        (UINT)staticSamplers.size(), staticSamplers.data(),
         D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS);
 
     Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
@@ -143,20 +162,26 @@ ID3D12RootSignature* ShaderManager::CreateSkinnedRootSignature()
 {
     HRESULT hr;
     ID3D12RootSignature* pd3dRootSignature = nullptr;
-    CD3DX12_DESCRIPTOR_RANGE descRangeSRV[1];
-    descRangeSRV[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 7, 6, 0); // t6-t12
 
-    CD3DX12_ROOT_PARAMETER rootParameters[6]; // Standard + CBV(b7), CBV(b8)
-    rootParameters[0].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL); // b1: Camera
-    rootParameters[1].InitAsConstants(41, 2, 0, D3D12_SHADER_VISIBILITY_ALL);     // b2: Object
-    rootParameters[2].InitAsConstantBufferView(4, 0, D3D12_SHADER_VISIBILITY_ALL); // b4: Lights
-    rootParameters[3].InitAsDescriptorTable(1, &descRangeSRV[0], D3D12_SHADER_VISIBILITY_PIXEL); // t6-t12
-    rootParameters[4].InitAsConstantBufferView(7, 0, D3D12_SHADER_VISIBILITY_VERTEX); // b7: Bone Offsets
-    rootParameters[5].InitAsConstantBufferView(8, 0, D3D12_SHADER_VISIBILITY_VERTEX); // b8: Bone Transforms
+    CD3DX12_DESCRIPTOR_RANGE descRangeSRV[2];
+    descRangeSRV[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 7, 6, 0); // t6-t12: 재질 텍스처
+    descRangeSRV[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3, 0); // t3: 그림자 맵 SRV
 
-    auto staticSamplers = GetStaticSamplers();
+    // 루트 파라미터 개수를 6개에서 8개로 늘립니다.
+    CD3DX12_ROOT_PARAMETER rootParameters[8];
+    rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL);      // b0: Pass CBV (View, Proj, ShadowTransform)
+    rootParameters[1].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL);      // b1: Camera
+    rootParameters[2].InitAsConstants(41, 2, 0, D3D12_SHADER_VISIBILITY_ALL);           // b2: Object
+    rootParameters[3].InitAsConstantBufferView(4, 0, D3D12_SHADER_VISIBILITY_ALL);      // b4: Lights
+    rootParameters[4].InitAsConstantBufferView(7, 0, D3D12_SHADER_VISIBILITY_VERTEX);  // b7: Bone Offsets
+    rootParameters[5].InitAsConstantBufferView(8, 0, D3D12_SHADER_VISIBILITY_VERTEX);  // b8: Bone Transforms
+    rootParameters[6].InitAsDescriptorTable(1, &descRangeSRV[0], D3D12_SHADER_VISIBILITY_PIXEL); // t6-t12: Material
+    rootParameters[7].InitAsDescriptorTable(1, &descRangeSRV[1], D3D12_SHADER_VISIBILITY_PIXEL); // t3: Shadow Map
+
+
+    auto staticSamplers = GetStaticSamplers(); 
     CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(_countof(rootParameters), rootParameters,
-        1, &staticSamplers[0], // Wrap 샘플러(s0)만 사용 가정
+        (UINT)staticSamplers.size(), staticSamplers.data(),
         D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS);
 
     Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
@@ -199,7 +224,7 @@ ID3D12RootSignature* ShaderManager::CreateSkyboxRootSignature()
     HRESULT hr;
     ID3D12RootSignature* pd3dRootSignature = nullptr;
     CD3DX12_DESCRIPTOR_RANGE descRangeSRV[1];
-    descRangeSRV[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 13, 0); // t13: SkyCubeTexture
+    descRangeSRV[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3, 0); // t3: SkyCubeTexture
 
     CD3DX12_ROOT_PARAMETER rootParameters[2]; // CBV(b1 Camera), Table(t13 Texture)
     rootParameters[0].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_VERTEX); // VS에서 View/Proj 필요
@@ -268,6 +293,30 @@ ID3D12RootSignature* ShaderManager::CreateInstancingRootSignature()
     return pd3dRootSignature;
 }
 
+ID3D12RootSignature* ShaderManager::CreateShadowMapRootSignature()
+{
+    HRESULT hr;
+    ID3D12RootSignature* pd3dRootSignature = nullptr;
+    CD3DX12_DESCRIPTOR_RANGE texTable;
+    texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3); // t3 : shadow map
+
+    CD3DX12_ROOT_PARAMETER rootParameters[2]; // CBV(b1 Camera), Table(t3 Texture)
+    rootParameters[0].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_VERTEX); // VS에서 View/Proj 필요
+    rootParameters[1].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL); // PS에서 샘플링
+
+    auto staticSamplers = GetStaticSamplers();
+    CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(_countof(rootParameters), rootParameters,
+        1, &staticSamplers[2],
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS);
+
+    Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+    hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) { if (errorBlob) OutputDebugStringA((char*)errorBlob->GetBufferPointer()); return nullptr; }
+    hr = m_pd3dDevice->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&pd3dRootSignature));
+    if (FAILED(hr)) return nullptr;
+    return pd3dRootSignature;
+}
 
 CShader* ShaderManager::GetShader(const std::string& name, ID3D12GraphicsCommandList* pd3dCommandList)
 {

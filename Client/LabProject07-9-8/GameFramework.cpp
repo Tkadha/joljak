@@ -252,6 +252,10 @@ CGameFramework::CGameFramework()
 	m_inventorySlots.resize(25);
 	_MyID = -1;
 	_tcscpy_s(m_pszFrameRate, _T("Survival Odyssey ("));
+
+
+	m_pCurrentFrameResource = nullptr;
+	m_iCurrentFrameResourceIndex = 0;
 }
 
 CGameFramework::~CGameFramework()
@@ -284,6 +288,8 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 #endif
 
 	BuildObjects();
+
+	BuildFrameResources();
 	
 
 	IMGUI_CHECKVERSION();
@@ -1021,6 +1027,22 @@ void CGameFramework::BuildObjects()
 	m_GameTimer.Reset();
 }
 
+void CGameFramework::BuildFrameResources()
+{
+	// 씬에 있는 모든 렌더링할 오브젝트의 개수를 가져옵니다.
+	// 이는 FrameResource의 ObjectCB 크기를 결정하는 데 사용됩니다.
+	// (프로젝트 구조에 맞게 총 오브젝트 개수를 가져오는 방식은 조절될 수 있습니다)
+	UINT objectCount = m_pScene->GetAllObjectCount();
+
+	m_vFrameResources.resize(gNumFrameResources);
+
+	for (int i = 0; i < gNumFrameResources; ++i)
+	{
+		// passCount는 1, objectCount는 씬의 실제 오브젝트 수로 하여 FrameResource를 생성합니다.
+		m_vFrameResources[i] = std::make_unique<FrameResource>(m_pd3dDevice, 1, objectCount);
+	}
+}
+
 void CGameFramework::ReleaseObjects()
 {
 	if (m_pPlayer) m_pPlayer->Release();
@@ -1583,6 +1605,24 @@ void CGameFramework::MoveToNextFrame()
 
 //#define _WITH_PLAYER_TOP
 
+void CGameFramework::RenderScene()
+{
+	// 현재 FrameResource의 Command Allocator를 가져와서 리셋합니다.
+	// 이 Allocator로 새로운 커맨드들을 기록할 준비를 합니다.
+	ThrowIfFailed(m_pCurrentFrameResource->CmdListAlloc->Reset());
+
+	// Command List 리셋 
+	ThrowIfFailed(m_pd3dCommandList->Reset(m_pCurrentFrameResource->CmdListAlloc.Get(), nullptr));
+
+	if (m_pScene) m_pScene->Render(m_pd3dCommandList, m_pCamera); 
+
+	ThrowIfFailed(m_pd3dCommandList->Close());
+
+	// 커맨드 리스트를 실행 큐에 제출
+	ID3D12CommandList* ppCommandLists[] = { m_pd3dCommandList };
+	m_pd3dCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+}
+
 void CGameFramework::FrameAdvance()
 {    
 	if (m_logQueue.size() > 0) {
@@ -1645,6 +1685,20 @@ void CGameFramework::FrameAdvance()
 		}
 	}
 
+	// --- 1. 다음 FrameResource로 순환 ---
+	m_iCurrentFrameResourceIndex = (m_iCurrentFrameResourceIndex + 1) % gNumFrameResources;
+	m_pCurrentFrameResource = m_vFrameResources[m_iCurrentFrameResourceIndex].get();
+
+	// --- 2. GPU가 현재 작업할 FrameResource를 다 사용할 때까지 대기 ---
+	if (m_pCurrentFrameResource->Fence != 0 && m_pd3dFence->GetCompletedValue() < m_pCurrentFrameResource->Fence)
+	{
+		// 끝날 때까지 CPU는 여기서 기다림
+		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
+		ThrowIfFailed(m_pd3dFence->SetEventOnCompletion(m_pCurrentFrameResource->Fence, eventHandle));
+		WaitForSingleObject(eventHandle, INFINITE);
+		CloseHandle(eventHandle);
+	}
+
 	m_GameTimer.Tick(144.0f);
 
 	ProcessInput();
@@ -1656,8 +1710,12 @@ void CGameFramework::FrameAdvance()
 	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 
-	HRESULT hResult = m_pd3dCommandAllocator->Reset();
-	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
+	UpdateConstantBuffers();
+
+
+
+	ThrowIfFailed(m_pCurrentFrameResource->CmdListAlloc->Reset());
+	ThrowIfFailed(m_pd3dCommandList->Reset(m_pCurrentFrameResource->CmdListAlloc.Get(), nullptr));
 
 
 	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
@@ -1681,556 +1739,555 @@ void CGameFramework::FrameAdvance()
 
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
-	if (m_pScene) m_pScene->Render(m_pd3dCommandList, m_pCamera);
+	// --- Scene 렌더링 (그림자 포함) ---
+	// 이 함수는 내부적으로 2-Pass 렌더링(Shadow Pass, Main Pass)을 모두 수행하게 됩니다.
+	// (다음 단계에서 Scene::Render를 최종 수정할 것입니다)
+	if (m_pScene) m_pScene->Render(m_pd3dCommandList, m_pCamera, m_pCurrentFrameResource);
+
 
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 #endif	
 
-	ImGui_ImplDX12_NewFrame();
-	ImGui_ImplWin32_NewFrame();
-	ImGui::NewFrame();
-	
-	///////////////////////////////////////////////////////////// 아이템 핫바
-	const int HotbarCount = 5;
-	const float SlotSize = 54.0f;
-	const float SlotSpacing = 6.0f;
-	const float ExtraPadding = 18.0f;
-
-	const float TotalWidth = (SlotSize * HotbarCount) + (SlotSpacing * (HotbarCount - 1));
-	const float WindowWidth = TotalWidth + ExtraPadding;
-
-	ImVec2 displaySize = ImGui::GetIO().DisplaySize;
-	ImVec2 hotbarPos = ImVec2(30.0f, displaySize.y - 80.0f);
-
-	ImGui::SetNextWindowPos(hotbarPos);
-	ImGui::SetNextWindowSize(ImVec2(WindowWidth, 65));
-	ImGui::Begin("Hotbar", nullptr,
-		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
-		ImGuiWindowFlags_NoBackground);
-
-	ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
-
-	for (int i = 0; i < HotbarCount; ++i)
 	{
-		if (i > 0) ImGui::SameLine();
+		ImGui_ImplDX12_NewFrame();
+		ImGui_ImplWin32_NewFrame();
+		ImGui::NewFrame();
 
-		ImGui::PushID(i);
+		///////////////////////////////////////////////////////////// 아이템 핫바
+		const int HotbarCount = 5;
+		const float SlotSize = 54.0f;
+		const float SlotSpacing = 6.0f;
+		const float ExtraPadding = 18.0f;
 
-		if (i == m_SelectedHotbarIndex)
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 1.0f, 0.0f, 0.5f)); // 노란색 반투명
+		const float TotalWidth = (SlotSize * HotbarCount) + (SlotSpacing * (HotbarCount - 1));
+		const float WindowWidth = TotalWidth + ExtraPadding;
 
-		if (!m_inventorySlots[i].IsEmpty())
+		ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+		ImVec2 hotbarPos = ImVec2(30.0f, displaySize.y - 80.0f);
+
+		ImGui::SetNextWindowPos(hotbarPos);
+		ImGui::SetNextWindowSize(ImVec2(WindowWidth, 65));
+		ImGui::Begin("Hotbar", nullptr,
+			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoBackground);
+
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+
+		for (int i = 0; i < HotbarCount; ++i)
 		{
-			// 버튼 먼저 생성 (테두리 유지)
-			ImVec2 pos = ImGui::GetCursorScreenPos();
-			ImGui::Button(" ", ImVec2(SlotSize, SlotSize));
+			if (i > 0) ImGui::SameLine();
 
-			// 버튼 위에 아이콘을 따로 그리기
-			ImTextureID icon = m_inventorySlots[i].item->GetIconHandle();
-			if (icon)
+			ImGui::PushID(i);
+
+			if (i == m_SelectedHotbarIndex)
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 1.0f, 0.0f, 0.5f)); // 노란색 반투명
+
+			if (!m_inventorySlots[i].IsEmpty())
 			{
-				ImGui::GetWindowDrawList()->AddImage(
-					icon,
-					pos,
-					ImVec2(pos.x + SlotSize, pos.y + SlotSize)
-				);
-			}
-		}
-		else
-		{
-			ImGui::Button(" ", ImVec2(SlotSize, SlotSize)); // 빈 슬롯은 그냥 테두리만
-		}
-		if (i == m_SelectedHotbarIndex)
-			ImGui::PopStyleColor();
-
-		ImGui::PopID();
-	}
-
-
-	ImGui::PopStyleVar();
-	ImGui::End();
-
-
-
-	//////////////////////////////////////////////////플레이어 UI
-
-	const float hudWidth = 300.0f;
-	const float hudHeight = 100.0f;
-	const float barWidth = 100.0f;
-	const float barHeight = 15.0f;
-
-	ImVec2 hudPos = ImVec2(displaySize.x - hudWidth+10.0f, displaySize.y - hudHeight);
-
-	ImGui::SetNextWindowPos(hudPos);
-	ImGui::SetNextWindowSize(ImVec2(hudWidth, hudHeight));
-	ImGui::Begin("StatusBars", nullptr,
-		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
-		ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoCollapse);
-
-	
-	ImGui::BeginGroup();
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Hp"); // 체력 
-	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-	ImGui::ProgressBar(
-		(float)m_pPlayer->Playerhp / (float)m_pPlayer->Maxhp,
-		ImVec2(barWidth, barHeight),
-		std::to_string(m_pPlayer->Playerhp).c_str()
-	);
-	ImGui::PopStyleColor();
-	ImGui::EndGroup();
-
-	ImGui::SameLine(0.0f, 50.0f); 
-	ImGui::BeginGroup();
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Stamina"); // 스태미너
-	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.5f, 1.0f, 1.0f));
-	ImGui::ProgressBar(
-		(float)m_pPlayer->Playerstamina / (float)m_pPlayer->Maxstamina,
-		ImVec2(barWidth, barHeight),
-		std::to_string(m_pPlayer->Playerstamina).c_str()
-	);
-	ImGui::PopStyleColor();
-	ImGui::EndGroup();
-
-	
-	ImGui::BeginGroup();
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Hunger"); // 허기
-	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
-	ImGui::ProgressBar(m_pPlayer->PlayerHunger, ImVec2(barWidth, barHeight));
-	ImGui::PopStyleColor();
-	ImGui::EndGroup();
-
-	ImGui::SameLine(0.0f, 50.0f);
-
-	ImGui::BeginGroup();
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Thirst"); // 갈증
-	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 0.2f, 1.0f, 1.0f));
-	ImGui::ProgressBar(m_pPlayer->PlayerThirst, ImVec2(barWidth, barHeight));
-	ImGui::PopStyleColor();
-	ImGui::EndGroup();
-
-	ImGui::End();
-	//////////////////////////////////////////////////////// 인벤토리
-	if (ShowInventory)
-	{
-		const int inventoryCols = 5;
-		const int inventoryRows = 5;
-		const float slotSize = 50.0f;
-		const float spacing = 5.0f;
-		ImVec2 invSize = ImVec2(600.0f, 360.0f);
-
-		ImVec2 invPos = ImVec2(
-			displaySize.x * 0.5f - invSize.x * 0.5f,
-			displaySize.y * 0.5f - invSize.y * 0.5f
-		);
-
-		ImGui::SetNextWindowPos(invPos, ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowSize(invSize, ImGuiCond_FirstUseEver);
-		ImGui::Begin("Inventory", nullptr,
-			ImGuiWindowFlags_NoResize |
-			ImGuiWindowFlags_NoCollapse);
-
-		// ▶ 2열로 나누기
-		ImGui::Columns(2, nullptr, false);
-
-		// 왼쪽: 인벤토리 슬롯
-		{
-			static int selectedSlotIndex = -1;
-
-			for (int i = 0; i < m_inventorySlots.size(); ++i)
-			{
-				ImGui::PushID(i);
-
-				bool isClicked = false;
-
+				// 버튼 먼저 생성 (테두리 유지)
 				ImVec2 pos = ImGui::GetCursorScreenPos();
-				ImGui::Button(" ", ImVec2(slotSize, slotSize)); // 버튼만 깔아줌 (배경 유지용)
+				ImGui::Button(" ", ImVec2(SlotSize, SlotSize));
 
-				if (!m_inventorySlots[i].IsEmpty())
+				// 버튼 위에 아이콘을 따로 그리기
+				ImTextureID icon = m_inventorySlots[i].item->GetIconHandle();
+				if (icon)
 				{
-					// 아이콘 출력
-					Item* item = m_inventorySlots[i].item.get();
-					ImTextureID icon = item->GetIconHandle();
-					if (icon)
+					ImGui::GetWindowDrawList()->AddImage(
+						icon,
+						pos,
+						ImVec2(pos.x + SlotSize, pos.y + SlotSize)
+					);
+				}
+			}
+			else
+			{
+				ImGui::Button(" ", ImVec2(SlotSize, SlotSize)); // 빈 슬롯은 그냥 테두리만
+			}
+			if (i == m_SelectedHotbarIndex)
+				ImGui::PopStyleColor();
+
+			ImGui::PopID();
+		}
+
+
+		ImGui::PopStyleVar();
+		ImGui::End();
+
+
+
+		//////////////////////////////////////////////////플레이어 UI
+
+		const float hudWidth = 300.0f;
+		const float hudHeight = 100.0f;
+		const float barWidth = 100.0f;
+		const float barHeight = 15.0f;
+
+		ImVec2 hudPos = ImVec2(displaySize.x - hudWidth + 10.0f, displaySize.y - hudHeight);
+
+		ImGui::SetNextWindowPos(hudPos);
+		ImGui::SetNextWindowSize(ImVec2(hudWidth, hudHeight));
+		ImGui::Begin("StatusBars", nullptr,
+			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoCollapse);
+
+
+		ImGui::BeginGroup();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Hp"); // 체력 
+		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+		ImGui::ProgressBar(
+			(float)m_pPlayer->Playerhp / (float)m_pPlayer->Maxhp,
+			ImVec2(barWidth, barHeight),
+			std::to_string(m_pPlayer->Playerhp).c_str()
+		);
+		ImGui::PopStyleColor();
+		ImGui::EndGroup();
+
+		ImGui::SameLine(0.0f, 50.0f);
+		ImGui::BeginGroup();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Stamina"); // 스태미너
+		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.5f, 1.0f, 1.0f));
+		ImGui::ProgressBar(
+			(float)m_pPlayer->Playerstamina / (float)m_pPlayer->Maxstamina,
+			ImVec2(barWidth, barHeight),
+			std::to_string(m_pPlayer->Playerstamina).c_str()
+		);
+		ImGui::PopStyleColor();
+		ImGui::EndGroup();
+
+
+		ImGui::BeginGroup();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Hunger"); // 허기
+		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
+		ImGui::ProgressBar(m_pPlayer->PlayerHunger, ImVec2(barWidth, barHeight));
+		ImGui::PopStyleColor();
+		ImGui::EndGroup();
+
+		ImGui::SameLine(0.0f, 50.0f);
+
+		ImGui::BeginGroup();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Thirst"); // 갈증
+		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 0.2f, 1.0f, 1.0f));
+		ImGui::ProgressBar(m_pPlayer->PlayerThirst, ImVec2(barWidth, barHeight));
+		ImGui::PopStyleColor();
+		ImGui::EndGroup();
+
+		ImGui::End();
+		//////////////////////////////////////////////////////// 인벤토리
+		if (ShowInventory)
+		{
+			const int inventoryCols = 5;
+			const int inventoryRows = 5;
+			const float slotSize = 50.0f;
+			const float spacing = 5.0f;
+			ImVec2 invSize = ImVec2(600.0f, 360.0f);
+
+			ImVec2 invPos = ImVec2(
+				displaySize.x * 0.5f - invSize.x * 0.5f,
+				displaySize.y * 0.5f - invSize.y * 0.5f
+			);
+
+			ImGui::SetNextWindowPos(invPos, ImGuiCond_FirstUseEver);
+			ImGui::SetNextWindowSize(invSize, ImGuiCond_FirstUseEver);
+			ImGui::Begin("Inventory", nullptr,
+				ImGuiWindowFlags_NoResize |
+				ImGuiWindowFlags_NoCollapse);
+
+			// ▶ 2열로 나누기
+			ImGui::Columns(2, nullptr, false);
+
+			// 왼쪽: 인벤토리 슬롯
+			{
+				static int selectedSlotIndex = -1;
+
+				for (int i = 0; i < m_inventorySlots.size(); ++i)
+				{
+					ImGui::PushID(i);
+
+					bool isClicked = false;
+
+					ImVec2 pos = ImGui::GetCursorScreenPos();
+					ImGui::Button(" ", ImVec2(slotSize, slotSize)); // 버튼만 깔아줌 (배경 유지용)
+
+					if (!m_inventorySlots[i].IsEmpty())
 					{
-						ImGui::GetWindowDrawList()->AddImage(
-							icon,
-							pos,
-							ImVec2(pos.x + slotSize, pos.y + slotSize)
+						// 아이콘 출력
+						Item* item = m_inventorySlots[i].item.get();
+						ImTextureID icon = item->GetIconHandle();
+						if (icon)
+						{
+							ImGui::GetWindowDrawList()->AddImage(
+								icon,
+								pos,
+								ImVec2(pos.x + slotSize, pos.y + slotSize)
+							);
+						}
+
+						// 수량 텍스트 표시
+						ImVec2 min = pos;
+						ImVec2 max = ImVec2(pos.x + slotSize, pos.y + slotSize);
+						ImVec2 textPos = ImVec2(min.x + 2, max.y - 18);
+						ImGui::GetWindowDrawList()->AddText(
+							textPos,
+							IM_COL32_WHITE,
+							std::to_string(m_inventorySlots[i].quantity).c_str()
 						);
 					}
 
-					// 수량 텍스트 표시
-					ImVec2 min = pos;
-					ImVec2 max = ImVec2(pos.x + slotSize, pos.y + slotSize);
-					ImVec2 textPos = ImVec2(min.x + 2, max.y - 18);
-					ImGui::GetWindowDrawList()->AddText(
-						textPos,
-						IM_COL32_WHITE,
-						std::to_string(m_inventorySlots[i].quantity).c_str()
-					);
+					// ✅ 선택 테두리 강조
+					if (i == selectedSlotIndex)
+					{
+						ImGui::GetWindowDrawList()->AddRect(
+							pos,
+							ImVec2(pos.x + slotSize, pos.y + slotSize),
+							IM_COL32(255, 255, 0, 255), // 노란색
+							0.0f,
+							0,
+							2.0f
+						);
+					}
+
+					// 🔁 클릭 시 교환 처리
+					if (ImGui::IsItemClicked())
+					{
+						if (ShowFurnaceUI)  // 🔥 화로 UI가 열려 있는 경우
+						{
+							Item* item = m_inventorySlots[i].item.get();
+							if (!item) return;
+
+							std::string name = item->GetName();
+
+							if (name == "coal" || name == "wood") {
+								furnaceSlot.fuelAmount += 25.0f;
+								if (furnaceSlot.fuelAmount > 100.0f) furnaceSlot.fuelAmount = 100.0f;
+								m_inventorySlots[i].quantity--;
+								if (m_inventorySlots[i].quantity <= 0) m_inventorySlots[i].item = nullptr;
+							}
+							else if (name == "pork" || name == "iron_material") {
+								furnaceSlot.material = item;
+								m_inventorySlots[i].quantity--;
+								if (m_inventorySlots[i].quantity <= 0) m_inventorySlots[i].item = nullptr;
+							}
+						}
+						else  // 🔄 화로 UI가 닫혀 있는 경우: 인벤토리 슬롯 교환
+						{
+							if (selectedSlotIndex == -1) {
+								selectedSlotIndex = i;
+							}
+							else {
+								std::swap(m_inventorySlots[selectedSlotIndex], m_inventorySlots[i]);
+								selectedSlotIndex = -1;
+							}
+						}
+					}
+
+					ImGui::PopID();
+
+					if ((i + 1) % inventoryCols != 0)
+						ImGui::SameLine(0.0f, spacing);
 				}
 
-				// ✅ 선택 테두리 강조
-				if (i == selectedSlotIndex)
+
+			}
+
+			ImGui::NextColumn();
+
+			// 오른쪽: 플레이어 스탯
+			{
+				ImGui::Text("LV: %d", m_pPlayer->PlayerLevel);
+				ImGui::Text("STATUS:");
+
+				ImGui::BulletText("HP: %d / %d", m_pPlayer->Playerhp, m_pPlayer->Maxhp);
+				ImGui::SameLine();
+				if (m_pPlayer->StatPoint > 0) {
+					if (ImGui::Button("+##hp")) { m_pPlayer->Maxhp += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerhp += 10; }
+				}
+				else {
+					ImGui::BeginDisabled(); ImGui::Button("+##hp"); ImGui::EndDisabled();
+				}
+
+				ImGui::BulletText("STAMINA: %d / %d", m_pPlayer->Playerstamina, m_pPlayer->Maxstamina);
+				ImGui::SameLine();
+				if (m_pPlayer->StatPoint > 0) {
+					if (ImGui::Button("+##stamina")) { m_pPlayer->Maxstamina += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerstamina += 10; }
+				}
+				else {
+					ImGui::BeginDisabled(); ImGui::Button("+##stamina"); ImGui::EndDisabled();
+				}
+
+				ImGui::BulletText("ATK: %d", m_pPlayer->PlayerAttack);
+				ImGui::SameLine();
+				if (m_pPlayer->StatPoint > 0) {
+					if (ImGui::Button("+##atk")) { m_pPlayer->PlayerAttack += 1; m_pPlayer->StatPoint--; }
+				}
+				else {
+					ImGui::BeginDisabled(); ImGui::Button("+##atk"); ImGui::EndDisabled();
+				}
+
+				ImGui::BulletText("SPEED: %.1f", m_pPlayer->PlayerSpeed);
+				ImGui::SameLine();
+				if (m_pPlayer->StatPoint > 0) {
+					if (ImGui::Button("+##speed")) { m_pPlayer->PlayerSpeed += 0.2f; m_pPlayer->StatPoint--; }
+				}
+				else {
+					ImGui::BeginDisabled(); ImGui::Button("+##speed"); ImGui::EndDisabled();
+				}
+				ImGui::BulletText("XP: %d / %d", m_pPlayer->Playerxp, m_pPlayer->Totalxp);
+				ImGui::Spacing();
+				ImGui::Separator();
+				ImGui::Text("STAT POINT: %d", m_pPlayer->StatPoint);
+			}
+
+			ImGui::Columns(1); // 열 정리
+			ImGui::End();
+		}
+		////////////////////////////////////////////////////////////////////////////////////// 조합창
+		if (ShowCraftingUI)
+		{
+			const float windowWidth = 600.0f;
+			const float windowHeight = 450.0f;
+
+			ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+			ImVec2 craftingPos = ImVec2(
+				displaySize.x * 0.5f - windowWidth * 0.5f,
+				displaySize.y * 0.5f - windowHeight * 0.5f
+			);
+
+			ImGui::SetNextWindowPos(craftingPos);
+			ImGui::SetNextWindowSize(ImVec2(windowWidth, windowHeight));
+
+			ImGui::Begin("Crafting", nullptr,
+				ImGuiWindowFlags_NoResize |
+				ImGuiWindowFlags_NoCollapse);
+
+
+			ImGui::Columns(2, nullptr, false);
+
+			// 조합 가능한 아이템 리스트
+			ImGui::Text("CRAFT ITEM");
+			ImGui::Separator();
+
+			for (int i = 0; i < m_vecCraftableItems.size(); ++i)
+			{
+				const CraftItem& item = m_vecCraftableItems[i];
+
+				if (ImGui::Selectable(item.ResultItemName.c_str(), selectedCraftItemIndex == i))
 				{
-					ImGui::GetWindowDrawList()->AddRect(
-						pos,
-						ImVec2(pos.x + slotSize, pos.y + slotSize),
-						IM_COL32(255, 255, 0, 255), // 노란색
-						0.0f,
-						0,
-						2.0f
-					);
+					selectedCraftItemIndex = i; // 아이템 선택
+				}
+			}
+
+			ImGui::NextColumn();
+
+			// ▶ 오른쪽: 필요한 재료 출력
+			ImGui::Text("MATERIAL");
+			ImGui::Separator();
+
+			if (selectedCraftItemIndex >= 0 && selectedCraftItemIndex < m_vecCraftableItems.size())
+			{
+				const CraftItem& selectedItem = m_vecCraftableItems[selectedCraftItemIndex];
+
+				for (const CraftMaterial& mat : selectedItem.Materials)
+				{
+					ImGui::Text("%s x%d", mat.MaterialName.c_str(), mat.Quantity);
 				}
 
-				// 🔁 클릭 시 교환 처리
+				ImGui::Spacing();
+				ImGui::Separator();
+				ImGui::Spacing();
+
+				if (ImGui::Button("CRAFT", ImVec2(200, 50)))
+				{
+					if (CanCraftItem())
+					{
+						CraftSelectedItem();
+					}
+				}
+			}
+
+			ImGui::Columns(1);
+
+			ImGui::End();
+		}
+		////////////////////////////////////////////////////////////////////////////////////////////////////// 건축 UI
+		if (BuildMode)
+		{
+			ImGui::SetNextWindowPos(ImVec2(100, 100));
+			ImGui::SetNextWindowSize(ImVec2(200, 200));
+			ImGui::Begin("Build Mode", nullptr,
+				ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
+
+			static int selected = -1;
+			const char* buildings[] = { "나무 벽", "나무 문", "나무 바닥", "계단" };
+			//static bool bPrevBuildMode = false;
+
+			if (BuildMode && !bPrevBuildMode)
+			{
+				m_pConstructionSystem->EnterBuildMode(); // 상태 전환 시 한 번만 실행
+			}
+			bPrevBuildMode = BuildMode;
+			/*
+			for (int i = 0; i < IM_ARRAYSIZE(buildings); i++)
+			{
+				if (ImGui::Selectable(buildings[i], selected == i))
+				{
+					selected = i;
+
+					// 1. 문자열 매핑
+					std::string buildingKey;
+					if (selected == 0) buildingKey = "pine";
+					else if (selected == 1) buildingKey = "door";
+					else if (selected == 2) buildingKey = "floor";
+					else if (selected == 3) buildingKey = "stair";
+
+
+					// 3. 미리보기 재생성
+				}
+			}
+			*/
+
+			if (m_pConstructionSystem->IsBuildMode())
+			{
+				XMFLOAT3 previewPos = m_pConstructionSystem->GetPreviewPosition(); // ★ getter 함수 필요
+				ImGui::Text("PreviewPos: %.2f, % .2f, % .2f", previewPos.x, previewPos.y, previewPos.z);
+			}
+			if (ImGui::Button("Build End"))
+			{
+				BuildMode = false;
+				bPrevBuildMode = BuildMode;
+				m_pConstructionSystem->ExitBuildMode();
+			}
+
+			ImGui::End();
+		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////
+		if (ShowFurnaceUI)
+		{
+			const float slotSize = 72.0f;
+			const ImVec2 slotVec = ImVec2(slotSize, slotSize);
+
+			ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+			ImVec2 windowSize = ImVec2(360, 330);
+			ImVec2 centerPos = ImVec2(
+				(displaySize.x - windowSize.x) * 0.5f,
+				(displaySize.y - windowSize.y) * 0.5f
+			);
+
+			ImGui::SetNextWindowPos(centerPos, ImGuiCond_Always);
+			ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
+
+			ImGui::Begin("Furnace", &ShowFurnaceUI, ImGuiWindowFlags_NoResize);
+
+			ImGui::Text("FURANCE");
+			ImGui::Separator();
+
+			ImGui::SetCursorPos(ImVec2(60, 80));
+			ImGui::Button(" ", slotVec); // 항상 배경 존재
+
+			if (furnaceSlot.material)
+			{
+				ImTextureID matIcon = furnaceSlot.material->GetIconHandle();
+				ImVec2 pos = ImGui::GetItemRectMin();
+
+				ImGui::GetWindowDrawList()->AddImage(
+					matIcon,
+					pos,
+					ImVec2(pos.x + 70, pos.y + 70)
+				);
+			}
+
+			// 🔥 연료 아이콘
+			ImGui::SetCursorPos(ImVec2(60, 200));
+			ImGui::Text("FUEL");
+
+			ImGui::SetCursorPos(ImVec2(60, 220));
+			ImGui::ProgressBar(furnaceSlot.fuelAmount / 100.0f, ImVec2(150, 20));
+
+			auto fireItem = ItemManager::GetItemByName("fire");
+			if (fireItem)
+			{
+				ImTextureID fireIcon = fireItem->GetIconHandle();
+				ImGui::SetCursorPos(ImVec2(72, 150)); // 중앙 위치
+				ImGui::GetWindowDrawList()->AddImage(
+					fireIcon,
+					ImGui::GetCursorScreenPos(),
+					ImVec2(ImGui::GetCursorScreenPos().x + 48, ImGui::GetCursorScreenPos().y + 48)
+				);
+			}
+
+
+			auto directionItem = ItemManager::GetItemByName("direction");
+			if (directionItem)
+			{
+				ImTextureID arrowIcon = directionItem->GetIconHandle();
+				ImGui::SetCursorPos(ImVec2(190, 150));
+				ImGui::GetWindowDrawList()->AddImage(
+					arrowIcon,
+					ImGui::GetCursorScreenPos(),
+					ImVec2(ImGui::GetCursorScreenPos().x + 60, ImGui::GetCursorScreenPos().y + 60)
+				);
+			}
+
+			if (furnaceSlot.result)
+			{
+				ImTextureID resultIcon = furnaceSlot.result->GetIconHandle();
+				string resultitem = furnaceSlot.result->GetName();
+				ImGui::SetCursorPos(ImVec2(260, 150)); // 결과 슬롯 위치
+				ImGui::Image(resultIcon, slotVec);
+
 				if (ImGui::IsItemClicked())
 				{
-					if (ShowFurnaceUI)  // 🔥 화로 UI가 열려 있는 경우
-					{
-						Item* item = m_inventorySlots[i].item.get();
-						if (!item) return;
-
-						std::string name = item->GetName();
-
-						if (name == "coal" || name == "wood") {
-							furnaceSlot.fuelAmount += 25.0f;
-							if (furnaceSlot.fuelAmount > 100.0f) furnaceSlot.fuelAmount = 100.0f;
-							m_inventorySlots[i].quantity--;
-							if (m_inventorySlots[i].quantity <= 0) m_inventorySlots[i].item = nullptr;
-						}
-						else if (name == "pork" || name == "iron_material") {
-							furnaceSlot.material = item;
-							m_inventorySlots[i].quantity--;
-							if (m_inventorySlots[i].quantity <= 0) m_inventorySlots[i].item = nullptr;
-						}
-					}
-					else  // 🔄 화로 UI가 닫혀 있는 경우: 인벤토리 슬롯 교환
-					{
-						if (selectedSlotIndex == -1) {
-							selectedSlotIndex = i;
-						}
-						else {
-							std::swap(m_inventorySlots[selectedSlotIndex], m_inventorySlots[i]);
-							selectedSlotIndex = -1;
-						}
-					}
-				}
-
-				ImGui::PopID();
-
-				if ((i + 1) % inventoryCols != 0)
-					ImGui::SameLine(0.0f, spacing);
-			}
-
-
-		}
-
-		ImGui::NextColumn();
-
-		// 오른쪽: 플레이어 스탯
-		{
-			ImGui::Text("LV: %d", m_pPlayer->PlayerLevel);
-			ImGui::Text("STATUS:");
-
-			ImGui::BulletText("HP: %d / %d", m_pPlayer->Playerhp, m_pPlayer->Maxhp);
-			ImGui::SameLine();
-			if (m_pPlayer->StatPoint > 0) {
-				if (ImGui::Button("+##hp")) { m_pPlayer->Maxhp += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerhp += 10; }
-			}
-			else {
-				ImGui::BeginDisabled(); ImGui::Button("+##hp"); ImGui::EndDisabled();
-			}
-
-			ImGui::BulletText("STAMINA: %d / %d", m_pPlayer->Playerstamina, m_pPlayer->Maxstamina);
-			ImGui::SameLine();
-			if (m_pPlayer->StatPoint > 0) {
-				if (ImGui::Button("+##stamina")) { m_pPlayer->Maxstamina += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerstamina += 10; }
-			}
-			else {
-				ImGui::BeginDisabled(); ImGui::Button("+##stamina"); ImGui::EndDisabled();
-			}
-
-			ImGui::BulletText("ATK: %d", m_pPlayer->PlayerAttack);
-			ImGui::SameLine();
-			if (m_pPlayer->StatPoint > 0) {
-				if (ImGui::Button("+##atk")) { m_pPlayer->PlayerAttack += 1; m_pPlayer->StatPoint--; }
-			}
-			else {
-				ImGui::BeginDisabled(); ImGui::Button("+##atk"); ImGui::EndDisabled();
-			}
-
-			ImGui::BulletText("SPEED: %.1f", m_pPlayer->PlayerSpeed);
-			ImGui::SameLine();
-			if (m_pPlayer->StatPoint > 0) {
-				if (ImGui::Button("+##speed")) { m_pPlayer->PlayerSpeed += 0.2f; m_pPlayer->StatPoint--; }
-			}
-			else {
-				ImGui::BeginDisabled(); ImGui::Button("+##speed"); ImGui::EndDisabled();
-			}
-			ImGui::BulletText("XP: %d / %d", m_pPlayer->Playerxp, m_pPlayer->Totalxp);
-			ImGui::Spacing();
-			ImGui::Separator();
-			ImGui::Text("STAT POINT: %d", m_pPlayer->StatPoint);
-		}
-
-		ImGui::Columns(1); // 열 정리
-		ImGui::End();
-	}
-	////////////////////////////////////////////////////////////////////////////////////// 조합창
-	if (ShowCraftingUI) 
-	{
-		const float windowWidth = 600.0f;
-		const float windowHeight = 450.0f;
-
-		ImVec2 displaySize = ImGui::GetIO().DisplaySize;
-		ImVec2 craftingPos = ImVec2(
-			displaySize.x * 0.5f - windowWidth * 0.5f,
-			displaySize.y * 0.5f - windowHeight * 0.5f
-		);
-
-		ImGui::SetNextWindowPos(craftingPos);
-		ImGui::SetNextWindowSize(ImVec2(windowWidth, windowHeight));
-
-		ImGui::Begin("Crafting", nullptr,
-			ImGuiWindowFlags_NoResize |
-			ImGuiWindowFlags_NoCollapse);
-
-		
-		ImGui::Columns(2, nullptr, false);
-
-		// 조합 가능한 아이템 리스트
-		ImGui::Text("CRAFT ITEM");
-		ImGui::Separator();
-
-		for (int i = 0; i < m_vecCraftableItems.size(); ++i)
-		{
-			const CraftItem& item = m_vecCraftableItems[i];
-
-			if (ImGui::Selectable(item.ResultItemName.c_str(), selectedCraftItemIndex == i))
-			{
-				selectedCraftItemIndex = i; // 아이템 선택
-			}
-		}
-
-		ImGui::NextColumn();
-
-		// ▶ 오른쪽: 필요한 재료 출력
-		ImGui::Text("MATERIAL");
-		ImGui::Separator();
-
-		if (selectedCraftItemIndex >= 0 && selectedCraftItemIndex < m_vecCraftableItems.size())
-		{
-			const CraftItem& selectedItem = m_vecCraftableItems[selectedCraftItemIndex];
-
-			for (const CraftMaterial& mat : selectedItem.Materials)
-			{
-				ImGui::Text("%s x%d", mat.MaterialName.c_str(), mat.Quantity);
-			}
-
-			ImGui::Spacing();
-			ImGui::Separator();
-			ImGui::Spacing();
-
-			if (ImGui::Button("CRAFT", ImVec2(200, 50)))
-			{
-				if (CanCraftItem())
-				{
-					CraftSelectedItem();
+					AddItem(resultitem, 1);
+					furnaceSlot.result = nullptr;
 				}
 			}
-		}
-
-		ImGui::Columns(1);
-
-		ImGui::End();
-	}
-	////////////////////////////////////////////////////////////////////////////////////////////////////// 건축 UI
-	if (BuildMode)
-	{
-		ImGui::SetNextWindowPos(ImVec2(100, 100));
-		ImGui::SetNextWindowSize(ImVec2(200, 200));
-		ImGui::Begin("Build Mode", nullptr,
-			ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
-
-		static int selected = -1;
-		const char* buildings[] = { "나무 벽", "나무 문", "나무 바닥", "계단" };
-		//static bool bPrevBuildMode = false;
-
-		if (BuildMode && !bPrevBuildMode)
-		{
-			m_pConstructionSystem->EnterBuildMode(); // 상태 전환 시 한 번만 실행
-		}
-		bPrevBuildMode = BuildMode;
-		/*
-		for (int i = 0; i < IM_ARRAYSIZE(buildings); i++)
-		{
-			if (ImGui::Selectable(buildings[i], selected == i))
+			else
 			{
-				selected = i;
-
-				// 1. 문자열 매핑
-				std::string buildingKey;
-				if (selected == 0) buildingKey = "pine";
-				else if (selected == 1) buildingKey = "door";
-				else if (selected == 2) buildingKey = "floor";
-				else if (selected == 3) buildingKey = "stair";
-
-
-				// 3. 미리보기 재생성
+				ImGui::SetCursorPos(ImVec2(260, 150));
+				ImGui::Button("RESULT", slotVec);
 			}
-		}
-		*/
 
-		if (m_pConstructionSystem->IsBuildMode())
-		{
-			XMFLOAT3 previewPos = m_pConstructionSystem->GetPreviewPosition(); // ★ getter 함수 필요
-			ImGui::Text("PreviewPos: %.2f, % .2f, % .2f", previewPos.x, previewPos.y, previewPos.z);
-		}
-		if (ImGui::Button("Build End"))
-		{
-			BuildMode = false;
-			bPrevBuildMode = BuildMode;
-			m_pConstructionSystem->ExitBuildMode();
+			ImGui::End();
 		}
 
-		ImGui::End();
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		ImGui::Render();
+		ID3D12DescriptorHeap* ppHeaps[] = { m_pd3dSrvDescriptorHeapForImGui };
+		m_pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_pd3dCommandList);
 	}
-
-	/////////////////////////////////////////////////////////////////////////////////////////////////////
-	if (ShowFurnaceUI)
-	{
-		const float slotSize = 72.0f;
-		const ImVec2 slotVec = ImVec2(slotSize, slotSize);
-
-		ImVec2 displaySize = ImGui::GetIO().DisplaySize;
-		ImVec2 windowSize = ImVec2(360, 330);
-		ImVec2 centerPos = ImVec2(
-			(displaySize.x - windowSize.x) * 0.5f,
-			(displaySize.y - windowSize.y) * 0.5f
-		);
-
-		ImGui::SetNextWindowPos(centerPos, ImGuiCond_Always);
-		ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
-
-		ImGui::Begin("Furnace", &ShowFurnaceUI, ImGuiWindowFlags_NoResize);
-
-		ImGui::Text("FURANCE");
-		ImGui::Separator();
-
-		ImGui::SetCursorPos(ImVec2(60, 80));
-		ImGui::Button(" ", slotVec); // 항상 배경 존재
-
-		if (furnaceSlot.material)
-		{
-			ImTextureID matIcon = furnaceSlot.material->GetIconHandle();
-			ImVec2 pos = ImGui::GetItemRectMin();
-
-			ImGui::GetWindowDrawList()->AddImage(
-				matIcon,
-				pos,
-				ImVec2(pos.x + 70, pos.y + 70)
-			);
-		}
-
-		// 🔥 연료 아이콘
-		ImGui::SetCursorPos(ImVec2(60, 200));
-		ImGui::Text("FUEL");
-
-		ImGui::SetCursorPos(ImVec2(60, 220));
-		ImGui::ProgressBar(furnaceSlot.fuelAmount / 100.0f, ImVec2(150, 20));
-		
-		auto fireItem = ItemManager::GetItemByName("fire");
-		if (fireItem)
-		{
-			ImTextureID fireIcon = fireItem->GetIconHandle();
-			ImGui::SetCursorPos(ImVec2(72, 150)); // 중앙 위치
-			ImGui::GetWindowDrawList()->AddImage(
-				fireIcon,
-				ImGui::GetCursorScreenPos(),
-				ImVec2(ImGui::GetCursorScreenPos().x + 48, ImGui::GetCursorScreenPos().y + 48)
-			);
-		}
-
-		
-		auto directionItem = ItemManager::GetItemByName("direction");
-		if (directionItem)
-		{
-			ImTextureID arrowIcon = directionItem->GetIconHandle();
-			ImGui::SetCursorPos(ImVec2(190, 150)); 
-			ImGui::GetWindowDrawList()->AddImage(
-				arrowIcon,
-				ImGui::GetCursorScreenPos(),
-				ImVec2(ImGui::GetCursorScreenPos().x + 60, ImGui::GetCursorScreenPos().y + 60)
-			);
-		}
-
-		if (furnaceSlot.result)
-		{
-			ImTextureID resultIcon = furnaceSlot.result->GetIconHandle();
-			string resultitem = furnaceSlot.result->GetName();
-			ImGui::SetCursorPos(ImVec2(260, 150)); // 결과 슬롯 위치
-			ImGui::Image(resultIcon, slotVec);
-
-			if (ImGui::IsItemClicked())
-			{
-				AddItem(resultitem, 1);
-				furnaceSlot.result = nullptr;
-			}
-		}
-		else
-		{
-			ImGui::SetCursorPos(ImVec2(260, 150));
-			ImGui::Button("RESULT", slotVec);
-		}
-
-		ImGui::End();
-	}
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	ImGui::Render();
-	ID3D12DescriptorHeap* ppHeaps[] = { m_pd3dSrvDescriptorHeapForImGui };
-	m_pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_pd3dCommandList);
-
-
-
 
 	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
 
-	hResult = m_pd3dCommandList->Close();
-	
+	// 커맨드 리스트 기록 완료
+	ThrowIfFailed(m_pd3dCommandList->Close());
+
+
 	ID3D12CommandList *ppd3dCommandLists[] = { m_pd3dCommandList };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
-	WaitForGpuComplete();
+	// --- 바로 이 부분입니다! ---
+	   // GPU에 펜스 값을 업데이트하라는 명령을 보냅니다.
+	m_nFenceValue++;
+	ThrowIfFailed(m_pd3dCommandQueue->Signal(m_pd3dFence, m_nFenceValue));
+	// 현재 FrameResource가 이 펜스 값을 기억하도록 저장합니다.
+	m_pCurrentFrameResource->Fence = m_nFenceValue;
 
-#ifdef _WITH_PRESENT_PARAMETERS
-	DXGI_PRESENT_PARAMETERS dxgiPresentParameters;
-	dxgiPresentParameters.DirtyRectsCount = 0;
-	dxgiPresentParameters.pDirtyRects = NULL;
-	dxgiPresentParameters.pScrollRect = NULL;
-	dxgiPresentParameters.pScrollOffset = NULL;
-	m_pdxgiSwapChain->Present1(1, 0, &dxgiPresentParameters);
-#else
-#ifdef _WITH_SYNCH_SWAPCHAIN
+	// 화면에 최종 결과물을 표시합니다.
 	m_pdxgiSwapChain->Present(1, 0);
-#else
-	m_pdxgiSwapChain->Present(0, 0);
-#endif
-#endif
 
-	MoveToNextFrame();
+	// 다음 프레임을 위해 스왑체인 인덱스를 업데이트합니다.
+	m_nSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
 	m_GameTimer.GetFrameRate(m_pszFrameRate + 18, 37);
 	size_t nLength = _tcslen(m_pszFrameRate);
@@ -2238,6 +2295,7 @@ void CGameFramework::FrameAdvance()
 	//_stprintf_s(m_pszFrameRate + nLength, 70 - nLength, _T("(%4f, %4f, %4f)"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
 	::SetWindowText(m_hWnd, m_pszFrameRate);
 }
+
 void CGameFramework::CreateCbvSrvDescriptorHeap()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
@@ -2249,6 +2307,7 @@ void CGameFramework::CreateCbvSrvDescriptorHeap()
 	if (FAILED(hr))
 		::MessageBox(NULL, _T("Failed to create SRV Descriptor Heap for ImGui"), _T("Error"), MB_OK);
 }
+
 void CGameFramework::InitializeCraftItems()
 {
 	m_vecCraftableItems.clear();
@@ -2674,4 +2733,29 @@ void CGameFramework::WaitForGpu()
 		// 이미 GPU가 해당 값 이상으로 진행함 (바로 종료 가능)
 		OutputDebugString(L"GPU already finished (Fence value check).\n");
 	}
+}
+
+void CGameFramework::UpdateConstantBuffers()
+{
+	// PassCB 업데이트
+	auto passCB = m_pCurrentFrameResource->PassCB.get();
+
+	PassConstants passConstants;
+	// 카메라로부터 View, Proj 행렬을 가져와 PassConstants를 채웁니다.
+	// 이 부분은 기존 CCamera::UpdateShaderVariables와 유사합니다.
+	XMMATRIX view = m_pCamera->GetViewMatrix();
+	XMMATRIX proj = m_pCamera->GetProjectionMatrix();
+	XMStoreFloat4x4(&passConstants.View, XMMatrixTranspose(view));
+	XMStoreFloat4x4(&passConstants.Proj, XMMatrixTranspose(proj));
+	// ... 기타 필요한 Pass 데이터들 ...
+
+	// Scene에서 계산한 ShadowTransform 행렬을 가져와 PassConstants에 추가합니다.
+	XMStoreFloat4x4(&passConstants.ShadowTransform, XMMatrixTranspose(m_pScene->GetShadowTransform()));
+
+	passCB->CopyData(0, passConstants);
+
+
+	// ObjectCB 업데이트
+	auto objectCB = m_pCurrentFrameResource->ObjectCB.get();
+	m_pScene->UpdateObjectConstantBuffers(objectCB);
 }

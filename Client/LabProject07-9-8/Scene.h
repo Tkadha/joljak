@@ -12,6 +12,8 @@
 #include "ShaderManager.h"
 #include <unordered_map>
 #include <mutex>
+#include "ShadowMap.h"
+#include "FrameResource.h"
 
 #define MAX_LIGHTS						16 
 
@@ -83,6 +85,8 @@ public:
     void AnimateObjects(float fTimeElapsed);
 	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 	//void Render(ID3D12GraphicsCommandList *pd3dCommandList,bool obbRender, CCamera *pCamera=NULL);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, FrameResource* pFrameResource);
+
 
 	void ReleaseUploadBuffers();
 
@@ -160,4 +164,42 @@ public:
 	void SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 	void SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 
+
+
+	// 그림자
+	std::vector<std::unique_ptr<FrameResource>> mFrameResources;
+	FrameResource* mCurrFrameResource = nullptr;
+
+	PassConstants mShadowPassCB;
+
+	std::unique_ptr<ShadowMap> m_pShadowMap;
+
+	DirectX::BoundingSphere mSceneBounds;
+
+	float m_fSceneRadius = 5000.0f;
+
+	float mLightNearZ = 0.0f;
+	float mLightFarZ = 0.0f;
+	XMFLOAT3 mLightPosW;
+	XMFLOAT4X4 mLightView = MathHelper::Identity4x4();
+	XMFLOAT4X4 mLightProj = MathHelper::Identity4x4();
+	XMFLOAT4X4 mShadowTransform = MathHelper::Identity4x4();
+
+	UINT mMainLightIndex = 0;
+
+	float mLightRotationAngle = 0.0f;
+	XMFLOAT3 mBaseLightDirections[3] = {
+		XMFLOAT3(0.57735f, -0.57735f, 0.57735f),
+		XMFLOAT3(-0.57735f, -0.57735f, 0.57735f),
+		XMFLOAT3(0.0f, -0.707f, -0.707f)
+	};
+	XMFLOAT3 mRotatedLightDirections[3];
+
+
+	void UpdateShadowTransform(const XMFLOAT3& focusPoint);
+
+	UINT GetAllObjectCount();
+
+	XMMATRIX GetShadowTransform() const;
+	void UpdateObjectConstantBuffers(UploadBuffer<ObjectConstants>* pObjectCB);
 };
