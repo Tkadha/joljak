@@ -647,8 +647,18 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			if (pLightBuffer) {
 				pd3dCommandList->SetGraphicsRootConstantBufferView(2, pLightBuffer->GetGPUVirtualAddress());
 			}
+
+			pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
 		}
 
+		//if (shaderType == "Standard") {
+		//	// Standard 셰이더의 경우, 4번 슬롯에 그림자 맵 바인딩
+		//	pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
+		//}
+		//else if (shaderType == "Skinned") {
+		//	// Skinned 셰이더의 경우, 6번 슬롯에 그림자 맵 바인딩
+		//	pd3dCommandList->SetGraphicsRootDescriptorTable(6, pScene->GetShadowMapSrv());
+		//}
 
 		
 		for (int i = 0; i < m_nMaterials; i++)
@@ -705,13 +715,13 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 						
 						ID3D12Resource* pOffsetBuffer = pSkinnedMesh->m_pd3dcbBindPoseBoneOffsets;
                         if (pOffsetBuffer) {
-                            pd3dCommandList->SetGraphicsRootConstantBufferView(4, pOffsetBuffer->GetGPUVirtualAddress());
+                            pd3dCommandList->SetGraphicsRootConstantBufferView(5, pOffsetBuffer->GetGPUVirtualAddress());
                         }
 						
 						if (m_pSharedAnimController && 
 							m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms &&
 							m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]) {
-							pd3dCommandList->SetGraphicsRootConstantBufferView(5, m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]->GetGPUVirtualAddress());
+							pd3dCommandList->SetGraphicsRootConstantBufferView(6, m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]->GetGPUVirtualAddress());
 						}
 						else {
 							
@@ -741,6 +751,23 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 	if (m_pMesh) m_pMesh->Render(pd3dCommandList, nInstances, d3dInstancingBufferView);
 }
+
+void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	cbGameObjectInfo gameObjectInfo;
+	XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+
+	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo, 0);
+
+	if (m_pMesh)
+	{
+		for (int i = 0; i < m_nMaterials; i++)
+		{
+			m_pMesh->Render(pd3dCommandList, i);
+		}
+	}
+}
+
 
 void CGameObject::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
@@ -1161,15 +1188,15 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 			XMMATRIX mtxRotate = XMMatrixRotationQuaternion(XMLoadFloat4(&xmf4QuaternionRotation));
 			XMMATRIX mtxTranslate = XMMatrixTranslation(xmf3Position.x, xmf3Position.y, xmf3Position.z);
 
-			XMStoreFloat4x4(&pGameObject->m_xmf4x4ToParent, XMMatrixMultiply(XMMatrixMultiply(mtxScale, mtxRotate), mtxTranslate));
+			//XMStoreFloat4x4(&pGameObject->m_xmf4x4ToParent, XMMatrixMultiply(XMMatrixMultiply(mtxScale, mtxRotate), mtxTranslate));
 
 
 		}
 		else if (!strcmp(pstrToken, "<TransformMatrix>:"))
 		{
-			//nReads = (UINT)::fread(&pGameObject->m_xmf4x4ToParent, sizeof(float), 16, pInFile);
-			XMFLOAT4X4 xmf4x4TempWorldMatrix; // 임시 변수
-			nReads = (UINT)::fread(&xmf4x4TempWorldMatrix, sizeof(float), 16, pInFile);
+			nReads = (UINT)::fread(&pGameObject->m_xmf4x4ToParent, sizeof(float), 16, pInFile);
+			//XMFLOAT4X4 xmf4x4TempWorldMatrix; // 임시 변수
+			//nReads = (UINT)::fread(&xmf4x4TempWorldMatrix, sizeof(float), 16, pInFile);
 
 		}
 		else if (!strcmp(pstrToken, "<Mesh>:"))

@@ -164,6 +164,7 @@ private:
 private:
 	ComPtr<ID3D12DescriptorHeap>	m_pd3dCbvSrvDescriptorHeap;
 	UINT							m_nCbvSrvDescriptorIncrementSize;
+	UINT							m_nRtvDescriptorIncrementSize;		// 추가(그림자)
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dCbvCpuHandleStart;
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dCbvGpuHandleStart;
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCpuHandleStart;
@@ -213,6 +214,9 @@ public:
 
 	// 그림자
 	ID3D12DescriptorHeap* GetShadowDsvHeap() { return m_pd3dShadowDsvHeap; }
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRtvCPUDescriptorHandle();
+	D3D12_CPU_DESCRIPTOR_HANDLE GetDsvCPUDescriptorHandle();
+
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;
 #endif

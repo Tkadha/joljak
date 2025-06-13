@@ -172,9 +172,9 @@ ID3D12RootSignature* ShaderManager::CreateSkinnedRootSignature()
     rootParameters[1].InitAsConstants(41, 2, 0, D3D12_SHADER_VISIBILITY_ALL);     // b2: Object
     rootParameters[2].InitAsConstantBufferView(4, 0, D3D12_SHADER_VISIBILITY_ALL); // b4: Lights
     rootParameters[3].InitAsDescriptorTable(1, &descRangeSRV[0], D3D12_SHADER_VISIBILITY_PIXEL); // t6-t12
-    rootParameters[4].InitAsConstantBufferView(7, 0, D3D12_SHADER_VISIBILITY_VERTEX); // b7: Bone Offsets
-    rootParameters[5].InitAsConstantBufferView(8, 0, D3D12_SHADER_VISIBILITY_VERTEX); // b8: Bone Transforms
-    rootParameters[6].InitAsDescriptorTable(1, &descRangeSRV[1], D3D12_SHADER_VISIBILITY_PIXEL); // 그림자 맵 테이블
+    rootParameters[4].InitAsDescriptorTable(1, &descRangeSRV[1], D3D12_SHADER_VISIBILITY_PIXEL); // 그림자 맵 테이블
+    rootParameters[5].InitAsConstantBufferView(7, 0, D3D12_SHADER_VISIBILITY_VERTEX); // b7: Bone Offsets
+    rootParameters[6].InitAsConstantBufferView(8, 0, D3D12_SHADER_VISIBILITY_VERTEX); // b8: Bone Transforms
 
     auto staticSamplers = GetStaticSamplers();
     CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(
@@ -378,8 +378,8 @@ CShader* ShaderManager::CreateShaderInternal(const std::string& name, ID3D12Grap
         rootSignatureName = "OBB";
     }
     else if (name == "Shadow") {
-        rootSignatureName = "Shadow"; // Shadow 셰이더는 Shadow 루트 서명을 사용
         pShader = new CShadowShader();
+        rootSignatureName = "Shadow"; // Shadow 셰이더는 Shadow 루트 서명을 사용
     }
 
     else if (name == "Instancing") {

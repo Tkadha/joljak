@@ -48,16 +48,13 @@ struct VS_STANDARD_OUTPUT
 // 그림자 계수를 계산하는 함수
 float CalcShadowFactor(float4 shadowPosH)
 {
-    // 원근 나누기 (NDC 좌표로 변환)
+    // 원근 나누기
     shadowPosH.xyz /= shadowPosH.w;
     
-    // 텍스처 좌표계로 변환 [(-1,1) -> (0,1)]
+    // 텍스처 좌표계로 변환
     shadowPosH.x = +0.5f * shadowPosH.x + 0.5f;
     shadowPosH.y = -0.5f * shadowPosH.y + 0.5f;
     
-    // 그림자 맵과 현재 픽셀의 깊이를 비교 (하드웨어 PCF)
-    // gsamShadow는 Comparison Sampler이므로, 이 함수는 자동으로
-    // 주변 4개 픽셀의 깊이와 비교하고 그 결과를 블렌딩하여 부드러운 그림자 경계를 만듭니다.
     float shadowFactor = gShadowMap.SampleCmpLevelZero(gsamShadow, shadowPosH.xy, shadowPosH.z);
 
     return shadowFactor;

@@ -458,6 +458,9 @@ void CGameFramework::CreateDirect3DDevice()
 	::gnRtvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	::gnDsvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
+	// 추가(그림자)
+	m_nRtvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
 	if (pd3dAdapter) pd3dAdapter->Release();
 }
 
@@ -2684,4 +2687,18 @@ void CGameFramework::WaitForGpu()
 		// 이미 GPU가 해당 값 이상으로 진행함 (바로 종료 가능)
 		OutputDebugString(L"GPU already finished (Fence value check).\n");
 	}
+}
+
+
+// 그림자
+D3D12_CPU_DESCRIPTOR_HANDLE CGameFramework::GetCurrentRtvCPUDescriptorHandle()
+{
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	d3dRtvCPUDescriptorHandle.ptr += (m_nSwapChainBufferIndex * m_nRtvDescriptorIncrementSize);
+	return d3dRtvCPUDescriptorHandle;
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE CGameFramework::GetDsvCPUDescriptorHandle()
+{
+	return m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 }

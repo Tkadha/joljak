@@ -206,6 +206,12 @@
     <ClCompile Include="MathHelper.cpp">
       <Filter>Utility</Filter>
     </ClCompile>
+    <ClCompile Include="ShadowMap.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="ShadowShader.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Server\Global.h" />
@@ -341,6 +347,10 @@
     <ClInclude Include="Scene.h">
       <Filter>소스 파일\Scene</Filter>
     </ClInclude>
+    <ClInclude Include="ShadowMap.h" />
+    <ClInclude Include="ShadowShader.h">
+      <Filter>소스 파일\Shader</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LabProject07-9-8.rc" />
@@ -382,6 +392,9 @@
     </FxCompile>
     <FxCompile Include="OBBShader.hlsl">
       <Filter>소스 파일\Shader\OBBShader</Filter>
+    </FxCompile>
+    <FxCompile Include="Shadow.hlsl">
+      <Filter>소스 파일\Shader</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

@@ -881,16 +881,22 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 		// 기존 Render 함수를 호출하되, Shadow 셰이더는 재질/조명 정보를 무시할 것임
 		for (auto& obj : m_vGameObjects) {
-			if (obj) obj->Render(pd3dCommandList, nullptr);
+			if (obj) obj->RenderShadow(pd3dCommandList);
 		}
 	}
+	// 1. 그림자 맵 리소스를 픽셀 셰이더에서 읽을 수 있는 상태로 변경
+	m_pShadowMap->TransitionToReadable(pd3dCommandList);
 
+	// 2. 렌더 타겟을 다시 화면(메인 백버퍼)과 메인 깊이 버퍼로 설정
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pGameFramework->GetCurrentRtvCPUDescriptorHandle();
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pGameFramework->GetDsvCPUDescriptorHandle();
+	pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
+	// 3. 뷰포트와 시저 렉트도 메인 카메라 기준으로 다시 설정
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 
+
 	pCamera->UpdateShaderVariables(pd3dCommandList);
-
-
 	UpdateShaderVariables(pd3dCommandList);
 
 
