@@ -373,7 +373,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Common.hlsl" />
     <FxCompile Include="InstancingShaders.hlsl" />
     <FxCompile Include="Shaders.hlsl">
       <Filter>소스 파일\Shader</Filter>
@@ -394,6 +393,9 @@
       <Filter>소스 파일\Shader\OBBShader</Filter>
     </FxCompile>
     <FxCompile Include="Shadow.hlsl">
+      <Filter>소스 파일\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Common.hlsl">
       <Filter>소스 파일\Shader</Filter>
     </FxCompile>
   </ItemGroup>

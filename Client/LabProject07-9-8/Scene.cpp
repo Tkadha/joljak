@@ -883,6 +883,8 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		for (auto& obj : m_vGameObjects) {
 			if (obj) obj->RenderShadow(pd3dCommandList);
 		}
+
+		if (m_pTerrain) m_pTerrain->RenderShadow(pd3dCommandList);
 	}
 	// 1. 그림자 맵 리소스를 픽셀 셰이더에서 읽을 수 있는 상태로 변경
 	m_pShadowMap->TransitionToReadable(pd3dCommandList);

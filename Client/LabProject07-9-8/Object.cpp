@@ -1608,6 +1608,8 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress());
 		}
 
+		pd3dCommandList->SetGraphicsRootDescriptorTable(3, pScene->GetShadowMapSrv());
+
 		UpdateTransform(NULL); 
 
 		
@@ -1632,6 +1634,25 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 	}
 	
 }
+
+
+void CHeightMapTerrain::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	// 지형의 월드 행렬을 루트 상수로 바인딩합니다.
+	cbGameObjectInfo gameObjectInfo;
+	XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo.gmtxGameObject, 0); // 월드 행렬만 전달
+
+	// 메시 전체를 그립니다.
+	if (m_pMesh && m_nMaterials > 0)
+	{
+		for (int i = 0; i < m_nMaterials; i++)
+		{
+			m_pMesh->Render(pd3dCommandList, i);
+		}
+	}
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 

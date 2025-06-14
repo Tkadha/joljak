@@ -182,8 +182,14 @@ float4 PSStandard3(VS_STANDARD_OUTPUT input) : SV_TARGET
     
     float shadowFactor = CalcShadowFactor(input.ShadowPosH);
     
-    float3 finalColor = gMaterialInfo.AmbientColor.rgb * cAlbedoColor.rgb; // 주변광
-    finalColor += shadowFactor * (cIlluminationColor.rgb); // 직사광 (그림자 적용)
+    // 1. 최종 조명 색상을 먼저 계산합니다.
+    //    (주변광 + 그림자가 적용된 직사광)
+    float3 totalLight = gMaterialInfo.AmbientColor.rgb + (shadowFactor * cIlluminationColor.rgb);
+
+    // 2. 계산된 최종 조명 색상에 물체의 표면 색상(알베도 텍스처)을 곱합니다.
+    float3 finalColor = totalLight * cAlbedoColor.rgb;
+    
+    //finalColor += shadowFactor * (cIlluminationColor.rgb); // 직사광 (그림자 적용)
     
     // 4. 안개 적용
     float distToEye = distance(input.positionW, gvCameraPosition.xyz);
