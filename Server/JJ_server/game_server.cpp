@@ -374,7 +374,6 @@ void BuildObject()
 	int TreeCount = 200;
 	for (int i = 0; i < TreeCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
-
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		std::pair<float, float> randomsize = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
@@ -403,7 +402,6 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-
 	int CowCount = 100;
 	for (int i = 0; i < CowCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
@@ -425,7 +423,13 @@ void BuildObject()
 	}
 	int PigCount = 100;
 	for (int i = 0; i < PigCount; ++i) {
+		shared_ptr<CLoadedModelInfo> pModelInfo = GameObject::LoadGeometryFromFile("Model/SK_Pig.bin");
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		if (pModelInfo && pModelInfo->m_pModelRootObject)
+		{
+			obj->SetChild(pModelInfo->m_pModelRootObject);
+		}
+
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(10.f, 10.f, 10.f);
@@ -437,6 +441,8 @@ void BuildObject()
 		obj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 
+		obj->SetOBB(1.0f, 0.8f, 1.0f, XMFLOAT3(0.0f, 1.0f, -1.0f));
+		obj->localOBB.Center.y += 30.0f;
 		gameObjects.push_back(obj);
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
