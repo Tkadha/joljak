@@ -246,7 +246,7 @@ void ProcessAccept()
 	}
 	else // 잘 처리함
 	{
-		shared_ptr<PlayerClient> remoteClient = remoteClientCandidate;
+		shared_ptr<PlayerClient> remoteClient = remoteClientCandidate; // made client
 		cout << "accept - key: " << remoteClient.get() << endl;
 
 		// 새 TCP 소켓도 IOCP에 추가한다.
@@ -326,7 +326,16 @@ void ProcessAccept()
 			}
 
 		}
-
+		{
+			// playerobject 생성
+			shared_ptr<CLoadedModelInfo> pModelInfo = GameObject::LoadGeometryFromFile("Model/Player.bin");
+			shared_ptr<GameObject> obj = make_shared<GameObject>();
+			if (pModelInfo && pModelInfo->m_pModelRootObject)
+			{
+				obj->SetChild(pModelInfo->m_pModelRootObject);
+			}
+			remoteClient->player_object = obj;
+		}
 		// 인게임 객체 다 보내기 (나중에 옥트리 이동 시 뷰리스트 적용)
 		{
 			std::vector<tree_obj*> results; // 시야 범위 내 객체 찾기
@@ -373,7 +382,17 @@ void BuildObject()
 	int obj_id = 0;
 	int TreeCount = 200;
 	for (int i = 0; i < TreeCount; ++i) {
+		FILE* pInFile = NULL;
+		::fopen_s(&pInFile, "Model/FAE_Pine_A_LOD0.bin", "rb");
+		::rewind(pInFile);
+		shared_ptr<GameObject> pModelInfo = GameObject::LoadFrameHierarchyFromFile(NULL, pInFile, NULL);
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		if (pModelInfo)
+		{
+			obj->SetChild(pModelInfo);
+		}
+		if (pInFile) fclose(pInFile);
+
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		std::pair<float, float> randomsize = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
@@ -381,6 +400,7 @@ void BuildObject()
 		obj->SetID(obj_id++);
 		obj->SetType(OBJECT_TYPE::OB_TREE);
 		obj->SetAnimationType(ANIMATION_TYPE::UNKNOWN);
+		obj->SetOBB(0.1f, 1.0f, 0.1f, XMFLOAT3(0.0f, 0.0f, 0.0f));
 		gameObjects.push_back(obj);
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
@@ -388,7 +408,17 @@ void BuildObject()
 	}
 	int RockCount = 200;
 	for (int i = 0; i < RockCount; ++i) {
+		FILE* pInFile = NULL;
+		::fopen_s(&pInFile, "Model/RockCluster_A_LOD0.bin", "rb");
+		::rewind(pInFile);
+		shared_ptr<GameObject> pModelInfo = GameObject::LoadFrameHierarchyFromFile(NULL, pInFile, NULL);
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		if (pModelInfo)
+		{
+			obj->SetChild(pModelInfo);
+		}
+		if (pInFile) fclose(pInFile);
+
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		std::pair<float, float> randomsize = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
@@ -397,6 +427,7 @@ void BuildObject()
 
 		obj->SetType(OBJECT_TYPE::OB_STONE);
 		obj->SetAnimationType(ANIMATION_TYPE::UNKNOWN);
+		obj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
 		gameObjects.push_back(obj);
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
@@ -404,7 +435,12 @@ void BuildObject()
 	}
 	int CowCount = 100;
 	for (int i = 0; i < CowCount; ++i) {
+		shared_ptr<CLoadedModelInfo> pModelInfo = GameObject::LoadGeometryFromFile("Model/SK_Cow.bin");
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		if (pModelInfo && pModelInfo->m_pModelRootObject)
+		{
+			obj->SetChild(pModelInfo->m_pModelRootObject);
+		}
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(12.f, 12.f, 12.f);
@@ -416,6 +452,7 @@ void BuildObject()
 		obj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 
+		obj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
 		gameObjects.push_back(obj);
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
@@ -450,8 +487,14 @@ void BuildObject()
 	}
 
 	int SpiderCount = 70;
-	for (int i = 0; i < SpiderCount; ++i) {
+	for (int i = 0; i < SpiderCount; ++i) 
+	{
+		shared_ptr<CLoadedModelInfo> pModelInfo = GameObject::LoadGeometryFromFile("Model/SK_Spider.bin");
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		if (pModelInfo && pModelInfo->m_pModelRootObject)
+		{
+			obj->SetChild(pModelInfo->m_pModelRootObject);
+		}
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(8.f, 8.f, 8.f);
@@ -463,6 +506,7 @@ void BuildObject()
 		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
+		obj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
 		gameObjects.push_back(obj);
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
@@ -470,7 +514,12 @@ void BuildObject()
 	}
 	int WolfCount = 70;
 	for (int i = 0; i < WolfCount; ++i) {
+		shared_ptr<CLoadedModelInfo> pModelInfo = GameObject::LoadGeometryFromFile("Model/SK_Wolf.bin");
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		if (pModelInfo && pModelInfo->m_pModelRootObject)
+		{
+			obj->SetChild(pModelInfo->m_pModelRootObject);
+		}
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(10.f, 10.f, 10.f);
@@ -482,6 +531,7 @@ void BuildObject()
 		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
+		obj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
 		gameObjects.push_back(obj);
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
@@ -489,7 +539,12 @@ void BuildObject()
 	}
 	int ToadCount = 70;
 	for (int i = 0; i < ToadCount; ++i) {
+		shared_ptr<CLoadedModelInfo> pModelInfo = GameObject::LoadGeometryFromFile("Model/SK_Toad.bin");
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		if (pModelInfo && pModelInfo->m_pModelRootObject)
+		{
+			obj->SetChild(pModelInfo->m_pModelRootObject);
+		}
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(8.f, 8.f, 8.f);
@@ -501,6 +556,7 @@ void BuildObject()
 		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
+		obj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
 		gameObjects.push_back(obj);
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
