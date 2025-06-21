@@ -27,9 +27,6 @@
     <Filter Include="Terrain">
       <UniqueIdentifier>{a3049cb0-73fc-4568-b50f-cba8018a4b19}</UniqueIdentifier>
     </Filter>
-    <Filter Include="GameObject\Base">
-      <UniqueIdentifier>{488ad7fd-5bfe-45b8-aadc-8231f1b3e34e}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="game_server.cpp">
@@ -67,9 +64,6 @@
     </ClCompile>
     <ClCompile Include="Terrain.cpp">
       <Filter>Terrain</Filter>
-    </ClCompile>
-    <ClCompile Include="Mesh.cpp">
-      <Filter>GameObject\Base</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -111,9 +105,6 @@
     </ClInclude>
     <ClInclude Include="..\Global.h">
       <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Mesh.h">
-      <Filter>GameObject\Base</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

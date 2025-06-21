@@ -11,15 +11,9 @@
 #include <stdio.h>
 #include <tchar.h>
 
-#include <WinSock2.h>
-#include <d3d12.h>
-#include <dxgi1_4.h>
-#include <D3Dcompiler.h>
+
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
-#include <DirectXColors.h>
-#include <DirectXCollision.h>
-
 #include <random>
 #include <algorithm>
 
@@ -27,10 +21,6 @@ using namespace std;
 using namespace DirectX;
 using namespace DirectX::PackedVector;
 
-
-extern BYTE ReadStringFromFile(FILE* pInFile, char* pstrToken);
-extern int ReadIntegerFromFile(FILE* pInFile);
-extern float ReadFloatFromFile(FILE* pInFile);
 
 #define EPSILON					1.0e-10f
 
