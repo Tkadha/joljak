@@ -19,7 +19,6 @@ public:
 	C_STATE state;
 	std::mutex vl_mu;
 	std::unordered_set<int> viewlist;
-	std::shared_ptr<GameObject> player_object = nullptr; // 플레이어 오브젝트
 private:
 
 	XMFLOAT3					m_Position = XMFLOAT3(0.0f, 0.0f, 0.0f);

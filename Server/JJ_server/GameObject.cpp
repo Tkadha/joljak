@@ -264,10 +264,7 @@ std::shared_ptr<GameObject> GameObject::LoadFrameHierarchyFromFile(std::shared_p
 						{
 							break;
 						}
-					}
-					if (!strcmp(pstrMaterialName, "</Materials>"))
-					{
-						break;
+
 					}
 				}
 			}
