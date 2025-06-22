@@ -495,7 +495,7 @@ void CPlayer::UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFL
 			0.0f, 0.0f, 0.0f, 1.0f
 		)
 	);
-	XMStoreFloat4(&m_localOBB.Orientation, qRotation);
+	//XMStoreFloat4(&m_localOBB.Orientation, qRotation);
 	UpdateTransform();
 }
 

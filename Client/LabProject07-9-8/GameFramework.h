@@ -184,7 +184,9 @@ private:
 
 	std::unique_ptr<ResourceManager> m_pResourceManager;
 	//std::unique_ptr<ShaderManager> m_pShaderManager;
-	ShaderManager* m_pShaderManager;
+	ShaderManager* m_pShaderManager; 
+
+
 
 public:
 	bool AllocateCbvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle);
@@ -216,6 +218,19 @@ public:
 	ID3D12DescriptorHeap* GetShadowDsvHeap() { return m_pd3dShadowDsvHeap; }
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRtvCPUDescriptorHandle();
 	D3D12_CPU_DESCRIPTOR_HANDLE GetDsvCPUDescriptorHandle();
+
+	
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_pd3dDebugQuadVB;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_pd3dDebugQuadIB;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_pd3dDebugQuadVB_Uploader;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_pd3dDebugQuadIB_Uploader;
+
+	D3D12_VERTEX_BUFFER_VIEW m_d3dDebugQuadVBView;
+	D3D12_INDEX_BUFFER_VIEW  m_d3dDebugQuadIBView;
+
+	D3D12_VERTEX_BUFFER_VIEW GetDebugQuadVBView() const { return m_d3dDebugQuadVBView; }
+	D3D12_INDEX_BUFFER_VIEW GetDebugQuadIBView() const { return m_d3dDebugQuadIBView; }
 
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;

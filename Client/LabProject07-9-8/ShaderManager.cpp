@@ -9,6 +9,7 @@
 #include "SkinnedShader.h"
 #include "SkyBoxShader.h"
 #include "ShadowShader.h"
+#include "DebugShader.h"
 // 예: #include "StandardShader.h", "SkinnedShader.h" 등 (아직 없다면 생성 필요)
 
 // --- 정적 샘플러 정의 ---
@@ -115,7 +116,9 @@ ID3D12RootSignature* ShaderManager::CreateRootSignatureInternal(const std::strin
     if (name == "Skybox") return CreateSkyboxRootSignature();
     if (name == "OBB") return CreateOBBRootSignature();
     if (name == "Instancing") return CreateInstancingRootSignature();
-    else if (name == "Shadow") return CreateShadowRootSignature();
+    if (name == "Shadow") return CreateShadowRootSignature();
+    if (name == "Debug") return CreateDebugRootSignature();
+
 
     OutputDebugStringA("Error: Unknown root signature name requested!\n");
     return nullptr;
@@ -320,6 +323,36 @@ ID3D12RootSignature* ShaderManager::CreateShadowRootSignature()
     return(pd3dRootSignature);
 }
 
+ID3D12RootSignature* ShaderManager::CreateDebugRootSignature()
+{
+
+    HRESULT hr;
+    ID3D12RootSignature* pd3dRootSignature = nullptr;
+
+    CD3DX12_DESCRIPTOR_RANGE descRangeSRV[1];
+    descRangeSRV[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
+
+    CD3DX12_ROOT_PARAMETER rootParameters[1]; 
+    rootParameters[0].InitAsDescriptorTable(1, &descRangeSRV[0], D3D12_SHADER_VISIBILITY_PIXEL); // PS에서 샘플링
+
+    auto staticSamplers = GetStaticSamplers();
+    CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(_countof(rootParameters), rootParameters,
+        1, &staticSamplers[0],
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS);
+
+    Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+    hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) { if (errorBlob) OutputDebugStringA((char*)errorBlob->GetBufferPointer()); return nullptr; }
+    hr = m_pd3dDevice->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&pd3dRootSignature));
+    if (FAILED(hr)) return nullptr;
+    return pd3dRootSignature;
+
+
+}
+
+
+
 CShader* ShaderManager::GetShader(const std::string& name, ID3D12GraphicsCommandList* pd3dCommandList)
 {
     auto it = m_Shaders.find(name);
@@ -382,6 +415,10 @@ CShader* ShaderManager::CreateShaderInternal(const std::string& name, ID3D12Grap
     else if (name == "Shadow") {
         pShader = new CShadowShader();
         rootSignatureName = "Shadow"; // Shadow 셰이더는 Shadow 루트 서명을 사용
+    }
+    else if (name == "Debug") {
+        pShader = new CDebugShader();
+        rootSignatureName = "Debug"; // Shadow 셰이더는 Shadow 루트 서명을 사용
     }
 
     else if (name == "Instancing") {

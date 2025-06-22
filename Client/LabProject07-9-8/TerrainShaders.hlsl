@@ -51,6 +51,7 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
     
     // 3. 그림자 공간으로 변환
     output.ShadowPosH = mul(worldPos_H, gmtxShadowTransform);
+    //output.ShadowPosH = worldPos_H; // 월드 좌표를 그대로 전달
 
     output.color = input.color; // 정점 색상 전달
     output.uv0 = input.uv0; // UV 좌표 전달
@@ -71,7 +72,20 @@ float CalcShadowFactor(float4 shadowPosH)
 
 // --- Pixel Shader ---
 float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
-{
+{ 
+    //------------디버깅------------
+    
+    // 정점 셰이더에서 넘어온 월드 좌표(input.ShadowPosH)를
+    // 맵의 최대 크기(예: 5000.0)로 나누어 [0,1] 범위의 색상으로 만듭니다.
+    // 이 값을 조절하며 테스트해보세요.
+    //float3 worldPosColor = input.ShadowPosH.xyz / 10000.0f;
+
+    //// x, y, z 좌표를 각각 R, G, B 색상에 매핑하여 출력합니다.
+    //return float4(worldPosColor.r, worldPosColor.g, worldPosColor.b, 1.0f);
+    
+    //------------디버깅------------
+    
+    
     // 텍스처 샘플링
     float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
     float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);

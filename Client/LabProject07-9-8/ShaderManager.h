@@ -33,6 +33,7 @@ private:
     ID3D12RootSignature* CreateOBBRootSignature();
     ID3D12RootSignature* CreateInstancingRootSignature();
     ID3D12RootSignature* CreateShadowRootSignature();
+    ID3D12RootSignature* CreateDebugRootSignature();
 
     // 셰이더 생성 함수
     CShader* CreateShaderInternal(const std::string& name, ID3D12GraphicsCommandList* pd3dCommandList);

@@ -571,21 +571,17 @@ CGameObject *CGameObject::FindFrame(char *pstrFrameName)
 void CGameObject::UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent)
 {
 	m_xmf4x4World = (pxmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4ToParent, *pxmf4x4Parent) : m_xmf4x4ToParent;
-
 	
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
-
 	
 	XMVECTOR localCenter = XMLoadFloat3(&m_localOBB.Center);
 	XMVECTOR worldCenter = XMVector3TransformCoord(localCenter, worldMatrix);
 	XMStoreFloat3(&m_worldOBB.Center, worldCenter);
-
 	
 	XMMATRIX rotationMatrix = worldMatrix;
 	rotationMatrix.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);  
 	XMVECTOR orientation = XMQuaternionRotationMatrix(rotationMatrix);
 	XMStoreFloat4(&m_worldOBB.Orientation, orientation);
-
 	
 	XMFLOAT3 scale;
 	scale.x = XMVectorGetX(XMVector3Length(worldMatrix.r[0]));
@@ -766,6 +762,8 @@ void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 			m_pMesh->Render(pd3dCommandList, i);
 		}
 	}
+	if (m_pSibling) m_pSibling->RenderShadow(pd3dCommandList);
+	if (m_pChild) m_pChild->RenderShadow(pd3dCommandList);
 }
 
 

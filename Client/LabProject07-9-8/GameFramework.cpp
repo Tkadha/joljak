@@ -1017,6 +1017,41 @@ void CGameFramework::BuildObjects()
 	m_pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 
 
+	struct DebugVertex
+	{
+		XMFLOAT3 Pos;
+		XMFLOAT2 TexC;
+	};
+
+	DebugVertex vertices[4] =
+	{
+		// 화면 오른쪽 아래 1/4 크기의 사각형
+		{ XMFLOAT3(0.5f, -0.5f, 0.0f), XMFLOAT2(0.0f, 1.0f) }, // 0: 왼쪽 아래
+		{ XMFLOAT3(0.5f, -0.0f, 0.0f), XMFLOAT2(0.0f, 0.0f) }, // 1: 왼쪽 위
+		{ XMFLOAT3(1.0f, -0.0f, 0.0f), XMFLOAT2(1.0f, 0.0f) }, // 2: 오른쪽 위
+		{ XMFLOAT3(1.0f, -0.5f, 0.0f), XMFLOAT2(1.0f, 1.0f) }  // 3: 오른쪽 아래
+	};
+
+	// 2. 인덱스 데이터 정의 (삼각형 2개)
+	std::uint16_t indices[6] = { 0, 1, 2, 0, 2, 3 };
+
+	const UINT vbByteSize = 4 * sizeof(DebugVertex);
+	const UINT ibByteSize = 6 * sizeof(std::uint16_t);
+
+	// 3. d3dUtil 함수를 사용해 정점/인덱스 버퍼를 GPU에 생성
+	m_pd3dDebugQuadVB = d3dUtil::CreateDefaultBuffer(m_pd3dDevice, m_pd3dCommandList, vertices, vbByteSize, m_pd3dDebugQuadVB_Uploader);
+	m_pd3dDebugQuadIB = d3dUtil::CreateDefaultBuffer(m_pd3dDevice, m_pd3dCommandList, indices, ibByteSize, m_pd3dDebugQuadIB_Uploader);
+
+	// 4. 생성된 버퍼를 가리킬 뷰(View)를 설정
+	m_d3dDebugQuadVBView.BufferLocation = m_pd3dDebugQuadVB->GetGPUVirtualAddress();
+	m_d3dDebugQuadVBView.StrideInBytes = sizeof(DebugVertex);
+	m_d3dDebugQuadVBView.SizeInBytes = vbByteSize;
+
+	m_d3dDebugQuadIBView.BufferLocation = m_pd3dDebugQuadIB->GetGPUVirtualAddress();
+	m_d3dDebugQuadIBView.Format = DXGI_FORMAT_R16_UINT;
+	m_d3dDebugQuadIBView.SizeInBytes = ibByteSize;
+
+
 	m_pd3dCommandList->Close();
 	ID3D12CommandList *ppd3dCommandLists[] = { m_pd3dCommandList };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
@@ -1026,12 +1061,14 @@ void CGameFramework::BuildObjects()
 		m_pPlayer->SetCollisionTargets(m_pScene->m_vGameObjects);
 	}
 
+
 	WaitForGpuComplete();
 
 	if (m_pScene) m_pScene->ReleaseUploadBuffers();
 	if (m_pPlayer) m_pPlayer->ReleaseUploadBuffers();
 
 	m_GameTimer.Reset();
+
 }
 
 void CGameFramework::ReleaseObjects()
@@ -2251,6 +2288,7 @@ void CGameFramework::FrameAdvance()
 	//_stprintf_s(m_pszFrameRate + nLength, 70 - nLength, _T("(%4f, %4f, %4f)"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
 	::SetWindowText(m_hWnd, m_pszFrameRate);
 }
+
 void CGameFramework::CreateCbvSrvDescriptorHeap()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
@@ -2262,6 +2300,7 @@ void CGameFramework::CreateCbvSrvDescriptorHeap()
 	if (FAILED(hr))
 		::MessageBox(NULL, _T("Failed to create SRV Descriptor Heap for ImGui"), _T("Error"), MB_OK);
 }
+
 void CGameFramework::InitializeCraftItems()
 {
 	m_vecCraftableItems.clear();

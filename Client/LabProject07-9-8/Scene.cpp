@@ -185,7 +185,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 	
 	// 1. 그림자 맵 객체 생성
-	m_pShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 2048, 2048);
+	m_pShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 8192, 8192);
 
 	// 2. SRV 핸들 할당: Framework의 AllocateSrvDescriptors 함수를 사용합니다.
 	D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandle;
@@ -884,6 +884,8 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			if (obj) obj->RenderShadow(pd3dCommandList);
 		}
 
+		if (m_pPlayer) m_pPlayer->RenderShadow(pd3dCommandList);
+
 		if (m_pTerrain) m_pTerrain->RenderShadow(pd3dCommandList);
 	}
 	// 1. 그림자 맵 리소스를 픽셀 셰이더에서 읽을 수 있는 상태로 변경
@@ -1034,7 +1036,78 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		}
 	}
 
+
+	// --- 그림자 맵 디버그 출력 ---
+	CShader* pDebugShader = pShaderManager->GetShader("Debug", pd3dCommandList);
+	pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
+	pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
+
+	// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
+	pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
+
+	
+	// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
+	pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
+	pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
+	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 }
+
+void CScene::TestRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	// ------------------------------------------------------------------
+	// 기존의 모든 CScene::Render 내용을 이 코드로 완전히 교체합니다.
+	// ------------------------------------------------------------------
+
+	OutputDebugString(L"--- CScene::Render START ---\n");
+
+	// 1. 필요한 포인터 가져오기
+	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
+
+	// 2. 렌더 타겟, 뷰포트, 디스크립터 힙을 명시적으로 다시 설정합니다.
+	//    (이전 상태에 관계없이 우리가 원하는 상태로 강제합니다)
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pGameFramework->GetCurrentRtvCPUDescriptorHandle();
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pGameFramework->GetDsvCPUDescriptorHandle();
+	pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
+
+	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+
+//	ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() };
+	ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->m_pd3dSrvDescriptorHeapForImGui };
+
+	pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+	// 3. 디버그 셰이더와 PSO, 루트 서명 설정
+	CShader* pDebugShader = pShaderManager->GetShader("Debug", pd3dCommandList);
+	if (!pDebugShader || !pDebugShader->GetPipelineState())
+	{
+		OutputDebugString(L"Error: Debug shader or PSO is null.\n");
+		return;
+	}
+
+	pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
+	pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
+
+	D3D12_GPU_DESCRIPTOR_HANDLE shadowMapSrv = m_pShadowMap->Srv();
+	if (shadowMapSrv.ptr != 0) {
+		pd3dCommandList->SetGraphicsRootDescriptorTable(0, shadowMapSrv);
+	}
+
+
+	// 4. 디버그 사각형 그리기
+	D3D12_VERTEX_BUFFER_VIEW vbView = m_pGameFramework->GetDebugQuadVBView();
+	D3D12_INDEX_BUFFER_VIEW ibView = m_pGameFramework->GetDebugQuadIBView();
+
+	pd3dCommandList->IASetVertexBuffers(0, 1, &vbView);
+	pd3dCommandList->IASetIndexBuffer(&ibView);
+	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	OutputDebugString(L"Attempting to draw the debug quad...\n");
+	pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+
+	OutputDebugString(L"--- CScene::Render END ---\n");
+}
+
 
 void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader)
 {
@@ -1244,28 +1317,18 @@ void CScene::UpdateShadowTransform(const XMFLOAT3& focusPoint)
 	if (!pMainLight) return;
 
 	XMVECTOR lightDir = XMLoadFloat3(&pMainLight->m_xmf3Direction);
+	if (XMVector3Equal(lightDir, XMVectorZero())) return;
+	lightDir = XMVector3Normalize(lightDir);
+
 	XMVECTOR lightPos = XMLoadFloat3(&focusPoint) - 2000.0f * lightDir;
 	XMVECTOR targetPos = XMLoadFloat3(&focusPoint);
-	XMVECTOR lightUp;
-
-	// --- 여기에 예외 처리 코드를 추가합니다 ---
-	// 빛의 방향과 World Up 벡터(0,1,0)의 내적 값을 계산합니다.
-	float dot = fabsf(XMVectorGetY(lightDir));
-
-	// 만약 두 벡터가 거의 평행하다면 (내적 값이 0.99 이상)
-	if (dot > 0.99f) {
-		// Up 벡터를 World의 X축 방향으로 설정합니다.
-		lightUp = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
-	}
-	else {
-		// 평행하지 않다면 기존처럼 World의 Y축을 Up 벡터로 사용합니다.
-		lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-	}
-	// --- 예외 처리 끝 ---
+	XMVECTOR lightUp = (fabsf(XMVectorGetY(lightDir)) > 0.99f)
+		? XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)
+		: XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
 	XMMATRIX view = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
 
-	float sceneRadius = 2500.0f;
+	float sceneRadius = 1500.0f;
 	XMMATRIX proj = XMMatrixOrthographicLH(sceneRadius * 2.0f, sceneRadius * 2.0f, 0.0f, 5000.0f);
 
 	XMMATRIX T(
