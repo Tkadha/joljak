@@ -371,9 +371,9 @@ void CGameObject::SetOBB(float scalex, float scaley, float scalez, const XMFLOAT
 			(minPos.z + maxPos.z) * 0.5f+centerOffset.z
 		);
 		m_localOBB.Extents = XMFLOAT3(
-			(maxPos.x - minPos.x) * 0.5f* scalex,
-			(maxPos.y - minPos.y) * 0.5f*scaley,
-			(maxPos.z - minPos.z) * 0.5f*scalez
+			(maxPos.x - minPos.x) * 0.5f * scalex,
+			(maxPos.y - minPos.y) * 0.5f * scaley,
+			(maxPos.z - minPos.z) * 0.5f * scalez
 		);
 		m_localOBB.Orientation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);  
 	}
@@ -414,6 +414,15 @@ void CGameObject::SetOBB(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	if (m_pSibling) m_pSibling->SetOBB();
 	if (m_pChild) m_pChild->SetOBB();
 	*/
+}
+
+BoundingOrientedBox CGameObject::GetOBB()
+{
+	if (m_pMesh) {
+		return m_localOBB;
+	}
+	if (m_pSibling) return m_pSibling->GetOBB();
+	if (m_pChild) return m_pChild->GetOBB();
 }
 
 void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)

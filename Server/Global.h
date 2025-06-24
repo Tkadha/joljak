@@ -19,6 +19,7 @@ enum class E_PACKET
 	E_O_HIT = 13,
 	E_O_INVINCIBLE = 14, 
 	E_O_SETHP = 15, 
+	E_O_SETOBB = 16,
 
 
 	E_DB_REGISTER = 100,
@@ -90,6 +91,13 @@ public:
 	float x, y, z;
 	FLOAT3() = default;
 	FLOAT3(float x, float y, float z) : x(x), y(y), z(z) {}
+};
+class FLOAT4
+{
+public:
+	float x, y, z, w;
+	FLOAT4() = default;
+	FLOAT4(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
 };
 
 class PACKET
@@ -261,7 +269,19 @@ class OBJ_INVINCIBLE_PACKET : public PACKET
 	}
 };
 
-
+class OBJ_OBB_PACKET : public PACKET
+{
+public:
+	int oid;
+	FLOAT3 Center{};
+	FLOAT3 Extents{};
+	FLOAT4 Orientation{};
+	OBJ_OBB_PACKET() {
+		oid = -1;
+		size = sizeof(OBJ_OBB_PACKET);
+		type = static_cast<char>(E_PACKET::E_O_SETOBB);
+	}
+};
 
 
 

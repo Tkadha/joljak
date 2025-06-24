@@ -184,63 +184,63 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 {
 	if (Vector3::Length(XMFLOAT3(xmf3Shift)) == 0.0f) return;
 
-	XMFLOAT3 originalPosition = m_xmf3Position;
+	//XMFLOAT3 originalPosition = m_xmf3Position;
 
-	// X축 이동 시도
-	XMFLOAT3 testPosX = originalPosition;
-	testPosX.x += xmf3Shift.x;
-	BoundingOrientedBox testOBBX;
-	XMMATRIX matX = XMMatrixTranslation(testPosX.x, testPosX.y, testPosX.z);
-	m_localOBB.Transform(testOBBX, matX);
-	testOBBX.Orientation.w = 1.f;
-	bool bCollidedX = false;
-	if (m_pCollisionTargets)
-	{
-		for (auto& obj : *m_pCollisionTargets)
-		{
-			if (!obj || obj == this) continue;
-			if (obj->m_id < 0) continue;
-			if (obj->getHp() <= 0) continue;
+	//// X축 이동 시도
+	//XMFLOAT3 testPosX = originalPosition;
+	//testPosX.x += xmf3Shift.x;
+	//BoundingOrientedBox testOBBX;
+	//XMMATRIX matX = XMMatrixTranslation(testPosX.x, testPosX.y, testPosX.z);
+	//m_localOBB.Transform(testOBBX, matX);
+	//testOBBX.Orientation.w = 1.f;
+	//bool bCollidedX = false;
+	//if (m_pCollisionTargets)
+	//{
+	//	for (auto& obj : *m_pCollisionTargets)
+	//	{
+	//		if (!obj || obj == this) continue;
+	//		if (obj->m_id < 0) continue;
+	//		if (obj->getHp() <= 0) continue;
 
-			if (testOBBX.Intersects(obj->m_worldOBB))
-			{
-				bCollidedX = true;
-				break;
-			}
-		}
-	}
-	if (!bCollidedX) m_xmf3Position.x = testPosX.x;
+	//		if (testOBBX.Intersects(obj->m_worldOBB))
+	//		{
+	//			bCollidedX = true;
+	//			break;
+	//		}
+	//	}
+	//}
+	//if (!bCollidedX) m_xmf3Position.x = testPosX.x;
 
-	// Z축 이동 시도
-	XMFLOAT3 testPosZ = m_xmf3Position;
-	testPosZ.z += xmf3Shift.z;
-	BoundingOrientedBox testOBBZ;
-	XMMATRIX matZ = XMMatrixTranslation(testPosZ.x, testPosZ.y, testPosZ.z);
-	m_localOBB.Transform(testOBBZ, matZ);
-	testOBBZ.Orientation.w = 1.f;
+	//// Z축 이동 시도
+	//XMFLOAT3 testPosZ = m_xmf3Position;
+	//testPosZ.z += xmf3Shift.z;
+	//BoundingOrientedBox testOBBZ;
+	//XMMATRIX matZ = XMMatrixTranslation(testPosZ.x, testPosZ.y, testPosZ.z);
+	//m_localOBB.Transform(testOBBZ, matZ);
+	//testOBBZ.Orientation.w = 1.f;
 
-	bool bCollidedZ = false;
-	if (m_pCollisionTargets)
-	{
-		for (auto& obj : *m_pCollisionTargets)
-		{
-			if (!obj || obj == this) continue;
-			if (obj->m_id < 0) continue;
-			if (obj->getHp() <= 0) continue;
-			if (testOBBZ.Intersects(obj->m_worldOBB))
-			{
-				bCollidedZ = true;
-				break;
-			}
-		}
-	}
-	if (!bCollidedZ) m_xmf3Position.z = testPosZ.z;
+	//bool bCollidedZ = false;
+	//if (m_pCollisionTargets)
+	//{
+	//	for (auto& obj : *m_pCollisionTargets)
+	//	{
+	//		if (!obj || obj == this) continue;
+	//		if (obj->m_id < 0) continue;
+	//		if (obj->getHp() <= 0) continue;
+	//		if (testOBBZ.Intersects(obj->m_worldOBB))
+	//		{
+	//			bCollidedZ = true;
+	//			break;
+	//		}
+	//	}
+	//}
+	//if (!bCollidedZ) m_xmf3Position.z = testPosZ.z;
 
-	
-	
-	m_xmf3Position.y += xmf3Shift.y;
+	//
+	//
+	//m_xmf3Position.y += xmf3Shift.y;
 
-	
+	m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
 
 	m_pCamera->Move(xmf3Shift);
 	// 최종 적용
@@ -248,7 +248,7 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 	UpdateOBB(m_xmf3Position, playerSize, playerRotation);
 	//m_pCamera->SetPosition(m_xmf3Position);
 
-	if (!bUpdateVelocity && (bCollidedX || bCollidedZ)) {
+	/*if (!bUpdateVelocity && (bCollidedX || bCollidedZ)) {
 		auto& nwManager = NetworkManager::GetInstance();
 		auto pos = m_xmf3Position;
 		POSITION_PACKET p;
@@ -256,7 +256,7 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 		p.position.y = pos.y;
 		p.position.z = pos.z;
 		nwManager.PushSendQueue(p, p.size);
-	}
+	}*/
 	if (bUpdateVelocity)
 	{
 		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
@@ -490,7 +490,7 @@ void CPlayer::UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFL
 			0.0f, 0.0f, 0.0f, 1.0f
 		)
 	);
-	XMStoreFloat4(&m_localOBB.Orientation, qRotation);
+	//XMStoreFloat4(&m_localOBB.Orientation, qRotation);
 	UpdateTransform();
 }
 

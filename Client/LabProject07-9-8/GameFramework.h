@@ -237,7 +237,7 @@ public:
 	ULONGLONG					_MyID = -1;
 
 	std::queue<log_inout> 	m_logQueue;
-
+	std::list<GameObjectType> gameobj_list;
 	// 서버연결 확인코드
 	bool serverConnected = false;
 	std::atomic_bool b_running;

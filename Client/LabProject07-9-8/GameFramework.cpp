@@ -1003,6 +1003,25 @@ void CGameFramework::BuildObjects()
 	m_pPlayer->SetOBB(position, size, rotation);
 	m_pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 
+#ifdef ONLINE
+	NetworkManager& nw = NetworkManager::GetInstance();
+	OBJ_OBB_PACKET p;
+	auto& obb = m_pPlayer->m_localOBB;
+	p.Center.x = obb.Center.x;
+	p.Center.y = obb.Center.y;
+	p.Center.z = obb.Center.z;
+	p.Extents.x = obb.Extents.x;
+	p.Extents.y = obb.Extents.y;
+	p.Extents.z = obb.Extents.z;
+	p.Orientation.x = obb.Orientation.x;
+	p.Orientation.y = obb.Orientation.y;
+	p.Orientation.z = obb.Orientation.z;
+	p.Orientation.w = obb.Orientation.w;
+	p.oid = -1;
+	p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+	p.size = sizeof(OBJ_OBB_PACKET);
+	nw.PushSendQueue(p, p.size);
+#endif
 
 	m_pd3dCommandList->Close();
 	ID3D12CommandList *ppd3dCommandLists[] = { m_pd3dCommandList };
@@ -1071,6 +1090,28 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 
 			gameObj->SetOBB(0.2f, 1.f, 0.2f, XMFLOAT3{ 0.f,0.f,0.f });
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
 		}
 			break;
 		case OBJECT_TYPE::OB_STONE:
@@ -1098,6 +1139,27 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
 		}
 			break;
 		case OBJECT_TYPE::OB_COW:
@@ -1136,6 +1198,29 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
+
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pCowModel) delete(pCowModel);
@@ -1173,6 +1258,29 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 
 			gameObj->SetOBB(1.f, 0.8f, 1.f, XMFLOAT3{ 0.f,1.f,-1.f });
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
+
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pPigModel) delete(pPigModel);
@@ -1214,6 +1322,29 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
+
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pSpiderModel) delete(pSpiderModel);
@@ -1255,6 +1386,29 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
+
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pToadModel) delete(pToadModel);
@@ -1296,6 +1450,29 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
+
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pWolfModel) delete(pWolfModel);

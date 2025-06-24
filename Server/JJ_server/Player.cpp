@@ -43,6 +43,32 @@ void PlayerClient::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 	}
 }
 
+void PlayerClient::UpdateTransform()
+{
+
+    XMMATRIX worldMatrix = XMLoadFloat4x4(&xmf4x4);
+
+
+    XMVECTOR localCenter = XMLoadFloat3(&local_obb.Center);
+    XMVECTOR worldCenter = XMVector3TransformCoord(localCenter, worldMatrix);
+    XMStoreFloat3(&world_obb.Center, worldCenter);
+
+
+    XMMATRIX rotationMatrix = worldMatrix;
+    rotationMatrix.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+    XMVECTOR orientation = XMQuaternionRotationMatrix(rotationMatrix);
+    XMStoreFloat4(&world_obb.Orientation, orientation);
+
+
+    XMFLOAT3 scale;
+    scale.x = XMVectorGetX(XMVector3Length(worldMatrix.r[0]));
+    scale.y = XMVectorGetX(XMVector3Length(worldMatrix.r[1]));
+    scale.z = XMVectorGetX(XMVector3Length(worldMatrix.r[2]));
+    world_obb.Extents.x = local_obb.Extents.x * scale.x;
+    world_obb.Extents.y = local_obb.Extents.y * scale.y;
+    world_obb.Extents.z = local_obb.Extents.z * scale.z;
+}
+
 void PlayerClient::Update(float fTimeElapsed)
 {
 	m_Velocity = Vector3::Add(m_Velocity, m_Gravity);
@@ -113,7 +139,7 @@ void PlayerClient::Update_test(float deltaTime)
         }
         else if (currentInput.Jump && isGrounded) {
             m_currentState = ServerPlayerState::Jumping;
-            m_Velocity.y = 300.0f; // 점프 초기 속도
+            m_Velocity.y = 150.0f; // 점프 초기 속도
         }
         else if (isGrounded && m_currentState == ServerPlayerState::Falling) { // 착지
             m_currentState = ServerPlayerState::Idle; // 착지하면 Idle
@@ -196,18 +222,57 @@ void PlayerClient::Update_test(float deltaTime)
 
     // 이동 및 충돌 처리
     //XMFLOAT3 deltaPos = Vector3::ScalarProduct(m_Velocity, deltaTime);
-    XMFLOAT3 deltaPos = Vector3::ScalarProduct(m_Velocity, 0.75f);
+    XMFLOAT3 deltaVel = Vector3::ScalarProduct(m_Velocity, 0.75f);
     /* 충돌 처리*/
     if (m_currentState == ServerPlayerState::Running)
     {
-        deltaPos.x *= 1.5f;
-        deltaPos.y *= 1.5f;
-        deltaPos.z *= 1.5f;
+        deltaVel.x *= 1.5f;
+        deltaVel.z *= 1.5f;
     }
-    XMFLOAT3 finalDeltaPos = deltaPos; // 충돌 처리 적용
-    // 위치 업데이트
-    m_Position = Vector3::Add(m_Position, finalDeltaPos);
 
+    // 이동 충돌처리 적용
+    // X축 이동 시도
+    XMFLOAT3 moving_pos = m_Position;
+    moving_pos.x += deltaVel.x;
+    BoundingOrientedBox testOBBX;
+    XMMATRIX matX = XMMatrixTranslation(moving_pos.x, moving_pos.y, moving_pos.z);
+    local_obb.Transform(testOBBX, matX);
+    testOBBX.Orientation.w = 1.f;
+
+    // octree 적용해서 범위 줄이기
+    for (auto& obj : GameObject::gameObjects)
+    {
+        if (obj->GetID() < 0) continue;
+        if (false == obj->is_alive) continue;
+
+        if (testOBBX.Intersects(obj->world_obb))
+        {
+            moving_pos.x = m_Position.x;
+            break;
+        }
+    }
+
+    // Z축 이동 시도
+    moving_pos.z += deltaVel.z;
+    BoundingOrientedBox testOBBZ;
+    XMMATRIX matZ = XMMatrixTranslation(moving_pos.x, moving_pos.y, moving_pos.z);
+    local_obb.Transform(testOBBZ, matZ);
+    testOBBZ.Orientation.w = 1.f;
+    for (auto& obj : GameObject::gameObjects)
+    {
+        if (obj->GetID() < 0) continue;
+        if (false == obj->is_alive) continue;
+
+        if (testOBBZ.Intersects(obj->world_obb))
+        {
+            moving_pos.z = m_Position.z;
+            break;
+        }
+    }
+
+    m_Position.y += deltaVel.y;
+
+    SetPosition(moving_pos);
     // 땅 짚기
     SnapToGround();
 }

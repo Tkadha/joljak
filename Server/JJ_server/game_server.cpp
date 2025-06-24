@@ -45,8 +45,6 @@ vector<shared_ptr<thread>> worker_threads;
 
 Timer g_timer;
 
-std::vector<shared_ptr<GameObject>> gameObjects;
-
 void ProcessClientLeave(shared_ptr<PlayerClient> remoteClient)
 {
 	// 에러 혹은 소켓 종료이다.
@@ -160,6 +158,39 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
+	case E_PACKET::E_O_SETOBB:
+	{
+		OBJ_OBB_PACKET* r_packet = reinterpret_cast<OBJ_OBB_PACKET*>(packet);
+		if (r_packet->oid < 0) { // 해당 클라의 플레이어 obb
+			if (OBB_Manager::obb_list.find(OBJECT_TYPE::OB_PLAYER) != OBB_Manager::obb_list.end()) {
+				client->local_obb = *OBB_Manager::obb_list[OBJECT_TYPE::OB_PLAYER];
+			}
+			else {
+				BoundingOrientedBox bb;
+				bb.Center = XMFLOAT3{ r_packet->Center.x, r_packet->Center.y, r_packet->Center.z };
+				bb.Extents = XMFLOAT3{ r_packet->Extents.x, r_packet->Extents.y, r_packet->Extents.z };
+				bb.Orientation = XMFLOAT4{ r_packet->Orientation.x, r_packet->Orientation.y, r_packet->Orientation.z, r_packet->Orientation.w };
+				OBB_Manager::AddOBB(OBJECT_TYPE::OB_PLAYER, bb);
+				client->local_obb = *OBB_Manager::obb_list[OBJECT_TYPE::OB_PLAYER];
+			}
+		}
+		else {
+			OBJECT_TYPE type = GameObject::gameObjects[r_packet->oid]->GetType();
+			if (OBB_Manager::obb_list.find(type) != OBB_Manager::obb_list.end()) break;
+			BoundingOrientedBox bb;
+			bb.Center = XMFLOAT3{ r_packet->Center.x, r_packet->Center.y, r_packet->Center.z };
+			bb.Extents = XMFLOAT3{ r_packet->Extents.x, r_packet->Extents.y, r_packet->Extents.z };
+			bb.Orientation = XMFLOAT4{ r_packet->Orientation.x, r_packet->Orientation.y, r_packet->Orientation.z, r_packet->Orientation.w };
+			OBB_Manager::AddOBB(type, bb);
+			for (auto& obj : GameObject::gameObjects) {
+				if (obj->GetType() == type) {
+					obj->local_obb = *OBB_Manager::obb_list[type];
+					obj->UpdateTransform();
+				}
+			}	
+		}
+	}
+	break;
 	case E_PACKET::E_P_POSITION:
 	{
 		POSITION_PACKET* r_packet = reinterpret_cast<POSITION_PACKET*>(packet);
@@ -176,7 +207,7 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 
 		client->BroadCastRotatePacket();
 	}
-		break;
+	break;
 	case E_PACKET::E_P_INPUT:
 	{
 		INPUT_PACKET* r_packet = reinterpret_cast<INPUT_PACKET*>(packet);
@@ -187,8 +218,8 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 	case E_PACKET::E_O_HIT:
 	{
 		OBJ_HIT_PACKET* r_packet = reinterpret_cast<OBJ_HIT_PACKET*>(packet);
-		if (gameObjects.size() < r_packet->oid) return; // 잘못된 id
-		auto& obj = gameObjects[r_packet->oid];
+		if (GameObject::gameObjects.size() < r_packet->oid) return; // 잘못된 id
+		auto& obj = GameObject::gameObjects[r_packet->oid];
 		obj->Decreasehp(r_packet->damage); // hp--
 		std::cout << "Recv hit packet - damage: " << r_packet->damage << " hp: " << obj->Gethp() << std::endl;
 		if (obj->GetType() == OBJECT_TYPE::OB_PIG || obj->GetType() == OBJECT_TYPE::OB_COW) {
@@ -214,13 +245,13 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 			cl.second->SendInvinciblePacket(r_packet->oid, true);
 		}		
 	}
-		break;
+	break;
 
 	case E_PACKET::E_O_SETHP:
 	{
 		OBJ_HP_PACKET* r_packet = reinterpret_cast<OBJ_HP_PACKET*>(packet);
-		if (gameObjects.size() < r_packet->oid) return; // 잘못된 id
-		auto& obj = gameObjects[r_packet->oid];
+		if (GameObject::gameObjects.size() < r_packet->oid) return; // 잘못된 id
+		auto& obj = GameObject::gameObjects[r_packet->oid];
 		obj->Sethp(r_packet->hp);
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME) continue;
@@ -333,9 +364,9 @@ void ProcessAccept()
 			tree_obj p_obj{ -1,remoteClient->GetPosition() };
 			Octree::GameObjectOctree.query(p_obj, oct_distance, results);
 			for (auto& obj : results) {
-				if (gameObjects[obj->u_id]->is_alive == false) continue;
-				if (gameObjects[obj->u_id]->Gethp() <= 0) continue;
-				remoteClient->SendAddPacket(gameObjects[obj->u_id]);
+				if (GameObject::gameObjects[obj->u_id]->is_alive == false) continue;
+				if (GameObject::gameObjects[obj->u_id]->Gethp() <= 0) continue;
+				remoteClient->SendAddPacket(GameObject::gameObjects[obj->u_id]);
 			}				
 		}
 		auto p_obj = std::make_unique<tree_obj>(remoteClient->m_id, remoteClient->GetPosition());
@@ -382,7 +413,7 @@ void BuildObject()
 		obj->SetID(obj_id++);
 		obj->SetType(OBJECT_TYPE::OB_TREE);
 		obj->SetAnimationType(ANIMATION_TYPE::UNKNOWN);
-		gameObjects.push_back(obj);
+		GameObject::gameObjects.push_back(obj);
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
@@ -398,7 +429,7 @@ void BuildObject()
 
 		obj->SetType(OBJECT_TYPE::OB_STONE);
 		obj->SetAnimationType(ANIMATION_TYPE::UNKNOWN);
-		gameObjects.push_back(obj);
+		GameObject::gameObjects.push_back(obj);
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
@@ -418,7 +449,7 @@ void BuildObject()
 		obj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 
-		gameObjects.push_back(obj);
+		GameObject::gameObjects.push_back(obj);
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
@@ -437,7 +468,7 @@ void BuildObject()
 		obj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 
-		gameObjects.push_back(obj);
+		GameObject::gameObjects.push_back(obj);
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
@@ -457,7 +488,7 @@ void BuildObject()
 		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
-		gameObjects.push_back(obj);
+		GameObject::gameObjects.push_back(obj);
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
@@ -476,7 +507,7 @@ void BuildObject()
 		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
-		gameObjects.push_back(obj);
+		GameObject::gameObjects.push_back(obj);
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
@@ -495,7 +526,7 @@ void BuildObject()
 		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
-		gameObjects.push_back(obj);
+		GameObject::gameObjects.push_back(obj);
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
@@ -536,7 +567,7 @@ int main(int argc, char* argv[])
 			float deltaTime = g_timer.GetTimeElapsed(); // Use Tick same deltaTime
 
 			// fsm몬스터 로직
-			for (auto& obj : gameObjects) {
+			for (auto& obj : GameObject::gameObjects) {
 				std::vector<tree_obj*> results;
 				tree_obj t_obj{ -1, obj->GetPosition() };
 				Octree::PlayerOctree.query(t_obj, oct_distance, results);
@@ -568,14 +599,14 @@ int main(int argc, char* argv[])
 
 				for (auto o_id : before_vl) {
 					if (0 == new_vl.count(o_id)) {	// before에만 있다면 제거 패킷
-						cl.second->SendRemovePacket(gameObjects[o_id]);
+						cl.second->SendRemovePacket(GameObject::gameObjects[o_id]);
 					}
 				}
 				for (auto o_id : new_vl) {
 					if (0 == before_vl.count(o_id)) { //new에만 있다면 추가 패킷
-						if (gameObjects[o_id]->is_alive == false) continue;
-						if (gameObjects[o_id]->Gethp() <= 0) continue;
-						cl.second->SendAddPacket(gameObjects[o_id]);
+						if (GameObject::gameObjects[o_id]->is_alive == false) continue;
+						if (GameObject::gameObjects[o_id]->Gethp() <= 0) continue;
+						cl.second->SendAddPacket(GameObject::gameObjects[o_id]);
 					}
 				}
 			}
