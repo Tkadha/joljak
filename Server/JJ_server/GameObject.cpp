@@ -1,8 +1,9 @@
 #include "stdafx.h"
 #include <iostream>
+#include "Player.h"
 #include "Terrain.h"
 #include "GameObject.h"
-
+#include "Octree.h"
 std::unordered_map<OBJECT_TYPE, std::shared_ptr<BoundingOrientedBox>> OBB_Manager::obb_list;
 std::vector<shared_ptr<GameObject>> GameObject::gameObjects;
 
@@ -33,19 +34,73 @@ void GameObject::MoveForward(float fDistance)
 	xmf3Position.y = fHeight;
 
 	// 충돌처리
-	//XMFLOAT3 test_move_x = GetPosition();
-	//test_move_x.x = xmf3Position.x;
-	//BoundingOrientedBox testOBBX;
-	//XMMATRIX matX = XMMatrixTranslation(test_move_x.x, test_move_x.y, test_move_x.z);
-	//local_obb.Transform(testOBBX, matX);
-	//testOBBX.Orientation.w = 1.f;
-	//// 객체 순환해서 충돌 체크
-	//bool bCollided = false;
-	//{
-	//
-	//}
-	//if (bCollided) xmf3Position.x = GetPosition().x;
+	XMFLOAT3 test_move = GetPosition();
+	test_move.x = xmf3Position.x;
+	BoundingOrientedBox testOBBX;
+	XMMATRIX matX = XMMatrixTranslation(test_move.x, test_move.y, test_move.z);
+	local_obb.Transform(testOBBX, matX);
+	testOBBX.Orientation.w = 1.f;
+	// 객체 순환해서 충돌 체크
+	std::vector<tree_obj*> presults;
+	std::vector<tree_obj*> oresults;
+	{
+		tree_obj n_obj{ GetID() ,test_move };
+		Octree::PlayerOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, presults);
+		Octree::GameObjectOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, oresults);
+		for (auto& p_obj : presults) {
+			for (auto& cl : PlayerClient::PlayerClients) {
+				if (cl.second->state != PC_INGAME)continue;
+				if (cl.second->m_id != p_obj->u_id) continue;
+				if (testOBBX.Intersects(cl.second->world_obb))
+				{
+					test_move.x = GetPosition().x;
+					break;
+				}
+			}
+		}
+		for (auto& o_obj : oresults) {
+			if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
+			if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
+			if (testOBBX.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
+			{
+				test_move.x = GetPosition().x;
+				break;
+			}
+		}
+	}
+	test_move.z = xmf3Position.z;
+	BoundingOrientedBox testOBBZ;
+	XMMATRIX matZ = XMMatrixTranslation(test_move.x, test_move.y, test_move.z);
+	local_obb.Transform(testOBBZ, matZ);
+	testOBBZ.Orientation.w = 1.f;
 
+	presults.clear();
+	oresults.clear();
+	{
+		tree_obj n_obj{ GetID() ,test_move };
+		Octree::PlayerOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, presults);
+		Octree::GameObjectOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, oresults);
+		for (auto& p_obj : presults) {
+			for (auto& cl : PlayerClient::PlayerClients) {
+				if (cl.second->state != PC_INGAME)continue;
+				if (cl.second->m_id != p_obj->u_id) continue;
+				if (testOBBX.Intersects(cl.second->world_obb))
+				{
+					test_move.z = GetPosition().z;
+					break;
+				}
+			}
+		}
+		for (auto& o_obj : oresults) {
+			if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
+			if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
+			if (testOBBX.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
+			{
+				test_move.z = GetPosition().z;
+				break;
+			}
+		}
+	}
 
 
 	GameObject::SetPosition(xmf3Position);

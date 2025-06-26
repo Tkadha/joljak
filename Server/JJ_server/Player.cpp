@@ -2,6 +2,7 @@
 #include "Player.h"
 #include "Terrain.h"
 #include "GameObject.h"
+#include "Octree.h"
 #include <iostream>
 
 #define DIR_FORWARD					0x01
@@ -45,8 +46,18 @@ void PlayerClient::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 
 void PlayerClient::UpdateTransform()
 {
+    XMVECTOR vRight = XMLoadFloat3(&m_Right);
+    XMVECTOR vUp = XMLoadFloat3(&m_Up);
+    XMVECTOR vLook = XMLoadFloat3(&m_Look);
+    XMVECTOR vPosition = XMLoadFloat3(&m_Position);
+    XMFLOAT4X4 xmf4x4 = Matrix4x4::Identity();
+    XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&xmf4x4._11), vRight);
+    XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&xmf4x4._21), vUp);
+    XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&xmf4x4._31), vLook);
+    XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&xmf4x4._41), vPosition);
 
     XMMATRIX worldMatrix = XMLoadFloat4x4(&xmf4x4);
+
 
 
     XMVECTOR localCenter = XMLoadFloat3(&local_obb.Center);
@@ -223,13 +234,14 @@ void PlayerClient::Update_test(float deltaTime)
     // 이동 및 충돌 처리
     //XMFLOAT3 deltaPos = Vector3::ScalarProduct(m_Velocity, deltaTime);
     XMFLOAT3 deltaVel = Vector3::ScalarProduct(m_Velocity, 0.75f);
-    /* 충돌 처리*/
+    // 런닝 판정
     if (m_currentState == ServerPlayerState::Running)
     {
         deltaVel.x *= 1.5f;
         deltaVel.z *= 1.5f;
     }
 
+    /* 충돌 처리*/
     // 이동 충돌처리 적용
     // X축 이동 시도
     XMFLOAT3 moving_pos = m_Position;
@@ -240,15 +252,31 @@ void PlayerClient::Update_test(float deltaTime)
     testOBBX.Orientation.w = 1.f;
 
     // octree 적용해서 범위 줄이기
-    for (auto& obj : GameObject::gameObjects)
+    std::vector<tree_obj*> presults;
+    std::vector<tree_obj*> oresults;
     {
-        if (obj->GetID() < 0) continue;
-        if (false == obj->is_alive) continue;
-
-        if (testOBBX.Intersects(obj->world_obb))
-        {
-            moving_pos.x = m_Position.x;
-            break;
+        tree_obj n_obj{ -1 ,moving_pos };
+        Octree::PlayerOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, presults);
+        Octree::GameObjectOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, oresults);
+        for (auto& p_obj : presults) {
+            for (auto& cl : PlayerClient::PlayerClients) {
+                if (cl.second->state != PC_INGAME)continue;
+                if (cl.second->m_id != p_obj->u_id) continue;
+                if (testOBBX.Intersects(cl.second->world_obb))
+                {
+                    moving_pos.x = m_Position.x;
+                    break;
+                }
+            }
+        }
+        for (auto& o_obj : oresults) {
+            if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
+            if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
+            if (testOBBX.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
+            {
+                moving_pos.x = m_Position.x;
+                break;
+            }
         }
     }
 
@@ -258,15 +286,32 @@ void PlayerClient::Update_test(float deltaTime)
     XMMATRIX matZ = XMMatrixTranslation(moving_pos.x, moving_pos.y, moving_pos.z);
     local_obb.Transform(testOBBZ, matZ);
     testOBBZ.Orientation.w = 1.f;
-    for (auto& obj : GameObject::gameObjects)
-    {
-        if (obj->GetID() < 0) continue;
-        if (false == obj->is_alive) continue;
 
-        if (testOBBZ.Intersects(obj->world_obb))
-        {
-            moving_pos.z = m_Position.z;
-            break;
+    presults.clear();
+    oresults.clear();
+    {
+        tree_obj n_obj{ -1 ,moving_pos };
+        Octree::PlayerOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, presults);
+        Octree::GameObjectOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, oresults);
+        for (auto& p_obj : presults) {
+            for (auto& cl : PlayerClient::PlayerClients) {
+                if (cl.second->state != PC_INGAME)continue;
+                if (cl.second->m_id != p_obj->u_id) continue;
+                if (testOBBZ.Intersects(cl.second->world_obb))
+                {
+                    moving_pos.z = m_Position.z;
+                    break;
+                }
+            }
+        }
+        for (auto& o_obj : oresults) {
+            if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
+            if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
+            if (testOBBZ.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
+            {
+                moving_pos.z = m_Position.z;
+                break;
+            }
         }
     }
 
