@@ -73,6 +73,11 @@ void CCamera::SetScissorRect(LONG xLeft, LONG yTop, LONG xRight, LONG yBottom)
 
 void CCamera::GenerateProjectionMatrix(float fNearPlaneDistance, float fFarPlaneDistance, float fAspectRatio, float fFOVAngle)
 {
+	m_fFovAngle = fFOVAngle;
+	m_fAspectRatio = fAspectRatio;
+	m_fNearPlaneDistance = fNearPlaneDistance;
+	m_fFarPlaneDistance = fFarPlaneDistance;
+
 	m_xmf4x4Projection = Matrix4x4::PerspectiveFovLH(XMConvertToRadians(fFOVAngle), fAspectRatio, fNearPlaneDistance, fFarPlaneDistance);
 //	XMMATRIX xmmtxProjection = XMMatrixPerspectiveFovLH(XMConvertToRadians(fFOVAngle), fAspectRatio, fNearPlaneDistance, fFarPlaneDistance);
 //	XMStoreFloat4x4(&m_xmf4x4Projection, xmmtxProjection);
@@ -457,4 +462,38 @@ void CThirdPersonCamera::Rotate(float pitchDelta, float yawDelta, float rollDelt
 	// if (m_pPlayer) {
 	//     LookAt(m_pPlayer->GetPosition()); // LookAt 함수는 카메라가 특정 지점을 바라보도록 m_xmf3Look 등을 설정
 	// }
+}
+
+
+void CCamera::GetFrustumCorners(XMFLOAT3* pCorners) const
+{
+	// 1. FOV를 이용해 Near/Far 평면의 높이와 너비를 계산합니다.
+	float halfFovY = XMConvertToRadians(m_fFovAngle * 0.5f);
+	float nearHeight = 2.0f * m_fNearPlaneDistance * tanf(halfFovY);
+	float nearWidth = nearHeight * m_fAspectRatio;
+	float farHeight = 2.0f * m_fFarPlaneDistance * tanf(halfFovY);
+	float farWidth = farHeight * m_fAspectRatio;
+
+	// 2. 카메라의 로컬 축(Right, Up, Look)과 위치를 XMVECTOR로 로드합니다.
+	XMVECTOR xmvPosition = XMLoadFloat3(&m_xmf3Position);
+	XMVECTOR xmvRight = XMLoadFloat3(&m_xmf3Right);
+	XMVECTOR xmvUp = XMLoadFloat3(&m_xmf3Up);
+	XMVECTOR xmvLook = XMLoadFloat3(&m_xmf3Look);
+
+	// 3. Near/Far 평면의 중심점을 계산합니다.
+	XMVECTOR nearPlaneCenter = xmvPosition + (xmvLook * m_fNearPlaneDistance);
+	XMVECTOR farPlaneCenter = xmvPosition + (xmvLook * m_fFarPlaneDistance);
+
+	// 4. 8개의 꼭짓점을 계산합니다.
+	// Near Plane (카메라와 가까운 면)
+	XMStoreFloat3(&pCorners[0], nearPlaneCenter - (xmvRight * (nearWidth * 0.5f)) - (xmvUp * (nearHeight * 0.5f))); // 왼쪽 아래
+	XMStoreFloat3(&pCorners[1], nearPlaneCenter - (xmvRight * (nearWidth * 0.5f)) + (xmvUp * (nearHeight * 0.5f))); // 왼쪽 위
+	XMStoreFloat3(&pCorners[2], nearPlaneCenter + (xmvRight * (nearWidth * 0.5f)) + (xmvUp * (nearHeight * 0.5f))); // 오른쪽 위
+	XMStoreFloat3(&pCorners[3], nearPlaneCenter + (xmvRight * (nearWidth * 0.5f)) - (xmvUp * (nearHeight * 0.5f))); // 오른쪽 아래
+
+	// Far Plane (카메라와 먼 면)
+	XMStoreFloat3(&pCorners[4], farPlaneCenter - (xmvRight * (farWidth * 0.5f)) - (xmvUp * (farHeight * 0.5f))); // 왼쪽 아래
+	XMStoreFloat3(&pCorners[5], farPlaneCenter - (xmvRight * (farWidth * 0.5f)) + (xmvUp * (farHeight * 0.5f))); // 왼쪽 위
+	XMStoreFloat3(&pCorners[6], farPlaneCenter + (xmvRight * (farWidth * 0.5f)) + (xmvUp * (farHeight * 0.5f))); // 오른쪽 위
+	XMStoreFloat3(&pCorners[7], farPlaneCenter + (xmvRight * (farWidth * 0.5f)) - (xmvUp * (farHeight * 0.5f))); // 오른쪽 아래
 }

@@ -1307,6 +1307,10 @@ void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity
 
 void CScene::UpdateShadowTransform(const XMFLOAT3& focusPoint)
 {
+	CCamera* m_pCamera = m_pPlayer->GetCamera();
+	if (m_pCamera) return;
+
+	// 1. 주된 방향광의 방향을 가져옵니다.
 	LIGHT* pMainLight = nullptr;
 	for (int i = 0; i < m_nLights; ++i) {
 		if (m_pLights[i].m_nType == DIRECTIONAL_LIGHT) {
@@ -1317,28 +1321,49 @@ void CScene::UpdateShadowTransform(const XMFLOAT3& focusPoint)
 	if (!pMainLight) return;
 
 	XMVECTOR lightDir = XMLoadFloat3(&pMainLight->m_xmf3Direction);
-	if (XMVector3Equal(lightDir, XMVectorZero())) return;
 	lightDir = XMVector3Normalize(lightDir);
 
-	XMVECTOR lightPos = XMLoadFloat3(&focusPoint) - 2000.0f * lightDir;
-	XMVECTOR targetPos = XMLoadFloat3(&focusPoint);
+	// 2. 플레이어 카메라의 절두체(Frustum) 꼭짓점 8개를 월드 공간에서 계산합니다.
+	XMFLOAT3 frustumCorners[8];
+	m_pCamera->GetFrustumCorners(frustumCorners);
+
+	// 3. 이 꼭짓점들을 감싸는 최소 경계구(Bounding Sphere)의 중심과 반지름을 찾습니다.
+	XMVECTOR frustumCenter = XMVectorZero();
+	for (int i = 0; i < 8; ++i)
+	{
+		frustumCenter += XMLoadFloat3(&frustumCorners[i]);
+	}
+	frustumCenter /= 8.0f;
+
+	float maxDistSq = 0.0f;
+	for (int i = 0; i < 8; ++i)
+	{
+		XMVECTOR dist = XMLoadFloat3(&frustumCorners[i]) - frustumCenter;
+		maxDistSq = XMVectorGetX(XMVectorMax(XMVector3LengthSq(dist), XMVectorSet(maxDistSq, maxDistSq, maxDistSq, maxDistSq)));
+	}
+	float sphereRadius = sqrtf(maxDistSq);
+
+	// 4. 빛의 위치와 목표 지점을 이 경계구를 기준으로 설정합니다.
+	XMVECTOR lightPos = frustumCenter - lightDir * sphereRadius;
+	XMVECTOR targetPos = frustumCenter;
 	XMVECTOR lightUp = (fabsf(XMVectorGetY(lightDir)) > 0.99f)
 		? XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)
 		: XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
 	XMMATRIX view = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
 
-	float sceneRadius = 1500.0f;
-	XMMATRIX proj = XMMatrixOrthographicLH(sceneRadius * 2.0f, sceneRadius * 2.0f, 0.0f, 5000.0f);
+	// 5. 빛의 투영 행렬을 경계구에 딱 맞게 설정합니다.
+	float viewWidth = sphereRadius * 2.0f;
+	float viewHeight = sphereRadius * 2.0f;
+	float viewNear = 0.0f;
+	float viewFar = sphereRadius * 2.0f;
+	XMMATRIX proj = XMMatrixOrthographicLH(viewWidth, viewHeight, viewNear, viewFar);
 
-	XMMATRIX T(
-		0.5f, 0.0f, 0.0f, 0.0f,
-		0.0f, -0.5f, 0.0f, 0.0f,
-		0.0f, 0.0f, 1.0f, 0.0f,
-		0.5f, 0.5f, 0.0f, 1.0f);
-
+	// 6. 최종 ShadowTransform 행렬을 계산합니다.
+	XMMATRIX T(0.5f, 0.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f);
 	XMMATRIX S = view * proj * T;
 
+	// 계산된 행렬들을 저장합니다.
 	XMStoreFloat4x4(&mLightView, view);
 	XMStoreFloat4x4(&mLightProj, proj);
 	XMStoreFloat4x4(&mShadowTransform, S);

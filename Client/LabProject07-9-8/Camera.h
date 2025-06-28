@@ -46,6 +46,11 @@ protected:
 
 	XMFLOAT4X4						m_xmf4x4View;
 	XMFLOAT4X4						m_xmf4x4Projection;
+	
+    float                           m_fFovAngle;
+    float                           m_fAspectRatio;
+    float                           m_fNearPlaneDistance;
+    float                           m_fFarPlaneDistance;
 
 	D3D12_VIEWPORT					m_d3dViewport;
 	D3D12_RECT						m_d3dScissorRect;
@@ -127,6 +132,7 @@ public:
 	void SetProjectionMatrix(const XMFLOAT4X4& xmf4x4Projection) { m_xmf4x4Projection = xmf4x4Projection; }
 
 	void UpdateShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4ShadowTransform);
+	void GetFrustumCorners(XMFLOAT3* pCorners) const;
 };
 
 class CSpaceShipCamera : public CCamera
