@@ -853,7 +853,8 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	assert(pShaderManager != nullptr && "ShaderManager is not available!");
 
 
-	UpdateShadowTransform(m_pPlayer->GetPosition()); // 빛의 위치/방향에 따라 ShadowTransform 행렬 계산
+	//UpdateShadowTransform(m_pPlayer->GetPosition()); // 빛의 위치/방향에 따라 ShadowTransform 행렬 계산
+	UpdateShadowTransform();
 	pCamera->UpdateShadowTransform(mShadowTransform); // 카메라에 ShadowTransform 전달하여 상수 버퍼 업데이트 준비
 
 	// =================================================================
@@ -1316,6 +1317,19 @@ void CScene::UpdateShadowTransform(const XMFLOAT3& focusPoint)
 	}
 	if (!pMainLight) return;
 
+
+	// 디버깅
+	wchar_t buffer[256];
+	swprintf_s(buffer, L"Focus Point (Player Pos): (%.2f, %.2f, %.2f)\n", focusPoint.x, focusPoint.y, focusPoint.z);
+	OutputDebugStringW(buffer);
+
+	swprintf_s(buffer, L"Light Direction: (%.2f, %.2f, %.2f)\n",
+		pMainLight->m_xmf3Direction.x,
+		pMainLight->m_xmf3Direction.y,
+		pMainLight->m_xmf3Direction.z);
+	OutputDebugStringW(buffer);
+	// 디버깅
+
 	XMVECTOR lightDir = XMLoadFloat3(&pMainLight->m_xmf3Direction);
 	if (XMVector3Equal(lightDir, XMVectorZero())) return;
 	lightDir = XMVector3Normalize(lightDir);
@@ -1339,6 +1353,53 @@ void CScene::UpdateShadowTransform(const XMFLOAT3& focusPoint)
 
 	XMMATRIX S = view * proj * T;
 
+	XMStoreFloat4x4(&mLightView, view);
+	XMStoreFloat4x4(&mLightProj, proj);
+	XMStoreFloat4x4(&mShadowTransform, S);
+}
+
+// 고정 광원
+void CScene::UpdateShadowTransform()
+{
+	// 주된 방향광을 찾습니다.
+	LIGHT* pMainLight = nullptr;
+	for (int i = 0; i < m_nLights; ++i) {
+		if (m_pLights[i].m_nType == DIRECTIONAL_LIGHT) {
+			pMainLight = &m_pLights[i];
+			break;
+		}
+	}
+	if (!pMainLight) return;
+
+	// 1. 빛의 방향을 고정합니다. (예: 하늘 오른쪽 위에서 왼쪽 아래로 비스듬히)
+	XMVECTOR lightDir = XMVectorSet(0.5f, -0.707f, 0.5f, 0.0f);
+	lightDir = XMVector3Normalize(lightDir);
+
+	// 2. 빛의 위치와 바라볼 목표 지점을 월드 공간에 고정합니다.
+	//    맵의 중심을 향해, 높은 곳에서 비추도록 설정
+	XMVECTOR targetPos = XMVectorSet(5000.0f, 0.0f, 5000.0f, 0.0f);
+	XMVECTOR lightPos = targetPos - (lightDir * 10000.0f); // 목표 지점에서 빛 방향 반대로 4000만큼 떨어진 위치
+	XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+	// 3. 고정된 값으로 View 행렬을 생성합니다.
+	XMMATRIX view = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
+
+	// 4. 맵 전체를 커버할 만큼 충분히 큰, 고정된 크기의 투영 행렬을 생성합니다.
+	//    이 값들은 맵의 실제 크기에 맞춰 조절해야 합니다.
+	float sceneSpan = 5000.0f; // 그림자를 그릴 영역의 가로, 세로 크기
+	float sceneNear = 1.0f;
+	float sceneFar = 9000.0f;
+	XMMATRIX proj = XMMatrixOrthographicLH(sceneSpan, sceneSpan, sceneNear, sceneFar);
+
+	// 5. 최종 ShadowTransform 행렬을 계산합니다.
+	XMMATRIX T(
+		0.5f, 0.0f, 0.0f, 0.0f,
+		0.0f, -0.5f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.5f, 0.5f, 0.0f, 1.0f);
+	XMMATRIX S = view * proj * T;
+
+	// 계산된 행렬들을 멤버 변수에 저장합니다.
 	XMStoreFloat4x4(&mLightView, view);
 	XMStoreFloat4x4(&mLightProj, proj);
 	XMStoreFloat4x4(&mShadowTransform, S);

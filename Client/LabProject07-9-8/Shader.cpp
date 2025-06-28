@@ -34,80 +34,53 @@ D3D12_SHADER_BYTECODE CShader::CreatePixelShader()
 	return(d3dShaderByteCode);
 }
 
-D3D12_SHADER_BYTECODE CShader::CompileShaderFromFile(WCHAR* pszFileName, LPCSTR pszShaderName, LPCSTR pszShaderProfile, ID3DBlob** ppd3dShaderBlob)
+D3D12_SHADER_BYTECODE CShader::CompileShaderFromFile(WCHAR* pszFileName, LPCSTR szEntryPoint, LPCSTR szShaderModel, ID3DBlob** ppd3dShaderBlob)
 {
-	UINT nCompileFlags = 0;
+	D3D12_SHADER_BYTECODE d3dShaderByteCode = { }; // 0으로 초기화
+	DWORD nShaderFlags = 0;
 #if defined(_DEBUG)
-	nCompileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+	nShaderFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
 
-	ID3DBlob* pd3dErrorBlob = NULL;
-	HRESULT hResult = ::D3DCompileFromFile(
-		pszFileName,            // 셰이더 파일 경로
-		NULL,                   // 매크로 정의 없음
-		D3D_COMPILE_STANDARD_FILE_INCLUDE, // 표준 Include 처리 사용
-		pszShaderName,          // 진입점 함수 이름 ("VSStandard")
-		pszShaderProfile,       // 셰이더 프로파일 ("vs_5_1")
-		nCompileFlags,          // 컴파일 플래그
-		0,                      // Effect 플래그 (사용 안 함)
-		ppd3dShaderBlob,        // 컴파일된 코드 출력 포인터 주소 (&m_pd3dVertexShaderBlob)
-		&pd3dErrorBlob          // 오류 메시지 출력 포인터 주소
-	);
+	ID3DBlob* pd3dErrorBlob = nullptr;
+	HRESULT hResult = D3DCompileFromFile(pszFileName, NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, szEntryPoint, szShaderModel, nShaderFlags, 0, ppd3dShaderBlob, &pd3dErrorBlob);
 
-	// --- 중요: HRESULT 확인 및 오류 메시지 출력 ---
+	// --- 컴파일 실패 시 오류를 상세히 출력하는 가장 중요한 부분 ---
 	if (FAILED(hResult))
 	{
-		OutputDebugStringA("Shader Compile Failed: ");
-		OutputDebugStringW(pszFileName); // 파일 이름
-		OutputDebugStringA(" Entry: ");
-		OutputDebugStringA(pszShaderName); // 진입점 이름
-		OutputDebugStringA(" Profile: ");
-		OutputDebugStringA(pszShaderProfile); // 프로파일 이름
-		OutputDebugStringA("\n");
+		// 실패 시 ppd3dShaderBlob은 유효하지 않으므로, 확실하게 nullptr로 만듭니다.
+		if (*ppd3dShaderBlob) {
+			(*ppd3dShaderBlob)->Release();
+			*ppd3dShaderBlob = nullptr;
+		}
 
+		// 오류 메시지가 있다면 출력 창에 모두 표시합니다.
 		if (pd3dErrorBlob)
 		{
-			OutputDebugStringA("Compile Error:\n");
-			// 오류 메시지를 디버그 출력 창에 표시
-			OutputDebugStringA((char*)pd3dErrorBlob->GetBufferPointer());
-			pd3dErrorBlob->Release(); // 오류 블롭 해제
-		}
-		else
-		{
-			OutputDebugStringA("Compile Error: Unknown error (No error blob).\n");
-		}
+			OutputDebugStringA("\n--- SHADER COMPILE ERROR ---\n");
+			OutputDebugStringA("File: ");
+			OutputDebugStringW(pszFileName); // 파일 이름
+			OutputDebugStringA("\nEntry Point: ");
+			OutputDebugStringA(szEntryPoint); // 함수 이름
+			OutputDebugStringA("\nError: ");
+			OutputDebugStringA((char*)pd3dErrorBlob->GetBufferPointer()); // 상세 오류 내용
+			OutputDebugStringA("\n--------------------------\n\n");
 
-		// 실패 시 *ppd3dShaderBlob은 유효하지 않으므로 NULL로 설정 (안전 조치)
-		if (ppd3dShaderBlob && *ppd3dShaderBlob) {
-			(*ppd3dShaderBlob)->Release();
-			*ppd3dShaderBlob = NULL;
+			pd3dErrorBlob->Release();
 		}
 
-		// 빈 바이트코드 반환
-		D3D12_SHADER_BYTECODE emptyByteCode = { nullptr, 0 };
-		return emptyByteCode;
-}
+		// 실패했으므로 비어있는 바이트코드를 반환합니다.
+		return d3dShaderByteCode;
+	}
 
-	// 성공 시 오류 블롭 해제 (오류는 없지만 경고 등이 있을 수 있음)
+	// 성공 시, 정상적으로 바이트코드 정보를 채웁니다.
+	d3dShaderByteCode.BytecodeLength = (*ppd3dShaderBlob)->GetBufferSize();
+	d3dShaderByteCode.pShaderBytecode = (*ppd3dShaderBlob)->GetBufferPointer();
+
 	if (pd3dErrorBlob) pd3dErrorBlob->Release();
-
-	// --- 성공 시에만 바이트코드 정보 설정 ---
-	D3D12_SHADER_BYTECODE d3dShaderByteCode;
-	// *ppd3dShaderBlob이 유효한지 한번 더 확인 (방어적 코드)
-	if (ppd3dShaderBlob && *ppd3dShaderBlob) {
-		d3dShaderByteCode.BytecodeLength = (*ppd3dShaderBlob)->GetBufferSize();
-		d3dShaderByteCode.pShaderBytecode = (*ppd3dShaderBlob)->GetBufferPointer();
-	}
-	else {
-		// 이론적으로 여기까지 오면 안되지만, 예외 상황 처리
-		OutputDebugStringA("Error: Shader blob is null even after successful compile?\n");
-		d3dShaderByteCode.BytecodeLength = 0;
-		d3dShaderByteCode.pShaderBytecode = nullptr;
-	}
 
 	return d3dShaderByteCode;
 }
-
 #define _WITH_WFOPEN
 //#define _WITH_STD_STREAM
 

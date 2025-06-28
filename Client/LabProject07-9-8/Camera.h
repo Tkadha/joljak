@@ -11,6 +11,10 @@ struct VS_CB_CAMERA_INFO
 {
 	XMFLOAT4X4						m_xmf4x4View;
 	XMFLOAT4X4						m_xmf4x4Projection;
+
+	// 그림자 변환 행렬
+	XMFLOAT4X4  m_xmf4x4ShadowTransform;
+
 	XMFLOAT3						m_xmf3Position;
 	float		m_fCameraPadding;
 
@@ -20,8 +24,6 @@ struct VS_CB_CAMERA_INFO
 	float FogRange;                // �Ȱ� ����
 	float		m_fFogPadding[2];
 
-	// 그림자 변환 행렬
-	XMFLOAT4X4  m_xmf4x4ShadowTransform;
 };
 
 class CPlayer;

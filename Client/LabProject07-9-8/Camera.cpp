@@ -180,7 +180,7 @@ void CCamera::UpdateShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4ShadowTrans
 	if (m_pcbMappedCamera)
 	{
 		// VS_CB_CAMERA_INFO 구조체에 있는 m_xmf4x4ShadowTransform 멤버에 값을 복사합니다.
-		m_pcbMappedCamera->m_xmf4x4ShadowTransform = xmf4x4ShadowTransform;
+		XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4ShadowTransform, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4ShadowTransform)));
 	}
 }
 

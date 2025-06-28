@@ -41,8 +41,8 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 {
     VS_TERRAIN_OUTPUT output;
 
-   // 1. 모델 로컬 좌표를 월드 공간으로 변환
-    float4 worldPos_H = mul(float4(input.position, 1.0f), gmtxGameObject);
+   // 1. input.position이 이미 월드 좌표
+    float4 worldPos_H = float4(input.position, 1.0f);
     output.positionW = worldPos_H.xyz; // 픽셀 셰이더로 전달할 월드 위치
 
     // 2. 월드 공간 위치를 뷰 및 투영 변환하여 클립 공간 위치 계산
@@ -51,12 +51,11 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
     
     // 3. 그림자 공간으로 변환
     output.ShadowPosH = mul(worldPos_H, gmtxShadowTransform);
-    //output.ShadowPosH = worldPos_H; // 월드 좌표를 그대로 전달
-
-    output.color = input.color; // 정점 색상 전달
-    output.uv0 = input.uv0; // UV 좌표 전달
+    
+    output.color = input.color;
+    output.uv0 = input.uv0;
     output.uv1 = input.uv1;
-
+    
     return output;
 }
 
@@ -83,6 +82,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     //// x, y, z 좌표를 각각 R, G, B 색상에 매핑하여 출력합니다.
     //return float4(worldPosColor.r, worldPosColor.g, worldPosColor.b, 1.0f);
     
+    //return float4(input.uv0.x, input.uv0.y, input.uv1.x, 1.0f);
     //------------디버깅------------
     
     
@@ -95,31 +95,25 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     //float4 cColor = input.color * lerp(cBaseTexColor, cDetailTexColor, 0.5); // 예: 정점 색상과 블렌딩
     
     float4 cTextureColor = lerp(cBaseTexColor, cDetailTexColor, 0.5);
-    
-    
+
      // 1. 그림자 계수 계산
     float shadowFactor = CalcShadowFactor(input.ShadowPosH);
+    
+// 최종 조명 계산 (input.color는 미리 계산된 빛, 여기에 그림자를 적용)
+    float3 totalLight = float3(0.3f, 0.3f, 0.3f) + (shadowFactor * input.color.rgb);
 
-    // 2. 최종 조명 계산 (지형의 정점 색상(input.color)을 기본 조명값으로 사용)
-    //    약간의 주변광(Ambient)을 더해주어 그림자가 완전히 새까맣게 되는 것을 방지합니다.
-    float3 totalLight = float3(0.3f, 0.3f, 0.3f) + shadowFactor * input.color.rgb;
-
-    // 3. 최종 색상 결정: 텍스처 색상에 최종 조명 색상을 곱합니다.
-    float4 cColor;
-    cColor.rgb = cTextureColor.rgb * totalLight;
-    cColor.a = cTextureColor.a;
+    // 최종 색상 결정
+    float3 finalColor = cTextureColor.rgb * totalLight;
     
     //안개
-    float distToEye = distance(input.positionW, gvCameraPosition.xyz);        
-    float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);    
-    float normalizedDistance = saturate(distToEye / (gFogStart + gFogRange));
-    //return float4(normalizedDistance, normalizedDistance, normalizedDistance, 1.0f); // [수정된 디버깅 출력]
+    //float distToEye = distance(input.positionW, gvCameraPosition.xyz);        
+    //float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);    
+    //float normalizedDistance = saturate(distToEye / (gFogStart + gFogRange));
+    
+    float distToEye = distance(input.positionW, gvCameraPosition.xyz);
+    float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);
+    finalColor = lerp(gFogColor.rgb, finalColor, fogFactor);
 
     
-    // --- fogFactor 값 디버깅 ---
-    //return float4(fogFactor, fogFactor, fogFactor, 1.0f); 
-    
-    cColor.rgb = lerp(cColor.rgb, gFogColor.rgb, normalizedDistance);
-    
-    return cColor;
+    return float4(finalColor, cTextureColor.a);
 }
