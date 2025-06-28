@@ -192,6 +192,7 @@ public:
 	POINT mLastMousePos;
 
 	void UpdateShadowTransform(const XMFLOAT3& focusPoint);
+	void UpdateShadowTransform();
 
 	D3D12_GPU_DESCRIPTOR_HANDLE GetShadowMapSrv() { return m_pShadowMap->Srv(); }
 };
