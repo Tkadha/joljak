@@ -1636,9 +1636,12 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 void CHeightMapTerrain::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// 지형의 월드 행렬을 루트 상수로 바인딩합니다.
+	// 월드 행렬을 단위 행렬로 만듭니다.
+	XMMATRIX mtxIdentity = XMMatrixIdentity();
+
 	cbGameObjectInfo gameObjectInfo;
-	XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+	XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(mtxIdentity));
+
 	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo.gmtxGameObject, 0); // 월드 행렬만 전달
 
 	// 메시 전체를 그립니다.

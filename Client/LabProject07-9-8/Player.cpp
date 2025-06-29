@@ -712,10 +712,11 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pStateMachine = new PlayerStateMachine(this, m_pSkinnedAnimationController);
 
 	CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)pContext;
-	SetPosition(XMFLOAT3(1500.0f, pTerrain->GetHeight(1500.0f, 1500.0f), 1500.0f));
+	XMFLOAT2 pos{ 1500.0f,1500.0f };
+	SetPosition(XMFLOAT3(pos.x, pTerrain->GetHeight(pos.x, pos.y), pos.y));
 	SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
 
-	m_pCamera->Move(XMFLOAT3(1500.0f, pTerrain->GetHeight(1500.0f, 1500.0f) + 20.0f, 1500.0f));
+	m_pCamera->Move(XMFLOAT3(pos.x, pTerrain->GetHeight(pos.x, pos.y) + 20.0f, pos.y));
 	if (pPlayerModelInfo) delete pPlayerModelInfo;
 }
 
@@ -823,7 +824,7 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 			m_pCamera = OnChangeCamera(THIRD_PERSON_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.25f);
 			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, -30.0f));		// 카占쌨띰옙 占쏙옙치 占쏙옙占쏙옙
-			m_pCamera->GenerateProjectionMatrix(1.01f, 20000.0f, ASPECT_RATIO, 60.0f);
+			m_pCamera->GenerateProjectionMatrix(1.01f, 5000.0f, ASPECT_RATIO, 60.0f);
 			m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
 			break;

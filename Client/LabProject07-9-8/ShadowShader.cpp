@@ -50,3 +50,29 @@ D3D12_SHADER_BYTECODE CShadowShader::CreatePixelShader()
     // 픽셀 셰이더는 아무 작업도 하지 않으므로 NULL을 반환합니다.
     return(CShader::CompileShaderFromFile(L"Shadow.hlsl", "PS", "ps_5_1", &m_pd3dVertexShaderBlob));
 }
+
+D3D12_RASTERIZER_DESC CShadowShader::CreateRasterizerState()
+{
+    D3D12_RASTERIZER_DESC d3dRasterizerDesc;
+    ::ZeroMemory(&d3dRasterizerDesc, sizeof(D3D12_RASTERIZER_DESC));
+    d3dRasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
+    d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
+
+    // DepthBias: 고정된 값만큼 깊이를 추가
+    d3dRasterizerDesc.DepthBias = 5000; 
+
+    // SlopeScaledDepthBias: 표면의 기울기에 따라 바이어스를 다르게 적용
+    d3dRasterizerDesc.SlopeScaledDepthBias = 1.5f; // 값을 조금씩 늘려보세요. (예: 1.0f -> 1.5f 또는 2.0f)
+
+    d3dRasterizerDesc.DepthBiasClamp = 0.0f;
+    d3dRasterizerDesc.DepthClipEnable = TRUE;
+
+    d3dRasterizerDesc.FrontCounterClockwise = FALSE;
+    d3dRasterizerDesc.MultisampleEnable = FALSE;
+    d3dRasterizerDesc.AntialiasedLineEnable = FALSE;
+    d3dRasterizerDesc.ForcedSampleCount = 0;
+    d3dRasterizerDesc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+
+
+    return d3dRasterizerDesc;
+}

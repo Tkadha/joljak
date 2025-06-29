@@ -71,7 +71,8 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f); 
 	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.75f, 0.7f, 1.0f); 
 	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f); 
-	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.5f, -0.707f, 0.5f); 
+	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.5f, -0.707f, 0.5f);
+	m_pLights[2].m_xmf3Position = XMFLOAT3(0.0f, 3000.0f, 0.0f);
 
 
 	m_pLights[1].m_bEnable = false;
@@ -1386,7 +1387,61 @@ void CScene::UpdateShadowTransform(const XMFLOAT3& focusPoint)
 // 고정 광원
 void CScene::UpdateShadowTransform()
 {
-	// 주된 방향광을 찾습니다.
+	//CCamera* m_pCamera = m_pPlayer->GetCamera();
+	//if (!m_pCamera) return;
+
+	//// 1. 주된 방향광의 방향을 가져옵니다.
+	//LIGHT* pMainLight = nullptr;
+	//for (int i = 0; i < m_nLights; ++i) {
+	//	if (m_pLights[i].m_nType == DIRECTIONAL_LIGHT) {
+	//		pMainLight = &m_pLights[i];
+	//		break;
+	//	}
+	//}
+	//if (!pMainLight) return;
+
+	//XMVECTOR lightDir = XMLoadFloat3(&pMainLight->m_xmf3Direction);
+	//lightDir = XMVector3Normalize(lightDir);
+
+	//// 2. 플레이어 카메라의 절두체 중심과 반지름을 계산합니다.
+	//XMFLOAT3 frustumCorners[8];
+	//m_pCamera->GetFrustumCorners(frustumCorners);
+
+	//XMVECTOR frustumCenter = XMVectorZero();
+	//for (int i = 0; i < 8; ++i) {
+	//	frustumCenter += XMLoadFloat3(&frustumCorners[i]);
+	//}
+	//frustumCenter /= 8.0f;
+
+	//float maxDistSq = 0.0f;
+	//for (int i = 0; i < 8; ++i) {
+	//	XMVECTOR dist = XMLoadFloat3(&frustumCorners[i]) - frustumCenter;
+	//	maxDistSq = XMVectorGetX(XMVectorMax(XMVector3LengthSq(dist), XMVectorSet(maxDistSq, maxDistSq, maxDistSq, maxDistSq)));
+	//}
+	//float sphereRadius = sqrtf(maxDistSq);
+
+	//// --- 3. 안정적인 Up 벡터 계산 (가장 중요한 수정) ---
+	//// 먼저 월드의 Up 벡터를 기준으로, 빛의 방향과 수직인 '오른쪽 벡터'를 구합니다.
+	//XMVECTOR worldUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	//XMVECTOR lightRight = XMVector3Cross(worldUp, lightDir);
+	//lightRight = XMVector3Normalize(lightRight);
+
+	//// 그 다음, 빛의 방향과 방금 구한 '오른쪽 벡터'를 외적하여,
+	//// 빛의 방향과 항상 90도를 유지하는 완벽한 'Up 벡터'를 구합니다.
+	//XMVECTOR lightUp = XMVector3Cross(lightDir, lightRight);
+
+	//// --- 4. 빛의 View 행렬 생성 ---
+	//// 빛의 위치는 플레이어가 보는 영역의 중심에서, 빛의 방향 반대쪽으로 떨어진 곳입니다.
+	//XMVECTOR lightPos = frustumCenter - lightDir * sphereRadius;
+	//XMMATRIX view = XMMatrixLookAtLH(lightPos, frustumCenter, lightUp);
+
+	//// 5. 빛의 Projection 행렬 생성 (이전과 동일)
+	//float viewWidth = sphereRadius * 2.0f;
+	//float viewHeight = sphereRadius * 2.0f;
+	//float viewNear = 0.0f;
+	//float viewFar = sphereRadius * 2.0f;
+	//XMMATRIX proj = XMMatrixOrthographicLH(viewWidth, viewHeight, viewNear, viewFar);
+
 	LIGHT* pMainLight = nullptr;
 	for (int i = 0; i < m_nLights; ++i) {
 		if (m_pLights[i].m_nType == DIRECTIONAL_LIGHT) {
@@ -1396,35 +1451,23 @@ void CScene::UpdateShadowTransform()
 	}
 	if (!pMainLight) return;
 
-	// 1. 빛의 방향을 고정합니다. (예: 하늘 오른쪽 위에서 왼쪽 아래로 비스듬히)
 	XMVECTOR lightDir = XMVectorSet(0.5f, -0.707f, 0.5f, 0.0f);
 	lightDir = XMVector3Normalize(lightDir);
 
-	// 2. 빛의 위치와 바라볼 목표 지점을 월드 공간에 고정합니다.
-	//    맵의 중심을 향해, 높은 곳에서 비추도록 설정
 	XMVECTOR targetPos = XMVectorSet(5000.0f, 0.0f, 5000.0f, 0.0f);
-	XMVECTOR lightPos = targetPos - (lightDir * 10000.0f); // 목표 지점에서 빛 방향 반대로 4000만큼 떨어진 위치
+	XMVECTOR lightPos = targetPos - (lightDir * 10000.0f);
 	XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
-	// 3. 고정된 값으로 View 행렬을 생성합니다.
 	XMMATRIX view = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
 
-	// 4. 맵 전체를 커버할 만큼 충분히 큰, 고정된 크기의 투영 행렬을 생성합니다.
-	//    이 값들은 맵의 실제 크기에 맞춰 조절해야 합니다.
-	float sceneSpan = 5000.0f; // 그림자를 그릴 영역의 가로, 세로 크기
+	float sceneSpan = 5000.0f; 
 	float sceneNear = 1.0f;
 	float sceneFar = 9000.0f;
 	XMMATRIX proj = XMMatrixOrthographicLH(sceneSpan, sceneSpan, sceneNear, sceneFar);
 
-	// 5. 최종 ShadowTransform 행렬을 계산합니다.
-	XMMATRIX T(
-		0.5f, 0.0f, 0.0f, 0.0f,
-		0.0f, -0.5f, 0.0f, 0.0f,
-		0.0f, 0.0f, 1.0f, 0.0f,
-		0.5f, 0.5f, 0.0f, 1.0f);
+	XMMATRIX T(0.5f, 0.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f);
 	XMMATRIX S = view * proj * T;
 
-	// 계산된 행렬들을 멤버 변수에 저장합니다.
 	XMStoreFloat4x4(&mLightView, view);
 	XMStoreFloat4x4(&mLightProj, proj);
 	XMStoreFloat4x4(&mShadowTransform, S);

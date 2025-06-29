@@ -195,4 +195,6 @@ public:
 	void UpdateShadowTransform();
 
 	D3D12_GPU_DESCRIPTOR_HANDLE GetShadowMapSrv() { return m_pShadowMap->Srv(); }
+
+	CGameObject* m_pDebugLightFrustumBox = nullptr;
 };

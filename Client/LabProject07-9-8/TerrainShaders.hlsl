@@ -62,11 +62,34 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 
 float CalcShadowFactor(float4 shadowPosH)
 {
+   // Complete projection by doing division by w.
     shadowPosH.xyz /= shadowPosH.w;
-    shadowPosH.x = +0.5f * shadowPosH.x + 0.5f;
-    shadowPosH.y = -0.5f * shadowPosH.y + 0.5f;
-    float shadowFactor = gShadowMap.SampleCmpLevelZero(gsamShadow, shadowPosH.xy, shadowPosH.z);
-    return shadowFactor;
+
+    // Depth in NDC space.
+    float depth = shadowPosH.z;
+
+    uint width, height, numMips;
+    gShadowMap.GetDimensions(0, width, height, numMips);
+
+    // Texel size.
+    float dx = 1.0f / (float) width;
+
+    float percentLit = 0.0f;
+    const float2 offsets[9] =
+    {
+        float2(-dx, -dx), float2(0.0f, -dx), float2(dx, -dx),
+        float2(-dx, 0.0f), float2(0.0f, 0.0f), float2(dx, 0.0f),
+        float2(-dx, +dx), float2(0.0f, +dx), float2(dx, +dx)
+    };
+
+    [unroll]
+    for (int i = 0; i < 9; ++i)
+    {
+        percentLit += gShadowMap.SampleCmpLevelZero(gsamShadow,
+            shadowPosH.xy + offsets[i], depth).r;
+    }
+    
+    return percentLit / 9.0f;
 }
 
 // --- Pixel Shader ---
@@ -85,6 +108,25 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     //return float4(input.uv0.x, input.uv0.y, input.uv1.x, 1.0f);
     //------------디버깅------------
     
+    // --- 최종 디버깅: 깊이 값 비교 시각화 ---
+
+    // 1. 비교에 사용할 두 개의 깊이 값을 계산합니다.
+    //float4 shadowPosH = input.ShadowPosH;
+    //shadowPosH.xyz /= shadowPosH.w;
+    //float2 shadowUV = float2(0.5f * shadowPosH.x + 0.5f, -0.5f * shadowPosH.y + 0.5f);
+
+    //// [A] 현재 픽셀의 깊이 값 (빛의 시점)
+    //float myDepth = shadowPosH.z;
+
+    //// [B] 그림자 맵에 저장된, 가장 가까운 물체의 깊이 값
+    //float shadowMapDepth = gShadowMap.SampleLevel(gssWrap, shadowUV, 0).r;
+
+    //// 2. 이 두 값을 직접 화면에 색상으로 출력하여 비교합니다.
+    //// R 채널: [A] 현재 픽셀의 깊이
+    //// G 채널: [B] 그림자 맵에 저장된 깊이
+    //// B 채널: 두 값의 차이 (차이가 클수록 파란색이 강해짐)
+    //return float4(myDepth, shadowMapDepth, abs(myDepth - shadowMapDepth) * 10.0, 1.0);
+
     
     // 텍스처 샘플링
     float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
