@@ -3,6 +3,7 @@
 #include "Terrain.h"
 #include "GameObject.h"
 #include "Octree.h"
+#include "Event.h"
 #include <iostream>
 
 #define DIR_FORWARD					0x01
@@ -240,6 +241,13 @@ void PlayerClient::Update_test(float deltaTime)
         deltaVel.x *= 1.5f;
         deltaVel.z *= 1.5f;
     }
+    // 슬로우 효과 확인
+    if (b_slow)
+    {
+        deltaVel.x /= 1.5f;
+        deltaVel.z /= 1.5f;
+    }
+
 
     /* 충돌 처리*/
     // 이동 충돌처리 적용
@@ -356,6 +364,22 @@ void PlayerClient::SnapToGround()
     if (m_currentState != ServerPlayerState::Jumping) {
         xmf3PlayerPosition.y = fHeight;
         SetPosition(xmf3PlayerPosition);
+    }
+}
+
+void PlayerClient::SetEffect(OBJECT_TYPE obj_type)
+{
+    switch (obj_type)
+    {
+    case OBJECT_TYPE::OB_TOAD:
+    {
+        SetSlow(true);
+        EVENT ev{ EVENT_TYPE::E_P_SLOW_END, m_id, -1 };
+        EVENT::add_timer(ev, 5000); // 5초 후에 슬로우 효과 제거
+    }
+        break;
+    default:
+        break;
     }
 }
 

@@ -27,6 +27,9 @@
     <Filter Include="Terrain">
       <UniqueIdentifier>{a3049cb0-73fc-4568-b50f-cba8018a4b19}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Event">
+      <UniqueIdentifier>{93554441-4fa6-4e11-a6b7-55a839fb745c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="game_server.cpp">
@@ -64,6 +67,9 @@
     </ClCompile>
     <ClCompile Include="Terrain.cpp">
       <Filter>Terrain</Filter>
+    </ClCompile>
+    <ClCompile Include="Event.cpp">
+      <Filter>Event</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -105,6 +111,9 @@
     </ClInclude>
     <ClInclude Include="..\Global.h">
       <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Event.h">
+      <Filter>Event</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

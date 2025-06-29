@@ -4,6 +4,7 @@
 #include "../Global.h"
 #include <unordered_set>
 #include "Terrain.h"
+#include <iostream>
 // client Á¤º¸
 
 
@@ -45,6 +46,7 @@ private:
 	float m_walkSpeed = 50.0f;
 	float m_runSpeed = 100.0f;
 
+	bool b_slow = false;
 public:
 	PlayerClient() : RemoteClient()
 	{
@@ -114,6 +116,11 @@ public:
 	void Update_test(float deltaTime);
 	bool CheckIfGrounded();
 	void SnapToGround();
+
+	void SetEffect(OBJECT_TYPE obj_type);
+	void SetSlow(bool b) { 
+		std::cout <<"SetSlow: " << b << std::endl;
+		b_slow = b; }
 
 	void processInput(PlayerInput input);
 

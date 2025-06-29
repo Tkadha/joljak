@@ -169,12 +169,22 @@ void CGameObject::Check_attack()
 				}
 
 				auto& nwManager = NetworkManager::GetInstance();
+				{
 				auto pos = p_info->GetPosition();
-				POSITION_PACKET p;
-				p.position.x = pos.x;
-				p.position.y = pos.y;
-				p.position.z = pos.z;
-				nwManager.PushSendQueue(p, p.size);
+					POSITION_PACKET p;
+					p.position.x = pos.x;
+					p.position.y = pos.y;
+					p.position.z = pos.z;
+					nwManager.PushSendQueue(p, p.size);
+				}
+				{
+					SET_HP_HIT_OBJ_PACKET p;
+					p.hit_obj_id = obj->m_id;
+					p.hp = p_info->getHp();
+					p.size = sizeof(SET_HP_HIT_OBJ_PACKET);
+					p.type = static_cast<char>(E_PACKET::E_P_SETHP);
+					nwManager.PushSendQueue(p, p.size);
+				}
 			}
 		}
 	}

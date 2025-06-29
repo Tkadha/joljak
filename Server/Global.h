@@ -12,6 +12,7 @@ enum class E_PACKET
 	E_P_POSITION = 6,
 	E_P_LOGIN = 7,
 	E_P_LOGOUT = 8,
+
 	E_O_ADD = 9,
 	E_O_REMOVE = 10,
 	E_O_CHANGEANIMATION = 11,
@@ -20,6 +21,8 @@ enum class E_PACKET
 	E_O_INVINCIBLE = 14, 
 	E_O_SETHP = 15, 
 	E_O_SETOBB = 16,
+
+	E_P_SETHP = 17,
 
 
 	E_DB_REGISTER = 100,
@@ -176,6 +179,20 @@ public:
 		type = static_cast<char>(E_PACKET::E_P_POSITION);
 	}
 };
+
+class SET_HP_HIT_OBJ_PACKET : public PACKET
+{
+public:
+	int hit_obj_id;
+	int hp;
+	SET_HP_HIT_OBJ_PACKET() {
+		hit_obj_id = -1;
+		hp = 0;
+		size = sizeof(SET_HP_HIT_OBJ_PACKET);
+		type = static_cast<char>(E_PACKET::E_P_SETHP);
+	}
+};
+
 
 class ADD_PACKET : public PACKET 
 {
