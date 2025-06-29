@@ -855,7 +855,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 
 	//UpdateShadowTransform(m_pPlayer->GetPosition()); // 빛의 위치/방향에 따라 ShadowTransform 행렬 계산
-	UpdateShadowTransform();
+	UpdateShadowTransform(m_pPlayer->GetPosition());
 	pCamera->UpdateShadowTransform(mShadowTransform); // 카메라에 ShadowTransform 전달하여 상수 버퍼 업데이트 준비
 
 	// =================================================================
@@ -1309,10 +1309,6 @@ void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity
 
 void CScene::UpdateShadowTransform(const XMFLOAT3& focusPoint)
 {
-	CCamera* m_pCamera = m_pPlayer->GetCamera();
-	if (m_pCamera) return;
-
-	// 1. 주된 방향광의 방향을 가져옵니다.
 	LIGHT* pMainLight = nullptr;
 	for (int i = 0; i < m_nLights; ++i) {
 		if (m_pLights[i].m_nType == DIRECTIONAL_LIGHT) {
@@ -1322,125 +1318,42 @@ void CScene::UpdateShadowTransform(const XMFLOAT3& focusPoint)
 	}
 	if (!pMainLight) return;
 
-
-	// 디버깅
-	wchar_t buffer[256];
-	swprintf_s(buffer, L"Focus Point (Player Pos): (%.2f, %.2f, %.2f)\n", focusPoint.x, focusPoint.y, focusPoint.z);
-	OutputDebugStringW(buffer);
-
-	swprintf_s(buffer, L"Light Direction: (%.2f, %.2f, %.2f)\n",
-		pMainLight->m_xmf3Direction.x,
-		pMainLight->m_xmf3Direction.y,
-		pMainLight->m_xmf3Direction.z);
-	OutputDebugStringW(buffer);
-	// 디버깅
-
 	XMVECTOR lightDir = XMLoadFloat3(&pMainLight->m_xmf3Direction);
-	lightDir = XMVector3Normalize(lightDir);
+	XMVECTOR lightPos = XMLoadFloat3(&focusPoint) - 2000.0f * lightDir;
+	XMVECTOR targetPos = XMLoadFloat3(&focusPoint);
+	XMVECTOR lightUp;
 
-	// 2. 플레이어 카메라의 절두체(Frustum) 꼭짓점 8개를 월드 공간에서 계산합니다.
-	XMFLOAT3 frustumCorners[8];
-	m_pCamera->GetFrustumCorners(frustumCorners);
+	float dot = fabsf(XMVectorGetY(lightDir));
 
-	// 3. 이 꼭짓점들을 감싸는 최소 경계구(Bounding Sphere)의 중심과 반지름을 찾습니다.
-	XMVECTOR frustumCenter = XMVectorZero();
-	for (int i = 0; i < 8; ++i)
-	{
-		frustumCenter += XMLoadFloat3(&frustumCorners[i]);
+	if (dot > 0.99f) {
+		lightUp = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
 	}
-	frustumCenter /= 8.0f;
-
-	float maxDistSq = 0.0f;
-	for (int i = 0; i < 8; ++i)
-	{
-		XMVECTOR dist = XMLoadFloat3(&frustumCorners[i]) - frustumCenter;
-		maxDistSq = XMVectorGetX(XMVectorMax(XMVector3LengthSq(dist), XMVectorSet(maxDistSq, maxDistSq, maxDistSq, maxDistSq)));
+	else {
+		lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 	}
-	float sphereRadius = sqrtf(maxDistSq);
-
-	// 4. 빛의 위치와 목표 지점을 이 경계구를 기준으로 설정합니다.
-	XMVECTOR lightPos = frustumCenter - lightDir * sphereRadius;
-	XMVECTOR targetPos = frustumCenter;
-	XMVECTOR lightUp = (fabsf(XMVectorGetY(lightDir)) > 0.99f)
-		? XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)
-		: XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
 	XMMATRIX view = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
 
-	// 5. 빛의 투영 행렬을 경계구에 딱 맞게 설정합니다.
-	float viewWidth = sphereRadius * 2.0f;
-	float viewHeight = sphereRadius * 2.0f;
-	float viewNear = 0.0f;
-	float viewFar = sphereRadius * 2.0f;
-	XMMATRIX proj = XMMatrixOrthographicLH(viewWidth, viewHeight, viewNear, viewFar);
+	float sceneRadius = 2500.0f;
+	XMMATRIX proj = XMMatrixOrthographicLH(sceneRadius * 2.0f, sceneRadius * 2.0f, 0.0f, 5000.0f);
 
-	// 6. 최종 ShadowTransform 행렬을 계산합니다.
-	XMMATRIX T(0.5f, 0.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f);
+	XMMATRIX T(
+		0.5f, 0.0f, 0.0f, 0.0f,
+		0.0f, -0.5f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.5f, 0.5f, 0.0f, 1.0f);
+
 	XMMATRIX S = view * proj * T;
 
-	// 계산된 행렬들을 저장합니다.
 	XMStoreFloat4x4(&mLightView, view);
 	XMStoreFloat4x4(&mLightProj, proj);
 	XMStoreFloat4x4(&mShadowTransform, S);
+
 }
 
 // 고정 광원
 void CScene::UpdateShadowTransform()
 {
-	//CCamera* m_pCamera = m_pPlayer->GetCamera();
-	//if (!m_pCamera) return;
-
-	//// 1. 주된 방향광의 방향을 가져옵니다.
-	//LIGHT* pMainLight = nullptr;
-	//for (int i = 0; i < m_nLights; ++i) {
-	//	if (m_pLights[i].m_nType == DIRECTIONAL_LIGHT) {
-	//		pMainLight = &m_pLights[i];
-	//		break;
-	//	}
-	//}
-	//if (!pMainLight) return;
-
-	//XMVECTOR lightDir = XMLoadFloat3(&pMainLight->m_xmf3Direction);
-	//lightDir = XMVector3Normalize(lightDir);
-
-	//// 2. 플레이어 카메라의 절두체 중심과 반지름을 계산합니다.
-	//XMFLOAT3 frustumCorners[8];
-	//m_pCamera->GetFrustumCorners(frustumCorners);
-
-	//XMVECTOR frustumCenter = XMVectorZero();
-	//for (int i = 0; i < 8; ++i) {
-	//	frustumCenter += XMLoadFloat3(&frustumCorners[i]);
-	//}
-	//frustumCenter /= 8.0f;
-
-	//float maxDistSq = 0.0f;
-	//for (int i = 0; i < 8; ++i) {
-	//	XMVECTOR dist = XMLoadFloat3(&frustumCorners[i]) - frustumCenter;
-	//	maxDistSq = XMVectorGetX(XMVectorMax(XMVector3LengthSq(dist), XMVectorSet(maxDistSq, maxDistSq, maxDistSq, maxDistSq)));
-	//}
-	//float sphereRadius = sqrtf(maxDistSq);
-
-	//// --- 3. 안정적인 Up 벡터 계산 (가장 중요한 수정) ---
-	//// 먼저 월드의 Up 벡터를 기준으로, 빛의 방향과 수직인 '오른쪽 벡터'를 구합니다.
-	//XMVECTOR worldUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-	//XMVECTOR lightRight = XMVector3Cross(worldUp, lightDir);
-	//lightRight = XMVector3Normalize(lightRight);
-
-	//// 그 다음, 빛의 방향과 방금 구한 '오른쪽 벡터'를 외적하여,
-	//// 빛의 방향과 항상 90도를 유지하는 완벽한 'Up 벡터'를 구합니다.
-	//XMVECTOR lightUp = XMVector3Cross(lightDir, lightRight);
-
-	//// --- 4. 빛의 View 행렬 생성 ---
-	//// 빛의 위치는 플레이어가 보는 영역의 중심에서, 빛의 방향 반대쪽으로 떨어진 곳입니다.
-	//XMVECTOR lightPos = frustumCenter - lightDir * sphereRadius;
-	//XMMATRIX view = XMMatrixLookAtLH(lightPos, frustumCenter, lightUp);
-
-	//// 5. 빛의 Projection 행렬 생성 (이전과 동일)
-	//float viewWidth = sphereRadius * 2.0f;
-	//float viewHeight = sphereRadius * 2.0f;
-	//float viewNear = 0.0f;
-	//float viewFar = sphereRadius * 2.0f;
-	//XMMATRIX proj = XMMatrixOrthographicLH(viewWidth, viewHeight, viewNear, viewFar);
 
 	LIGHT* pMainLight = nullptr;
 	for (int i = 0; i < m_nLights; ++i) {
@@ -1471,4 +1384,35 @@ void CScene::UpdateShadowTransform()
 	XMStoreFloat4x4(&mLightView, view);
 	XMStoreFloat4x4(&mLightProj, proj);
 	XMStoreFloat4x4(&mShadowTransform, S);
+}
+
+
+void CScene::UpdateLights(float fTimeElapsed)
+{
+	// 1. 빛의 회전 각도를 시간의 흐름에 따라 업데이트합니다.
+	float rotationSpeed = 5.0f; // 15도를 1초에 회전
+	m_fLightRotationAngle += fTimeElapsed * rotationSpeed;
+	if (m_fLightRotationAngle > 360.0f) m_fLightRotationAngle -= 360.0f;
+
+	// 주 방향광
+	LIGHT* pMainLight = nullptr;
+	for (int i = 0; i < m_nLights; ++i) {
+		if (m_pLights[i].m_nType == DIRECTIONAL_LIGHT) {
+			pMainLight = &m_pLights[i];
+			break;
+		}
+	}
+	if (!pMainLight) return;
+
+	// 1. 기본 빛의 방향을 설정합니다.
+	XMVECTOR xmvBaseLightDirection = XMVectorSet(0.0f, -0.707f, -0.707f, 0.0f);
+
+	// 2. 월드의 Z축이 아닌, Y축(수직축)을 기준으로 회전하는 행렬을 만듭니다.
+	XMMATRIX xmmtxLightRotate = XMMatrixRotationY(XMConvertToRadians(m_fLightRotationAngle));
+
+	// 3. 기본 빛의 방향을 회전시켜 현재 프레임의 빛 방향을 계산합니다.
+	XMVECTOR xmvCurrentLightDirection = XMVector3TransformNormal(xmvBaseLightDirection, xmmtxLightRotate);
+
+	// 4. 계산된 새로운 방향을 실제 조명 데이터에 업데이트합니다.
+	XMStoreFloat3(&pMainLight->m_xmf3Direction, xmvCurrentLightDirection);
 }

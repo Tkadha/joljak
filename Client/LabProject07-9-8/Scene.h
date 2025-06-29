@@ -194,7 +194,10 @@ public:
 	void UpdateShadowTransform(const XMFLOAT3& focusPoint);
 	void UpdateShadowTransform();
 
+
 	D3D12_GPU_DESCRIPTOR_HANDLE GetShadowMapSrv() { return m_pShadowMap->Srv(); }
 
-	CGameObject* m_pDebugLightFrustumBox = nullptr;
+	float m_fLightRotationAngle = 0.0f;
+	
+	void UpdateLights(float fTimeElapsed);
 };

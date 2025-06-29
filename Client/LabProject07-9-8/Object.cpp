@@ -1673,7 +1673,7 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	CMaterial* pSkyBoxMaterial = new CMaterial(1, pGameFramework);
 
 	
-	std::shared_ptr<CTexture> pSkyBoxTexture = pResourceManager->GetTexture(L"SkyBox/SkyBox_1.dds", pd3dCommandList);
+	std::shared_ptr<CTexture> pSkyBoxTexture = pResourceManager->GetTexture(L"SkyBox/SkyBox_0.dds", pd3dCommandList);
 	if (pSkyBoxTexture) {
 		pSkyBoxMaterial->AssignTexture(0, pSkyBoxTexture, pd3dDevice); 
 	}
