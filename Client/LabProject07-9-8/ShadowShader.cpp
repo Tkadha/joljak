@@ -59,10 +59,10 @@ D3D12_RASTERIZER_DESC CShadowShader::CreateRasterizerState()
     d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
 
     // DepthBias: 고정된 값만큼 깊이를 추가
-    d3dRasterizerDesc.DepthBias = 5000; 
+    d3dRasterizerDesc.DepthBias = 1000; 
 
     // SlopeScaledDepthBias: 표면의 기울기에 따라 바이어스를 다르게 적용
-    d3dRasterizerDesc.SlopeScaledDepthBias = 1.5f; // 값을 조금씩 늘려보세요. (예: 1.0f -> 1.5f 또는 2.0f)
+    d3dRasterizerDesc.SlopeScaledDepthBias = 2.0f; // 값을 조금씩 늘려보세요. (예: 1.0f -> 1.5f 또는 2.0f)
 
     d3dRasterizerDesc.DepthBiasClamp = 0.0f;
     d3dRasterizerDesc.DepthClipEnable = TRUE;

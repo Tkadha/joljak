@@ -186,7 +186,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 	
 	// 1. 그림자 맵 객체 생성
-	m_pShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 8192, 8192);
+	m_pShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 4096, 4096);
 
 	// 2. SRV 핸들 할당: Framework의 AllocateSrvDescriptors 함수를 사용합니다.
 	D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandle;
@@ -1352,8 +1352,46 @@ void CScene::UpdateShadowTransform(const XMFLOAT3& focusPoint)
 }
 
 // 고정 광원
+//void CScene::UpdateShadowTransform()
+//{
+//
+//	LIGHT* pMainLight = nullptr;
+//	for (int i = 0; i < m_nLights; ++i) {
+//		if (m_pLights[i].m_nType == DIRECTIONAL_LIGHT) {
+//			pMainLight = &m_pLights[i];
+//			break;
+//		}
+//	}
+//	if (!pMainLight) return;
+//
+//	XMVECTOR lightDir = XMVectorSet(0.5f, -0.707f, 0.5f, 0.0f);
+//	lightDir = XMVector3Normalize(lightDir);
+//
+//	XMVECTOR targetPos = XMVectorSet(5000.0f, 0.0f, 5000.0f, 0.0f);
+//	XMVECTOR lightPos = targetPos - (lightDir * 10000.0f);
+//	XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+//
+//	XMMATRIX view = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
+//
+//	float sceneSpan = 5000.0f; 
+//	float sceneNear = 1.0f;
+//	float sceneFar = 9000.0f;
+//	XMMATRIX proj = XMMatrixOrthographicLH(sceneSpan, sceneSpan, sceneNear, sceneFar);
+//
+//	XMMATRIX T(0.5f, 0.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f);
+//	XMMATRIX S = view * proj * T;
+//
+//	XMStoreFloat4x4(&mLightView, view);
+//	XMStoreFloat4x4(&mLightProj, proj);
+//	XMStoreFloat4x4(&mShadowTransform, S);
+//}
+
+
+// 카메라 프러스텀 적용 버전
 void CScene::UpdateShadowTransform()
 {
+	CCamera* m_pCamera = m_pPlayer->GetCamera();
+	if (m_pCamera) return;
 
 	LIGHT* pMainLight = nullptr;
 	for (int i = 0; i < m_nLights; ++i) {
@@ -1367,16 +1405,35 @@ void CScene::UpdateShadowTransform()
 	XMVECTOR lightDir = XMVectorSet(0.5f, -0.707f, 0.5f, 0.0f);
 	lightDir = XMVector3Normalize(lightDir);
 
-	XMVECTOR targetPos = XMVectorSet(5000.0f, 0.0f, 5000.0f, 0.0f);
-	XMVECTOR lightPos = targetPos - (lightDir * 10000.0f);
+	XMFLOAT3 frustumCorners[8];
+	m_pCamera->GetFrustumCorners(frustumCorners);
+
+	XMVECTOR frustumCenter = XMVectorZero();
+	for (int i = 0; i < 8; ++i)
+	{
+		frustumCenter += XMLoadFloat3(&frustumCorners[i]);
+	}
+	frustumCenter /= 8.0f;
+
+	float maxDistSq = 0.0f;
+	for (int i = 0; i < 8; ++i)
+	{
+		XMVECTOR dist = XMLoadFloat3(&frustumCorners[i]) - frustumCenter;
+		maxDistSq = XMVectorGetX(XMVectorMax(XMVector3LengthSq(dist), XMVectorSet(maxDistSq, maxDistSq, maxDistSq, maxDistSq)));
+	}
+	float sphereRadius = sqrtf(maxDistSq);
+
+	XMVECTOR lightPos = frustumCenter - lightDir * sphereRadius;
+	XMVECTOR targetPos = frustumCenter;
 	XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
 	XMMATRIX view = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
 
-	float sceneSpan = 5000.0f; 
-	float sceneNear = 1.0f;
-	float sceneFar = 9000.0f;
-	XMMATRIX proj = XMMatrixOrthographicLH(sceneSpan, sceneSpan, sceneNear, sceneFar);
+	float viewWidth = sphereRadius * 2.0f;
+	float viewHeight = sphereRadius * 2.0f;
+	float viewNear = 0.0f;
+	float viewFar = sphereRadius * 2.0f;
+	XMMATRIX proj = XMMatrixOrthographicLH(viewWidth, viewHeight, viewNear, viewFar);
 
 	XMMATRIX T(0.5f, 0.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f);
 	XMMATRIX S = view * proj * T;
