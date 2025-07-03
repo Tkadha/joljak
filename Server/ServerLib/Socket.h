@@ -29,7 +29,7 @@ enum class SocketType
 	Udp,
 };
 
-enum class COMP_TYPE { OP_ACCEPT, OP_RECV, OP_SEND };
+enum class COMP_TYPE { OP_ACCEPT, OP_RECV, OP_SEND, OP_FSM_UPDATE };
 class OVER_EXP {
 public:
 	WSAOVERLAPPED over;
@@ -37,7 +37,7 @@ public:
 	char send_buf[BUFSIZE];
 	COMP_TYPE comp_type;
 	char m_isReadOverlapped = false;
-
+	int obj_id;
 	OVER_EXP() : comp_type(COMP_TYPE::OP_RECV)
 	{
 		ZeroMemory(&over, sizeof(over));

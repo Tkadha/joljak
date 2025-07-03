@@ -4,6 +4,7 @@
 #include "FSMManager.h"
 
 #include <unordered_map>
+#include <mutex>
 class OBB_Manager {
 public:
 	static std::unordered_map<OBJECT_TYPE, std::shared_ptr<BoundingOrientedBox>> obb_list;
@@ -88,13 +89,32 @@ public:
 public:
 	bool is_alive;
 	std::shared_ptr<FSMManager<GameObject>> FSM_manager = NULL;
+	mutable mutex FSM_mutex;
 	void FSMUpdate()
 	{
+		lock_guard<mutex> lock(FSM_mutex);
 		if (FSM_manager) FSM_manager->Update();
 	}
 	void ChangeState(std::shared_ptr<FSMState<GameObject>> newstate)
 	{
-		FSM_manager->ChangeState(newstate);
+		lock_guard<mutex> lock(FSM_mutex);
+		if (FSM_manager) FSM_manager->ChangeState(newstate);
+	}
+	void SetInvincible() {
+		lock_guard<mutex> lock(FSM_mutex);
+		if (FSM_manager) FSM_manager->SetInvincible();
+	}
+	bool GetInvincible() const {
+		lock_guard<mutex> lock(FSM_mutex);
+		if (FSM_manager) return FSM_manager->GetInvincible();
+	}
+	void SetAtkDelay() {
+		lock_guard<mutex> lock(FSM_mutex);
+		if (FSM_manager) FSM_manager->SetAtkDelay();
+	}
+	bool GetAtkDelay() const {
+		lock_guard<mutex> lock(FSM_mutex);
+		if (FSM_manager) return FSM_manager->GetAtkDelay();
 	}
 
 public:

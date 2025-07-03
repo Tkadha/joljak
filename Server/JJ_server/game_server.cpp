@@ -31,8 +31,8 @@ using namespace std;
 //-----------------------------------------------
 
 
-#define IOCPCOUNT 1
-const int iocpcount{ 1 }; // CPU 코어 수 - 1
+#define IOCPCOUNT 5
+const int iocpcount{ 5 }; // CPU 코어 수 - 1
 
 Iocp iocp(iocpcount); // 본 예제는 스레드를 딱 하나만 쓴다. 따라서 여기도 1이 들어간다.
 
@@ -93,14 +93,21 @@ void worker_thread()
 					delete p_read_over; // 보냈다면 delete해주기
 					continue;
 				}
-
+				if (COMP_TYPE::OP_FSM_UPDATE == p_read_over->comp_type) // FSM 업데이트 요청이면
+				{
+					auto obj = GameObject::gameObjects[p_read_over->obj_id];
+					if (obj) {
+						obj->FSMUpdate();
+					}
+					delete p_read_over; // FSM 업데이트는 별도의 패킷이 없으므로 그냥 삭제
+					continue;
+				}
 				if (readEvent.lpCompletionKey == (ULONG_PTR)g_l_socket.get()) // 리슨소켓이면
 				{
 					ProcessAccept();				
 				}
 				else  // TCP 연결 소켓이면
 				{					
-					//cout << "Recv!" << endl;
 					// 처리할 클라이언트
 					shared_ptr<PlayerClient> remoteClient;
 					remoteClient = PlayerClient::PlayerClients[(PlayerClient*)readEvent.lpCompletionKey];
@@ -225,9 +232,9 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		obj->Decreasehp(r_packet->damage); // hp--
 		if (obj->GetType() == OBJECT_TYPE::OB_PIG || obj->GetType() == OBJECT_TYPE::OB_COW) {
 			if (obj->FSM_manager) {
-				obj->FSM_manager->SetInvincible();
-				if (obj->Gethp() <= 0) obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCDieState>());
-				else obj->FSM_manager->ChangeState(std::make_shared<NonAtkNPCRunAwayState>());
+				obj->SetInvincible();
+				if (obj->Gethp() <= 0) obj->ChangeState(std::make_shared<NonAtkNPCDieState>());
+				else obj->ChangeState(std::make_shared<NonAtkNPCRunAwayState>());
 			}
 		}
 		else if (obj->GetType() == OBJECT_TYPE::OB_TREE || obj->GetType() == OBJECT_TYPE::OB_STONE) {
@@ -235,9 +242,9 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		}
 		else {
 			if (obj->FSM_manager) {
-				obj->FSM_manager->SetInvincible();
-				if (obj->Gethp() <= 0) obj->FSM_manager->ChangeState(std::make_shared<AtkNPCDieState>());
-				else obj->FSM_manager->ChangeState(std::make_shared<AtkNPCHitState>());
+				obj->SetInvincible();
+				if (obj->Gethp() <= 0) obj->ChangeState(std::make_shared<AtkNPCDieState>());
+				else obj->ChangeState(std::make_shared<AtkNPCHitState>());
 			}
 		}
 		for(auto& cl : PlayerClient::PlayerClients) {
@@ -339,7 +346,13 @@ int main(int argc, char* argv[])
 				tree_obj t_obj{ -1, obj->GetPosition() };
 				Octree::PlayerOctree.query(t_obj, oct_distance, results);
 				// Do not update if there is no player nearby
-				if (results.size() > 0 && obj->FSM_manager) obj->FSMUpdate();
+				if (results.size() > 0 && obj->FSM_manager) {
+					OVER_EXP* p_over = new OVER_EXP();
+					p_over->comp_type = COMP_TYPE::OP_FSM_UPDATE;
+					p_over->obj_id = obj->GetID();
+					PostQueuedCompletionStatus(iocp.m_hIocp, 0, (ULONG_PTR)obj.get(), &p_over->over);
+					//obj->FSMUpdate();
+				}
 			}
 
 			for (auto& cl : PlayerClient::PlayerClients) {
