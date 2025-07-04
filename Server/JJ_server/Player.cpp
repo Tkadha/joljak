@@ -323,7 +323,7 @@ void PlayerClient::Update_test(float deltaTime)
         }
     }
 
-    m_Position.y += deltaVel.y;
+    moving_pos.y += deltaVel.y;
 
     SetPosition(moving_pos);
     // ¶¥ Â¤±â

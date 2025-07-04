@@ -99,7 +99,7 @@ void worker_thread()
 					if (obj) {
 						obj->FSMUpdate();
 					}
-					delete p_read_over; // FSM 업데이트는 별도의 패킷이 없으므로 그냥 삭제
+					delete p_read_over;
 					continue;
 				}
 				if (readEvent.lpCompletionKey == (ULONG_PTR)g_l_socket.get()) // 리슨소켓이면
@@ -337,10 +337,9 @@ int main(int argc, char* argv[])
 
 		g_timer.Start();
 		while (true) {
-			g_timer.Tick(60.f);
+			g_timer.Tick(120.f);
 			float deltaTime = g_timer.GetTimeElapsed(); // Use Tick same deltaTime
 
-			// fsm몬스터 로직
 			for (auto& obj : GameObject::gameObjects) {
 				std::vector<tree_obj*> results;
 				tree_obj t_obj{ -1, obj->GetPosition() };
@@ -351,7 +350,6 @@ int main(int argc, char* argv[])
 					p_over->comp_type = COMP_TYPE::OP_FSM_UPDATE;
 					p_over->obj_id = obj->GetID();
 					PostQueuedCompletionStatus(iocp.m_hIocp, 0, (ULONG_PTR)obj.get(), &p_over->over);
-					//obj->FSMUpdate();
 				}
 			}
 
@@ -535,7 +533,7 @@ void BuildObject()
 {
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	float spawnmin = 5000, spawnmax = 10000;
+	float spawnmin = 3000, spawnmax = 10000;
 	float objectMinSize = 15, objectMaxSize = 20;
 
 	int obj_id = 0;
@@ -658,6 +656,45 @@ void BuildObject()
 		obj->SetID(obj_id++);
 
 		obj->SetType(OBJECT_TYPE::OB_TOAD);
+		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
+
+		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
+
+		GameObject::gameObjects.push_back(obj);
+
+		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
+		Octree::GameObjectOctree.insert(std::move(t_obj));
+	}
+	int BatCount = 70;
+	for (int i = 0; i < BatCount; ++i) {
+		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second)+ 30, randompos.second);
+		obj->SetScale(9.f, 9.f, 9.f);
+		obj->SetID(obj_id++);
+
+		obj->SetType(OBJECT_TYPE::OB_BAT);
+		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
+
+		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
+
+		GameObject::gameObjects.push_back(obj);
+
+		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
+		Octree::GameObjectOctree.insert(std::move(t_obj));
+	}
+
+	int RaptorCount = 70;
+	for (int i = 0; i < RaptorCount; ++i) {
+		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second) + 30, randompos.second);
+		obj->SetScale(9.f, 9.f, 9.f);
+		obj->SetID(obj_id++);
+
+		obj->SetType(OBJECT_TYPE::OB_RAPTOR);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
 
 		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());

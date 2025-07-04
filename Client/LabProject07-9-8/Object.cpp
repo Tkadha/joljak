@@ -123,6 +123,7 @@ void CGameObject::Check_attack()
 	case GameObjectType::Turtle:
 	case GameObjectType::Pig:
 	case GameObjectType::Snake:
+	case GameObjectType::Raptor:
 		if (m_anitype != 11) return;
 		break;
 	case GameObjectType::Snail:
@@ -203,6 +204,7 @@ void CGameObject::ChangeAnimation(ANIMATION_TYPE type)
 	case GameObjectType::Turtle:
 	case GameObjectType::Pig:
 	case GameObjectType::Snake:
+	case GameObjectType::Raptor:
 		switch (type)
 		{
 		case ANIMATION_TYPE::IDLE:
