@@ -273,6 +273,8 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	CreateSwapChain();
 	CreateDepthStencilView();
 
+	CreateGBuffer();
+
 	// 그림자 맵 DSV 힙 (추후에 함수로 수정)
 	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
 	dsvHeapDesc.NumDescriptors = 1;
@@ -484,7 +486,7 @@ void CGameFramework::CreateRtvAndDsvDescriptorHeaps()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
 	::ZeroMemory(&d3dDescriptorHeapDesc, sizeof(D3D12_DESCRIPTOR_HEAP_DESC));
-	d3dDescriptorHeapDesc.NumDescriptors = m_nSwapChainBuffers;
+	d3dDescriptorHeapDesc.NumDescriptors = m_nSwapChainBuffers + GBUFFER_COUNT;
 	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 	d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	d3dDescriptorHeapDesc.NodeMask = 0;
@@ -575,6 +577,93 @@ void CGameFramework::ChangeSwapChainState()
 	m_nSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
 	CreateRenderTargetViews();
+}
+
+void CGameFramework::CreateGBuffer()
+{
+	// 커맨드 리스트를 열어서 리소스 생성 관련 명령을 기록할 준비를 합니다.
+	m_pd3dCommandList->Reset(m_pd3dCommandAllocator, nullptr);
+
+	// G-Buffer로 사용할 텍스처들의 포맷을 정의합니다.
+	DXGI_FORMAT pdxgiGBufferFormats[GBUFFER_COUNT] =
+	{
+		DXGI_FORMAT_R32G32B32A32_FLOAT,      // 0: 월드 좌표 (World Position)
+		DXGI_FORMAT_R16G16B16A16_FLOAT,      // 1: 노멀 벡터 (Normal)
+		DXGI_FORMAT_R8G8B8A8_UNORM,          // 2: 알베도 색상 (Albedo)
+		DXGI_FORMAT_R8G8B8A8_UNORM           // 3: 재질 정보 (Specular, Roughness 등)
+	};
+
+	// 각 G-Buffer 텍스처를 생성합니다.
+	for (UINT i = 0; i < GBUFFER_COUNT; ++i)
+	{
+		D3D12_RESOURCE_DESC d3dResourceDesc = {};
+		d3dResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		d3dResourceDesc.Alignment = 0;
+		d3dResourceDesc.Width = FRAME_BUFFER_WIDTH;
+		d3dResourceDesc.Height = FRAME_BUFFER_HEIGHT;
+		d3dResourceDesc.DepthOrArraySize = 1;
+		d3dResourceDesc.MipLevels = 1;
+		d3dResourceDesc.Format = pdxgiGBufferFormats[i];
+		d3dResourceDesc.SampleDesc.Count = 1;
+		d3dResourceDesc.SampleDesc.Quality = 0;
+		d3dResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		d3dResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET; // 렌더 타겟으로 사용 허용
+
+		D3D12_CLEAR_VALUE d3dClearValue = {};
+		d3dClearValue.Format = pdxgiGBufferFormats[i];
+		// 텍스처를 0으로 초기화합니다.
+		// (색상 텍스처는 검은색, 위치/노멀 텍스처는 (0,0,0)으로 시작)
+		d3dClearValue.Color[0] = 0.0f;
+		d3dClearValue.Color[1] = 0.0f;
+		d3dClearValue.Color[2] = 0.0f;
+		d3dClearValue.Color[3] = 0.0f;
+
+		// G-Buffer 텍스처 리소스를 생성합니다.
+		m_pd3dDevice->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&d3dResourceDesc,
+			D3D12_RESOURCE_STATE_RENDER_TARGET, // 처음 상태는 렌더 타겟
+			&d3dClearValue,
+			IID_PPV_ARGS(&m_ppd3dGBufferTextures[i])
+		);
+
+		// 디버깅을 위해 이름을 붙여줍니다.
+		wchar_t name[32];
+		swprintf_s(name, L"GBufferTexture%d", i);
+		m_ppd3dGBufferTextures[i]->SetName(name);
+	}
+
+	// G-Buffer용 RTV(Render Target View)들을 생성합니다.
+	// 메인 RTV 힙에서 백버퍼 2개 뒤의 공간부터 사용합니다.
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvCPUHandle(m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	rtvCPUHandle.Offset(m_nSwapChainBuffers, m_nRtvDescriptorIncrementSize);
+
+	for (UINT i = 0; i < GBUFFER_COUNT; ++i)
+	{
+		m_pd3dDevice->CreateRenderTargetView(m_ppd3dGBufferTextures[i].Get(), nullptr, rtvCPUHandle);
+		m_pd3dGbufferRtvCPUHandles[i] = rtvCPUHandle;
+		rtvCPUHandle.Offset(1, m_nRtvDescriptorIncrementSize);
+	}
+
+	// 조명 패스에서 사용할 SRV(Shader Resource View)들을 생성합니다.
+	// 메인 CBV/SRV 힙에서 자리를 할당받습니다.
+	CD3DX12_CPU_DESCRIPTOR_HANDLE srvCPUHandle;
+	AllocateSrvDescriptors(GBUFFER_COUNT, srvCPUHandle, m_d3dGbufferSrvGPUHandle);
+
+	for (UINT i = 0; i < GBUFFER_COUNT; ++i)
+	{
+		m_pd3dDevice->CreateShaderResourceView(m_ppd3dGBufferTextures[i].Get(), nullptr, srvCPUHandle);
+		srvCPUHandle.Offset(1, m_nCbvSrvDescriptorIncrementSize);
+	}
+
+	// 리소스 생성이 완료되었으므로, 커맨드 리스트를 닫고 실행합니다.
+	m_pd3dCommandList->Close();
+	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList };
+	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+
+	// GPU 작업이 끝날 때까지 기다립니다.
+	WaitForGpuComplete();
 }
 
 void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
@@ -2742,4 +2831,20 @@ D3D12_CPU_DESCRIPTOR_HANDLE CGameFramework::GetCurrentRtvCPUDescriptorHandle()
 D3D12_CPU_DESCRIPTOR_HANDLE CGameFramework::GetDsvCPUDescriptorHandle()
 {
 	return m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+}
+
+
+// G-Buffer
+void CGameFramework::TransitionGBuffer(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter)
+{
+	CD3DX12_RESOURCE_BARRIER pBarriers[GBUFFER_COUNT];
+	for (UINT i = 0; i < GBUFFER_COUNT; ++i)
+		pBarriers[i] = CD3DX12_RESOURCE_BARRIER::Transition(m_ppd3dGBufferTextures[i].Get(), stateBefore, stateAfter);
+	pd3dCommandList->ResourceBarrier(GBUFFER_COUNT, pBarriers);
+}
+
+void CGameFramework::GetGbufferRtvCPUHandles(D3D12_CPU_DESCRIPTOR_HANDLE* pRtvCPUHandles)
+{
+	for (UINT i = 0; i < GBUFFER_COUNT; ++i)
+		pRtvCPUHandles[i] = m_pd3dGbufferRtvCPUHandles[i];
 }

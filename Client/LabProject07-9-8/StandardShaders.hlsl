@@ -45,6 +45,16 @@ struct VS_STANDARD_OUTPUT
     float4 ShadowPosH : TEXCOORD1; // 그림자 좌표를 위한 공간 추가
 };
 
+
+struct PS_GBUFFER_OUTPUT
+{
+    float4 WorldPos : SV_Target0; // 0번 타겟: 월드 좌표
+    float4 Normal : SV_Target1; // 1번 타겟: 월드 공간 노멀
+    float4 Albedo : SV_Target2; // 2번 타겟: 알베도 (기본 색상)
+    float4 Material : SV_Target3; // 3번 타겟: 기타 재질 정보
+};
+
+
 // 그림자 계수를 계산하는 함수
 float CalcShadowFactor(float4 shadowPosH)
 {
@@ -215,21 +225,57 @@ float4 PSStandard3(VS_STANDARD_OUTPUT input) : SV_TARGET
     finalColor = lerp(gFogColor.rgb, finalColor, fogFactor);
 
     return float4(finalColor, cAlbedoColor.a);    
-    
-    
-    //float4 cColor = cAlbedoColor + cSpecularColor + cMetallicColor + cEmissionColor;
-    
-    //// 안개
-    //float distToEye = distance(input.positionW, gvCameraPosition.xyz);
-    //float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);
+}
 
-    //float4 litColor = lerp(cColor, cIlluminationColor, 0.5f);
+
+PS_GBUFFER_OUTPUT PSStandard_GBuffer(VS_STANDARD_OUTPUT input) : SV_TARGET
+{
+    PS_GBUFFER_OUTPUT output;
     
-    //litColor.rgb = lerp(gFogColor.rgb, cColor.rgb, fogFactor);
+    float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_ALBEDO_MAP)
+        cAlbedoColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
+    clip(cAlbedoColor.a - 0.0000000000000000000000000000000000001f); // 알파 값이 0.1보다 작으면 그리기 중단
     
-    //float normalizedDistance = saturate(distToEye / (gFogStart + gFogRange));
+    float4 cSpecularColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_SPECULAR_MAP)
+        cSpecularColor = gtxtSpecularTexture.Sample(gssWrap, input.uv);
+    float4 cNormalColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_NORMAL_MAP)
+        cNormalColor = gtxtNormalTexture.Sample(gssWrap, input.uv);
+    float4 cMetallicColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_METALLIC_MAP)
+        cMetallicColor = gtxtMetallicTexture.Sample(gssWrap, input.uv);
+    float4 cEmissionColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_EMISSION_MAP)
+        cEmissionColor = gtxtEmissionTexture.Sample(gssWrap, input.uv);
+
+    float3 normalW;
+    if (gnTexturesMask & MATERIAL_NORMAL_MAP)
+    {
+        float3x3 TBN = float3x3(normalize(input.tangentW), normalize(input.bitangentW), normalize(input.normalW));
+        float3 vNormal = normalize(cNormalColor.rgb * 2.0f - 1.0f); //[0, 1] → [-1, 1]
+        normalW = normalize(mul(vNormal, TBN));
+    }
+    else
+    {
+        normalW = normalize(input.normalW);
+    }
     
-    //cColor.rgb = lerp(cColor.rgb, gFogColor.rgb, normalizedDistance);
+    // Target 0: 월드 좌표 (정점 셰이더에서 넘어온 값을 그대로 저장)
+    output.WorldPos = float4(input.positionW, 1.0f);
+
+    // Target 1: 월드 공간 노멀
+    // 노멀 벡터는 -1~1 범위의 값을 가지므로, 0~1 범위로 변환하여 저장합니다.
+    output.Normal = float4(normalW * 0.5f + 0.5f, 1.0f);
     
-    //return (cColor);
+    // Target 2: 알베도 색상
+    output.Albedo = cAlbedoColor;
+
+    // Target 3: 재질 정보 (예: 스페큘러 강도를 R 채널에 저장)
+    // 지금은 간단하게 gMaterialInfo의 SpecularColor를 사용합니다.
+    output.Material = gMaterialInfo.SpecularColor;
+
+    return output;
+    
 }

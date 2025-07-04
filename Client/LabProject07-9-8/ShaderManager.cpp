@@ -396,6 +396,10 @@ CShader* ShaderManager::CreateShaderInternal(const std::string& name, ID3D12Grap
         pShader = new CStandardShader(); // Standard 셰이더 객체 생성
         rootSignatureName = "Standard";  // Standard 루트 서명 필요
     }
+    else if (name == "Standard_GBuffer") {
+        pShader = new CStandardShader();
+        rootSignatureName = "Standard"; // 루트 서명은 기존 것을 공유
+    }
     else if (name == "Skinned") {
         pShader = new CSkinnedAnimationStandardShader();
         rootSignatureName = "Skinned";

@@ -67,6 +67,9 @@ extern HINSTANCE						ghAppInstance;
 #define FRAME_BUFFER_WIDTH				1900
 #define FRAME_BUFFER_HEIGHT				1100
 
+// G-Buffer 텍스처의 개수
+const UINT GBUFFER_COUNT = 4;
+
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")

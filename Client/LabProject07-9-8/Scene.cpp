@@ -9,6 +9,7 @@
 #include "NonAtkState.h"
 #include "AtkState.h"
 
+
 bool ChangeAlbedoTexture(
 	CGameObject* pParentGameObject,
 	int materialIndex,
@@ -893,9 +894,63 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// 1. 그림자 맵 리소스를 픽셀 셰이더에서 읽을 수 있는 상태로 변경
 	m_pShadowMap->TransitionToReadable(pd3dCommandList);
 
-	// 2. 렌더 타겟을 다시 화면(메인 백버퍼)과 메인 깊이 버퍼로 설정
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pGameFramework->GetCurrentRtvCPUDescriptorHandle();
+
+	// =================================================================
+// Pass 2: G-Buffer 생성 패스
+// =================================================================
+	{
+		// G-Buffer 텍스처들을 렌더 타겟 상태로 전환
+		m_pGameFramework->TransitionGBuffer(pd3dCommandList, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+		// MRT 설정 및 G-Buffer 초기화
+		D3D12_CPU_DESCRIPTOR_HANDLE pd3dRtvCPUHandles[GBUFFER_COUNT];
+		m_pGameFramework->GetGbufferRtvCPUHandles(pd3dRtvCPUHandles);
+		D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pGameFramework->GetDsvCPUDescriptorHandle();
+		pd3dCommandList->OMSetRenderTargets(GBUFFER_COUNT, pd3dRtvCPUHandles, TRUE, &d3dDsvCPUDescriptorHandle);
+		for (UINT i = 0; i < GBUFFER_COUNT; ++i) {
+			pd3dCommandList->ClearRenderTargetView(pd3dRtvCPUHandles[i], Colors::Black, 0, nullptr);
+		}
+		pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
+
+		// 뷰포트 및 디스크립터 힙 설정
+		pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+		ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() };
+		pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+		// --- 여기에 모든 오브젝트를 그리는 코드를 추가합니다 ---
+		// 각 Render 함수는 이제 내부적으로 G-Buffer용 셰이더를 사용하고,
+		// 여러 타겟에 재료 정보를 출력합니다.
+
+		// 조명 패스에서 그림자를 계산해야 하므로, 그림자 맵은 여기서도 필요합니다.
+		pd3dCommandList->SetGraphicsRootDescriptorTable(4, m_pShadowMap->Srv()); // Standard/Skinned 기준 4번 슬롯
+
+		if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera); // 스카이박스는 G-Buffer에 그리지 않도록 수정 필요
+		if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
+
+		for (auto& obj : m_vGameObjects) {
+			if (obj && obj->isRender) obj->Render(pd3dCommandList, pCamera);
+		}
+		// ... Player 등 다른 오브젝트 리스트들도 Render 호출 ...
+	}
+
+	// G-Buffer들을 조명 패스에서 읽을 수 있는 상태로 다시 전환
+	m_pGameFramework->TransitionGBuffer(pd3dCommandList, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
+
+
+
+
+	// =================================================================
+	// Pass 3: 조명 패스 (아직 구현 안 함, 최종 결과를 백버퍼에 그리는 단계)
+	// =================================================================
+	// 지금은 임시로 백버퍼를 다시 렌더타겟으로 설정하고 초기화만 합니다.
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pGameFramework->GetDsvCPUDescriptorHandle();
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pGameFramework->GetCurrentRtvCPUDescriptorHandle();
+	pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
+	pd3dCommandList->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, Colors::CornflowerBlue, 0, nullptr);
+
+
+	// 2. 렌더 타겟을 다시 화면(메인 백버퍼)과 메인 깊이 버퍼로 설정
+	//D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pGameFramework->GetDsvCPUDescriptorHandle();
 	pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
 	// 3. 뷰포트와 시저 렉트도 메인 카메라 기준으로 다시 설정
