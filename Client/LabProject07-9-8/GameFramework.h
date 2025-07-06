@@ -236,6 +236,7 @@ public:
 
 	void TransitionGBuffer(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter);
 	void GetGbufferRtvCPUHandles(D3D12_CPU_DESCRIPTOR_HANDLE* pRtvCPUHandles);
+	D3D12_GPU_DESCRIPTOR_HANDLE GetGbufferSrvGPUHandle() { return m_d3dGbufferSrvGPUHandle; };
 #if defined(_DEBUG)
 	ID3D12Debug* m_pd3dDebugController;
 #endif

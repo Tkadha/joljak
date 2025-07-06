@@ -1,7 +1,7 @@
 // TerrainShader.cpp
 #include "TerrainShader.h"
 
-CTerrainShader::CTerrainShader(){}
+CTerrainShader::CTerrainShader(const std::string& name) { m_strShaderName = name; }
 
 CTerrainShader::~CTerrainShader(){}
 

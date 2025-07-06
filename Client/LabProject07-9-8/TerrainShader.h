@@ -5,7 +5,7 @@
 class CTerrainShader : public CShader
 {
 public:
-    CTerrainShader();
+    CTerrainShader(const std::string& name);
     virtual ~CTerrainShader();
 
     // Input Layout 오버라이드 (지형 메쉬에 맞춤)

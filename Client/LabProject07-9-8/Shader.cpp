@@ -5,8 +5,9 @@
 #include "stdafx.h"
 #include "Shader.h"
 
-CShader::CShader()
+CShader::CShader(const std::string& name)
 {
+	m_strShaderName = name;
 }
 
 CShader::~CShader()

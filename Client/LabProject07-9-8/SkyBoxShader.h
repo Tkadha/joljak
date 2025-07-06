@@ -4,7 +4,7 @@
 class CSkyBoxShader : public CShader
 {
 public:
-    CSkyBoxShader();
+    CSkyBoxShader(const std::string& name);
     virtual ~CSkyBoxShader();
 
     // Input Layout 오버라이드 (Position 만 사용)

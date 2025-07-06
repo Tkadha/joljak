@@ -5,7 +5,7 @@
 class CDebugShader : public CShader
 {
 public:
-    CDebugShader();
+    CDebugShader(const std::string& name);
     virtual ~CDebugShader();
 
     // Input Layout 오버라이드 (Position 만 사용)

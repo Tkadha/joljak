@@ -1,6 +1,6 @@
 #include "SkinnedShader.h"
 
-CSkinnedAnimationStandardShader::CSkinnedAnimationStandardShader() {}
+CSkinnedAnimationStandardShader::CSkinnedAnimationStandardShader(const std::string& name) { m_strShaderName = name; }
 CSkinnedAnimationStandardShader::~CSkinnedAnimationStandardShader() {}
 
 D3D12_INPUT_LAYOUT_DESC CSkinnedAnimationStandardShader::CreateInputLayout()

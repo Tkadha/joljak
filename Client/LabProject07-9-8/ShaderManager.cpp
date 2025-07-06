@@ -10,6 +10,7 @@
 #include "SkyBoxShader.h"
 #include "ShadowShader.h"
 #include "DebugShader.h"
+#include "DeferedrLightingShader.h"
 // 예: #include "StandardShader.h", "SkinnedShader.h" 등 (아직 없다면 생성 필요)
 
 // --- 정적 샘플러 정의 ---
@@ -118,6 +119,7 @@ ID3D12RootSignature* ShaderManager::CreateRootSignatureInternal(const std::strin
     if (name == "Instancing") return CreateInstancingRootSignature();
     if (name == "Shadow") return CreateShadowRootSignature();
     if (name == "Debug") return CreateDebugRootSignature();
+    if (name == "Lighting") return CreateDeferedLightingRootSignature();
 
 
     OutputDebugStringA("Error: Unknown root signature name requested!\n");
@@ -301,26 +303,36 @@ ID3D12RootSignature* ShaderManager::CreateInstancingRootSignature()
 
 ID3D12RootSignature* ShaderManager::CreateShadowRootSignature()
 {
-    // Shadow 셰이더는 카메라 정보(b0)와 월드 행렬 정보(b2)만 필요합니다.
-    CD3DX12_ROOT_PARAMETER pd3dRootParameters[2];
-    pd3dRootParameters[0].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_VERTEX); // b0: Camera
+    HRESULT hr;
+    ID3D12RootSignature* pd3dRootSignature = nullptr;
+    CD3DX12_DESCRIPTOR_RANGE descRangeSRV[5];
+    descRangeSRV[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 13, 0); // t13
+    descRangeSRV[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 14, 0); // t13
+    descRangeSRV[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 15, 0); // t13
+    descRangeSRV[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 16, 0); // t13
+    descRangeSRV[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3, 0); // t3: Shadow Map
 
-    pd3dRootParameters[1].InitAsConstants(41, 2, 0, D3D12_SHADER_VISIBILITY_VERTEX);    // b2: GameObject 
+    CD3DX12_ROOT_PARAMETER rootParameters[7]; // CBV(b1 Camera), Constants(b2 Object), Table(t1, t2 Textures)
+    rootParameters[0].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL); // 둘 다 사용
+    rootParameters[1].InitAsConstants(16, 2, 0, D3D12_SHADER_VISIBILITY_VERTEX);     // VS에서만 필요
+    rootParameters[2].InitAsDescriptorTable(1, &descRangeSRV[0], D3D12_SHADER_VISIBILITY_PIXEL); // PS에서만 필요
+    rootParameters[3].InitAsDescriptorTable(1, &descRangeSRV[1], D3D12_SHADER_VISIBILITY_PIXEL); // PS에서만 필요
+    rootParameters[4].InitAsDescriptorTable(1, &descRangeSRV[2], D3D12_SHADER_VISIBILITY_PIXEL); // PS에서만 필요
+    rootParameters[5].InitAsDescriptorTable(1, &descRangeSRV[3], D3D12_SHADER_VISIBILITY_PIXEL); // PS에서만 필요
+    rootParameters[6].InitAsDescriptorTable(1, &descRangeSRV[4], D3D12_SHADER_VISIBILITY_PIXEL); // PS에서만 필요
 
-    CD3DX12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc;
-    d3dRootSignatureDesc.Init(_countof(pd3dRootParameters), pd3dRootParameters, 0, NULL, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+    auto staticSamplers = GetStaticSamplers();
+    CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(_countof(rootParameters), rootParameters,
+        (UINT)staticSamplers.size(), staticSamplers.data(),
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS);
 
-    ID3D12RootSignature* pd3dRootSignature = NULL;
-    ID3DBlob* pd3dSignatureBlob = NULL;
-    ID3DBlob* pd3dErrorBlob = NULL;
-
-    D3D12SerializeRootSignature(&d3dRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &pd3dSignatureBlob, &pd3dErrorBlob);
-    m_pd3dDevice->CreateRootSignature(0, pd3dSignatureBlob->GetBufferPointer(), pd3dSignatureBlob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&pd3dRootSignature);
-
-    if (pd3dSignatureBlob) pd3dSignatureBlob->Release();
-    if (pd3dErrorBlob) pd3dErrorBlob->Release();
-
-    return(pd3dRootSignature);
+    Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+    hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) { if (errorBlob) OutputDebugStringA((char*)errorBlob->GetBufferPointer()); return nullptr; }
+    hr = m_pd3dDevice->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&pd3dRootSignature));
+    if (FAILED(hr)) return nullptr;
+    return pd3dRootSignature;
 }
 
 ID3D12RootSignature* ShaderManager::CreateDebugRootSignature()
@@ -347,10 +359,66 @@ ID3D12RootSignature* ShaderManager::CreateDebugRootSignature()
     hr = m_pd3dDevice->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&pd3dRootSignature));
     if (FAILED(hr)) return nullptr;
     return pd3dRootSignature;
-
-
 }
 
+ID3D12RootSignature* ShaderManager::CreateDeferedLightingRootSignature()
+{
+    HRESULT hr;
+    ID3D12RootSignature* pd3dRootSignature = nullptr;
+
+    // --- 셰이더가 받을 리소스들을 종류별로 정의합니다 ---
+
+    // 1. G-Buffer 텍스처들 (4개, t13부터 시작)
+    CD3DX12_DESCRIPTOR_RANGE descRangeGBuffer;
+    descRangeGBuffer.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 13); // 4 SRVs starting at register t13
+
+    // 2. 그림자 맵 텍스처 (1개, t3)
+    CD3DX12_DESCRIPTOR_RANGE descRangeShadowMap;
+    descRangeShadowMap.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3); // 1 SRV at register t3
+
+    // 루트 파라미터
+    CD3DX12_ROOT_PARAMETER rootParameters[4];
+
+    // 파라미터 0: 카메라 정보 (b0)
+    rootParameters[0].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL);
+
+    // 파라미터 1: 조명 정보 (b4)
+    rootParameters[1].InitAsConstantBufferView(4, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+
+    // 파라미터 2: 그림자 맵 테이블 (t3)
+    rootParameters[2].InitAsDescriptorTable(1, &descRangeShadowMap, D3D12_SHADER_VISIBILITY_PIXEL);
+
+    // 파라미터 3: G-Buffer 텍스처 테이블 (t13, t14, t15, t16)
+    rootParameters[3].InitAsDescriptorTable(1, &descRangeGBuffer, D3D12_SHADER_VISIBILITY_PIXEL);
+
+    auto staticSamplers = GetStaticSamplers();
+    CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(
+        _countof(rootParameters), // 파라미터 개수
+        rootParameters,
+        (UINT)staticSamplers.size(), // 모든 정적 샘플러 사용
+        staticSamplers.data(),
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS | // 조명 패스는 VS가 단순하므로 접근 불필요
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS
+    );
+
+    Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+    hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) {
+        if (errorBlob) OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+        return nullptr;
+    }
+
+    hr = m_pd3dDevice->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&pd3dRootSignature));
+    if (FAILED(hr)) {
+        return nullptr;
+    }
+
+    return pd3dRootSignature;
+}
 
 
 CShader* ShaderManager::GetShader(const std::string& name, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -393,37 +461,42 @@ CShader* ShaderManager::CreateShaderInternal(const std::string& name, ID3D12Grap
 
     // 1. 셰이더 이름에 따라 사용할 클래스와 루트 서명 이름 결정
     if (name == "Standard") {
-        pShader = new CStandardShader(); // Standard 셰이더 객체 생성
+        pShader = new CStandardShader(name); // Standard 셰이더 객체 생성
         rootSignatureName = "Standard";  // Standard 루트 서명 필요
     }
     else if (name == "Standard_GBuffer") {
-        pShader = new CStandardShader();
+        pShader = new CStandardShader(name);
         rootSignatureName = "Standard"; // 루트 서명은 기존 것을 공유
     }
     else if (name == "Skinned") {
-        pShader = new CSkinnedAnimationStandardShader();
+        pShader = new CSkinnedAnimationStandardShader(name);
         rootSignatureName = "Skinned";
     }
     else if (name == "Terrain") {
-        pShader = new CTerrainShader();
+        pShader = new CTerrainShader(name);
         rootSignatureName = "Terrain";
     }
     else if (name == "Skybox") {
-        pShader = new CSkyBoxShader();
+        pShader = new CSkyBoxShader(name);
         rootSignatureName = "Skybox";
     }
     else if (name == "OBB") {
-        pShader = new COBBShader();
+        pShader = new COBBShader(name);
         rootSignatureName = "OBB";
     }
     else if (name == "Shadow") {
-        pShader = new CShadowShader();
-        rootSignatureName = "Shadow"; // Shadow 셰이더는 Shadow 루트 서명을 사용
+        pShader = new CShadowShader(name);
+        rootSignatureName = "Shadow";
     }
     else if (name == "Debug") {
-        pShader = new CDebugShader();
-        rootSignatureName = "Debug"; // Shadow 셰이더는 Shadow 루트 서명을 사용
+        pShader = new CDebugShader(name);
+        rootSignatureName = "Debug"; 
     }
+    else if (name == "Lighting") {
+        pShader = new CLightingShader(name);
+        rootSignatureName = "Lighting"; 
+    }
+
 
     else if (name == "Instancing") {
         // CInstancingShader 클래스가 있다고 가정 (필요시 생성)

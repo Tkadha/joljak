@@ -2,7 +2,7 @@
 #include "stdafx.h" // ÇÊ¿ä½Ã
 #include "OBBShader.h"
 
-COBBShader::COBBShader(){}
+COBBShader::COBBShader(const std::string& name) { m_strShaderName = name; }
 
 COBBShader::~COBBShader(){}
 

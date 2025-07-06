@@ -3,7 +3,7 @@
 class CSkinnedAnimationStandardShader : public CShader
 {
 public:
-	CSkinnedAnimationStandardShader();
+	CSkinnedAnimationStandardShader(const std::string& name);
 	virtual ~CSkinnedAnimationStandardShader();
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();

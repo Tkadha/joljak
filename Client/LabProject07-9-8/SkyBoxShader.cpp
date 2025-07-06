@@ -1,7 +1,7 @@
 // SkyBoxShader.cpp
 #include "SkyBoxShader.h"
 
-CSkyBoxShader::CSkyBoxShader(){}
+CSkyBoxShader::CSkyBoxShader(const std::string& name) { m_strShaderName = name; }
 
 CSkyBoxShader::~CSkyBoxShader(){}
 

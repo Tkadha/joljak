@@ -10,9 +10,11 @@
 class CShader
 {
 public:
-	CShader();
+	CShader() {}
+	CShader(const std::string& name);
 	virtual ~CShader();
 
+	std::string m_strShaderName; // 셰이더의 이름 저장
 private:
 	int									m_nReferences = 0;
 

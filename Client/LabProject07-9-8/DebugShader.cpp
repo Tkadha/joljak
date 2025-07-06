@@ -1,7 +1,7 @@
 // SkyBoxShader.cpp
 #include "DebugShader.h"
 
-CDebugShader::CDebugShader() {}
+CDebugShader::CDebugShader(const std::string& name) { m_strShaderName = name; }
 
 CDebugShader::~CDebugShader() {}
 

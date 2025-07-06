@@ -84,6 +84,12 @@
     <Filter Include="소스 파일\Shader\DebugShader">
       <UniqueIdentifier>{97e7eae9-39d0-4c5b-9fb7-255b1fb2dd49}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Shader\DeferedLighting">
+      <UniqueIdentifier>{ce206944-7a8a-400f-9b38-dd21253d2ad4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\Shadow">
+      <UniqueIdentifier>{af6bd7a7-87d7-421a-8223-1a749db29a8a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConstructionSystem.cpp" />
@@ -212,11 +218,14 @@
     <ClCompile Include="ShadowMap.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="ShadowShader.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="DebugShader.cpp">
       <Filter>소스 파일\Shader\DebugShader</Filter>
+    </ClCompile>
+    <ClCompile Include="DeferedrLightingShader.cpp">
+      <Filter>소스 파일\Shader\DeferedLighting</Filter>
+    </ClCompile>
+    <ClCompile Include="ShadowShader.cpp">
+      <Filter>소스 파일\Shader\Shadow</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -354,11 +363,14 @@
       <Filter>소스 파일\Scene</Filter>
     </ClInclude>
     <ClInclude Include="ShadowMap.h" />
-    <ClInclude Include="ShadowShader.h">
-      <Filter>소스 파일\Shader</Filter>
-    </ClInclude>
     <ClInclude Include="DebugShader.h">
       <Filter>소스 파일\Shader\DebugShader</Filter>
+    </ClInclude>
+    <ClInclude Include="DeferedrLightingShader.h">
+      <Filter>소스 파일\Shader\DeferedLighting</Filter>
+    </ClInclude>
+    <ClInclude Include="ShadowShader.h">
+      <Filter>소스 파일\Shader\Shadow</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -401,14 +413,17 @@
     <FxCompile Include="OBBShader.hlsl">
       <Filter>소스 파일\Shader\OBBShader</Filter>
     </FxCompile>
-    <FxCompile Include="Shadow.hlsl">
-      <Filter>소스 파일\Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Common.hlsl">
       <Filter>소스 파일\Shader</Filter>
     </FxCompile>
     <FxCompile Include="Debug.hlsl">
       <Filter>소스 파일\Shader\DebugShader</Filter>
+    </FxCompile>
+    <FxCompile Include="Shadow.hlsl">
+      <Filter>소스 파일\Shader\Shadow</Filter>
+    </FxCompile>
+    <FxCompile Include="DefetedLighting.hlsl">
+      <Filter>소스 파일\Shader\DeferedLighting</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

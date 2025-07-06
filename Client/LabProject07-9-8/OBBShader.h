@@ -5,7 +5,7 @@
 class COBBShader : public CShader
 {
 public:
-    COBBShader();
+    COBBShader(const std::string& name);
     virtual ~COBBShader();
 
     // Input Layout 오버라이드 (Position 만 사용)

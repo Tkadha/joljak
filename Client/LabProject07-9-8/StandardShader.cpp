@@ -1,6 +1,6 @@
 #include "StandardShader.h"
 
-CStandardShader::CStandardShader() {}
+CStandardShader::CStandardShader(const std::string& name) { m_strShaderName = name; }
 CStandardShader::~CStandardShader() {}
 
 void CStandardShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
@@ -16,11 +16,22 @@ void CStandardShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_d3dPipelineStateDesc.SampleMask = UINT_MAX;
 	m_d3dPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	
-	m_d3dPipelineStateDesc.NumRenderTargets = GBUFFER_COUNT;
-	m_d3dPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	m_d3dPipelineStateDesc.RTVFormats[1] = DXGI_FORMAT_R16G16B16A16_FLOAT;
-	m_d3dPipelineStateDesc.RTVFormats[2] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	m_d3dPipelineStateDesc.RTVFormats[3] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	if (m_strShaderName == "Standard_GBuffer")
+	{
+		// G-Buffer용 MRT
+		m_d3dPipelineStateDesc.NumRenderTargets = GBUFFER_COUNT;
+		m_d3dPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		m_d3dPipelineStateDesc.RTVFormats[1] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		m_d3dPipelineStateDesc.RTVFormats[2] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_d3dPipelineStateDesc.RTVFormats[3] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	}
+	else // 포워드 렌더링
+	{
+		// 기존 설정 (렌더 타겟 1개)
+		m_d3dPipelineStateDesc.NumRenderTargets = 1;
+		m_d3dPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	}
+
 
 	m_d3dPipelineStateDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	m_d3dPipelineStateDesc.SampleDesc.Count = 1;
@@ -56,5 +67,8 @@ D3D12_SHADER_BYTECODE CStandardShader::CreateVertexShader() {
 
 D3D12_SHADER_BYTECODE CStandardShader::CreatePixelShader() {
 	// "StandardShader.hlsl" 파일의 "PSStandard" 함수를 컴파일하도록 수정
-	return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "PSStandard3", "ps_5_1", &m_pd3dPixelShaderBlob));
+	if (m_strShaderName == "Standard_GBuffer")
+		return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "PSStandard_GBuffer", "ps_5_1", &m_pd3dPixelShaderBlob));
+	else
+		return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "PSStandard3", "ps_5_1", &m_pd3dPixelShaderBlob));
 }
