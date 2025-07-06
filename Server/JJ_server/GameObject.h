@@ -22,9 +22,9 @@ class GameObject
 	XMFLOAT4X4	xmf4x4; 
 	// 11 12 13 right, 21 22 23 up, 31 32 33 look, 41 42 43 position
 	int o_id{ -1 };
-
 public:
 	static std::vector<shared_ptr<GameObject>> gameObjects;
+	float fly_height{ 0 };
 
 	GameObject();
 	virtual ~GameObject();

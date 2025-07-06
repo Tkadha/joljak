@@ -31,8 +31,7 @@ void GameObject::MoveForward(float fDistance)
 	int z = (int)(xmf3Position.z / xmf3Scale.z);
 	bool bReverseQuad = ((z % 2) != 0);
 	float fHeight = Terrain::terrain->GetHeight(xmf3Position.x, xmf3Position.z, bReverseQuad) + 0.0f;
-	xmf3Position.y = fHeight;
-	if (type == OBJECT_TYPE::OB_BAT)xmf3Position.y += 15.f;
+	xmf3Position.y = fHeight + fly_height;
 	// 충돌처리
 	XMFLOAT3 test_move = GetPosition();
 	test_move.x = xmf3Position.x;

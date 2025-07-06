@@ -149,7 +149,7 @@ retry:
 			});
 		if (it != m_pScene->m_vGameObjects.end()) {
 			CGameObject* Found_obj = *it;
-			Found_obj->ChangeAnimation(recv_p->a_type);
+			if (Found_obj->m_pSkinnedAnimationController) Found_obj->ChangeAnimation(recv_p->a_type);
 		}
 		else goto retry;
 	}

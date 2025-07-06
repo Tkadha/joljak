@@ -71,13 +71,15 @@ CGameObject::~CGameObject()
 			if (m_ppMaterials[i]) m_ppMaterials[i]->Release();
 		}
 	}
-	if (m_ppMaterials) delete[] m_ppMaterials;
+	if (m_ppMaterials) {
+		delete[] m_ppMaterials;
+		m_ppMaterials = nullptr;
+	}
 
 	if (m_pSkinnedAnimationController) {
 		delete m_pSkinnedAnimationController;
 		m_pSkinnedAnimationController = nullptr;
 	}
-	//if (FSM_manager) delete FSM_manager;
 }
 
 void CGameObject::AddRef() 

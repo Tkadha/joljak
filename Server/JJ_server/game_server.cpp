@@ -346,10 +346,11 @@ int main(int argc, char* argv[])
 				Octree::PlayerOctree.query(t_obj, oct_distance, results);
 				// Do not update if there is no player nearby
 				if (results.size() > 0 && obj->FSM_manager) {
-					OVER_EXP* p_over = new OVER_EXP();
-					p_over->comp_type = COMP_TYPE::OP_FSM_UPDATE;
-					p_over->obj_id = obj->GetID();
-					PostQueuedCompletionStatus(iocp.m_hIocp, 0, (ULONG_PTR)obj.get(), &p_over->over);
+					//OVER_EXP* p_over = new OVER_EXP();
+					//p_over->comp_type = COMP_TYPE::OP_FSM_UPDATE;
+					//p_over->obj_id = obj->GetID();
+					//PostQueuedCompletionStatus(iocp.m_hIocp, 0, (ULONG_PTR)obj.get(), &p_over->over);
+					obj->FSMUpdate();
 				}
 			}
 
@@ -669,11 +670,11 @@ void BuildObject()
 	int BatCount = 70;
 	for (int i = 0; i < BatCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		obj->fly_height = 15.f;
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second)+ 30, randompos.second);
+		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second) + obj->fly_height, randompos.second);
 		obj->SetScale(9.f, 9.f, 9.f);
 		obj->SetID(obj_id++);
-
 		obj->SetType(OBJECT_TYPE::OB_BAT);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
 
