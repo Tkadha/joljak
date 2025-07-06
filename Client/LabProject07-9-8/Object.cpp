@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // File: CGameObject.cpp
 //-----------------------------------------------------------------------------
 
@@ -1095,7 +1095,7 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 		else if (!strcmp(pstrToken, "<TransformMatrix>:"))
 		{
 			//nReads = (UINT)::fread(&pGameObject->m_xmf4x4ToParent, sizeof(float), 16, pInFile);
-			XMFLOAT4X4 xmf4x4TempWorldMatrix; // �ӽ� ����
+			XMFLOAT4X4 xmf4x4TempWorldMatrix; // 임시 변수
 			nReads = (UINT)::fread(&xmf4x4TempWorldMatrix, sizeof(float), 16, pInFile);
 
 		}
@@ -1526,40 +1526,25 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
-CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
+CSkyBox::CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework)
+	: CGameObject(1, pGameFramework)
 {
-	assert(pGameFramework != nullptr && "GameFramework pointer is needed for CSkyBox!");
-	ResourceManager* pResourceManager = pGameFramework->GetResourceManager();
-	ShaderManager* pShaderManager = pGameFramework->GetShaderManager(); 
-	assert(pResourceManager != nullptr && pShaderManager != nullptr);
+	ResourceManager* pResMgr = pGameFramework->GetResourceManager();
+	ShaderManager* pShaderMgr = pGameFramework->GetShaderManager();
+	assert(pResMgr && pShaderMgr);
 
-	CSkyBoxMesh *pSkyBoxMesh = new CSkyBoxMesh(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 2.0f);
+	auto pSkyBoxMesh = new CSkyBoxMesh(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 2.0f);
 	SetMesh(pSkyBoxMesh);
 
-	CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
-	
 	CMaterial* pSkyBoxMaterial = new CMaterial(1, pGameFramework);
 
-	
-	std::shared_ptr<CTexture> pSkyBoxTexture = pResourceManager->GetTexture(L"SkyBox/SkyBox_1.dds", pd3dCommandList);
-	if (pSkyBoxTexture) {
-		pSkyBoxMaterial->AssignTexture(0, pSkyBoxTexture, pd3dDevice); 
-	}
-	else {
-		
-		OutputDebugString(L"Error: Failed to load SkyBox texture using ResourceManager.\n");
-	}
-
-	
-	CShader* pSkyBoxShader = pShaderManager->GetShader("Skybox", pd3dCommandList);
-	if (pSkyBoxShader) {
-		pSkyBoxMaterial->SetShader(pSkyBoxShader);
-		pSkyBoxShader->Release();
+	CShader* pShader = pShaderMgr->GetShader("Skybox", pd3dCommandList);
+	if (pShader) {
+		pSkyBoxMaterial->SetShader(pShader);
+		pShader->Release();
 	}
 
 	SetMaterial(0, pSkyBoxMaterial);
-	
 }
 
 
@@ -1575,6 +1560,9 @@ void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 	CMaterial* pMaterial = GetMaterial(0); 
 	if (m_pMesh && pMaterial && pMaterial->m_pShader)
 	{
+
+		XMFLOAT4X4 savedWorld = m_xmf4x4World;
+
 		pScene->SetGraphicsState(pd3dCommandList, pMaterial->m_pShader);
 
 		
@@ -1584,8 +1572,8 @@ void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 
 		
 		XMFLOAT3 xmf3CameraPos = pCamera->GetPosition();
-		SetPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
-		UpdateTransform(NULL); 
+		//SetPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
+		//UpdateTransform(NULL); 
 
 		
 		D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle();
@@ -1600,6 +1588,43 @@ void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 		
 		m_pMesh->Render(pd3dCommandList, 0); 
 
+		m_xmf4x4World = savedWorld;
+
+	}
+}
+
+void CSkyBox::SetSkyboxIndex(int index)
+{
+	if (index >= 0 && index < m_vSkyboxTextures.size())
+	{
+		m_nCurrentTextureIndex = index;
+
+		
+		CMaterial* pMaterial = GetMaterial(0);
+		if (pMaterial)
+		{
+			pMaterial->AssignTexture(0, m_vSkyboxTextures[index], m_pGameFramework->GetDevice());
+		}
+	}
+}
+
+void CSkyBox::LoadTextures(ID3D12GraphicsCommandList* cmdList, const std::vector<std::wstring>& texturePaths)
+{
+	ResourceManager* pRes = m_pGameFramework->GetResourceManager();
+	for (const auto& path : texturePaths)
+	{
+		auto tex = pRes->GetTexture(path.c_str(), cmdList);
+		if (tex) m_vSkyboxTextures.push_back(tex);
+	}
+
+
+	if (!m_vSkyboxTextures.empty())
+	{
+		CMaterial* pMaterial = GetMaterial(0);
+		if (pMaterial)
+		{
+			pMaterial->AssignTexture(0, m_vSkyboxTextures[0], m_pGameFramework->GetDevice());
+		}
 	}
 }
 
@@ -2118,4 +2143,86 @@ CConstructionObject::CConstructionObject(ID3D12Device* pd3dDevice, ID3D12Graphic
 
 	
 	if (pInFile) fclose(pInFile); 
+}
+
+CRockShardEffect::CRockShardEffect(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework)
+	: CGameObject(1, framework)
+{
+	m_pGameFramework = framework;
+
+	FILE* pInFile = nullptr;
+	::fopen_s(&pInFile, "Model/Branch_A.bin", "rb");
+	if (!pInFile) {
+		OutputDebugStringA("[❌] RockCluster_A_LOD0.bin 파일 열기 실패!\n");
+		return;
+	}
+	::rewind(pInFile);
+
+	CGameObject* rockObj = CGameObject::LoadFrameHierarchyFromFile(
+		device, cmdList, NULL, pInFile, NULL, framework);
+
+	if (pInFile) fclose(pInFile);
+
+	if (rockObj && rockObj->m_pMesh)
+	{
+		SetMesh(rockObj->m_pMesh); // 파편 메시에 복사
+	}
+
+	m_ppMaterials = new CMaterial * [1];
+	m_ppMaterials[0] = new CMaterial(0, framework);
+	m_nMaterials = 1;
+
+	isRender = true;
+}
+
+void CRockShardEffect::Activate(const XMFLOAT3& position, const XMFLOAT3& velocity)
+{
+
+	char buf[256];
+	sprintf_s(buf, "✅ Activate called! pos=(%.2f, %.2f, %.2f), vel=(%.2f, %.2f, %.2f)\n",
+		position.x, position.y, position.z,
+		velocity.x, velocity.y, velocity.z);
+	OutputDebugStringA(buf);
+
+
+	SetPosition(position);
+	SetScale(1.0f, 1.0f, 1.0f);
+	m_vVelocity = velocity;
+	m_fElapsedTime = 0.0f;
+	isRender = true;
+	m_bActive = true;
+}
+
+void CRockShardEffect::Update(float deltaTime)
+{
+	if (!m_bActive) {
+		//OutputDebugStringA("❌ Update skipped (not active)\n");
+		return;
+	}
+
+	//char buf[128];
+	//sprintf_s(buf, "🌀 Update: elapsed=%.2f / %.2f\n", m_fElapsedTime, m_fLifeTime);
+	//OutputDebugStringA(buf);
+
+	char buf[128];
+	sprintf_s(buf, "🧭 deltaTime = %.4f\n", deltaTime);
+	OutputDebugStringA(buf);
+	m_fElapsedTime += deltaTime;
+	/*
+	if (m_fElapsedTime > m_fLifeTime)
+	{
+		isRender = false;
+		m_bActive = false;
+		return;
+	}
+	
+	*/
+	m_vVelocity.y -= 9.8f * deltaTime;
+
+	XMFLOAT3 pos = GetPosition();
+	pos.x += m_vVelocity.x * deltaTime;
+	pos.y += m_vVelocity.y * deltaTime;
+	pos.z += m_vVelocity.z * deltaTime;
+	SetPosition(pos);
+
 }

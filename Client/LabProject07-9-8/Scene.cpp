@@ -129,7 +129,13 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 		return;
 	}
 
+	std::vector<std::wstring> skyboxTextures = {
+	   L"Skybox/SkyBox_0.dds",
+	   L"Skybox/day123.dds"
+	};
+
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	m_pSkyBox->LoadTextures(pd3dCommandList, skyboxTextures);
 	srand((unsigned int)time(NULL));
 
 	XMFLOAT3 xmf3Scale(5.f, 0.2f, 5.f);
@@ -175,7 +181,15 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		return;
 	}
 
+	std::vector<std::wstring> skyboxTextures = {
+	   L"Skybox/SkyBox_0.dds",
+	   L"Skybox/SkyBox_1.dds",
+	   L"Skybox/day123.dds"
+	};
+
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	m_pSkyBox->LoadTextures(pd3dCommandList, skyboxTextures);
+	
 	srand((unsigned int)time(NULL));
 
 	XMFLOAT3 xmf3Scale(5.f, 0.2f, 5.f);
@@ -612,6 +626,14 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		if (pWolfModel) delete pWolfModel;
 	}
 
+	const int rockShardPoolSize = 20;
+	for (int i = 0; i < rockShardPoolSize; ++i)
+	{
+		auto* shard = new CRockShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		m_vRockShards.push_back(shard);
+		m_vGameObjects.emplace_back(shard);
+	}
+
 
 	//m_pPlayer->SetCollisionTargets(m_vGameObjects);
 
@@ -818,6 +840,11 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
+
+	for (auto& shard : m_vRockShards)
+	{
+		shard->Update(fTimeElapsed);
+	}
 }
 
 
@@ -851,11 +878,12 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	m_pCurrentShader = nullptr;
 
 
+	
 
-
-	if (m_pSkyBox) {
+	if (m_pSkyBox)
 		m_pSkyBox->Render(pd3dCommandList, pCamera);
-	}
+
+	
 
 
 	if (m_pTerrain) {
@@ -966,6 +994,11 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		assert(!"OBB Shader (named 'OBB') not found in ShaderManager!");
 	}
 
+	for (auto& shard : m_vRockShards)
+	{
+		if (shard->isRender)
+			shard->Render(pd3dCommandList, pCamera);
+	}
 }
 
 void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader)
@@ -1157,4 +1190,28 @@ void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity
 	m_listRockObjects.emplace_back(newBranch);
 	//auto t_obj = std::make_unique<newBranch>(tree_obj_count++, gameObj->m_worldOBB.Center);
 	//octree.insert(std::move(t_obj));
+}
+void CScene::SpawnRockShardEffect(const XMFLOAT3& origin)
+{
+	int spawnCount = 5;
+
+	for (auto& shard : m_vRockShards)
+	{
+		if (!shard->IsActive())
+		{
+			float vx = ((rand() % 200) - 100) / 50.0f; // -2 ~ 2
+			float vy = ((rand() % 100) / 100.0f) + 3.0f; // 3 ~ 4
+			float vz = ((rand() % 200) - 100) / 50.0f;
+
+			shard->Activate(origin, XMFLOAT3(1.0f, 2.0f, 0.0f));
+			if (--spawnCount <= 0) break;
+		}
+	}
+}
+
+void CScene::SpawnRockShardEffectAtPlayer()
+{
+	XMFLOAT3 pos = m_pPlayer->GetPosition();
+	pos.y += 10.0f;
+	SpawnRockShardEffect(pos);
 }

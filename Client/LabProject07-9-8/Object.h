@@ -284,10 +284,17 @@ public:
 class CSkyBox : public CGameObject
 {
 public:
-	CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CGameFramework* pGameFramework);
+	CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
+
 	virtual ~CSkyBox();
 
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL) override;
+	void SetSkyboxIndex(int index);
+	void LoadTextures(ID3D12GraphicsCommandList* cmdList, const std::vector<std::wstring>& texturePaths);
+	int  GetTextureCount() const { return static_cast<int>(m_vSkyboxTextures.size()); }
+private:
+	std::vector<std::shared_ptr<CTexture>> m_vSkyboxTextures;
+	int m_nCurrentTextureIndex = 0;
 };
 
 
@@ -532,4 +539,20 @@ class CConstructionObject : public CGameObject
 public:
 	CConstructionObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CConstructionObject() {}
+};
+
+class CRockShardEffect : public CGameObject
+{
+public:
+	CRockShardEffect(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework);
+
+	void Activate(const XMFLOAT3& position, const XMFLOAT3& velocity);
+	void Update(float deltaTime);
+	bool IsActive() const { return m_bActive; }
+
+private:
+	bool m_bActive = false;
+	float m_fElapsedTime = 0.0f;
+	float m_fLifeTime = 2.0f;
+	XMFLOAT3 m_vVelocity = { 0, 0, 0 };
 };

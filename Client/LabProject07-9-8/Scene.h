@@ -93,6 +93,7 @@ public:
 	void CheckPlayerInteraction(CPlayer* pPlayer);
 
 
+	CSkyBox* GetSkyBox() const { return m_pSkyBox; }
 
 	CPlayer* GetPlayerInfo() { return m_pPlayer; };
 	CPlayer								*m_pPlayer = NULL;
@@ -112,6 +113,10 @@ public:
 	XMFLOAT3							m_xmf3RotatePosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
 	CSkyBox								*m_pSkyBox = NULL;
+
+	
+
+
 	CHeightMapTerrain					*m_pTerrain = NULL;
 
 	LIGHT								*m_pLights = NULL;
@@ -146,8 +151,11 @@ public:
 
 	vector<CGameObject*> m_listBranchObjects; // 생성된 나뭇가지 저장 리스트
 	vector<CGameObject*> m_listRockObjects; // 생성된 나뭇가지 저장 리스트
+	std::vector<CRockShardEffect*> m_vRockShards; //돌파편
 
 	void SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 	void SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
+	void SpawnRockShardEffect(const XMFLOAT3& origin);
+	void SpawnRockShardEffectAtPlayer();
 
 };

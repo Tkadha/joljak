@@ -565,6 +565,15 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					break;
 				case VK_F1:
 				case VK_F2:
+					if (m_pScene && m_pScene->GetSkyBox()) {
+						int textureCount = m_pScene->GetSkyBox()->GetTextureCount();
+						OutputDebugString(std::format(L"[SkyBox] 텍스처 로드 개수: {}\n",textureCount).c_str());
+						if (textureCount > 0) {
+							m_nCurrentSkybox = (m_nCurrentSkybox + 1) % textureCount;
+							m_pScene->GetSkyBox()->SetSkyboxIndex(m_nCurrentSkybox);
+						}
+					}
+					break;
 				case VK_F3:
 				case VK_F4:
 					m_pCamera = m_pPlayer->ChangeCamera((DWORD)(wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
@@ -602,6 +611,12 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				break;
 			case 'T':
 				m_pScene->obbRender = m_pScene->obbRender ? false : true;
+				break;
+			case 'L':
+				ShowTraitUI = !ShowTraitUI;
+				break;
+			case 'Y':
+				m_pScene->SpawnRockShardEffectAtPlayer();
 				break;
 			}
 			break;
@@ -1339,6 +1354,8 @@ void CGameFramework::MoveToNextFrame()
 
 void CGameFramework::FrameAdvance()
 {    
+
+
 	if (m_logQueue.size() > 0) {
 		m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
 		while (m_logQueue.size() > 0) {
@@ -1409,6 +1426,7 @@ void CGameFramework::FrameAdvance()
 		m_pConstructionSystem->UpdatePreviewPosition(m_pCamera);
 	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
+	m_pPlayer->UpdateTraits();
 
 	HRESULT hResult = m_pd3dCommandAllocator->Reset();
 	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
@@ -1436,6 +1454,26 @@ void CGameFramework::FrameAdvance()
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
 	if (m_pScene) m_pScene->Render(m_pd3dCommandList, m_pCamera);
+
+	auto currentTimePoint = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed = currentTimePoint - startTime;
+	double currentTime = elapsed.count(); // 초 단위 경과 시간
+
+	if (currentTime - lastEventTime >= eventInterval)
+	{
+		if (m_pScene && m_pScene->GetSkyBox()) {
+			int textureCount = m_pScene->GetSkyBox()->GetTextureCount();
+			OutputDebugString(std::format(L"[SkyBox] 텍스처 로드 개수: {}\n", textureCount).c_str());
+			if (textureCount > 0) {
+				m_nCurrentSkybox = (m_nCurrentSkybox + 1) % textureCount;
+				m_pScene->GetSkyBox()->SetSkyboxIndex(m_nCurrentSkybox);
+			}
+
+		}
+		lastEventTime = currentTime;
+	}
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
@@ -1820,7 +1858,7 @@ void CGameFramework::FrameAdvance()
 
 		if (BuildMode && !bPrevBuildMode)
 		{
-			m_pConstructionSystem->EnterBuildMode(); // 상태 전환 시 한 번만 실행
+			m_pConstructionSystem->EnterBuildMode(m_pCamera); // 상태 전환 시 한 번만 실행
 		}
 		bPrevBuildMode = BuildMode;
 		/*
@@ -1948,7 +1986,123 @@ void CGameFramework::FrameAdvance()
 		ImGui::End();
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////// 특성 ui
+	if (ShowTraitUI)
+	{
+		ImVec2 windowSize = ImVec2(600, 700);
+		ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+		ImVec2 windowPos = ImVec2(
+			(displaySize.x - windowSize.x) * 0.5f,
+			(displaySize.y - windowSize.y) * 0.5f
+		);
+
+		ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
+		ImGui::SetNextWindowPos(windowPos, ImGuiCond_Always, ImVec2(0, 0));
+
+		ImGui::Begin("Passive Traits", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+
+		if (ImGui::BeginTabBar("StatsTabs"))
+		{
+			int hp = m_pPlayer->Maxhp;
+			int stamina = m_pPlayer->Maxstamina;
+			int atk = m_pPlayer->PlayerAttack;
+			float speed = m_pPlayer->PlayerSpeed;
+
+			if (ImGui::BeginTabItem("Health"))
+			{
+				std::vector<std::tuple<int, const char*, const char*>> hpTraits = {
+					{350, "Extra Health", "Increases base max HP"},
+					{400, "HP-based Damage", "Damage increases with HP"},
+					{450, "Regenerate When Starving", "Health regen continues even at 0 hunger"},
+					{500, "Enhanced HP Damage", "Stronger scaling with HP"},
+					{550, "Health Regen Skill", "Gain a passive healing effect"}
+				};
+
+				for (auto& [req, name, effect] : hpTraits)
+				{
+					bool active = hp >= req;
+					ImGui::TextColored(active ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+						"[%s] %s", active ? "ACTIVE" : "LOCKED", name);
+					ImGui::BulletText("Required HP: %d", req);
+					ImGui::BulletText("Effect: %s", effect);
+					ImGui::Separator();
+				}
+				ImGui::EndTabItem();
+			}
+
+			if (ImGui::BeginTabItem("Stamina"))
+			{
+				std::vector<std::tuple<int, const char*, const char*>> staminaTraits = {
+					{200, "Work Speed Boost", "Faster gathering/crafting"},
+					{250, "Lower Stamina Cost", "Reduced stamina usage"},
+					{300, "Faster Recovery", "Stamina regeneration rate up"},
+					{350, "Power Surge", "Boost speed/attack if stamina is high"},
+					{400, "Exhausted Action", "Can still act briefly at 0 stamina"}
+				};
+
+				for (auto& [req, name, effect] : staminaTraits)
+				{
+					bool active = stamina >= req;
+					ImGui::TextColored(active ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+						"[%s] %s", active ? "ACTIVE" : "LOCKED", name);
+					ImGui::BulletText("Required Stamina: %d", req);
+					ImGui::BulletText("Effect: %s", effect);
+					ImGui::Separator();
+				}
+				ImGui::EndTabItem();
+			}
+
+			if (ImGui::BeginTabItem("Attack"))
+			{
+				std::vector<std::tuple<int, const char*, const char*>> atkTraits = {
+					{15, "Triple Hit Bonus", "Every 3rd attack deals 2x damage"},
+					{20, "Kill Heal", "Heal some HP when killing enemies"},
+					{25, "Bleed Effect", "Applies bleed status"},
+					{30, "Damage Multiplier", "Boost weapon/tool damage"},
+					{35, "3s Invincibility", "Become invincible for 3s (180s cooldown)"}
+				};
+
+				for (auto& [req, name, effect] : atkTraits)
+				{
+					bool active = atk >= req;
+					ImGui::TextColored(active ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+						"[%s] %s", active ? "ACTIVE" : "LOCKED", name);
+					ImGui::BulletText("Required ATK: %d", req);
+					ImGui::BulletText("Effect: %s", effect);
+					ImGui::Separator();
+				}
+				ImGui::EndTabItem();
+			}
+
+			if (ImGui::BeginTabItem("Speed"))
+			{
+				std::vector<std::tuple<int, const char*, const char*>> speedTraits = {
+					{15, "Extra Dash", "Gain an extra dash"},
+					{20, "Slow Resist", "Reduces duration of slowing effects"},
+					{25, "Speed on Kill", "Gain movement speed after killing"},
+					{30, "Dash Attack", "Dash deals damage"},
+					{35, "Evade Hit", "Chance to dodge when hit"}
+				};
+
+				for (auto& [req, name, effect] : speedTraits)
+				{
+					bool active = speed >= req;
+					ImGui::TextColored(active ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+						"[%s] %s", active ? "ACTIVE" : "LOCKED", name);
+					ImGui::BulletText("Required Speed: %d", req);
+					ImGui::BulletText("Effect: %s", effect);
+					ImGui::Separator();
+				}
+				ImGui::EndTabItem();
+			}
+
+			ImGui::EndTabBar();
+		}
+
+		ImGui::End();
+	}
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////
 	ImGui::Render();
 	ID3D12DescriptorHeap* ppHeaps[] = { m_pd3dSrvDescriptorHeapForImGui };
 	m_pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);

@@ -16,6 +16,7 @@
 #include "ShaderManager.h"
 #include "ConstructionSystem.h"
 #include "../../Server/Global.h"
+#include <chrono>
 using namespace Microsoft::WRL; // 추가
 
 
@@ -109,7 +110,10 @@ public:
 	void InitializeItemIcons();
 	void UpdateFurnace(float deltaTime);
 	std::vector<CraftItem> m_vecCraftableItems;
-
+	int m_nCurrentSkybox = 0;
+	std::chrono::high_resolution_clock::time_point startTime = std::chrono::high_resolution_clock::now();
+	double eventInterval = 10.0; // 3초마다 이벤트
+	double lastEventTime = 0.0;
 
 
 	void NerworkThread();
@@ -127,6 +131,7 @@ private:
 	bool						ShowCraftingUI = false; 
 	bool						BuildMode = false;
 	bool						ShowFurnaceUI = false;
+	bool						ShowTraitUI = false;
 	bool					bPrevBuildMode = false;
 	int							selectedCraftItemIndex = -1;
 	CPineObject*				m_pPreviewObject = nullptr;

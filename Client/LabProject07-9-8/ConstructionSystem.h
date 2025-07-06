@@ -9,7 +9,7 @@ class CConstructionSystem
 {
 public:
     void Init(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* pGameFramework, CScene* scene);
-    void EnterBuildMode();
+    void EnterBuildMode(const CCamera* pCamera);
     void ExitBuildMode();
     void UpdatePreview(const XMFLOAT3& playerPos, const XMFLOAT3& forward);
     void ConfirmPlacement();
@@ -25,7 +25,7 @@ private:
     bool m_bBuildMode = false;
     CGameObject* m_pPreviewObject = nullptr;
     XMFLOAT3 previewPos;
-    std::string m_sSelectedBuilding = "pine"; // 기본값은 pine
+    std::string m_sSelectedBuilding = "pine"; // 기본값�? pine
 
     ID3D12Device* m_pd3dDevice = nullptr;
     ID3D12GraphicsCommandList* m_pd3dCommandList = nullptr;
