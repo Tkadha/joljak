@@ -386,6 +386,97 @@ void CPlayer::Update(float fTimeElapsed)
 	}
 }
 
+void CPlayer::UpdateTraits()
+{
+
+	switch (Maxhp) {
+	case 350:
+		Maxhp += 30;
+		break;
+	case 400:
+
+		break;
+	case 450:
+
+		break;
+	case 500:
+
+		break;
+	case 550:
+
+		break;
+	}
+
+	switch (Maxstamina) {
+	case 200:
+		// Passive: Increased Work Speed
+		// TODO: Improve crafting/gathering speed
+		break;
+	case 250:
+		// Passive: Reduced stamina consumption
+		// TODO: Subtract stamina usage multiplier
+		break;
+	case 300:
+		// Passive: Faster stamina recovery
+		// TODO: Add regen speed multiplier
+		break;
+	case 350:
+		// Passive: Boost attack/speed at high stamina
+		// TODO: Conditional bonus if stamina > threshold
+		break;
+	case 400:
+		// Passive: Action at 0 stamina
+		// TODO: Allow limited action when stamina is 0
+		break;
+	}
+
+	switch (PlayerAttack) {
+	case 15:
+		// Passive: 3rd Hit Double Damage
+		// TODO: Count attacks and boost every 3rd
+		break;
+	case 20:
+		// Passive: Heal on Kill
+		// TODO: Restore HP on enemy death
+		break;
+	case 25:
+		// Passive: Bleed Effect
+		// TODO: Chance to apply bleeding
+		break;
+	case 30:
+		// Passive: Damage Multiplier
+		// TODO: Increase weapon/tool damage
+		break;
+	case 35:
+		// Passive: 3s Invincibility (180s cooldown)
+		// TODO: Use timer and flags
+		break;
+	}
+
+	switch ((int)PlayerSpeed) {
+	case 15:
+		// Passive: Extra Dash
+		// TODO: Add 1 more dash use
+		break;
+	case 20:
+		// Passive: Slow Resistance
+		// TODO: Reduce slow effect duration
+		break;
+	case 25:
+		// Passive: Speed Boost on Kill
+		// TODO: Temporarily increase speed on kill
+		break;
+	case 30:
+		// Passive: Dash Attack
+		// TODO: Deal damage when dashing
+		break;
+	case 35:
+		// Passive: Evade on Hit
+		// TODO: Add chance to avoid damage
+		break;
+	}
+}
+
 CCamera *CPlayer::OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode)
 {
 	CCamera *pNewCamera = NULL;

@@ -8,14 +8,15 @@ void CConstructionSystem::Init(ID3D12Device* device, ID3D12GraphicsCommandList* 
     m_pScene = scene;
 }
 
-void CConstructionSystem::EnterBuildMode()
+void CConstructionSystem::EnterBuildMode(const CCamera* pCamera)
 {
-    if (m_bBuildMode) return; // ?´ë? ì§„ìž…?ˆìœ¼ë©?ë¬´ì‹œ
+    if (m_bBuildMode) return; 
     m_pPreviewObject = m_pScene->m_pPreviewPine;
     m_pPreviewObject->SetPosition(previewPos);
     m_pPreviewObject->isRender = true;
-    // ?”ë? ?¤ë¸Œ?íŠ¸ ?ì„±
-   
+  
+    if (pCamera)
+        UpdatePreviewPosition(pCamera);
 
     m_bBuildMode = true;
 }
@@ -33,7 +34,7 @@ void CConstructionSystem::UpdatePreviewPosition(const CCamera* pCamera)
     
     if (!m_bBuildMode || !m_pPreviewObject) return;
 
-    // ì¹´ë©”??ê¸°ì? ?„ì¹˜ ê³„ì‚° (?žìœ¼ë¡?500ë§Œí¼)
+    
     XMFLOAT3 camPos = pCamera->GetPosition();
     XMFLOAT3 camLook = pCamera->GetLookVector();
 
@@ -66,9 +67,24 @@ void CConstructionSystem::UpdatePreview(const XMFLOAT3& playerPos, const XMFLOAT
 
 void CConstructionSystem::ConfirmPlacement()
 {
+    CGameObject* installedObject = new CConstructionObject(m_pd3dDevice, m_pd3dCommandList, m_pGameFramework);
+    installedObject->SetPosition(m_pPreviewObject->GetPosition());
+    installedObject->SetOBB(1.f, 1.f, 1.f, XMFLOAT3(0.f, 0.f, 0.f));
+    installedObject->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+    installedObject->isRender = true;
+    m_pScene->m_vGameObjects.emplace_back(installedObject);
+
+    // »õ ÇÁ¸®ºä ¿ÀºêÁ§Æ®µµ °°Àº ¹æ½ÄÀ¸·Î »ý¼º
+    CGameObject* newPreview = new CConstructionObject(m_pd3dDevice, m_pd3dCommandList, m_pGameFramework);
+    newPreview->SetOBB(1.f, 1.f, 1.f, XMFLOAT3(0.f, 0.f, 0.f));
+    newPreview->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+    newPreview->isRender = true;
+
+    m_pPreviewObject = newPreview;
+    m_pScene->m_pPreviewPine = newPreview;
+    
+
     m_bBuildMode = false;
-
-
 }
 
 void CConstructionSystem::RenderPreview(ID3D12GraphicsCommandList* cmdList, CCamera* camera)

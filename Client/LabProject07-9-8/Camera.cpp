@@ -108,26 +108,26 @@ void CCamera::RegenerateViewMatrix()
 
 void CCamera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	UINT ncbElementBytes = ((sizeof(VS_CB_CAMERA_INFO) + 255) & ~255); // 256의 배수
+	UINT ncbElementBytes = ((sizeof(VS_CB_CAMERA_INFO) + 255) & ~255); // 256??배수
 
-	// 리소스 생성 함수 결과 확인
+	// 리소???�성 ?�수 결과 ?�인
 	m_pd3dcbCamera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
-	// --- 리소스 생성 확인 ---
+	// --- 리소???�성 ?�인 ---
 	if (!m_pd3dcbCamera) {
 		OutputDebugString(L"!!!!!!!! ERROR: Failed to create Camera Constant Buffer! !!!!!!!!\n");
-		// 실패 시 m_pcbMappedCamera도 당연히 nullptr 상태 유지
+		// ?�패 ??m_pcbMappedCamera???�연??nullptr ?�태 ?��?
 		return;
 	}
 
-	// 맵핑 시도 및 결과 확인
+	// 맵핑 ?�도 �?결과 ?�인
 	HRESULT hResult = m_pd3dcbCamera->Map(0, NULL, (void**)&m_pcbMappedCamera);
 
-	// --- 맵핑 확인 ---
+	// --- 맵핑 ?�인 ---
 	if (FAILED(hResult) || !m_pcbMappedCamera) {
 		OutputDebugString(L"!!!!!!!! ERROR: Failed to map Camera Constant Buffer! !!!!!!!!\n");
-		m_pcbMappedCamera = nullptr; // 안전하게 nullptr 처리
-		// 필요시 m_pd3dcbCamera도 Release 처리 고려
+		m_pcbMappedCamera = nullptr; // ?�전?�게 nullptr 처리
+		// ?�요??m_pd3dcbCamera??Release 처리 고려
 	}
 }
 
@@ -135,23 +135,23 @@ void CCamera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 void CCamera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// --- 중요: 맵핑된 포인터 유효성 검사 ---
+	// --- 중요: 맵핑???�인???�효??검??---
 	if (!m_pcbMappedCamera || !m_pd3dcbCamera) {
 		OutputDebugString(L"!!!!!!!! ERROR: Camera Constant Buffer or Mapped Pointer is NULL in UpdateShaderVariables! !!!!!!!!\n");
-		return; // 업데이트 및 바인딩 불가
+		return; // ?�데?�트 �?바인??불�?
 	}
 
-	// 데이터 복사 (memcpy 대신 구조체 멤버 직접 대입이 더 안전할 수 있음)
+	// ?�이??복사 (memcpy ?�??구조�?멤버 직접 ?�?�이 ???�전?????�음)
 	XMMATRIX viewMatrix = XMLoadFloat4x4(&m_xmf4x4View);
 	XMMATRIX projMatrix = XMLoadFloat4x4(&m_xmf4x4Projection);
 
-	// Transpose는 HLSL에서 수행하거나 C++에서 수행 (일관성 유지)
-	// HLSL에서 Transpose 안 한다면 여기서 수행
+	// Transpose??HLSL?�서 ?�행?�거??C++?�서 ?�행 (?��????��?)
+	// HLSL?�서 Transpose ???�다�??�기???�행
 	XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4View, XMMatrixTranspose(viewMatrix));
 	XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4Projection, XMMatrixTranspose(projMatrix));
 	m_pcbMappedCamera->m_xmf3Position = m_xmf3Position;
 
-	// 안개 적용
+	// ?�개 ?�용
 	m_pcbMappedCamera->FogColor = m_xmf4FogColor;
 	m_pcbMappedCamera->FogStart = m_fFogStart;
 	m_pcbMappedCamera->FogRange = m_fFogRange;
