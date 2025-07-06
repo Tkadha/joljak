@@ -155,7 +155,7 @@ void CGameObject::Check_attack()
 				p_info->DecreaseHp(obj->GetAtk());
 				p_info->SetInvincibility();
 
-				// ¹Ð·Á³ª±â
+				// ï¿½Ð·ï¿½ï¿½ï¿½ï¿½ï¿½
 				XMFLOAT3 monsterlook = obj->GetLook();
 				const float KnockBackDistance = 10.f;
 				XMFLOAT3 playerPos = p_info->GetPosition();
@@ -1358,7 +1358,7 @@ CLoadedModelInfo *CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device *pd
 				::ReadStringFromFile(pInFile, pstrToken); //"</Hierarchy>"
 
 
-				// ½ºÅ²µå ¸Þ½¬ Á¤º¸ ÁØºñ
+				// ï¿½ï¿½Å²ï¿½ï¿½ ï¿½Þ½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Øºï¿½
 				if (pLoadedModel->m_pModelRootObject && pLoadedModel->m_nSkinnedMeshes > 0) {
 					pLoadedModel->FindAndCacheSkinnedMeshes();
 				}

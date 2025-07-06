@@ -32,7 +32,7 @@ using namespace std;
 
 
 #define IOCPCOUNT 5
-const int iocpcount{ 5 }; // CPU 코어 수 - 1
+const unsigned int iocpcount{ std::thread::hardware_concurrency() - 2 };
 
 Iocp iocp(iocpcount); // 본 예제는 스레드를 딱 하나만 쓴다. 따라서 여기도 1이 들어간다.
 
@@ -346,11 +346,10 @@ int main(int argc, char* argv[])
 				Octree::PlayerOctree.query(t_obj, oct_distance, results);
 				// Do not update if there is no player nearby
 				if (results.size() > 0 && obj->FSM_manager) {
-					//OVER_EXP* p_over = new OVER_EXP();
-					//p_over->comp_type = COMP_TYPE::OP_FSM_UPDATE;
-					//p_over->obj_id = obj->GetID();
-					//PostQueuedCompletionStatus(iocp.m_hIocp, 0, (ULONG_PTR)obj.get(), &p_over->over);
-					obj->FSMUpdate();
+					OVER_EXP* p_over = new OVER_EXP();
+					p_over->comp_type = COMP_TYPE::OP_FSM_UPDATE;
+					p_over->obj_id = obj->GetID();
+					PostQueuedCompletionStatus(iocp.m_hIocp, 0, (ULONG_PTR)obj.get(), &p_over->over);
 				}
 			}
 
@@ -538,7 +537,7 @@ void BuildObject()
 	float objectMinSize = 15, objectMaxSize = 20;
 
 	int obj_id = 0;
-	int TreeCount = 200;
+	int TreeCount = 100;
 	for (int i = 0; i < TreeCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 
@@ -554,7 +553,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int RockCount = 200;
+	int RockCount = 100;
 	for (int i = 0; i < RockCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -571,7 +570,7 @@ void BuildObject()
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
 
-	int CowCount = 100;
+	int CowCount = 50;
 	for (int i = 0; i < CowCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -590,7 +589,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int PigCount = 100;
+	int PigCount = 50;
 	for (int i = 0; i < PigCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);

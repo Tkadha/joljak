@@ -37,15 +37,11 @@ void CGameFramework::NerworkThread()
 			ProcessPacket(packet.first.get());
 
 		}
-		SleepEx(10, TRUE);
+		SleepEx(1, TRUE);
 	}
 }
 void CGameFramework::ProcessPacket(char* packet)
 {
-	int loop_count{ 0 };
-retry:
-	loop_count++;
-	if (loop_count > 100) return;
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
@@ -97,14 +93,29 @@ retry:
 	case E_PACKET::E_O_ADD:
 	{
 		ADD_PACKET* recv_p = reinterpret_cast<ADD_PACKET*>(packet);
-		FLOAT3 right = recv_p->right;
-		FLOAT3 up = recv_p->up;
-		FLOAT3 look = recv_p->look;
-		FLOAT3 position = recv_p->position;
-		OBJECT_TYPE o_type = recv_p->o_type;
-		ANIMATION_TYPE a_type = recv_p->a_type;
-		int id = recv_p->id;
-		m_logQueue.push(log_inout{ E_PACKET::E_O_ADD,0,right,up,look,position,o_type,a_type,id });
+
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+		auto it = std::find_if(m_pScene->m_listGameObjects.begin(), m_pScene->m_listGameObjects.end(), [recv_p](CGameObject* obj) {
+			return obj->m_id == recv_p->id;
+			});
+		if (it != m_pScene->m_listGameObjects.end()) {
+			CGameObject* foundObj = *it;
+			foundObj->SetLook(XMFLOAT3(recv_p->look.x, recv_p->look.y, recv_p->look.z));
+			foundObj->SetUp(XMFLOAT3(recv_p->up.x, recv_p->up.y, recv_p->up.z));
+			foundObj->SetRight(XMFLOAT3(recv_p->right.x, recv_p->right.y, recv_p->right.z));
+			foundObj->SetPosition(recv_p->position.x, recv_p->position.y, recv_p->position.z);
+			m_pScene->m_vGameObjects.emplace_back(*it);
+		}
+		else {
+			FLOAT3 right = recv_p->right;
+			FLOAT3 up = recv_p->up;
+			FLOAT3 look = recv_p->look;
+			FLOAT3 position = recv_p->position;
+			OBJECT_TYPE o_type = recv_p->o_type;
+			ANIMATION_TYPE a_type = recv_p->a_type;
+			int id = recv_p->id;
+			m_logQueue.push(log_inout{ E_PACKET::E_O_ADD,0,right,up,look,position,o_type,a_type,id });
+		}
 	}
 	break;
 	case E_PACKET::E_O_REMOVE:
@@ -136,7 +147,6 @@ retry:
 			Found_obj->SetPosition(recv_p->position.x, recv_p->position.y, recv_p->position.z);
 			Found_obj->Check_attack();
 		}
-		else goto retry;
 	}
 	break;
 	case E_PACKET::E_O_CHANGEANIMATION:
@@ -151,7 +161,6 @@ retry:
 			CGameObject* Found_obj = *it;
 			if (Found_obj->m_pSkinnedAnimationController) Found_obj->ChangeAnimation(recv_p->a_type);
 		}
-		else goto retry;
 	}
 		break;
 	break;
@@ -201,7 +210,6 @@ retry:
 				}
 			}
 		}
-		else goto retry;
 	}
 	break;
 	case E_PACKET::E_O_INVINCIBLE: {
@@ -215,7 +223,6 @@ retry:
 			CGameObject* Found_obj = *it;
 			Found_obj->SetInvincible(recv_p->invincible);
 		}
-		else goto retry;
 	}
 	break;
 	default:
@@ -993,7 +1000,6 @@ void CGameFramework::ReleaseObjects()
 
 void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id)
 {
-
 	if (m_pScene)
 	{
 		switch (o_type)
@@ -1021,6 +1027,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->m_id = id;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
@@ -1069,6 +1076,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->m_id = id;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
@@ -1160,6 +1168,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pCowModel) delete(pCowModel);
 		}
@@ -1220,6 +1229,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pPigModel) delete(pPigModel);
 		}
@@ -1284,6 +1294,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pSpiderModel) delete(pSpiderModel);
 		}
@@ -1348,6 +1359,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pToadModel) delete(pToadModel);
 		}
@@ -1412,6 +1424,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pWolfModel) delete(pWolfModel);
 		}
@@ -1476,6 +1489,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pBatModel) delete(pBatModel);
 		}
@@ -1540,6 +1554,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pRaptorModel) delete(pRaptorModel);
 		}
@@ -1867,7 +1882,13 @@ void CGameFramework::FrameAdvance()
 			case E_PACKET::E_O_ADD:
 			{
 				std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
-				AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id);
+				auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(),
+					[log](CGameObject* obj) { return obj && obj->m_id == log.id; });
+				auto it2 = std::find_if(m_pScene->m_listGameObjects.begin(), m_pScene->m_listGameObjects.end(),
+					[log](CGameObject* obj) { return obj && obj->m_id == log.id; });
+				if (it == m_pScene->m_vGameObjects.end() && it2 == m_pScene->m_listGameObjects.end()) {
+					AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id);
+				}
 			}
 				break;
 			default:
