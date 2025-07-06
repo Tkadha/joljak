@@ -129,6 +129,24 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 		return;
 	}
 
+	// 1. 그림자 맵 객체 생성
+	m_pShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 4096, 4096);
+
+	// 2. SRV 핸들 할당: Framework의 AllocateSrvDescriptors 함수를 사용합니다.
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandle;
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuSrvHandle;
+	m_pGameFramework->AllocateSrvDescriptors(1, cpuSrvHandle, gpuSrvHandle);
+
+	// 3. DSV 핸들 가져오기: 방금 Framework에 만든 그림자용 DSV 힙의 시작 핸들을 가져옵니다.
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuDsvHandle = m_pGameFramework->GetShadowDsvHeap()->GetCPUDescriptorHandleForHeapStart();
+
+	// 4. ShadowMap에 모든 핸들을 전달하여 최종 리소스 생성
+	m_pShadowMap->BuildDescriptors(
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuSrvHandle),
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(gpuSrvHandle),
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuDsvHandle)
+	);
+
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pGameFramework);
 	srand((unsigned int)time(NULL));
 
