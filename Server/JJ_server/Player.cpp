@@ -123,6 +123,60 @@ void PlayerClient::Update(float fTimeElapsed)
 	m_Velocity = Vector3::Add(m_Velocity, Vector3::ScalarProduct(m_Velocity, -fDeceleration, true));
 }
 
+void PlayerClient::Change_Stat(E_STAT stat, float value)
+{
+    if (this->state != PC_INGAME) return;
+	switch (stat)
+	{
+	case E_STAT::STAMINA:
+        Playerstamina.store(value);
+		break;
+    case E_STAT::HUNGER: {
+        float expectedHunger = PlayerHunger.load();
+        while (true) {
+            float desiredHunger = expectedHunger + value;
+
+            if (desiredHunger > 100.f) {
+                desiredHunger = 100.f;
+            }
+            if (PlayerHunger.compare_exchange_weak(expectedHunger, desiredHunger)) {
+                break;
+            }
+        }
+    }
+		break;
+    case E_STAT::THIRST: {
+        float expectedThirst = PlayerThirst.load();
+        while (true) {
+            float desiredThirst = expectedThirst + value;
+
+            if (desiredThirst > 100.f) {
+                desiredThirst = 100.f;
+            }
+            if (PlayerThirst.compare_exchange_weak(expectedThirst, desiredThirst)) {
+                break;
+            }
+        }
+    }
+		break;
+	case E_STAT::MAX_STAMINA:
+        Maxstamina.store(value);
+		break;
+	case E_STAT::HP:
+        Playerhp.store(value);
+		break;
+	case E_STAT::MAX_HP:
+        Maxhp.store(value);
+		break;
+	case E_STAT::SPEED:
+        Speed_stat = value; // 이동 속도
+		break;
+	default:
+		break;
+	}
+
+}
+
 void PlayerClient::processInput(PlayerInput input)
 {
 	m_lastReceivedInput = input;

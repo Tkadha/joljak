@@ -23,6 +23,7 @@ enum class E_PACKET
 	E_O_SETOBB = 16,
 
 	E_P_SETHP = 17,
+	E_P_CHANGE_STAT = 18,
 
 
 	E_DB_REGISTER = 100,
@@ -60,6 +61,17 @@ enum class ANIMATION_TYPE
 	HIT,
 };
 
+enum class E_STAT
+{
+	STAMINA = 0, // 스태미나
+	HUNGER = 1, // 허기
+	THIRST = 2, // 갈증
+	HP = 3, // 체력
+	MAX_STAMINA = 4, // 최대 스태미나
+	MAX_HP = 5, // 최대 체력
+	SPEED = 6, // 이동 속도
+	NONE = 7 // 상태 없음
+};
 const int MAX_BUF_SIZE = 1024; // 버퍼 최대 크기
 
 
@@ -194,6 +206,20 @@ public:
 	}
 };
 
+class CHANGE_STAT_PACKET : public PACKET
+{
+public:
+	int oid; // 객체 ID
+	E_STAT stat; // 상태 (예: 0: 일반, 1: 공격, 2: 방어 등)
+	float value;
+	CHANGE_STAT_PACKET() {
+		oid = -1;
+		stat = E_STAT::NONE;
+		value = -1;
+		size = sizeof(CHANGE_STAT_PACKET);
+		type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+	}
+};
 
 class ADD_PACKET : public PACKET 
 {

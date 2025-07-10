@@ -275,6 +275,12 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		client->SetEffect(o_type);
 	}
 	break;
+	case E_PACKET::E_P_CHANGE_STAT:
+	{
+		CHANGE_STAT_PACKET* r_packet = reinterpret_cast<CHANGE_STAT_PACKET*>(packet);
+		client->Change_Stat(r_packet->stat, r_packet->value);
+	}
+	break;
 	default:
 		break;
 	}
@@ -289,14 +295,136 @@ void event_thread()
 			if(EVENT::event_queue.try_pop(ev)) {
 				if (ev.wakeup_time < std::chrono::system_clock::now())
 				{
-					if (ev.e_type == EVENT_TYPE::E_P_SLOW_END) {
+					switch (ev.e_type)
+					{
+					case EVENT_TYPE::E_P_SLOW_END: {
 						auto uid = ev.player_id;
-						for(auto it : PlayerClient::PlayerClients) {
+						for (auto it : PlayerClient::PlayerClients) {
 							if (it.second->m_id != uid) continue;
 							it.second->SetSlow(false);
 							break;
 						}
 					}
+					break;
+					case EVENT_TYPE::E_P_REGENERATE_HP: {
+						auto uid = ev.player_id;
+						for (auto it : PlayerClient::PlayerClients) {
+							if (it.second->m_id != uid) continue;
+							int hp = it.second->Playerhp.load();
+
+							while (hp < it.second->Maxhp.load()) {
+								int desiredHp = hp + 5;
+								if (desiredHp > it.second->Maxhp.load()) {
+									desiredHp = it.second->Maxhp.load();
+								}
+
+								if (it.second->Playerhp.compare_exchange_weak(hp, desiredHp)) {
+									// 패킷전송
+									CHANGE_STAT_PACKET s_packet;
+									s_packet.size = sizeof(CHANGE_STAT_PACKET);
+									s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+									s_packet.stat = E_STAT::HP;
+									s_packet.value = it.second->Playerhp.load();
+									it.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+									break;
+								}
+							}
+
+							EVENT::add_timer(ev, 1000); // 1초 후 다시 hp 회복
+							break;
+						}
+					}
+						break;
+					case EVENT_TYPE::E_P_REGENERATE_STAMINA: {
+						auto uid = ev.player_id;
+						for (auto it : PlayerClient::PlayerClients) {
+							int stamina = it.second->Playerstamina.load();
+
+							while (stamina < it.second->Maxstamina.load()) {
+								int desiredstamina = stamina + 5;
+								if (desiredstamina > it.second->Maxstamina.load()) {
+									desiredstamina = it.second->Maxstamina.load();
+								}
+
+								if (it.second->Playerstamina.compare_exchange_weak(stamina, desiredstamina)) {
+									// 패킷전송
+									CHANGE_STAT_PACKET s_packet;
+									s_packet.size = sizeof(CHANGE_STAT_PACKET);
+									s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+									s_packet.stat = E_STAT::STAMINA;
+									s_packet.value = it.second->Playerstamina.load();
+									it.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+									break;
+								}
+							}
+							EVENT::add_timer(ev, 1000); // 1초 후 다시 stamina 회복
+							break;
+						}
+					}
+						break;
+					case EVENT_TYPE::E_P_CONSUME_HUNGER: {
+						auto uid = ev.player_id;
+						for (auto it : PlayerClient::PlayerClients) {
+							if (it.second->m_id != uid) continue;
+							float expectedHunger = it.second->PlayerHunger.load();
+							while (expectedHunger > 0.0f) {
+								float desiredHunger = expectedHunger - 1.0f;
+
+								if (desiredHunger < 0.0f) {
+									desiredHunger = 0.0f;
+								}
+
+								if (it.second->PlayerHunger.compare_exchange_weak(expectedHunger, desiredHunger)) {
+									// 패킷전송
+									CHANGE_STAT_PACKET s_packet;
+									s_packet.size = sizeof(CHANGE_STAT_PACKET);
+									s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+									s_packet.stat = E_STAT::HUNGER;
+									s_packet.value = it.second->PlayerHunger.load();
+									it.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+									break;
+								}
+							}
+							EVENT::add_timer(ev, 5000); // 5초마다 허기 소모						
+							break;
+						}
+						
+					}
+						break;
+					case EVENT_TYPE::E_P_CONSUME_THIRST: {
+						auto uid = ev.player_id;
+						for (auto it : PlayerClient::PlayerClients) {
+							if (it.second->m_id != uid) continue;
+							float expectedThirst = it.second->PlayerThirst.load();
+							while (expectedThirst > 0.0f) {
+								float desiredThirst;
+								if (it.second->GetCurrentState() != ServerPlayerState::Idle)
+									desiredThirst = expectedThirst - 2.0f;
+								else
+									desiredThirst = expectedThirst - 1.0f;
+								if (desiredThirst < 0.0f) {
+									desiredThirst = 0.0f;
+								}
+								if (it.second->PlayerThirst.compare_exchange_weak(expectedThirst, desiredThirst)) {
+									// 패킷전송
+									CHANGE_STAT_PACKET s_packet;
+									s_packet.size = sizeof(CHANGE_STAT_PACKET);
+									s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+									s_packet.stat = E_STAT::THIRST;
+									s_packet.value = it.second->PlayerThirst.load();
+									it.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+									break;
+								}
+							}
+							EVENT::add_timer(ev, 2500); // 2.5초마다 갈증 소모
+							break;
+						}
+					}
+						break;
+					default:
+						break;
+					}
+
 				}
 				else EVENT::event_queue.push(ev);
 			}
@@ -511,6 +639,17 @@ void ProcessAccept()
 		{
 			std::lock_guard<std::mutex> lock(remoteClient->c_mu);
 			remoteClient->state = PC_INGAME;
+		}
+
+		{
+			EVENT ev(EVENT_TYPE::E_P_REGENERATE_HP, remoteClient->m_id, -1);
+			EVENT::add_timer(ev, 1000); // 1초 후 hp 회복
+			ev.e_type = EVENT_TYPE::E_P_REGENERATE_STAMINA;
+			EVENT::add_timer(ev, 500); // 0.5초 후 stamina 회복
+			ev.e_type = EVENT_TYPE::E_P_CONSUME_HUNGER;
+			EVENT::add_timer(ev, 5000); // 5초마다 허기 소모
+			ev.e_type = EVENT_TYPE::E_P_CONSUME_THIRST;
+			EVENT::add_timer(ev, 2500); // 2.5초마다 갈증 소모
 		}
 
 		// 계속해서 소켓 받기를 해야 하므로 리슨소켓도 overlapped I/O를 걸자.

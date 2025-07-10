@@ -59,8 +59,8 @@ public:
 	CPlayer(CGameFramework* pGameFramework);
 	virtual ~CPlayer();
 	bool					    checkmove = false;
-	float PlayerHunger = 1.0f;
-	float PlayerThirst = 1.0f;
+	float PlayerHunger = 100.0f;
+	float PlayerThirst = 100.0f;
 	int PlayerLevel = 1;
 	int Playerhp = 300;
 	int Maxhp = 300;

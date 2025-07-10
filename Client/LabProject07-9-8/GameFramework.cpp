@@ -90,6 +90,27 @@ void CGameFramework::ProcessPacket(char* packet)
 		m_logQueue.push(log_inout{ E_PACKET::E_P_LOGOUT ,recv_p->uid });
 	}
 	break;
+	case E_PACKET::E_P_CHANGE_STAT: {
+		CHANGE_STAT_PACKET* recv_p = reinterpret_cast<CHANGE_STAT_PACKET*>(packet);
+		switch (recv_p->stat)
+		{
+		case E_STAT::HP:
+			m_pPlayer->Playerhp = recv_p->value;
+			break;
+		case E_STAT::STAMINA:
+			m_pPlayer->Playerstamina = recv_p->value;
+			break;
+		case E_STAT::HUNGER:
+			m_pPlayer->PlayerHunger = recv_p->value;
+			break;
+		case E_STAT::THIRST:
+			m_pPlayer->PlayerThirst = recv_p->value;
+			break;
+		default:
+			break;
+		}
+	}
+	break;
 	case E_PACKET::E_O_ADD:
 	{
 		ADD_PACKET* recv_p = reinterpret_cast<ADD_PACKET*>(packet);
@@ -1843,8 +1864,6 @@ void CGameFramework::MoveToNextFrame()
 
 void CGameFramework::FrameAdvance()
 {    
-
-
 	if (m_logQueue.size() > 0) {
 		m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
 		while (m_logQueue.size() > 0) {

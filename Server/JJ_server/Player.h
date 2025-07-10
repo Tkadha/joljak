@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include "Terrain.h"
 #include <iostream>
+#include <atomic>
 // client Á¤º¸
 
 
@@ -45,8 +46,16 @@ private:
 
 	float m_walkSpeed = 50.0f;
 	float m_runSpeed = 100.0f;
-
+	int Speed_stat = 0;
 	bool b_slow = false;
+
+public:
+	std::atomic_int Playerhp = 300;
+	std::atomic_int Maxhp = 300;
+	std::atomic_int Playerstamina = 150;
+	std::atomic_int Maxstamina = 150;
+	std::atomic<float> PlayerHunger = 100.0f;
+	std::atomic<float> PlayerThirst = 100.0f;
 public:
 	PlayerClient() : RemoteClient()
 	{
@@ -118,10 +127,10 @@ public:
 	void SnapToGround();
 
 	void SetEffect(OBJECT_TYPE obj_type);
-	void SetSlow(bool b) { 
-		std::cout <<"SetSlow: " << b << std::endl;
-		b_slow = b; }
+	void SetSlow(bool b) { b_slow = b; }
 
+	void Change_Stat(E_STAT stat, float value);
+	ServerPlayerState GetCurrentState() const { return m_currentState; }
 	void processInput(PlayerInput input);
 
 	XMFLOAT3 GetLookVector() { return(m_Look); }
