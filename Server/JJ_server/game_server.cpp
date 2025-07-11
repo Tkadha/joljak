@@ -272,6 +272,7 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		SET_HP_HIT_OBJ_PACKET* r_packet = reinterpret_cast<SET_HP_HIT_OBJ_PACKET*>(packet);
 		if(r_packet->hit_obj_id < 0) return; // 잘못된 id
 		auto o_type = GameObject::gameObjects[r_packet->hit_obj_id]->GetType();
+		client->Playerhp -= GameObject::gameObjects[r_packet->hit_obj_id]->_atk;
 		client->SetEffect(o_type);
 	}
 	break;
@@ -313,7 +314,7 @@ void event_thread()
 							int hp = it.second->Playerhp.load();
 
 							while (hp < it.second->Maxhp.load()) {
-								int desiredHp = hp + 5;
+								int desiredHp = hp + 1;
 								if (desiredHp > it.second->Maxhp.load()) {
 									desiredHp = it.second->Maxhp.load();
 								}
@@ -330,7 +331,7 @@ void event_thread()
 								}
 							}
 
-							EVENT::add_timer(ev, 1000); // 1초 후 다시 hp 회복
+							EVENT::add_timer(ev, 1500); // 1.5초 후 다시 hp 회복
 							break;
 						}
 					}

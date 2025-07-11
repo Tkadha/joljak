@@ -448,7 +448,10 @@ void AtkNPCAttackState::Execute(std::shared_ptr<GameObject> npc)
 		return;
 	}
 	if (exec_ms < 0.25 * 1000.f) {
-		npc->MoveForward(0.75f);
+		if(npc->GetType() == OBJECT_TYPE::OB_RAPTOR)
+			npc->MoveForward(0.5f);
+		else
+			npc->MoveForward(0.75f);
 	}
 	Octree::GameObjectOctree.update(npc->GetID(), npc->GetPosition());
 

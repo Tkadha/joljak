@@ -2107,7 +2107,7 @@ void CGameFramework::FrameAdvance()
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Hunger"); // 허기
 	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
-	ImGui::ProgressBar(m_pPlayer->PlayerHunger, ImVec2(barWidth, barHeight));
+	ImGui::ProgressBar(m_pPlayer->PlayerHunger / 100.f, ImVec2(barWidth, barHeight));
 	ImGui::PopStyleColor();
 	ImGui::EndGroup();
 
@@ -2117,7 +2117,7 @@ void CGameFramework::FrameAdvance()
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Thirst"); // 갈증
 	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 0.2f, 1.0f, 1.0f));
-	ImGui::ProgressBar(m_pPlayer->PlayerThirst, ImVec2(barWidth, barHeight));
+	ImGui::ProgressBar(m_pPlayer->PlayerThirst / 100.f, ImVec2(barWidth, barHeight));
 	ImGui::PopStyleColor();
 	ImGui::EndGroup();
 
