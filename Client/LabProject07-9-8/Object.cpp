@@ -628,7 +628,9 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 	if (m_pMesh && pPrimaryMaterial && pPrimaryMaterial->m_pShader)
 	{
-		pScene->SetGraphicsState(pd3dCommandList, pPrimaryMaterial->m_pShader);
+
+		string shaderName = pPrimaryMaterial->m_pShader->m_strShaderName;
+		pScene->SetGraphicsState(pd3dCommandList, shaderName);
 
 
 		
@@ -1598,8 +1600,8 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 	CMaterial* pMaterial = GetMaterial(0); 
 	if (m_pMesh && pMaterial && pMaterial->m_pShader)
 	{
-		
-		pScene->SetGraphicsState(pd3dCommandList, pMaterial->m_pShader);
+		string shaderName = pMaterial->m_pShader->m_strShaderName;
+		pScene->SetGraphicsState(pd3dCommandList, shaderName);
 
 		
 		if (pCamera && pCamera->GetCameraConstantBuffer()) {

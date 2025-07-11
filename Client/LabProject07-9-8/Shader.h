@@ -33,7 +33,7 @@ public:
 	D3D12_SHADER_BYTECODE CompileShaderFromFile(WCHAR *pszFileName, LPCSTR pszShaderName, LPCSTR pszShaderProfile, ID3DBlob **ppd3dShaderBlob);
 	D3D12_SHADER_BYTECODE ReadCompiledShaderFromFile(WCHAR *pszFileName, ID3DBlob **ppd3dShaderBlob=NULL);
 
-	virtual void CreateShader(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature);
+	//virtual void CreateShader(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature);
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList) { }
@@ -55,7 +55,7 @@ public:
 	void SetRootSignature(ID3D12RootSignature* pRootSig) { m_pd3dGraphicsRootSignature = pRootSig; }
 	// CScene::Render 등에서 사용할 Getter
 	ID3D12RootSignature* GetRootSignature() const { return m_pd3dGraphicsRootSignature; }
-	ID3D12PipelineState* GetPipelineState() const { return m_pd3dPipelineState; }
+	//ID3D12PipelineState* GetPipelineState() const { return m_pd3dPipelineState; }
 
 	// --- GetShaderType 가상 함수 추가 ---
 	// 이 함수는 각 파생 셰이더 클래스가 자신의 타입을 문자열로 반환하도록 강제합니다.
