@@ -8,7 +8,7 @@ public:
     CShadowShader(const std::string& name);
     virtual ~CShadowShader();
 
-    virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+    //virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 
     // CShader의 가상 함수들을 오버라이드합니다.
     virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();

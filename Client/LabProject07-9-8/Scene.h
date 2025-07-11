@@ -89,7 +89,7 @@ public:
 
 	void ReleaseUploadBuffers();
 
-	void SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader);
+	void SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, std::string shaderName);
 
 	// 조명 버퍼 접근자 
 	ID3D12Resource* GetLightsConstantBuffer() const { return m_pd3dcbLights; }

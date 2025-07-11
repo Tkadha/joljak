@@ -16,11 +16,9 @@ private:
     ID3D12Device* m_pd3dDevice = nullptr; // 리소스 생성에 필요
 
     // 루트 서명 캐시 (이름 -> 루트 서명 객체)
-    std::map<std::string, Microsoft::WRL::ComPtr<ID3D12RootSignature>> m_RootSignatures;
+    std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> m_mapPipelineStates;
+    std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12RootSignature>> m_mapRootSignatures;
 
-    // 셰이더 캐시 (이름 -> 셰이더 객체)
-    // CShader가 자체 참조 카운팅(AddRef/Release)을 하므로 raw 포인터 사용
-    // ShaderManager는 저장 시 AddRef, 소멸 시 Release 필요
     std::map<std::string, CShader*> m_Shaders;
 
     // 루트 서명 생성 함수
@@ -39,6 +37,7 @@ private:
     // 셰이더 생성 함수
     CShader* CreateShaderInternal(const std::string& name, ID3D12GraphicsCommandList* pd3dCommandList);
 
+    void CreatePSO(const std::string& name);
 
 public:
     ShaderManager(ID3D12Device* pd3dDevice);
@@ -48,15 +47,10 @@ public:
     ShaderManager(const ShaderManager&) = delete;
     ShaderManager& operator=(const ShaderManager&) = delete;
 
-    // --- 루트 서명 접근 ---
-    // 요청한 이름의 루트 서명을 반환 (없으면 생성 후 캐싱)
+    ID3D12PipelineState* GetPipelineState(const std::string& name);
     ID3D12RootSignature* GetRootSignature(const std::string& name);
 
-    // --- 셰이더 접근 ---
-    // 요청한 이름의 셰이더를 반환 (없으면 생성 후 캐싱 및 PSO 생성)
-    // 주의: CShader::CreateShader는 CommandList가 필요함
     CShader* GetShader(const std::string& name, ID3D12GraphicsCommandList* pd3dCommandList);
 
-    // --- 정리 ---
     void ReleaseAll(); // 모든 캐시된 리소스 해제
 };

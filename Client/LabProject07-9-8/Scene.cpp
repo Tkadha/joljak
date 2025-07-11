@@ -1231,17 +1231,15 @@ void CScene::TestRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCa
 }
 
 
-void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader)
+void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, std::string shaderName)
 {
-	if (!pShader || !pd3dCommandList) return;
+	if (!pd3dCommandList) return;
 
 	
-	if (pShader != m_pCurrentShader)
 	{
-		m_pCurrentShader = pShader;
+		ShaderManager* pShaderManager = GetShaderManager();
 
-		
-		ID3D12RootSignature* pRootSig = pShader->GetRootSignature();
+		ID3D12RootSignature* pRootSig = pShaderManager->GetRootSignature(shaderName);
 		if (pRootSig && pRootSig != m_pCurrentRootSignature) {
 			pd3dCommandList->SetGraphicsRootSignature(pRootSig);
 			m_pCurrentRootSignature = pRootSig;
@@ -1249,13 +1247,12 @@ void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShade
 		}
 
 		
-		ID3D12PipelineState* pPSO = pShader->GetPipelineState();
+		ID3D12PipelineState* pPSO = pShaderManager->GetPipelineState(shaderName);
 		if (pPSO && pPSO != m_pCurrentPSO) {
 			pd3dCommandList->SetPipelineState(pPSO);
 			m_pCurrentPSO = pPSO;
 		}
-	}
-	
+	}	
 }
 
 ShaderManager* CScene::GetShaderManager() const {

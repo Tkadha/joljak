@@ -72,15 +72,15 @@ void ShaderManager::ReleaseAll()
     m_Shaders.clear();
 
     // 루트 서명은 ComPtr이 자동으로 Release 처리
-    m_RootSignatures.clear();
+    m_mapRootSignatures.clear();
 }
 
 // --- 루트 서명 관리 구현 ---
 ID3D12RootSignature* ShaderManager::GetRootSignature(const std::string& name)
 {
     // 1. 캐시 확인
-    auto it = m_RootSignatures.find(name);
-    if (it != m_RootSignatures.end())
+    auto it = m_mapRootSignatures.find(name);
+    if (it != m_mapRootSignatures.end())
     {
         return it->second.Get(); // 캐시된 루트 서명 반환
     }
@@ -95,7 +95,7 @@ ID3D12RootSignature* ShaderManager::GetRootSignature(const std::string& name)
         // 3. 생성 성공 시 캐시에 저장
         if (pNewRootSig)
         {
-            m_RootSignatures[name] = pNewRootSig; // ComPtr이 소유권 가짐
+            m_mapRootSignatures[name] = pNewRootSig; // ComPtr이 소유권 가짐
             return pNewRootSig;
         }
         else
@@ -548,4 +548,72 @@ CShader* ShaderManager::CreateShaderInternal(const std::string& name, ID3D12Grap
 
     OutputDebugStringA(("Successfully created Shader and PSO: " + name + "\n").c_str());
     return pShader; // 성공
+}
+
+
+void ShaderManager::CreatePSO(const std::string& name)
+{
+    // 이미 생성된 PSO면 바로 리턴
+    if (m_mapPipelineStates.count(name) > 0) return;
+
+    // 이름에 따라 사용할 재료(CShader)와 루트서명을 결정
+    std::unique_ptr<CShader> pTempShader = nullptr;
+    std::string rootSignatureName;
+    D3D12_SHADER_BYTECODE psByteCode;
+
+    if (name == "Standard_GBuffer")
+    {
+        pTempShader = std::make_unique<CStandardShader>(name);
+        rootSignatureName = "Standard";
+    }
+    else if (name == "Standard")
+    {
+        pTempShader = std::make_unique<CStandardShader>(name);
+        rootSignatureName = "Standard";
+    }
+    else if (name == "Shadow")
+    {
+        pTempShader = std::make_unique<CShadowShader>(name);
+        rootSignatureName = "Shadow";
+    }
+    // ... 다른 셰이더들도 동일하게 추가 ...
+
+    // PSO 디스크립션(D3D12_GRAPHICS_PIPELINE_STATE_DESC)을 조립합니다.
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+    psoDesc.pRootSignature = GetRootSignature(rootSignatureName); // 미리 생성된 루트서명 가져오기
+    psoDesc.VS = pTempShader->CreateVertexShader();
+    psoDesc.PS = pTempShader->CreatePixelShader();
+    psoDesc.InputLayout = pTempShader->CreateInputLayout();
+    psoDesc.RasterizerState = pTempShader->CreateRasterizerState();
+    psoDesc.BlendState = pTempShader->CreateBlendState();
+    psoDesc.DepthStencilState = pTempShader->CreateDepthStencilState();
+    psoDesc.SampleMask = UINT_MAX;
+    psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    //psoDesc.NumRenderTargets = 1;
+    //psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    psoDesc.SampleDesc.Count = 1;
+    psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+
+    if (name.find("_GBuffer") != std::string::npos) // 이름에 _GBuffer가 포함되어 있으면
+    {
+		psoDesc.NumRenderTargets = GBUFFER_COUNT;
+		psoDesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		psoDesc.RTVFormats[1] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		psoDesc.RTVFormats[2] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		psoDesc.RTVFormats[3] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    }
+    else if (name == "Shadow")
+    {
+        psoDesc.NumRenderTargets = 0; // 그림자 패스는 컬러 타겟 없음
+        psoDesc.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
+    }
+    else // 그 외 (포워드 렌더링)
+    {
+        psoDesc.NumRenderTargets = 1;
+        psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    }
+
+    // 최종 PSO 생성 및 맵에 저장
+    m_pd3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_mapPipelineStates[name]));
 }

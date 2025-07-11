@@ -43,33 +43,33 @@ D3D12_SHADER_BYTECODE COBBShader::CreatePixelShader()
 }
 
 // CreateShader 함수 오버라이드 (Primitive Topology 설정 위해)
-void COBBShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
-{
-    // 1. 기본 PSO Desc 설정 (루트서명, VS, PS, 상태들 가져오기)
-    ::ZeroMemory(&m_d3dPipelineStateDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-    m_d3dPipelineStateDesc.pRootSignature = pd3dGraphicsRootSignature;
-    m_d3dPipelineStateDesc.VS = CreateVertexShader(); // VS 컴파일
-    m_d3dPipelineStateDesc.PS = CreatePixelShader();  // PS 컴파일
-    m_d3dPipelineStateDesc.RasterizerState = CreateRasterizerState(); // 오버라이드된 Rasterizer 사용
-    m_d3dPipelineStateDesc.BlendState = CreateBlendState();        // 기본 Blend 사용
-    m_d3dPipelineStateDesc.DepthStencilState = CreateDepthStencilState(); // 기본 Depth 사용
-    m_d3dPipelineStateDesc.InputLayout = CreateInputLayout();       // 오버라이드된 InputLayout 사용
-    m_d3dPipelineStateDesc.SampleMask = UINT_MAX;
-    m_d3dPipelineStateDesc.NumRenderTargets = 1;
-    m_d3dPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-    m_d3dPipelineStateDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    m_d3dPipelineStateDesc.SampleDesc.Count = 1;
-    m_d3dPipelineStateDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-
-    // --- 2. OBB 셰이더를 위한 수정 ---
-    m_d3dPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE; // 라인 리스트로 변경!
-    // --- 수정 끝 ---
-
-    // 3. PSO 생성
-    HRESULT hResult = pd3dDevice->CreateGraphicsPipelineState(&m_d3dPipelineStateDesc, __uuidof(ID3D12PipelineState), (void**)&m_pd3dPipelineState);
-
-    // 4. 블롭 및 입력 레이아웃 메모리 해제 (베이스 클래스와 동일)
-    if (m_pd3dVertexShaderBlob) { m_pd3dVertexShaderBlob->Release(); m_pd3dVertexShaderBlob = NULL; }
-    if (m_pd3dPixelShaderBlob) { m_pd3dPixelShaderBlob->Release(); m_pd3dPixelShaderBlob = NULL; }
-    if (m_d3dPipelineStateDesc.InputLayout.pInputElementDescs) { delete[] m_d3dPipelineStateDesc.InputLayout.pInputElementDescs; }
-}
+//void COBBShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+//{
+//    // 1. 기본 PSO Desc 설정 (루트서명, VS, PS, 상태들 가져오기)
+//    ::ZeroMemory(&m_d3dPipelineStateDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+//    m_d3dPipelineStateDesc.pRootSignature = pd3dGraphicsRootSignature;
+//    m_d3dPipelineStateDesc.VS = CreateVertexShader(); // VS 컴파일
+//    m_d3dPipelineStateDesc.PS = CreatePixelShader();  // PS 컴파일
+//    m_d3dPipelineStateDesc.RasterizerState = CreateRasterizerState(); // 오버라이드된 Rasterizer 사용
+//    m_d3dPipelineStateDesc.BlendState = CreateBlendState();        // 기본 Blend 사용
+//    m_d3dPipelineStateDesc.DepthStencilState = CreateDepthStencilState(); // 기본 Depth 사용
+//    m_d3dPipelineStateDesc.InputLayout = CreateInputLayout();       // 오버라이드된 InputLayout 사용
+//    m_d3dPipelineStateDesc.SampleMask = UINT_MAX;
+//    m_d3dPipelineStateDesc.NumRenderTargets = 1;
+//    m_d3dPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+//    m_d3dPipelineStateDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+//    m_d3dPipelineStateDesc.SampleDesc.Count = 1;
+//    m_d3dPipelineStateDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+//
+//    // --- 2. OBB 셰이더를 위한 수정 ---
+//    m_d3dPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE; // 라인 리스트로 변경!
+//    // --- 수정 끝 ---
+//
+//    // 3. PSO 생성
+//    HRESULT hResult = pd3dDevice->CreateGraphicsPipelineState(&m_d3dPipelineStateDesc, __uuidof(ID3D12PipelineState), (void**)&m_pd3dPipelineState);
+//
+//    // 4. 블롭 및 입력 레이아웃 메모리 해제 (베이스 클래스와 동일)
+//    if (m_pd3dVertexShaderBlob) { m_pd3dVertexShaderBlob->Release(); m_pd3dVertexShaderBlob = NULL; }
+//    if (m_pd3dPixelShaderBlob) { m_pd3dPixelShaderBlob->Release(); m_pd3dPixelShaderBlob = NULL; }
+//    if (m_d3dPipelineStateDesc.InputLayout.pInputElementDescs) { delete[] m_d3dPipelineStateDesc.InputLayout.pInputElementDescs; }
+//}
