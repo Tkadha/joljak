@@ -70,7 +70,12 @@ CShader* ShaderManager::GetShader(const std::string& name)
         if (it->second->GetPipelineState() == nullptr)
         {
             ID3D12RootSignature* pRootSignature = GetRootSignature(it->second->GetShaderType());
-            it->second->CreateShader(m_pd3dDevice, nullptr, pRootSignature);
+            if (pRootSignature)
+            {
+                it->second->CreateShader(m_pd3dDevice, nullptr, pRootSignature);
+
+                it->second->SetRootSignature(pRootSignature);
+            }
         }
         return it->second.get();
     }
