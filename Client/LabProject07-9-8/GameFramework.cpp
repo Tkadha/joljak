@@ -488,11 +488,14 @@ void CGameFramework::CreateCommandQueueAndList()
 	d3dCommandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 	d3dCommandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 	hResult = m_pd3dDevice->CreateCommandQueue(&d3dCommandQueueDesc, _uuidof(ID3D12CommandQueue), (void **)&m_pd3dCommandQueue);
-
+	hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&m_pd3dUploadCommandAllocator);
 	hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void **)&m_pd3dCommandAllocator);
 
 	hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dCommandAllocator, NULL, __uuidof(ID3D12GraphicsCommandList), (void **)&m_pd3dCommandList);
 	hResult = m_pd3dCommandList->Close();
+
+	hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dUploadCommandAllocator, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&m_pd3dUploadCommandList);
+	hResult = m_pd3dUploadCommandList->Close();
 }
 
 void CGameFramework::CreateRtvAndDsvDescriptorHeaps()
@@ -1030,15 +1033,15 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			CGameObject* gameObj;
 			int tree_type = rand() % 2;
 			if (tree_type == 0) {
-				gameObj = new CBirchObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
+				gameObj = new CBirchObject(m_pd3dDevice, m_pd3dUploadCommandList, m_pScene->m_pGameFramework);
 				int materialIndexToChange = 1;
 				UINT albedoTextureSlot = 0;
 				const wchar_t* textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
 				ResourceManager* pResourceManager = GetResourceManager();
-				ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, m_pd3dCommandList, m_pd3dDevice);
+				ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, m_pd3dUploadCommandList, m_pd3dDevice);
 			}
 			else if (tree_type == 1)
-				gameObj = new CPineObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
+				gameObj = new CPineObject(m_pd3dDevice, m_pd3dUploadCommandList, m_pScene->m_pGameFramework);
 
 			
 			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
@@ -1055,7 +1058,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(0.2f, 1.f, 0.2f, XMFLOAT3{ 0.f,0.f,0.f });
-			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
 			if (it == gameobj_list.end()) {
@@ -1082,12 +1085,12 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			break;
 		case OBJECT_TYPE::OB_STONE:
 		{
-			CGameObject* gameObj = new CRockClusterAObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
+			CGameObject* gameObj = new CRockClusterAObject(m_pd3dDevice, m_pd3dUploadCommandList, m_pScene->m_pGameFramework);
 			int materialIndexToChange = 0;
 			UINT albedoTextureSlot = 0;
 			const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
 			ResourceManager* pResourceManager = GetResourceManager();
-			ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, m_pd3dCommandList, m_pd3dDevice);
+			ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, m_pd3dUploadCommandList, m_pd3dDevice);
 
 
 			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
@@ -1104,7 +1107,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
-			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
 			if (it == gameobj_list.end()) {
@@ -1132,8 +1135,8 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		case OBJECT_TYPE::OB_COW:
 		{
 			int animate_count = 13;
-			CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Cow.bin", this);
-			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pCowModel, animate_count, this);
+			CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Cow.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pCowModel, animate_count, this);
 			gameObj->m_objectType = GameObjectType::Cow;
 			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 			gameObj->m_anitype = 0;
@@ -1164,7 +1167,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
-			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
 			if (it == gameobj_list.end()) {
@@ -1197,8 +1200,8 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		case OBJECT_TYPE::OB_PIG:
 		{
 			int animate_count = 13;
-			CLoadedModelInfo* pPigModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Pig.bin", this);
-			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pPigModel, animate_count, this);
+			CLoadedModelInfo* pPigModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Pig.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pPigModel, animate_count, this);
 			gameObj->m_objectType = GameObjectType::Pig;
 			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 			gameObj->m_anitype = 0;
@@ -1225,7 +1228,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 0.8f, 1.f, XMFLOAT3{ 0.f,1.f,-1.f });
-			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
 			if (it == gameobj_list.end()) {
@@ -1258,8 +1261,8 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		case OBJECT_TYPE::OB_SPIDER:
 		{
 			int animate_count = 13;
-			CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Spider.bin", this);
-			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pSpiderModel, animate_count, this);
+			CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Spider.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pSpiderModel, animate_count, this);
 			gameObj->m_objectType = GameObjectType::Spider;
 			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 			gameObj->m_anitype = 0;
@@ -1290,7 +1293,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
-			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
 			if (it == gameobj_list.end()) {
@@ -1323,8 +1326,8 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		case OBJECT_TYPE::OB_TOAD:
 		{
 			int animate_count = 13;
-			CLoadedModelInfo* pToadModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Toad.bin", this);
-			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pToadModel, animate_count, this);
+			CLoadedModelInfo* pToadModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Toad.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pToadModel, animate_count, this);
 			gameObj->m_objectType = GameObjectType::Toad;
 			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 			gameObj->m_anitype = 0;
@@ -1355,7 +1358,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
-			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
 			if (it == gameobj_list.end()) {
@@ -1388,8 +1391,8 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		case OBJECT_TYPE::OB_WOLF:
 		{
 			int animate_count = 13;
-			CLoadedModelInfo* pWolfModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Wolf.bin", this);
-			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pWolfModel, animate_count, this);
+			CLoadedModelInfo* pWolfModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Wolf.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pWolfModel, animate_count, this);
 			gameObj->m_objectType = GameObjectType::Wolf;
 			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 			gameObj->m_anitype = 0;
@@ -1420,7 +1423,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
-			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
 			if (it == gameobj_list.end()) {
@@ -1453,8 +1456,8 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		case OBJECT_TYPE::OB_BAT:
 		{
 			int animate_count = 13;
-			CLoadedModelInfo* pBatModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Bat.bin", this);
-			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pBatModel, animate_count, this);
+			CLoadedModelInfo* pBatModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Bat.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pBatModel, animate_count, this);
 			gameObj->m_objectType = GameObjectType::Bat;
 			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 			gameObj->m_anitype = 0;
@@ -1485,7 +1488,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
-			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
 			if (it == gameobj_list.end()) {
@@ -1518,8 +1521,8 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		case OBJECT_TYPE::OB_RAPTOR:
 		{
 			int animate_count = 13;
-			CLoadedModelInfo* pRaptorModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Raptor.bin", this);
-			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pRaptorModel, animate_count, this);
+			CLoadedModelInfo* pRaptorModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Raptor.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pRaptorModel, animate_count, this);
 			gameObj->m_objectType = GameObjectType::Raptor;
 			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 			gameObj->m_anitype = 0;
@@ -1550,7 +1553,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
-			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
 			if (it == gameobj_list.end()) {
@@ -1865,7 +1868,9 @@ void CGameFramework::MoveToNextFrame()
 void CGameFramework::FrameAdvance()
 {    
 	if (m_logQueue.size() > 0) {
-		m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
+		m_pd3dUploadCommandAllocator->Reset();
+		m_pd3dUploadCommandList->Reset(m_pd3dUploadCommandAllocator, NULL);
+
 		while (m_logQueue.size() > 0) {
 			auto log = m_logQueue.front();
 			m_logQueue.pop();
@@ -1873,9 +1878,9 @@ void CGameFramework::FrameAdvance()
 			{
 			case E_PACKET::E_P_LOGIN:
 			{
-				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/Player.bin", this);
+				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/Player.bin", this);
 				int animate_count = 15;
-				m_pScene->PlayerList[log.ID] = std::make_unique<UserObject>(m_pd3dDevice, m_pd3dCommandList, pUserModel, animate_count, this);
+				m_pScene->PlayerList[log.ID] = std::make_unique<UserObject>(m_pd3dDevice, m_pd3dUploadCommandList, pUserModel, animate_count, this);
 				m_pScene->PlayerList[log.ID]->m_objectType = GameObjectType::Player;
 				m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 				for (int j = 1; j < animate_count; ++j) {
@@ -1914,8 +1919,8 @@ void CGameFramework::FrameAdvance()
 				break;
 			}
 		}
-		m_pd3dCommandList->Close();
-		ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList };
+		m_pd3dUploadCommandList->Close();
+		ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dUploadCommandList };
 		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
 		WaitForGpuComplete();
@@ -1940,7 +1945,7 @@ void CGameFramework::FrameAdvance()
 		m_pConstructionSystem->UpdatePreviewPosition(m_pCamera);
 	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
-	m_pPlayer->UpdateTraits();
+
 
 	HRESULT hResult = m_pd3dCommandAllocator->Reset();
 	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
@@ -2261,6 +2266,7 @@ void CGameFramework::FrameAdvance()
 					s_packet.stat = E_STAT::HP;
 					s_packet.value = m_pPlayer->Playerhp;
 					nwManager.PushSendQueue(s_packet, s_packet.size);
+					m_pPlayer->UpdateTraits();
 				}
 			}
 			else {
@@ -2281,6 +2287,7 @@ void CGameFramework::FrameAdvance()
 					s_packet.stat = E_STAT::STAMINA;
 					s_packet.value = m_pPlayer->Playerstamina;
 					nwManager.PushSendQueue(s_packet, s_packet.size);
+					m_pPlayer->UpdateTraits();
 				}
 			}
 			else {
@@ -2290,7 +2297,7 @@ void CGameFramework::FrameAdvance()
 			ImGui::BulletText("ATK: %d", m_pPlayer->PlayerAttack);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
-				if (ImGui::Button("+##atk")) { m_pPlayer->PlayerAttack += 1; m_pPlayer->StatPoint--; }
+				if (ImGui::Button("+##atk")) { m_pPlayer->PlayerAttack += 1; m_pPlayer->StatPoint--; m_pPlayer->UpdateTraits(); }
 			}
 			else {
 				ImGui::BeginDisabled(); ImGui::Button("+##atk"); ImGui::EndDisabled();
@@ -2307,6 +2314,7 @@ void CGameFramework::FrameAdvance()
 					s_packet.stat = E_STAT::SPEED;
 					s_packet.value = m_pPlayer->PlayerSpeedLevel;
 					nwManager.PushSendQueue(s_packet, s_packet.size);
+					m_pPlayer->UpdateTraits();
 				}
 			}
 			else {

@@ -390,7 +390,7 @@ void CPlayer::UpdateTraits()
 {
 	auto& nwManager = NetworkManager::GetInstance();
 	switch (Maxhp) {
-	case 350:
+	case 350: {
 		Maxhp += 30;
 		CHANGE_STAT_PACKET s_packet;
 		s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
@@ -398,6 +398,7 @@ void CPlayer::UpdateTraits()
 		s_packet.stat = E_STAT::MAX_HP;
 		s_packet.value = Maxhp;
 		nwManager.PushSendQueue(s_packet, s_packet.size);
+	}
 		break;
 	case 400:
 

@@ -164,6 +164,9 @@ private:
 	HANDLE						m_hFenceEvent;
 	int							m_nIconCount;
 	
+	ID3D12CommandAllocator* m_pd3dUploadCommandAllocator = nullptr;
+	ID3D12GraphicsCommandList* m_pd3dUploadCommandList = nullptr;
+
 	// --- 종료 동기화용 펜스 값 추가 ---
 	UINT64                      m_nMasterFenceValue = 0;
 private:
