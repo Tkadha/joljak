@@ -757,11 +757,19 @@ void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 
 	if (m_pMesh)
 	{
-		for (int i = 0; i < m_nMaterials; i++)
+		if (m_pMesh->m_nSubMeshes > 0)
 		{
-			m_pMesh->Render(pd3dCommandList, i);
+			for (int i = 0; i < m_pMesh->m_nSubMeshes; i++)
+			{
+				m_pMesh->Render(pd3dCommandList, i);
+			}
+		}
+		else
+		{
+			m_pMesh->Render(pd3dCommandList, 0);
 		}
 	}
+
 	if (m_pSibling) m_pSibling->RenderShadow(pd3dCommandList);
 	if (m_pChild) m_pChild->RenderShadow(pd3dCommandList);
 }
@@ -1059,19 +1067,16 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 			}
 
 			
-			CShader* pMatShader = pShaderManager->GetShader(shaderName, pd3dCommandList);
+			CShader* pMatShader = pShaderManager->GetShader(shaderName);
 			if (pMatShader) {
-				pMaterial->SetShader(pMatShader); 
-				
-				pMatShader->Release();
+				pMaterial->SetShader(pMatShader);
 			}
 			else {
 				OutputDebugStringA(("Error: Could not get shader '" + shaderName + "' from ShaderManager! Assigning default Standard shader.\n").c_str());
 				
-				pMatShader = pShaderManager->GetShader("Standard", pd3dCommandList);
+				pMatShader = pShaderManager->GetShader("Standard");
 				if (pMatShader) {
 					pMaterial->SetShader(pMatShader);
-					pMatShader->Release();
 				}
 			}
 			
@@ -1571,10 +1576,9 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	}
 
 	
-	CShader* pTerrainShader = pShaderManager->GetShader("Terrain", pd3dCommandList); 
+	CShader* pTerrainShader = pShaderManager->GetShader("Terrain"); 
 	if (pTerrainShader) {
 		pTerrainMaterial->SetShader(pTerrainShader); 
-		pTerrainShader->Release(); 
 	}
 	else {
 		OutputDebugString(L"Error: Failed to get Terrain shader. Material will not have a shader.\n");
@@ -1683,10 +1687,9 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	}
 
 	
-	CShader* pSkyBoxShader = pShaderManager->GetShader("Skybox", pd3dCommandList);
+	CShader* pSkyBoxShader = pShaderManager->GetShader("Skybox");
 	if (pSkyBoxShader) {
 		pSkyBoxMaterial->SetShader(pSkyBoxShader);
-		pSkyBoxShader->Release();
 	}
 
 	SetMaterial(0, pSkyBoxMaterial);

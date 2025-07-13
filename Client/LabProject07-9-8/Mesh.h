@@ -59,7 +59,6 @@ protected:
 	ID3D12Resource					*m_pd3dPositionUploadBuffer = NULL;
 	D3D12_VERTEX_BUFFER_VIEW		m_d3dPositionBufferView;
 
-	int								m_nSubMeshes = 0;
 	int								*m_pnSubSetIndices = NULL;
 	UINT							**m_ppnSubSetIndices = NULL;
 
@@ -69,6 +68,7 @@ protected:
 
 public:
 	int m_nPositions;
+	int								m_nSubMeshes = 0;
 	XMFLOAT3						*m_pxmf3Positions = NULL;
 
 	UINT GetType() { return(m_nType); }

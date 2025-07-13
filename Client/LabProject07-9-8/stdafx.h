@@ -1,7 +1,7 @@
 #pragma once
 
 ///---------¼­¹ö ¿¬°á------------
-#define ONLINE
+//#define ONLINE
 
 
 #define WIN32_LEAN_AND_MEAN             // ê±°ì˜ ?¬ìš©?˜ì? ?ŠëŠ” ?´ìš©?€ Windows ?¤ë”?ì„œ ?œì™¸?©ë‹ˆ??
@@ -432,3 +432,14 @@ namespace genRandom
 		return std::make_pair(x, z);
 	}
 }
+
+
+
+// Wave
+
+struct Vertex
+{
+	DirectX::XMFLOAT3 pos;
+	DirectX::XMFLOAT3 normal;
+	DirectX::XMFLOAT2 texc;
+};

@@ -73,3 +73,27 @@ void COBBShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
     if (m_pd3dPixelShaderBlob) { m_pd3dPixelShaderBlob->Release(); m_pd3dPixelShaderBlob = NULL; }
     if (m_d3dPipelineStateDesc.InputLayout.pInputElementDescs) { delete[] m_d3dPipelineStateDesc.InputLayout.pInputElementDescs; }
 }
+
+
+ID3D12RootSignature* COBBShader::CreateRootSignature(ID3D12Device* pd3dDevice)
+{
+    CD3DX12_ROOT_PARAMETER pd3dDescriptorRanges[1]; // CBV(b0 Transform WVP)
+    // OBB 셰이더 HLSL은 cbTransform:register(b0) 사용
+    pd3dDescriptorRanges[0].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+
+    // 샘플러나 텍스처 필요 없음
+    CD3DX12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc(_countof(pd3dDescriptorRanges), pd3dDescriptorRanges,
+        0, nullptr, // No static samplers
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS);
+
+    HRESULT hr;
+    ID3D12RootSignature* pd3dRootSignature = nullptr;
+    Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+
+    hr = D3D12SerializeRootSignature(&d3dRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) { if (errorBlob) OutputDebugStringA((char*)errorBlob->GetBufferPointer()); return nullptr; }
+    hr = pd3dDevice->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&pd3dRootSignature));
+    if (FAILED(hr)) return nullptr;
+    return pd3dRootSignature;
+}

@@ -7,6 +7,7 @@
 #include "Object.h"
 #include "Camera.h"
 
+
 class CShader
 {
 public:
@@ -59,6 +60,8 @@ public:
 	// 이 함수는 각 파생 셰이더 클래스가 자신의 타입을 문자열로 반환하도록 강제합니다.
 	virtual std::string GetShaderType() const = 0; // 순수 가상 함수로 선언
 
+
+	static std::array<const CD3DX12_STATIC_SAMPLER_DESC, 3> GetStaticSamplers();
 protected:
 	ID3DBlob							*m_pd3dVertexShaderBlob = NULL;
 	ID3DBlob							*m_pd3dPixelShaderBlob = NULL;

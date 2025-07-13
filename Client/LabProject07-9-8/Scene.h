@@ -23,6 +23,7 @@
 
 class CGameFramework;
 
+class CWavesObject;
 
 struct LIGHT
 {
@@ -117,6 +118,9 @@ public:
 	vector<CGameObject*>				m_vGameObjects{};
 	std::unordered_map<std::string, CGameObject*> m_mapBuildPrefabs;
 	CGameObject* m_pPreviewPine = nullptr;
+
+	// 파도 오브젝트
+	CWavesObject* m_pWavesObject = nullptr;
 
 
 	//int									m_nHierarchicalGameObjects = 0;

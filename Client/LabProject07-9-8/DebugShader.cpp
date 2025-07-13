@@ -79,3 +79,28 @@ D3D12_SHADER_BYTECODE CDebugShader::CreatePixelShader()
     // 분리된 HLSL 파일 사용
     return CompileShaderFromFile(L"Debug.hlsl", "PS", "ps_5_1", &m_pd3dPixelShaderBlob);
 }
+
+ID3D12RootSignature* CDebugShader::CreateRootSignature(ID3D12Device* pd3dDevice)
+{
+    CD3DX12_DESCRIPTOR_RANGE pd3dDescriptorRanges[1];
+    pd3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
+
+    CD3DX12_ROOT_PARAMETER pd3dRootParameters[1];
+    pd3dRootParameters[0].InitAsDescriptorTable(1, &pd3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_PIXEL); // PS에서 샘플링
+
+    auto staticSamplers = GetStaticSamplers();
+    CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(_countof(pd3dRootParameters), pd3dRootParameters,
+        1, &staticSamplers[0],
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS);
+
+    HRESULT hr;
+    ID3D12RootSignature* pd3dRootSignature = nullptr;
+    Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+
+    hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) { if (errorBlob) OutputDebugStringA((char*)errorBlob->GetBufferPointer()); return nullptr; }
+    hr = pd3dDevice->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&pd3dRootSignature));
+    if (FAILED(hr)) return nullptr;
+    return pd3dRootSignature;
+}

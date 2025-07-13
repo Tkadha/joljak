@@ -183,8 +183,8 @@ private:
 	UINT m_nTotalSrvDescriptors; // 생성 시 설정
 
 	std::unique_ptr<ResourceManager> m_pResourceManager;
-	//std::unique_ptr<ShaderManager> m_pShaderManager;
-	ShaderManager* m_pShaderManager; 
+	//ShaderManager* m_pShaderManager;
+	std::unique_ptr<ShaderManager> m_pShaderManager;
 
 
 
@@ -205,7 +205,7 @@ public:
 	ID3D12Device* GetDevice() { return m_pd3dDevice; }
 	ID3D12GraphicsCommandList* GetCommandList() { return m_pd3dCommandList; }
 	ResourceManager* GetResourceManager() { return m_pResourceManager.get(); };
-	ShaderManager* GetShaderManager() { return m_pShaderManager; };
+	ShaderManager* GetShaderManager() { return m_pShaderManager.get(); };
 
 	CScene* GetScene() { return m_pScene; }
 

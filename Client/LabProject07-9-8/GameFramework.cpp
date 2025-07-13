@@ -435,7 +435,8 @@ void CGameFramework::CreateDirect3DDevice()
 		OutputDebugString(L"Error: Failed to create D3D12 Device. Cannot get descriptor sizes.\n");
 		// 필요하다면 프로그램 종료 또는 예외 처리
 	}
-	m_pShaderManager = new ShaderManager(m_pd3dDevice);
+	m_pShaderManager = std::make_unique<ShaderManager>(m_pd3dDevice);
+
 
 	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS d3dMsaaQualityLevels;
 	d3dMsaaQualityLevels.Format = DXGI_FORMAT_R8G8B8A8_UNORM;

@@ -20,4 +20,6 @@ public:
     virtual D3D12_SHADER_BYTECODE CreatePixelShader() override;
 
     virtual std::string GetShaderType() const override { return "Debug"; }
+
+    static ID3D12RootSignature* CreateRootSignature(ID3D12Device* pd3dDevice);
 };

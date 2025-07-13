@@ -76,3 +76,25 @@ D3D12_RASTERIZER_DESC CShadowShader::CreateRasterizerState()
 
     return d3dRasterizerDesc;
 }
+
+ID3D12RootSignature* CShadowShader::CreateRootSignature(ID3D12Device* pd3dDevice)
+{
+    // Shadow 셰이더는 카메라 정보(b0)와 월드 행렬 정보(b2)만 필요합니다.
+    CD3DX12_ROOT_PARAMETER pd3dRootParameters[2];
+    pd3dRootParameters[0].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_VERTEX); // b0: Camera
+    pd3dRootParameters[1].InitAsConstants(41, 2, 0, D3D12_SHADER_VISIBILITY_VERTEX);    // b2: GameObject 
+
+    CD3DX12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc;
+    d3dRootSignatureDesc.Init(_countof(pd3dRootParameters), pd3dRootParameters, 0, NULL, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+    HRESULT hr;
+    ID3D12RootSignature* pd3dRootSignature = nullptr;
+    Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+
+    hr = D3D12SerializeRootSignature(&d3dRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+    if (FAILED(hr)) { if (errorBlob) OutputDebugStringA((char*)errorBlob->GetBufferPointer()); return nullptr; }
+    hr = pd3dDevice->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&pd3dRootSignature));
+    if (FAILED(hr)) return nullptr;
+    return pd3dRootSignature;
+}

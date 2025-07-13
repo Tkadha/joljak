@@ -19,4 +19,6 @@ public:
 
 
     virtual std::string GetShaderType() const override { return "Shadow"; }
+
+    static ID3D12RootSignature* CreateRootSignature(ID3D12Device* pd3dDevice);
 };

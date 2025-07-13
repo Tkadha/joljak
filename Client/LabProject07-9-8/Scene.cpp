@@ -8,6 +8,7 @@
 
 #include "NonAtkState.h"
 #include "AtkState.h"
+#include "WaveObject.h"
 
 bool ChangeAlbedoTexture(
 	CGameObject* pParentGameObject,
@@ -202,7 +203,29 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	m_pTerrain->m_xmf4x4World = Matrix4x4::Identity();
 	m_pTerrain->m_xmf4x4ToParent = Matrix4x4::Identity();
 
+
+
+	// 1. Waves 객체를 생성합니다.
+	m_pWavesObject = new CWavesObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	// 물결이 보일 위치를 설정합니다. (맵의 중앙 근처, 수면 높이)
+	m_pWavesObject->SetPosition(5000.0f, -20.0f, 5000.0f);
+
+	// 2. Waves를 위한 재질(Material)을 생성합니다.
+	CMaterial* pWavesMaterial = new CMaterial(1, m_pGameFramework);
+
+	// 3. ShaderManager에서 "Waves" 셰이더를 가져와 재질에 설정합니다.
+	pWavesMaterial->SetShader(m_pGameFramework->GetShaderManager()->GetShader("Waves"));
 	
+	// (선택) 물 텍스처가 있다면 여기서 로드하여 재질에 할당할 수 있습니다.
+	// pWavesMaterial->AssignTexture(...);
+
+	// 4. 생성한 재질을 Waves 객체에 설정합니다.
+	m_pWavesObject->SetMaterial(0, pWavesMaterial);
+	
+
+
+
+
 	// 1. 그림자 맵 객체 생성
 	m_pShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 4096, 4096);
 
@@ -717,6 +740,7 @@ void CScene::ReleaseObjects()
 {
 	if (m_pTerrain) delete m_pTerrain;
 	if (m_pSkyBox) delete m_pSkyBox;
+	if (m_pWavesObject) delete m_pWavesObject;
 
 	ReleaseShaderVariables();
 	//for(auto& obj : m_vGameObjects) {
@@ -781,6 +805,7 @@ void CScene::ReleaseUploadBuffers()
 {
 	if (m_pSkyBox) m_pSkyBox->ReleaseUploadBuffers();
 	if (m_pTerrain) m_pTerrain->ReleaseUploadBuffers();
+	if (m_pWavesObject) m_pWavesObject->ReleaseUploadBuffers();
 	for(auto& obj : m_vGameObjects) {
 		if (obj) obj->ReleaseUploadBuffers();
 	}
@@ -861,6 +886,8 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
+
+	if (m_pWavesObject) m_pWavesObject->Animate(fTimeElapsed);
 }
 
 
@@ -884,9 +911,9 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		m_pShadowMap->SetRenderTarget(pd3dCommandList);
 
 		// 그림자 생성을 위한 전용 셰이더 설정
-		CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Shadow", pd3dCommandList);
+		CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Shadow");
 		pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
-		pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature()); // Shadow 셰이더용 루트 서명
+		pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
 
 		// --- 빛 카메라 상수 버퍼 업데이트 및 바인딩 ---
 		XMMATRIX view = XMLoadFloat4x4(&mLightView);
@@ -950,6 +977,8 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		m_pTerrain->Render(pd3dCommandList, pCamera);
 	}
 
+	if (m_pWavesObject) m_pWavesObject->Render(pd3dCommandList, pCamera);
+
 	//std::vector<tree_obj*> results;
 	//tree_obj player_obj{ -1, m_pPlayer->GetPosition() };
 	//octree.query(player_obj, XMFLOAT3{ 2500,1000,2500 }, results);
@@ -1012,7 +1041,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 
 	if (obbRender) {
-		CShader* pOBBShader = pShaderManager->GetShader("OBB", pd3dCommandList);
+		CShader* pOBBShader = pShaderManager->GetShader("OBB");
 		if (pOBBShader) {
 			SetGraphicsState(pd3dCommandList, pOBBShader);
 			for (auto& obj : m_vGameObjects) {
@@ -1058,7 +1087,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 
 	// --- 그림자 맵 디버그 출력 ---
-	CShader* pDebugShader = pShaderManager->GetShader("Debug", pd3dCommandList);
+	CShader* pDebugShader = pShaderManager->GetShader("Debug");
 	pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
 	pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
 
@@ -1098,7 +1127,7 @@ void CScene::TestRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCa
 	pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 	// 3. 디버그 셰이더와 PSO, 루트 서명 설정
-	CShader* pDebugShader = pShaderManager->GetShader("Debug", pd3dCommandList);
+	CShader* pDebugShader = pShaderManager->GetShader("Debug");
 	if (!pDebugShader || !pDebugShader->GetPipelineState())
 	{
 		OutputDebugString(L"Error: Debug shader or PSO is null.\n");
