@@ -47,7 +47,7 @@ public:
 	void PushSendQueue(P packet, short size)
 	{
 		auto buffer = make_unique<char[]>(size);
-		memcpy(buffer.get(), reinterpret_cast<const char*>(& packet), size);
+		memcpy(buffer.get(), reinterpret_cast<const char*>(&packet), size);
 		lock_guard<mutex> lock(s_mu);
 		if (packet.type == static_cast<char>(E_PACKET::E_P_ROTATE))
 		{

@@ -239,7 +239,7 @@ public:
 public:
 	int hp{ 20 };
 	int level = 0;
-	int atk = 3;
+	int atk = 5;
 
 	int getHp() { return hp; }
 	void setHp(int n) { hp = n; }

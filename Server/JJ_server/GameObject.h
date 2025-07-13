@@ -120,7 +120,7 @@ public:
 public:
 	int _level = 0;
 	int _hp = 20;
-	int _atk = 3;
+	int _atk = 5;
 	void Sethp(int hp) { _hp = hp; }
 	void Decreasehp(int num) { _hp -= num; }
 	int Gethp() { return _hp; }

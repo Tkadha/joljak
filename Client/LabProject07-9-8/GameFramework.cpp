@@ -2243,13 +2243,25 @@ void CGameFramework::FrameAdvance()
 
 		// 오른쪽: 플레이어 스탯
 		{
+			auto& nwManager = NetworkManager::GetInstance();
 			ImGui::Text("LV: %d", m_pPlayer->PlayerLevel);
 			ImGui::Text("STATUS:");
 
 			ImGui::BulletText("HP: %d / %d", m_pPlayer->Playerhp, m_pPlayer->Maxhp);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
-				if (ImGui::Button("+##hp")) { m_pPlayer->Maxhp += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerhp += 10; }
+				if (ImGui::Button("+##hp")) { 
+					m_pPlayer->Maxhp += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerhp += 10; 
+					CHANGE_STAT_PACKET s_packet;
+					s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+					s_packet.size = sizeof(CHANGE_STAT_PACKET);
+					s_packet.stat = E_STAT::MAX_HP;
+					s_packet.value = m_pPlayer->Maxhp;
+					nwManager.PushSendQueue(s_packet, s_packet.size);
+					s_packet.stat = E_STAT::HP;
+					s_packet.value = m_pPlayer->Playerhp;
+					nwManager.PushSendQueue(s_packet, s_packet.size);
+				}
 			}
 			else {
 				ImGui::BeginDisabled(); ImGui::Button("+##hp"); ImGui::EndDisabled();
@@ -2258,7 +2270,18 @@ void CGameFramework::FrameAdvance()
 			ImGui::BulletText("STAMINA: %d / %d", m_pPlayer->Playerstamina, m_pPlayer->Maxstamina);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
-				if (ImGui::Button("+##stamina")) { m_pPlayer->Maxstamina += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerstamina += 10; }
+				if (ImGui::Button("+##stamina")) { 
+					m_pPlayer->Maxstamina += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerstamina += 10; 
+					CHANGE_STAT_PACKET s_packet;
+					s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+					s_packet.size = sizeof(CHANGE_STAT_PACKET);
+					s_packet.stat = E_STAT::MAX_STAMINA;
+					s_packet.value = m_pPlayer->Maxstamina;
+					nwManager.PushSendQueue(s_packet, s_packet.size);
+					s_packet.stat = E_STAT::STAMINA;
+					s_packet.value = m_pPlayer->Playerstamina;
+					nwManager.PushSendQueue(s_packet, s_packet.size);
+				}
 			}
 			else {
 				ImGui::BeginDisabled(); ImGui::Button("+##stamina"); ImGui::EndDisabled();
@@ -2276,7 +2299,15 @@ void CGameFramework::FrameAdvance()
 			ImGui::BulletText("SPEED: %.1f", m_pPlayer->PlayerSpeed);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
-				if (ImGui::Button("+##speed")) { m_pPlayer->PlayerSpeed += 0.2f; m_pPlayer->StatPoint--; }
+				if (ImGui::Button("+##speed")) { 
+					m_pPlayer->PlayerSpeed += 0.2f; m_pPlayer->StatPoint--; m_pPlayer->PlayerSpeedLevel++;
+					CHANGE_STAT_PACKET s_packet;
+					s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+					s_packet.size = sizeof(CHANGE_STAT_PACKET);
+					s_packet.stat = E_STAT::SPEED;
+					s_packet.value = m_pPlayer->PlayerSpeedLevel;
+					nwManager.PushSendQueue(s_packet, s_packet.size);
+				}
 			}
 			else {
 				ImGui::BeginDisabled(); ImGui::Button("+##speed"); ImGui::EndDisabled();

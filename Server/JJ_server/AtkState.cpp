@@ -180,6 +180,7 @@ void AtkNPCMoveState::Exit(std::shared_ptr<GameObject> npc)
 
 void AtkNPCChaseState::Enter(std::shared_ptr<GameObject> npc)
 {
+	if (npc->GetType() == OBJECT_TYPE::OB_BAT)	npc->fly_height = 15.f;
 	npc->SetAnimationType(ANIMATION_TYPE::WALK);
 	std::vector<tree_obj*> results;
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
@@ -448,10 +449,19 @@ void AtkNPCAttackState::Execute(std::shared_ptr<GameObject> npc)
 		return;
 	}
 	if (exec_ms < 0.25 * 1000.f) {
-		if(npc->GetType() == OBJECT_TYPE::OB_RAPTOR)
+		auto n_type = npc->GetType();
+		if (npc->fly_height > 0) npc->fly_height -= 0.5f; // 비행 중에는 조금씩 내려옴
+		if(n_type == OBJECT_TYPE::OB_RAPTOR || n_type == OBJECT_TYPE::OB_TOAD)
 			npc->MoveForward(0.5f);
 		else
 			npc->MoveForward(0.75f);
+
+	}
+	else {
+		if (npc->GetType() == OBJECT_TYPE::OB_BAT && npc->fly_height < 15.f) {
+			npc->fly_height += 0.5f;
+			npc->MoveForward(0.f);
+		}
 	}
 	Octree::GameObjectOctree.update(npc->GetID(), npc->GetPosition());
 
@@ -467,20 +477,6 @@ void AtkNPCAttackState::Execute(std::shared_ptr<GameObject> npc)
 			cl.second->SendMovePacket(npc);
 		}
 	}
-	// 플레이어 체력 감소 시키기
-	// 후 전송도 포함해야함
-
-	// 충돌처리 어떻게 할것인가
-	/*auto p_info = npc->m_pScene->GetPlayerInfo();
-	if (p_info) {
-		if (npc->m_pScene->CollisionCheck(npc.get(), p_info)) {
-			if (false == p_info->invincibility) {
-				auto obj = dynamic_cast<CMonsterObject*> (npc.get());
-				p_info->DecreaseHp(obj->GetAtk());
-				p_info->SetInvincibility();
-			}
-		}
-	}*/
 }
 
 void AtkNPCAttackState::Exit(std::shared_ptr<GameObject> npc)

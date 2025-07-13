@@ -69,6 +69,7 @@ public:
 	int StatPoint = 5;
 	int PlayerAttack = 10;
 	float PlayerSpeed = 10.0f;
+	int PlayerSpeedLevel = 0;
 	int Playerxp = 0;
 	int Totalxp = 20;
 	bool invincibility = false;

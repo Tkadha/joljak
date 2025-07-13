@@ -333,6 +333,7 @@ void PlayerClient::Update_test(float deltaTime)
         }
         for (auto& o_obj : oresults) {
             if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
+            if (GameObject::gameObjects[o_obj->u_id]->_hp <= 0) continue;
             if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
             if (testOBBX.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
             {
@@ -368,6 +369,7 @@ void PlayerClient::Update_test(float deltaTime)
         }
         for (auto& o_obj : oresults) {
             if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
+            if (GameObject::gameObjects[o_obj->u_id]->_hp <= 0) continue;
             if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
             if (testOBBZ.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
             {
