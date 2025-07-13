@@ -18,7 +18,7 @@ CMesh::~CMesh()
 	{
 		for (int i = 0; i < m_nSubMeshes; i++)
 		{
-			if (m_ppd3dSubSetIndexBuffers[i]) m_ppd3dSubSetIndexBuffers[i]->Release();
+			if (m_ppd3dSubSetIndexBuffers) if (m_ppd3dSubSetIndexBuffers[i]) m_ppd3dSubSetIndexBuffers[i]->Release();
 			if (m_ppnSubSetIndices[i]) delete[] m_ppnSubSetIndices[i];
 		}
 		if (m_ppd3dSubSetIndexBuffers) delete[] m_ppd3dSubSetIndexBuffers;
@@ -29,6 +29,128 @@ CMesh::~CMesh()
 	}
 
 	if (m_pxmf3Positions) delete[] m_pxmf3Positions;
+}
+
+CMesh::CMesh(const CMesh& other)
+	: m_nReferences(0),
+	m_nType(other.m_nType),
+	m_xmf3AABBCenter(other.m_xmf3AABBCenter),
+	m_xmf3AABBExtents(other.m_xmf3AABBExtents),
+	m_d3dPrimitiveTopology(other.m_d3dPrimitiveTopology),
+	m_nSlot(other.m_nSlot),
+	m_nOffset(other.m_nOffset),
+	m_nVertices(other.m_nVertices),
+	m_nSubMeshes(other.m_nSubMeshes),
+	m_nPositions(other.m_nPositions)
+{
+	strcpy_s(m_pstrMeshName, 64, other.m_pstrMeshName);
+
+	m_pd3dPositionBuffer = other.m_pd3dPositionBuffer;
+	m_pd3dPositionUploadBuffer = other.m_pd3dPositionUploadBuffer;
+	m_d3dPositionBufferView = other.m_d3dPositionBufferView;
+
+	if (other.m_ppd3dSubSetIndexBuffers && other.m_nSubMeshes > 0) {
+		// Raw 포인터 배열을 복사 (ComPtr를 사용하지 않는다는 가정)
+		// 이 경우 ComPtr를 사용하지 않는다면 수명 관리가 매우 복잡해집니다.
+		m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [other.m_nSubMeshes];
+		m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [other.m_nSubMeshes];
+		m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[other.m_nSubMeshes];
+
+		for (UINT i = 0; i < other.m_nSubMeshes; ++i) {
+			m_ppd3dSubSetIndexBuffers[i] = other.m_ppd3dSubSetIndexBuffers[i];
+			if (m_ppd3dSubSetIndexBuffers[i]) m_ppd3dSubSetIndexBuffers[i]->AddRef(); // 참조 카운트 증가
+
+			m_ppd3dSubSetIndexUploadBuffers[i] = other.m_ppd3dSubSetIndexUploadBuffers[i];
+			if (m_ppd3dSubSetIndexUploadBuffers[i]) m_ppd3dSubSetIndexUploadBuffers[i]->AddRef();
+
+			m_pd3dSubSetIndexBufferViews[i] = other.m_pd3dSubSetIndexBufferViews[i];
+		}
+	}
+	else {
+		m_ppd3dSubSetIndexBuffers = NULL;
+		m_ppd3dSubSetIndexUploadBuffers = NULL;
+		m_pd3dSubSetIndexBufferViews = NULL;
+	}
+
+	if (other.m_pxmf3Positions && other.m_nPositions > 0) {
+		m_pxmf3Positions = new DirectX::XMFLOAT3[other.m_nPositions];
+		std::copy(other.m_pxmf3Positions, other.m_pxmf3Positions + other.m_nPositions, m_pxmf3Positions);
+	}
+	else { m_pxmf3Positions = NULL; }
+
+	if (other.m_pnSubSetIndices && other.m_nSubMeshes > 0) {
+		m_pnSubSetIndices = new int[other.m_nSubMeshes];
+		std::copy(other.m_pnSubSetIndices, other.m_pnSubSetIndices + other.m_nSubMeshes, m_pnSubSetIndices);
+	}
+	else { m_pnSubSetIndices = NULL; }
+
+	if (other.m_ppnSubSetIndices && other.m_nSubMeshes > 0) {
+		m_ppnSubSetIndices = new UINT * [other.m_nSubMeshes];
+		for (int i = 0; i < other.m_nSubMeshes; ++i) {
+			if (other.m_ppnSubSetIndices[i]) {
+				m_ppnSubSetIndices[i] = new UINT[other.m_pnSubSetIndices[i]];
+				std::copy(other.m_ppnSubSetIndices[i], other.m_ppnSubSetIndices[i] + other.m_pnSubSetIndices[i], m_ppnSubSetIndices[i]);
+			}
+			else { m_ppnSubSetIndices[i] = NULL; }
+		}
+	}
+	else { m_ppnSubSetIndices = NULL; }
+}
+CMesh& CMesh::operator=(const CMesh& other)
+{
+	if (this != &other)
+	{
+		this->ReleaseUploadBuffers();
+		if (m_pd3dPositionBuffer) { m_pd3dPositionBuffer->Release(); m_pd3dPositionBuffer = NULL; }
+		if (m_pxmf3Positions) { delete[] m_pxmf3Positions; m_pxmf3Positions = NULL; }
+		if (m_pnSubSetIndices) { delete[] m_pnSubSetIndices; m_pnSubSetIndices = NULL; }
+		if (m_ppnSubSetIndices) {
+			for (int i = 0; i < m_nSubMeshes; ++i) { if (m_ppnSubSetIndices[i]) delete[] m_ppnSubSetIndices[i]; }
+			delete[] m_ppnSubSetIndices; m_ppnSubSetIndices = NULL;
+		}
+		if (m_ppd3dSubSetIndexBuffers) {
+			for (int i = 0; i < m_nSubMeshes; ++i) { if (m_ppd3dSubSetIndexBuffers[i]) m_ppd3dSubSetIndexBuffers[i]->Release(); }
+			delete[] m_ppd3dSubSetIndexBuffers; m_ppd3dSubSetIndexBuffers = NULL;
+		}
+		if (m_pd3dSubSetIndexBufferViews) { delete[] m_pd3dSubSetIndexBufferViews; m_pd3dSubSetIndexBufferViews = NULL; }
+
+		m_nReferences = 0;
+		strcpy_s(m_pstrMeshName, 64, other.m_pstrMeshName);
+		m_nType = other.m_nType; m_xmf3AABBCenter = other.m_xmf3AABBCenter; m_xmf3AABBExtents = other.m_xmf3AABBExtents;
+		m_d3dPrimitiveTopology = other.m_d3dPrimitiveTopology; m_nSlot = other.m_nSlot; m_nOffset = other.m_nOffset;
+		m_nVertices = other.m_nVertices; m_nSubMeshes = other.m_nSubMeshes; m_nPositions = other.m_nPositions;
+
+		m_pd3dPositionBuffer = NULL; m_pd3dPositionUploadBuffer = NULL; m_d3dPositionBufferView = { 0 };
+		m_ppd3dSubSetIndexBuffers = NULL; m_ppd3dSubSetIndexUploadBuffers = NULL; m_pd3dSubSetIndexBufferViews = NULL;
+
+		if (other.m_pxmf3Positions && other.m_nPositions > 0) {
+			m_pxmf3Positions = new DirectX::XMFLOAT3[other.m_nPositions];
+			std::copy(other.m_pxmf3Positions, other.m_pxmf3Positions + other.m_nPositions, m_pxmf3Positions);
+		}
+		else { m_pxmf3Positions = NULL; }
+
+		if (other.m_pnSubSetIndices && other.m_nSubMeshes > 0) {
+			m_pnSubSetIndices = new int[other.m_nSubMeshes];
+			std::copy(other.m_pnSubSetIndices, other.m_pnSubSetIndices + other.m_nSubMeshes, m_pnSubSetIndices);
+		}
+		else { m_pnSubSetIndices = NULL; }
+
+		if (other.m_ppnSubSetIndices && other.m_nSubMeshes > 0) {
+			m_ppnSubSetIndices = new UINT * [other.m_nSubMeshes];
+			for (int i = 0; i < other.m_nSubMeshes; ++i) {
+				if (other.m_ppnSubSetIndices[i]) {
+					m_ppnSubSetIndices[i] = new UINT[other.m_pnSubSetIndices[i]];
+					std::copy(other.m_ppnSubSetIndices[i], other.m_ppnSubSetIndices[i] + other.m_pnSubSetIndices[i], m_ppnSubSetIndices[i]);
+				}
+				else { m_ppnSubSetIndices[i] = NULL; }
+			}
+		}
+		else { m_ppnSubSetIndices = NULL; }
+	}
+	return *this;
+}
+CMesh* CMesh::clone() const {
+	return new CMesh(*this);
 }
 
 void CMesh::ReleaseUploadBuffers()
@@ -139,11 +261,13 @@ CHeightMapImage::CHeightMapImage(LPCTSTR pFileName, int nWidth, int nLength, XMF
 
 }
 
+
 CHeightMapImage::~CHeightMapImage()
 {
 	if (m_pHeightMapPixels) delete[] m_pHeightMapPixels;
 	m_pHeightMapPixels = NULL;
 }
+
 
 XMFLOAT3 CHeightMapImage::GetHeightMapNormal(int x, int z)
 {
@@ -310,6 +434,79 @@ CHeightMapGridMesh::~CHeightMapGridMesh()
 	if (m_pxmf2TextureCoords1) delete[] m_pxmf2TextureCoords1;
 }
 
+CHeightMapGridMesh::CHeightMapGridMesh(const CHeightMapGridMesh& other)
+	: CMesh(other),
+	m_nWidth(other.m_nWidth),
+	m_nLength(other.m_nLength),
+	m_xmf3Scale(other.m_xmf3Scale)
+{
+	m_pd3dColorBuffer = NULL; m_pd3dColorUploadBuffer = NULL; m_d3dColorBufferView = { 0 };
+	m_pd3dTextureCoord0Buffer = NULL; m_pd3dTextureCoord0UploadBuffer = NULL; m_d3dTextureCoord0BufferView = { 0 };
+	m_pd3dTextureCoord1Buffer = NULL; m_pd3dTextureCoord1UploadBuffer = NULL; m_d3dTextureCoord1BufferView = { 0 };
+
+	if (other.m_pxmf4Colors && other.m_nVertices > 0) {
+		m_pxmf4Colors = new DirectX::XMFLOAT4[other.m_nVertices];
+		std::copy(other.m_pxmf4Colors, other.m_pxmf4Colors + other.m_nVertices, m_pxmf4Colors);
+	}
+	else { m_pxmf4Colors = NULL; }
+
+	if (other.m_pxmf2TextureCoords0 && other.m_nVertices > 0) {
+		m_pxmf2TextureCoords0 = new DirectX::XMFLOAT2[other.m_nVertices];
+		std::copy(other.m_pxmf2TextureCoords0, other.m_pxmf2TextureCoords0 + other.m_nVertices, m_pxmf2TextureCoords0);
+	}
+	else { m_pxmf2TextureCoords0 = NULL; }
+
+	if (other.m_pxmf2TextureCoords1 && other.m_nVertices > 0) {
+		m_pxmf2TextureCoords1 = new DirectX::XMFLOAT2[other.m_nVertices];
+		std::copy(other.m_pxmf2TextureCoords1, other.m_pxmf2TextureCoords1 + other.m_nVertices, m_pxmf2TextureCoords1);
+	}
+	else { m_pxmf2TextureCoords1 = NULL; }
+}
+
+CHeightMapGridMesh& CHeightMapGridMesh::operator=(const CHeightMapGridMesh& other)
+{
+	if (this != &other)
+	{
+		CMesh::operator=(other);
+
+		this->ReleaseUploadBuffers();
+		if (m_pd3dColorBuffer) { m_pd3dColorBuffer->Release(); m_pd3dColorBuffer = NULL; }
+		if (m_pd3dTextureCoord0Buffer) { m_pd3dTextureCoord0Buffer->Release(); m_pd3dTextureCoord0Buffer = NULL; }
+		if (m_pd3dTextureCoord1Buffer) { m_pd3dTextureCoord1Buffer->Release(); m_pd3dTextureCoord1Buffer = NULL; }
+
+		if (m_pxmf4Colors) { delete[] m_pxmf4Colors; m_pxmf4Colors = NULL; }
+		if (m_pxmf2TextureCoords0) { delete[] m_pxmf2TextureCoords0; m_pxmf2TextureCoords0 = NULL; }
+		if (m_pxmf2TextureCoords1) { delete[] m_pxmf2TextureCoords1; m_pxmf2TextureCoords1 = NULL; }
+
+		m_nWidth = other.m_nWidth; m_nLength = other.m_nLength; m_xmf3Scale = other.m_xmf3Scale;
+
+		m_pd3dColorBuffer = NULL; m_pd3dColorUploadBuffer = NULL; m_d3dColorBufferView = { 0 };
+		m_pd3dTextureCoord0Buffer = NULL; m_pd3dTextureCoord0UploadBuffer = NULL; m_d3dTextureCoord0BufferView = { 0 };
+		m_pd3dTextureCoord1Buffer = NULL; m_pd3dTextureCoord1UploadBuffer = NULL; m_d3dTextureCoord1BufferView = { 0 };
+
+		if (other.m_pxmf4Colors && other.m_nVertices > 0) {
+			m_pxmf4Colors = new DirectX::XMFLOAT4[other.m_nVertices];
+			std::copy(other.m_pxmf4Colors, other.m_pxmf4Colors + other.m_nVertices, m_pxmf4Colors);
+		}
+		else { m_pxmf4Colors = NULL; }
+
+		if (other.m_pxmf2TextureCoords0 && other.m_nVertices > 0) {
+			m_pxmf2TextureCoords0 = new DirectX::XMFLOAT2[other.m_nVertices];
+			std::copy(other.m_pxmf2TextureCoords0, other.m_pxmf2TextureCoords0 + other.m_nVertices, m_pxmf2TextureCoords0);
+		}
+		else { m_pxmf2TextureCoords0 = NULL; }
+
+		if (other.m_pxmf2TextureCoords1 && other.m_nVertices > 0) {
+			m_pxmf2TextureCoords1 = new DirectX::XMFLOAT2[other.m_nVertices];
+			std::copy(other.m_pxmf2TextureCoords1, other.m_pxmf2TextureCoords1 + other.m_nVertices, m_pxmf2TextureCoords1);
+		}
+		else { m_pxmf2TextureCoords1 = NULL; }
+	}
+	return *this;
+}
+CHeightMapGridMesh* CHeightMapGridMesh::clone() const {
+	return new CHeightMapGridMesh(*this);
+}
 void CHeightMapGridMesh::ReleaseUploadBuffers()
 {
 	CMesh::ReleaseUploadBuffers();
@@ -458,7 +655,23 @@ CSkyBoxMesh::CSkyBoxMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 CSkyBoxMesh::~CSkyBoxMesh()
 {
 }
+CSkyBoxMesh::CSkyBoxMesh(const CSkyBoxMesh& other)
+	: CMesh(other)
+{
+}
 
+CSkyBoxMesh& CSkyBoxMesh::operator=(const CSkyBoxMesh& other)
+{
+	if (this != &other)
+	{
+		CMesh::operator=(other);
+	}
+	return *this;
+}
+
+CSkyBoxMesh* CSkyBoxMesh::clone() const {
+	return new CSkyBoxMesh(*this);
+}
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //
 CStandardMesh::CStandardMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) : CMesh(pd3dDevice, pd3dCommandList)
@@ -478,6 +691,131 @@ CStandardMesh::~CStandardMesh()
 	if (m_pxmf3BiTangents) delete[] m_pxmf3BiTangents;
 	if (m_pxmf2TextureCoords0) delete[] m_pxmf2TextureCoords0;
 	if (m_pxmf2TextureCoords1) delete[] m_pxmf2TextureCoords1;
+}
+
+CStandardMesh::CStandardMesh(const CStandardMesh& other)
+	: CMesh(other)
+{
+	m_pd3dTextureCoord0Buffer = other.m_pd3dTextureCoord0Buffer;
+	m_pd3dTextureCoord0UploadBuffer = other.m_pd3dTextureCoord0UploadBuffer;
+	m_d3dTextureCoord0BufferView = other.m_d3dTextureCoord0BufferView;
+
+	m_pd3dTextureCoord1Buffer = other.m_pd3dTextureCoord1Buffer;
+	m_pd3dTextureCoord1UploadBuffer = other.m_pd3dTextureCoord1UploadBuffer;
+	m_d3dTextureCoord1BufferView = other.m_d3dTextureCoord1BufferView;
+
+	m_pd3dNormalBuffer = other.m_pd3dNormalBuffer;
+	m_pd3dNormalUploadBuffer = other.m_pd3dNormalUploadBuffer;
+	m_d3dNormalBufferView = other.m_d3dNormalBufferView;
+
+	m_pd3dTangentBuffer = other.m_pd3dTangentBuffer;
+	m_pd3dTangentUploadBuffer = other.m_pd3dTangentUploadBuffer;
+	m_d3dTangentBufferView = other.m_d3dTangentBufferView;
+
+	m_pd3dBiTangentBuffer = other.m_pd3dBiTangentBuffer;
+	m_pd3dBiTangentUploadBuffer = other.m_pd3dBiTangentUploadBuffer;
+	m_d3dBiTangentBufferView = other.m_d3dBiTangentBufferView;
+
+	if (other.m_pxmf4Colors && other.m_nVertices > 0) {
+		m_pxmf4Colors = new DirectX::XMFLOAT4[other.m_nVertices];
+		std::copy(other.m_pxmf4Colors, other.m_pxmf4Colors + other.m_nVertices, m_pxmf4Colors);
+	}
+	else { m_pxmf4Colors = NULL; }
+
+	if (other.m_pxmf3Normals && other.m_nVertices > 0) {
+		m_pxmf3Normals = new DirectX::XMFLOAT3[other.m_nVertices];
+		std::copy(other.m_pxmf3Normals, other.m_pxmf3Normals + other.m_nVertices, m_pxmf3Normals);
+	}
+	else { m_pxmf3Normals = NULL; }
+
+	if (other.m_pxmf3Tangents && other.m_nVertices > 0) {
+		m_pxmf3Tangents = new DirectX::XMFLOAT3[other.m_nVertices];
+		std::copy(other.m_pxmf3Tangents, other.m_pxmf3Tangents + other.m_nVertices, m_pxmf3Tangents);
+	}
+	else { m_pxmf3Tangents = NULL; }
+
+	if (other.m_pxmf3BiTangents && other.m_nVertices > 0) {
+		m_pxmf3BiTangents = new DirectX::XMFLOAT3[other.m_nVertices];
+		std::copy(other.m_pxmf3BiTangents, other.m_pxmf3BiTangents + other.m_nVertices, m_pxmf3BiTangents);
+	}
+	else { m_pxmf3BiTangents = NULL; }
+
+	if (other.m_pxmf2TextureCoords0 && other.m_nVertices > 0) {
+		m_pxmf2TextureCoords0 = new DirectX::XMFLOAT2[other.m_nVertices];
+		std::copy(other.m_pxmf2TextureCoords0, other.m_pxmf2TextureCoords0 + other.m_nVertices, m_pxmf2TextureCoords0);
+	}
+	else { m_pxmf2TextureCoords0 = NULL; }
+
+	if (other.m_pxmf2TextureCoords1 && other.m_nVertices > 0) {
+		m_pxmf2TextureCoords1 = new DirectX::XMFLOAT2[other.m_nVertices];
+		std::copy(other.m_pxmf2TextureCoords1, other.m_pxmf2TextureCoords1 + other.m_nVertices, m_pxmf2TextureCoords1);
+	}
+	else { m_pxmf2TextureCoords1 = NULL; }
+}
+
+CStandardMesh& CStandardMesh::operator=(const CStandardMesh& other)
+{
+	if (this != &other)
+	{
+		CMesh::operator=(other);
+
+		this->ReleaseUploadBuffers();
+		if (m_pd3dTextureCoord0Buffer) { m_pd3dTextureCoord0Buffer->Release(); m_pd3dTextureCoord0Buffer = NULL; }
+		if (m_pd3dTextureCoord1Buffer) { m_pd3dTextureCoord1Buffer->Release(); m_pd3dTextureCoord1Buffer = NULL; }
+		if (m_pd3dNormalBuffer) { m_pd3dNormalBuffer->Release(); m_pd3dNormalBuffer = NULL; }
+		if (m_pd3dTangentBuffer) { m_pd3dTangentBuffer->Release(); m_pd3dTangentBuffer = NULL; }
+		if (m_pd3dBiTangentBuffer) { m_pd3dBiTangentBuffer->Release(); m_pd3dBiTangentBuffer = NULL; }
+
+		if (m_pxmf4Colors) { delete[] m_pxmf4Colors; m_pxmf4Colors = NULL; }
+		if (m_pxmf3Normals) { delete[] m_pxmf3Normals; m_pxmf3Normals = NULL; }
+		if (m_pxmf3Tangents) { delete[] m_pxmf3Tangents; m_pxmf3Tangents = NULL; }
+		if (m_pxmf3BiTangents) { delete[] m_pxmf3BiTangents; m_pxmf3BiTangents = NULL; }
+		if (m_pxmf2TextureCoords0) { delete[] m_pxmf2TextureCoords0; m_pxmf2TextureCoords0 = NULL; }
+		if (m_pxmf2TextureCoords1) { delete[] m_pxmf2TextureCoords1; m_pxmf2TextureCoords1 = NULL; }
+
+		m_pd3dTextureCoord0Buffer = NULL; m_pd3dTextureCoord0UploadBuffer = NULL; m_d3dTextureCoord0BufferView = { 0 };
+		m_pd3dTextureCoord1Buffer = NULL; m_pd3dTextureCoord1UploadBuffer = NULL; m_d3dTextureCoord1BufferView = { 0 };
+		m_pd3dNormalBuffer = NULL; m_pd3dNormalUploadBuffer = NULL; m_d3dNormalBufferView = { 0 };
+		m_pd3dTangentBuffer = NULL; m_pd3dTangentUploadBuffer = NULL; m_d3dTangentBufferView = { 0 };
+		m_pd3dBiTangentBuffer = NULL; m_pd3dBiTangentUploadBuffer = NULL; m_d3dBiTangentBufferView = { 0 };
+
+		if (other.m_pxmf4Colors && other.m_nVertices > 0) {
+			m_pxmf4Colors = new DirectX::XMFLOAT4[other.m_nVertices];
+			std::copy(other.m_pxmf4Colors, other.m_pxmf4Colors + other.m_nVertices, m_pxmf4Colors);
+		}
+		else { m_pxmf4Colors = NULL; }
+
+		if (other.m_pxmf3Normals && other.m_nVertices > 0) {
+			m_pxmf3Normals = new DirectX::XMFLOAT3[other.m_nVertices];
+			std::copy(other.m_pxmf3Normals, other.m_pxmf3Normals + other.m_nVertices, m_pxmf3Normals);
+		}
+		else { m_pxmf3Normals = NULL; }
+
+		if (other.m_pxmf3Tangents && other.m_nVertices > 0) {
+			m_pxmf3Tangents = new DirectX::XMFLOAT3[other.m_nVertices];
+			std::copy(other.m_pxmf3Tangents, other.m_pxmf3Tangents + other.m_nVertices, m_pxmf3Tangents);
+		}
+		else { m_pxmf3Tangents = NULL; }
+
+		if (other.m_pxmf3BiTangents && other.m_nVertices > 0) {
+			m_pxmf3BiTangents = new DirectX::XMFLOAT3[other.m_nVertices];
+			std::copy(other.m_pxmf3BiTangents, other.m_pxmf3BiTangents + other.m_nVertices, m_pxmf3BiTangents);
+		}
+		else { m_pxmf3BiTangents = NULL; }
+
+		if (other.m_pxmf2TextureCoords0 && other.m_nVertices > 0) {
+			m_pxmf2TextureCoords0 = new DirectX::XMFLOAT2[other.m_nVertices];
+			std::copy(other.m_pxmf2TextureCoords0, other.m_pxmf2TextureCoords0 + other.m_nVertices, m_pxmf2TextureCoords0);
+		}
+		else { m_pxmf2TextureCoords0 = NULL; }
+
+		if (other.m_pxmf2TextureCoords1 && other.m_nVertices > 0) {
+			m_pxmf2TextureCoords1 = new DirectX::XMFLOAT2[other.m_nVertices];
+			std::copy(other.m_pxmf2TextureCoords1, other.m_pxmf2TextureCoords1 + other.m_nVertices, m_pxmf2TextureCoords1);
+		}
+		else { m_pxmf2TextureCoords1 = NULL; }
+	}
+	return *this;
 }
 
 void CStandardMesh::ReleaseUploadBuffers()
@@ -667,6 +1005,10 @@ void CStandardMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, 5, pVertexBufferViews);
 }
 
+CStandardMesh* CStandardMesh::clone() const
+{
+	return new CStandardMesh(*this);
+}
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //
 CSkinnedMesh::CSkinnedMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) : CStandardMesh(pd3dDevice, pd3dCommandList)
@@ -689,7 +1031,109 @@ CSkinnedMesh::~CSkinnedMesh()
 
 	ReleaseShaderVariables();
 }
+CSkinnedMesh::CSkinnedMesh(const CSkinnedMesh& other)
+	: CStandardMesh(other)
+	, m_nBonesPerVertex(other.m_nBonesPerVertex)
+	, m_nSkinningBones(other.m_nSkinningBones)
+{
+	m_pd3dBoneIndexBuffer = NULL; m_pd3dBoneIndexUploadBuffer = NULL; m_d3dBoneIndexBufferView = { 0 };
+	m_pd3dBoneWeightBuffer = NULL; m_pd3dBoneWeightUploadBuffer = NULL; m_d3dBoneWeightBufferView = { 0 };
+	m_pd3dcbBindPoseBoneOffsets = NULL; m_pcbxmf4x4MappedBindPoseBoneOffsets = NULL;
+	m_pd3dcbSkinningBoneTransforms = NULL; m_pcbxmf4x4MappedSkinningBoneTransforms = NULL;
 
+	if (other.m_pxmn4BoneIndices && other.m_nVertices > 0) {
+		m_pxmn4BoneIndices = new DirectX::XMINT4[other.m_nVertices];
+		std::copy(other.m_pxmn4BoneIndices, other.m_pxmn4BoneIndices + other.m_nVertices, m_pxmn4BoneIndices);
+	}
+	else { m_pxmn4BoneIndices = NULL; }
+
+	if (other.m_pxmf4BoneWeights && other.m_nVertices > 0) {
+		m_pxmf4BoneWeights = new DirectX::XMFLOAT4[other.m_nVertices];
+		std::copy(other.m_pxmf4BoneWeights, other.m_pxmf4BoneWeights + other.m_nVertices, m_pxmf4BoneWeights);
+	}
+	else { m_pxmf4BoneWeights = NULL; }
+
+	if (other.m_ppstrSkinningBoneNames && other.m_nSkinningBones > 0) {
+		m_ppstrSkinningBoneNames = new char[other.m_nSkinningBones][64];
+		for (int i = 0; i < other.m_nSkinningBones; ++i) {
+			strcpy_s(m_ppstrSkinningBoneNames[i], 64, other.m_ppstrSkinningBoneNames[i]);
+		}
+	}
+	else { m_ppstrSkinningBoneNames = NULL; }
+
+	if (other.m_ppSkinningBoneFrameCaches && other.m_nSkinningBones > 0) {
+		m_ppSkinningBoneFrameCaches = new CGameObject * [other.m_nSkinningBones];
+		std::copy(other.m_ppSkinningBoneFrameCaches, other.m_ppSkinningBoneFrameCaches + other.m_nSkinningBones, m_ppSkinningBoneFrameCaches);
+	}
+	else { m_ppSkinningBoneFrameCaches = NULL; }
+
+	if (other.m_pxmf4x4BindPoseBoneOffsets && other.m_nSkinningBones > 0) {
+		m_pxmf4x4BindPoseBoneOffsets = new DirectX::XMFLOAT4X4[other.m_nSkinningBones];
+		std::copy(other.m_pxmf4x4BindPoseBoneOffsets, other.m_pxmf4x4BindPoseBoneOffsets + other.m_nSkinningBones, m_pxmf4x4BindPoseBoneOffsets);
+	}
+	else { m_pxmf4x4BindPoseBoneOffsets = NULL; }
+
+	m_pcbxmf4x4MappedBindPoseBoneOffsets = NULL;
+	m_pcbxmf4x4MappedSkinningBoneTransforms = NULL;
+}
+
+CSkinnedMesh& CSkinnedMesh::operator=(const CSkinnedMesh& other)
+{
+	if (this != &other)
+	{
+		CStandardMesh::operator=(other);
+
+		if (m_pxmn4BoneIndices) { delete[] m_pxmn4BoneIndices; m_pxmn4BoneIndices = NULL; }
+		if (m_pxmf4BoneWeights) { delete[] m_pxmf4BoneWeights; m_pxmf4BoneWeights = NULL; }
+		if (m_ppstrSkinningBoneNames) { delete[] m_ppstrSkinningBoneNames; m_ppstrSkinningBoneNames = NULL; }
+		if (m_ppSkinningBoneFrameCaches) { delete[] m_ppSkinningBoneFrameCaches; m_ppSkinningBoneFrameCaches = NULL; }
+		if (m_pxmf4x4BindPoseBoneOffsets) { delete[] m_pxmf4x4BindPoseBoneOffsets; m_pxmf4x4BindPoseBoneOffsets = NULL; }
+
+		ReleaseShaderVariables();
+		ReleaseUploadBuffers();
+
+		m_nBonesPerVertex = other.m_nBonesPerVertex;
+		m_nSkinningBones = other.m_nSkinningBones;
+
+		if (other.m_pxmn4BoneIndices && other.m_nVertices > 0) {
+			m_pxmn4BoneIndices = new DirectX::XMINT4[other.m_nVertices];
+			std::copy(other.m_pxmn4BoneIndices, other.m_pxmn4BoneIndices + other.m_nVertices, m_pxmn4BoneIndices);
+		}
+		else { m_pxmn4BoneIndices = NULL; }
+
+		if (other.m_pxmf4BoneWeights && other.m_nVertices > 0) {
+			m_pxmf4BoneWeights = new DirectX::XMFLOAT4[other.m_nVertices];
+			std::copy(other.m_pxmf4BoneWeights, other.m_pxmf4BoneWeights + other.m_nVertices, m_pxmf4BoneWeights);
+		}
+		else { m_pxmf4BoneWeights = NULL; }
+
+		if (other.m_ppstrSkinningBoneNames && other.m_nSkinningBones > 0) {
+			m_ppstrSkinningBoneNames = new char[other.m_nSkinningBones][64];
+			for (int i = 0; i < other.m_nSkinningBones; ++i) {
+				strcpy_s(m_ppstrSkinningBoneNames[i], 64, other.m_ppstrSkinningBoneNames[i]);
+			}
+		}
+		else { m_ppstrSkinningBoneNames = NULL; }
+
+		if (other.m_ppSkinningBoneFrameCaches && other.m_nSkinningBones > 0) {
+			m_ppSkinningBoneFrameCaches = new CGameObject * [other.m_nSkinningBones];
+			std::copy(other.m_ppSkinningBoneFrameCaches, other.m_ppSkinningBoneFrameCaches + other.m_nSkinningBones, m_ppSkinningBoneFrameCaches);
+		}
+		else { m_ppSkinningBoneFrameCaches = NULL; }
+
+		if (other.m_pxmf4x4BindPoseBoneOffsets && other.m_nSkinningBones > 0) {
+			m_pxmf4x4BindPoseBoneOffsets = new DirectX::XMFLOAT4X4[other.m_nSkinningBones];
+			std::copy(other.m_pxmf4x4BindPoseBoneOffsets, other.m_pxmf4x4BindPoseBoneOffsets + other.m_nSkinningBones, m_pxmf4x4BindPoseBoneOffsets);
+		}
+		else { m_pxmf4x4BindPoseBoneOffsets = NULL; }
+
+		m_pd3dBoneIndexBuffer = NULL; m_pd3dBoneIndexUploadBuffer = NULL; m_d3dBoneIndexBufferView = { 0 };
+		m_pd3dBoneWeightBuffer = NULL; m_pd3dBoneWeightUploadBuffer = NULL; m_d3dBoneWeightBufferView = { 0 };
+		m_pd3dcbBindPoseBoneOffsets = NULL; m_pcbxmf4x4MappedBindPoseBoneOffsets = NULL;
+		m_pd3dcbSkinningBoneTransforms = NULL; m_pcbxmf4x4MappedSkinningBoneTransforms = NULL;
+	}
+	return *this;
+}
 void CSkinnedMesh::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 }
@@ -837,4 +1281,9 @@ void CSkinnedMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void*
 {
 	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[7] = { m_d3dPositionBufferView, m_d3dTextureCoord0BufferView, m_d3dNormalBufferView, m_d3dTangentBufferView, m_d3dBiTangentBufferView, m_d3dBoneIndexBufferView, m_d3dBoneWeightBufferView };
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, 7, pVertexBufferViews);
+}
+
+CSkinnedMesh* CSkinnedMesh::clone() const
+{
+	return new CSkinnedMesh(*this);
 }

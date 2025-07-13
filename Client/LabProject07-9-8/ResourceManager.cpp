@@ -1,7 +1,22 @@
 #include "ResourceManager.h"
 #include "Texture.h"       // 실제 CTexture 헤더 경로로 수정
 #include "GameFramework.h" // 실제 CGameFramework 헤더 경로로 수정
+#include "Object.h"
 #include <iostream>        // 오류 로깅 등
+#include <vector>
+
+
+std::unordered_map<std::string, std::shared_ptr<CLoadedModelInfo>> ResourceManager::AnimateObject;
+std::unordered_map<std::string, std::shared_ptr<CGameObject>> ResourceManager::StaticObject;
+
+std::unique_ptr<ResourceManager> ResourceManager::m_instance = nullptr;
+
+ResourceManager* ResourceManager::GetInstance() {
+    if (!m_instance) {
+        m_instance = std::make_unique<ResourceManager>();
+    }
+    return m_instance.get();
+}
 
 ResourceManager::ResourceManager()
 {
@@ -14,6 +29,8 @@ ResourceManager::~ResourceManager()
 
 void ResourceManager::ReleaseAll() {
     m_TextureCache.clear();
+    AnimateObject.clear();
+    StaticObject.clear();
 }
 
 bool ResourceManager::Initialize(CGameFramework* pFramework)
@@ -53,4 +70,88 @@ std::shared_ptr<CTexture> ResourceManager::GetTexture(const std::wstring& filena
     // 4. 캐시에 추가 및 shared_ptr 반환
     m_TextureCache[filename] = newTexture; // 캐시에 shared_ptr 저장
     return newTexture; // 새로 생성된 shared_ptr 반환
+}
+
+CLoadedModelInfo ResourceManager::GetModelInfoCopy(
+    const std::string& filename,
+    ID3D12Device* pd3dDevice,
+    ID3D12GraphicsCommandList* pd3dCommandList,
+    CGameFramework* pGameFramework
+)
+{
+    auto it = AnimateObject.find(filename);
+    std::shared_ptr<CLoadedModelInfo> pOriginalModelInfo;
+
+    if (it != AnimateObject.end())
+    {
+        pOriginalModelInfo = it->second;
+    }
+    else
+    {
+        std::vector<char> buffer(filename.length() + 1);
+        filename.copy(buffer.data(), filename.length());
+        buffer[filename.length()] = '\0';
+
+        CLoadedModelInfo* rawModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(
+            pd3dDevice, pd3dCommandList, buffer.data(), pGameFramework);
+
+        if (!rawModelInfo)
+        {
+            throw std::runtime_error("오류: CLoadedModelInfo '" + filename + "'을(를) 파일에서 로드하지 못했습니다.");
+        }
+
+        pOriginalModelInfo.reset(rawModelInfo);
+        AnimateObject[filename] = pOriginalModelInfo;
+    }
+
+    if (!pOriginalModelInfo)
+    {
+        throw std::runtime_error("CLoadedModelInfo '" + filename + "'을(를) 로드하거나 찾을 수 없습니다.");
+    }
+
+    return *pOriginalModelInfo;
+}
+
+CGameObject ResourceManager::GetGameObjectCopy(
+    const std::string& filename,
+    ID3D12Device* pd3dDevice,
+    ID3D12GraphicsCommandList* pd3dCommandList,
+    CGameFramework* pGameFramework
+)
+{
+    auto it = StaticObject.find(filename);
+    std::shared_ptr<CGameObject> pOriginalGameObject;
+
+    if (it != StaticObject.end())
+    {
+        pOriginalGameObject = it->second;
+    }
+    else
+    {
+
+        FILE* pInFile = NULL;
+        if (::fopen_s(&pInFile, filename.c_str(), "rb") != 0 || !pInFile)
+        {
+            throw std::runtime_error("오류: 바이너리 파일 '" + filename + "'을(를) 열 수 없습니다.");
+        }
+        ::rewind(pInFile);
+
+        CGameObject* loadedRawPtr = CGameObject::LoadFrameHierarchyFromFile(
+            pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework);
+        ::fclose(pInFile);
+
+        if (!loadedRawPtr) {
+            throw std::runtime_error("CGameObject 로드 실패: " + filename);
+        }
+
+        pOriginalGameObject.reset(loadedRawPtr);
+        StaticObject[filename] = pOriginalGameObject;
+    }
+
+    if (!pOriginalGameObject)
+    {
+        throw std::runtime_error("CGameObject '" + filename + "'을(를) 로드하거나 찾을 수 없습니다.");
+    }
+
+    return *pOriginalGameObject;
 }

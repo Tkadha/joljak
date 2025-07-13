@@ -40,6 +40,95 @@ CMaterial::CMaterial(int nTextures, CGameFramework* pGameFramework)
     }
 }
 
+CMaterial::CMaterial(const CMaterial& other)
+    : m_nReferences(0), // 새 객체이므로 참조 카운트 초기화
+    m_pShader(other.m_pShader), // 쉐이더는 공유 (얕은 복사)
+    m_xmf4AlbedoColor(other.m_xmf4AlbedoColor),
+    m_xmf4EmissiveColor(other.m_xmf4EmissiveColor),
+    m_xmf4SpecularColor(other.m_xmf4SpecularColor),
+    m_xmf4AmbientColor(other.m_xmf4AmbientColor),
+    m_nType(other.m_nType),
+    m_fGlossiness(other.m_fGlossiness),
+    m_fSmoothness(other.m_fSmoothness),
+    m_fSpecularHighlight(other.m_fSpecularHighlight),
+    m_fMetallic(other.m_fMetallic),
+    m_fGlossyReflection(other.m_fGlossyReflection),
+    m_nTextures(other.m_nTextures),
+    m_vTextures(other.m_vTextures), // shared_ptr 벡터는 자동으로 복사되며 텍스처 객체는 공유
+    // D3D12 핸들은 새로 할당받아야 하므로, 여기서는 기본값으로 초기화
+    // 실제 사용 시 AssignTexture 등을 통해 재할당 받아야 함
+    m_d3dCpuSrvStartHandle({ 0 }),
+    m_d3dSrvGpuStartHandle({ 0 }),
+    m_nCbvSrvDescriptorIncrementSize(0), // 또는 other.m_nCbvSrvDescriptorIncrementSize; (설정 방식에 따라 다름)
+    m_pGameFramework(other.m_pGameFramework) // 프레임워크는 공유 (얕은 복사)
+{
+    // _TCHAR(*m_ppstrTextureNames)[64] 깊은 복사
+    if (other.m_ppstrTextureNames && other.m_nTextures > 0) {
+        m_ppstrTextureNames = new _TCHAR[m_nTextures][64];
+        for (int i = 0; i < m_nTextures; ++i) {
+            _tcscpy_s(m_ppstrTextureNames[i], 64, other.m_ppstrTextureNames[i]);
+        }
+    }
+    else {
+        m_ppstrTextureNames = NULL;
+    }
+
+}
+
+// 복사 대입 연산자 (깊은 복사)
+CMaterial& CMaterial::operator=(const CMaterial& other)
+{
+    if (this != &other) // 자기 자신에게 대입하는 경우 방지
+    {
+        // 1. 기존 리소스 해제
+        // 기존 m_ppstrTextureNames 해제
+        if (m_ppstrTextureNames) {
+            delete[] m_ppstrTextureNames;
+            m_ppstrTextureNames = NULL;
+        }
+        // m_vTextures는 shared_ptr이므로 자동으로 참조 카운팅 처리됨
+        // m_d3dCpuSrvStartHandle, m_d3dSrvGpuStartHandle은 값 타입이므로 그냥 덮어쓰거나 새로 할당받아야 함
+
+        // 2. 다른 객체의 내용으로 복사
+        m_nReferences = 0; // 새 객체이므로 참조 카운트 초기화
+        m_pShader = other.m_pShader; // 쉐이더는 공유 (얕은 복사)
+
+        m_xmf4AlbedoColor = other.m_xmf4AlbedoColor;
+        m_xmf4EmissiveColor = other.m_xmf4EmissiveColor;
+        m_xmf4SpecularColor = other.m_xmf4SpecularColor;
+        m_xmf4AmbientColor = other.m_xmf4AmbientColor;
+
+        m_nType = other.m_nType;
+        m_fGlossiness = other.m_fGlossiness;
+        m_fSmoothness = other.m_fSmoothness;
+        m_fSpecularHighlight = other.m_fSpecularHighlight;
+        m_fMetallic = other.m_fMetallic;
+        m_fGlossyReflection = other.m_fGlossyReflection;
+
+        m_nTextures = other.m_nTextures;
+        m_vTextures = other.m_vTextures; // shared_ptr 벡터는 복사되며 텍스처 객체는 공유
+
+        // D3D12 핸들은 새로 할당받아야 하므로, 여기서는 기본값으로 초기화
+        m_d3dCpuSrvStartHandle = { 0 };
+        m_d3dSrvGpuStartHandle = { 0 };
+        m_nCbvSrvDescriptorIncrementSize = 0; // 또는 other.m_nCbvSrvDescriptorIncrementSize;
+        m_pGameFramework = other.m_pGameFramework; // 프레임워크는 공유 (얕은 복사)
+
+        // _TCHAR(*m_ppstrTextureNames)[64] 깊은 복사
+        if (other.m_ppstrTextureNames && other.m_nTextures > 0) {
+            m_ppstrTextureNames = new _TCHAR[m_nTextures][64];
+            for (int i = 0; i < m_nTextures; ++i) {
+                _tcscpy_s(m_ppstrTextureNames[i], 64, other.m_ppstrTextureNames[i]);
+            }
+        }
+        else {
+            m_ppstrTextureNames = NULL;
+        }
+
+    }
+    return *this;
+}
+
 // CMaterial 소멸자 수정
 CMaterial::~CMaterial() {
     if (m_pShader) m_pShader->Release();
@@ -242,4 +331,9 @@ bool CMaterial::AssignTexture(UINT nTextureIndex, std::shared_ptr<CTexture> pTex
         OutputDebugStringW(L"    Warning: Texture pointer is null. Cannot create SRV in AssignTexture.\n");
          return false; // 텍스처 없으면 실패 간주
     }
+}
+
+CMaterial* CMaterial::clone() const
+{
+    return new CMaterial(*this); // 복사 생성자를 호출하여 깊은 복사본 생성
 }

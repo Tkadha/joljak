@@ -8,6 +8,8 @@
 #include "Scene.h"
 #include "GameFramework.h"
 #include "NetworkManager.h"
+#include "ResourceManager.h"
+#include <string>
 #include <algorithm>
 
 
@@ -80,6 +82,217 @@ CGameObject::~CGameObject()
 		delete m_pSkinnedAnimationController;
 		m_pSkinnedAnimationController = nullptr;
 	}
+}
+
+CGameObject::CGameObject(const CGameObject& other) : m_nReferences(0)
+{
+	// 깊은 복사 작업
+
+	memcpy(m_pstrFrameName, other.m_pstrFrameName, sizeof(m_pstrFrameName));
+
+	m_xmf4x4ToParent = other.m_xmf4x4ToParent;
+	m_xmf4x4World = other.m_xmf4x4World; // UpdateTransform에서 계산될 것이므로 초기 값만 복사
+
+	// OBB 관련 멤버 (값 타입)
+	m_xmf3Position = other.m_xmf3Position;
+	m_xmf3Size = other.m_xmf3Size;
+	m_xmf3Right = other.m_xmf3Right;
+	m_xmf3Up = other.m_xmf3Up;
+	m_xmf3Forward = other.m_xmf3Forward;
+	m_localOBB = other.m_localOBB;
+	m_worldOBB = other.m_worldOBB;
+
+	// Direct3D 리소스 포인터들은 새로 생성될 것이므로 nullptr로 초기화
+	m_pOBBVertexBuffer = nullptr;
+	m_pOBBIndexBuffer = nullptr;
+	m_OBBVertexBufferView = {}; // DirectX 구조체 초기화
+	m_OBBIndexBufferView = {};  // DirectX 구조체 초기화
+	m_pd3dcbOBBTransform = nullptr;
+	m_pcbMappedOBBTransform = nullptr;
+	m_OBBMaterial = nullptr; // OBB Material은 복사 시점에서는 nullptr로 두고, 필요하면 나중에 SetOBB에서 설정
+
+	// 여기서는 로드 함수에서 직접 다루지 않는 일부 멤버들을 기본값으로 설정하거나 얕은 복사합니다.
+	m_nMeshes = 0; // 메쉬는 m_pMesh를 통해 관리
+	isRender = other.isRender;
+	m_treecount = other.m_treecount;
+	m_id = other.m_id; // ID는 복사해도 되는지 상황에 따라 다름. 여기서는 복사
+	m_anitype = other.m_anitype;
+	_invincible = other._invincible;
+	m_xmf4DebugColor = other.m_xmf4DebugColor;
+	hp = other.hp;
+	level = other.level;
+	atk = other.atk;
+
+	m_pMesh = nullptr;
+	m_ppMaterials = nullptr;
+	m_pParent = nullptr;
+	m_pChild = nullptr;
+	m_pSibling = nullptr;
+	m_pSkinnedAnimationController = nullptr;
+	FSM_manager = nullptr; // 또는 `other.FSM_manager;` (참조 카운트 증가)
+	// 여기서는 새로운 GameObject이므로 FSM도 새로운 FSM을 가질 수 있게 nullptr로
+	terraindata = nullptr;
+	m_pGameFramework = other.m_pGameFramework; // 프레임워크는 공유
+	m_pSharedAnimController = nullptr; // 공유 컨트롤러는 복사하지 않음
+	m_pScene = other.m_pScene; // 씬은 공유
+	m_objectType = other.m_objectType;
+
+	if (other.m_pMesh) {
+		// 이 부분에서 다형성을 처리하기 위해 가상 `clone()` 메서드가 필요합니다.
+		// 예를 들어, CMesh와 CSkinnedMesh 모두에 `virtual CMesh* clone() const = 0;`가 정의되어 있고,
+		// 각 파생 클래스에서 이를 오버라이드하여 자신의 타입에 맞는 새 객체를 반환한다고 가정합니다.
+		m_pMesh = other.m_pMesh->clone();
+		// 만약 CSkinnedMesh라면 CSkinnedMesh*로 캐스팅해야 할 수 있습니다.
+		// CSkinnedMesh* pSkinnedMesh = dynamic_cast<CSkinnedMesh*>(other.m_pMesh);
+		// if (pSkinnedMesh) m_pMesh = new CSkinnedMesh(*pSkinnedMesh);
+		// else m_pMesh = new CMesh(*other.m_pMesh); // 일반 CMesh
+	}
+	if (other.m_ppMaterials && other.m_nMaterials > 0) {
+		m_nMaterials = other.m_nMaterials;
+		m_ppMaterials = new CMaterial * [m_nMaterials];
+		for (int i = 0; i < m_nMaterials; ++i) {
+			if (other.m_ppMaterials[i]) {
+				// CMaterial에도 깊은 복사(또는 clone()) 필요
+				m_ppMaterials[i] = other.m_ppMaterials[i]->clone(); // CMaterial::clone() 필요 가정
+			}
+			else {
+				m_ppMaterials[i] = nullptr;
+			}
+		}
+	}
+	else {
+		m_nMaterials = 0;
+		m_ppMaterials = nullptr;
+	}
+	if (other.m_pChild) {
+		// 깊은 복사된 자식 객체를 생성하고
+		CGameObject* newChild = new CGameObject(*(other.m_pChild));
+		// 이 자식을 현재 복사 중인 객체에 연결합니다.
+		// 이 복사 생성자 내부에서 m_pParent는 nullptr로 초기화되므로
+		// newChild->m_pParent = this; 처럼 명시적으로 연결해야 합니다.
+		// SetChild 함수가 내부적으로 부모-자식 관계를 설정해줄 수 있습니다.
+		SetChild(newChild);
+	}
+
+}
+CGameObject& CGameObject::operator=(const CGameObject& other)
+{
+	if (this == &other) {
+		return *this;
+	}
+
+	if (m_pMesh) {
+		delete m_pMesh;
+		m_pMesh = nullptr;
+	}
+
+	if (m_ppMaterials) {
+		for (int i = 0; i < m_nMaterials; ++i) {
+			if (m_ppMaterials[i]) {
+				delete m_ppMaterials[i];
+				m_ppMaterials[i] = nullptr;
+			}
+		}
+		delete[] m_ppMaterials;
+		m_ppMaterials = nullptr;
+	}
+	m_nMaterials = 0; // 재할당을 위해 카운트도 초기화
+
+	// OBB 관련 Direct3D 리소스 해제 (실제 구현 시 D3D12 API를 사용하여 해제해야 함)
+	// ReleaseUploadBuffers() 등 D3D 리소스를 해제하는 함수가 있다면 호출
+	// 현재는 단순히 포인터를 nullptr로 만듭니다.
+	if (m_pOBBVertexBuffer) {  m_pOBBVertexBuffer = nullptr; }
+	if (m_pOBBIndexBuffer) {  m_pOBBIndexBuffer = nullptr; }
+	if (m_pd3dcbOBBTransform) {  m_pd3dcbOBBTransform = nullptr; }
+	m_pcbMappedOBBTransform = nullptr; 
+	if (m_OBBMaterial) {  m_OBBMaterial = nullptr; }
+
+	// 계층 구조 해제: 자식, 형제 연결을 끊고, 자식 객체들을 해제합니다.
+	// 이 부분은 매우 복잡하며, 다른 객체들의 생명주기에 영향을 줄 수 있습니다.
+	// 일반적으로는 부모-자식 연결만 끊고, 자식 객체의 실제 소멸은 별도의 관리 시스템에 맡깁니다.
+	// 여기서는 간단하게 포인터만 끊는 것으로 가정합니다.
+	if (m_pChild) {
+		// Warning: 이 방식으로 자식을 해제하면 재귀적으로 모든 자식 트리가 해제될 수 있으며,
+		// 다른 곳에서 이 자식 객체를 참조하고 있다면 문제가 발생할 수 있습니다.
+		// delete m_pChild; // 매우 위험! CGameObject는 직접 delete하지 않는 경우가 많습니다.
+		m_pChild = nullptr;
+	}
+	m_pParent = nullptr;
+	m_pSibling = nullptr;
+
+	if (m_pSkinnedAnimationController) {
+		delete m_pSkinnedAnimationController;
+		m_pSkinnedAnimationController = nullptr;
+	}
+	// FSM_manager는 shared_ptr이므로, 참조 카운트가 0이 되면 자동으로 해제됩니다.
+	FSM_manager = nullptr; // 기존 참조를 끊음 (참조 카운트 감소)
+
+
+	// 3. 다른 객체의 내용을 깊은 복사 (복사 생성자와 유사한 로직)
+
+	// 값 타입 및 char 배열 복사
+	memcpy(m_pstrFrameName, other.m_pstrFrameName, sizeof(m_pstrFrameName));
+
+	m_xmf4x4ToParent = other.m_xmf4x4ToParent;
+	m_xmf4x4World = other.m_xmf4x4World;
+
+	// OBB 관련 멤버 (값 타입)
+	m_xmf3Position = other.m_xmf3Position;
+	m_xmf3Size = other.m_xmf3Size;
+	m_xmf3Right = other.m_xmf3Right;
+	m_xmf3Up = other.m_xmf3Up;
+	m_xmf3Forward = other.m_xmf3Forward;
+	m_localOBB = other.m_localOBB;
+	m_worldOBB = other.m_worldOBB;
+
+	// 기타 멤버들
+	m_nMeshes = 0;
+	isRender = other.isRender;
+	m_treecount = other.m_treecount;
+	m_id = other.m_id;
+	m_anitype = other.m_anitype;
+	_invincible = other._invincible;
+	m_xmf4DebugColor = other.m_xmf4DebugColor;
+	hp = other.hp;
+	level = other.level;
+	atk = other.atk;
+
+	// 공유될 포인터 (얕은 복사)
+	m_pGameFramework = other.m_pGameFramework;
+	m_pSharedAnimController = other.m_pSharedAnimController;
+	m_pScene = other.m_pScene;
+	m_objectType = other.m_objectType;
+	terraindata = other.terraindata; // LPVOID는 일반적으로 얕은 복사 (가리키는 데이터를 복사하지 않음)
+
+	// CMesh / CSkinnedMesh 깊은 복사
+	if (other.m_pMesh) {
+		m_pMesh = other.m_pMesh->clone(); // CMesh::clone() 필요 가정
+	}
+
+	// CMaterial** m_ppMaterials 깊은 복사
+	if (other.m_ppMaterials && other.m_nMaterials > 0) {
+		m_nMaterials = other.m_nMaterials;
+		m_ppMaterials = new CMaterial * [m_nMaterials];
+		for (int i = 0; i < m_nMaterials; ++i) {
+			if (other.m_ppMaterials[i]) {
+				m_ppMaterials[i] = other.m_ppMaterials[i]->clone(); // CMaterial::clone() 필요 가정
+			}
+			else {
+				m_ppMaterials[i] = nullptr;
+			}
+		}
+	}
+
+	// 자식 객체 계층 구조 깊은 복사 (재귀적 호출)
+	// 이 부분은 깊은 복사 생성자와 동일한 방식으로, 하지만 주의해서 처리해야 합니다.
+	// 기존 자식을 해제한 후 새로운 자식 트리를 생성합니다.
+	if (other.m_pChild) {
+		CGameObject* newChild = new CGameObject(*(other.m_pChild)); // 재귀적으로 깊은 복사
+		SetChild(newChild); // 부모-자식 연결
+	}
+
+	// 4. 복사된 객체 반환
+	return *this;
 }
 
 void CGameObject::AddRef() 
@@ -1908,14 +2121,19 @@ CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 CBirchObject::CBirchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
-	FILE* pInFile = NULL;
+	/*FILE* pInFile = NULL;
 	::fopen_s(&pInFile, "Model/Tree/FAE_Birch_A_LOD0.bin", "rb");
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); 
-	SetChild(pGameObject);
+	SetChild(pGameObject);*/
+
+	std::unique_ptr<CGameObject> pGameObject = std::make_unique<CGameObject>(
+		ResourceManager::GetInstance()->GetGameObjectCopy("Model/Tree/FAE_Birch_A_LOD0.bin", pd3dDevice, pd3dCommandList, pGameFramework)
+	);
+	SetChild(pGameObject.release());
 
 	m_objectType = GameObjectType::Tree;
 
-	if (pInFile) fclose(pInFile);
+	//if (pInFile) fclose(pInFile);
 }
 
 CWillowObject::CWillowObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
@@ -1992,17 +2210,20 @@ void CItemObject::Animate(float fTimeElapsed) {
 
 CRockClusterAObject::CRockClusterAObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
-	FILE* pInFile = NULL;
+	/*FILE* pInFile = NULL;
 	::fopen_s(&pInFile, "Model/RockCluster_A_LOD0.bin", "rb");
 	::rewind(pInFile);
 
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(
-		pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework);
-	SetChild(pGameObject);
+		pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework);*/
+	std::unique_ptr<CGameObject> pGameObject = std::make_unique<CGameObject>(
+		ResourceManager::GetInstance()->GetGameObjectCopy("Model/RockCluster_A_LOD0.bin", pd3dDevice, pd3dCommandList, pGameFramework)
+	);
+	SetChild(pGameObject.release());
 
 	m_objectType = GameObjectType::Rock;
 
-	if (pInFile) fclose(pInFile); 
+	//if (pInFile) fclose(pInFile); 
 }
 
 // ------------------ ??------------------

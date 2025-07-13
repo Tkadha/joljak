@@ -74,8 +74,8 @@ public:
 	CGameObject(CGameFramework* pGameFramework);
 	CGameObject(int nMaterials, CGameFramework* pGameFramework);
 	virtual ~CGameObject();
-	CGameObject(const CGameObject&) = delete;
-	CGameObject& operator=(const CGameObject&) = delete;
+	CGameObject(const CGameObject&);
+	CGameObject& operator=(const CGameObject&);
 public:
 	char							m_pstrFrameName[64];
 

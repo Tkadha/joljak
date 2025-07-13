@@ -23,8 +23,14 @@ public:
 	CMaterial(int nTextures);
 	CMaterial(int nTextures, CGameFramework* pGameFramework);
 
-	virtual ~CMaterial();
+	// 복사 생성자 선언 (깊은 복사를 수행)
+	CMaterial(const CMaterial& other);
 
+	// 복사 대입 연산자 선언 (깊은 복사를 수행)
+	CMaterial& operator=(const CMaterial& other);
+
+	virtual ~CMaterial();
+	virtual CMaterial* clone() const;
 private:
 	int								m_nReferences = 0;
 

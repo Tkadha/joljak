@@ -32,6 +32,9 @@ public:
 	CMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual ~CMesh();
 
+	CMesh(const CMesh& other);
+	CMesh& operator=(const CMesh&);
+
 private:
 	int								m_nReferences = 0;
 
@@ -86,6 +89,9 @@ public:
 	// 인스턴싱
 	void Render(ID3D12GraphicsCommandList* pd3dCommandList, UINT nInstances, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView);	
 	void Render(ID3D12GraphicsCommandList * pd3dCommandList, int nSubSet, UINT nInstances);
+
+	virtual CMesh* clone() const;
+
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -139,7 +145,8 @@ protected:
 public:
 	CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int xStart, int zStart, int nWidth, int nLength, XMFLOAT3 xmf3Scale = XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f), void *pContext = NULL);
 	virtual ~CHeightMapGridMesh();
-
+	CHeightMapGridMesh(const CHeightMapGridMesh& other);
+	CHeightMapGridMesh& operator=(const CHeightMapGridMesh& other);
 	XMFLOAT3 GetScale() { return(m_xmf3Scale); }
 	int GetWidth() { return(m_nWidth); }
 	int GetLength() { return(m_nLength); }
@@ -152,6 +159,8 @@ public:
 	virtual void OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
 
 	void AddSubMesh(int xStart, int zStart, int nWidth_part, int nLength_part, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+	virtual CHeightMapGridMesh* clone() const override;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -160,7 +169,11 @@ class CSkyBoxMesh : public CMesh
 {
 public:
 	CSkyBoxMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, float fWidth = 20.0f, float fHeight = 20.0f, float fDepth = 20.0f);
+	CSkyBoxMesh(const CSkyBoxMesh& other);
+	CSkyBoxMesh& operator=(const CSkyBoxMesh& other);
 	virtual ~CSkyBoxMesh();
+	virtual CSkyBoxMesh* clone() const override;
+
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -170,7 +183,8 @@ class CStandardMesh : public CMesh
 public:
 	CStandardMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual ~CStandardMesh();
-
+	CStandardMesh(const CStandardMesh& other);
+	CStandardMesh& operator=(const CStandardMesh& other);
 protected:
 	XMFLOAT4						*m_pxmf4Colors = NULL;
 	XMFLOAT3						*m_pxmf3Normals = NULL;
@@ -206,6 +220,9 @@ public:
 	virtual void ReleaseUploadBuffers();
 
 	virtual void OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
+
+	virtual CStandardMesh* clone() const override;
+
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -217,7 +234,8 @@ class CSkinnedMesh : public CStandardMesh
 public:
 	CSkinnedMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual ~CSkinnedMesh();
-
+	CSkinnedMesh(const CSkinnedMesh& other);
+	CSkinnedMesh& operator=(const CSkinnedMesh& other);
 protected:
 	ID3D12Resource					*m_pd3dBoneIndexBuffer = NULL;
 	ID3D12Resource					*m_pd3dBoneIndexUploadBuffer = NULL;
@@ -258,4 +276,7 @@ public:
 	virtual void ReleaseUploadBuffers();
 
 	virtual void OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
+
+	virtual CSkinnedMesh* clone() const override;
+
 };
