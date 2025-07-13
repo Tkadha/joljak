@@ -208,7 +208,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	// 1. Waves 객체를 생성합니다.
 	m_pWavesObject = new CWavesObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 	// 물결이 보일 위치를 설정합니다. (맵의 중앙 근처, 수면 높이)
-	m_pWavesObject->SetPosition(5000.0f, 2000.0f, 5000.0f);
+	m_pWavesObject->SetPosition(5000.0f, 2600.0f, 5000.0f);
 
 	// 2. Waves를 위한 재질(Material)을 생성합니다.
 	CMaterial* pWavesMaterial = new CMaterial(1, m_pGameFramework);
@@ -967,6 +967,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 
 
+	if (m_pWavesObject) m_pWavesObject->Render(pd3dCommandList, pCamera);
 
 	if (m_pSkyBox) {
 		m_pSkyBox->Render(pd3dCommandList, pCamera);
@@ -977,7 +978,6 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		m_pTerrain->Render(pd3dCommandList, pCamera);
 	}
 
-	if (m_pWavesObject) m_pWavesObject->Render(pd3dCommandList, pCamera);
 
 	//std::vector<tree_obj*> results;
 	//tree_obj player_obj{ -1, m_pPlayer->GetPosition() };
