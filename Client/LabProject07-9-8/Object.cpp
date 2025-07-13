@@ -319,7 +319,7 @@ void CGameObject::SetMesh(CMesh *pMesh)
 
 void CGameObject::SetShader(int nMaterial, CShader *pShader)
 {
-	if (m_ppMaterials[nMaterial]) m_ppMaterials[nMaterial]->SetShader(pShader);
+	//if (m_ppMaterials[nMaterial]) m_ppMaterials[nMaterial]->SetShader(pShader);
 }
 
 void CGameObject::SetMaterial(int nIndex, CMaterial *pMaterial)
@@ -426,8 +426,9 @@ void CGameObject::SetOBB(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	//m_OBBShader.Render(pd3dCommandList, NULL);
-	m_OBBMaterial->m_pShader->Render(pd3dCommandList, NULL);
-
+	//m_OBBMaterial->m_pShader->Render(pd3dCommandList, NULL);
+	//
+	//pd3dCommandList->SetPipelineState(pShaderManager->GetPipelineState("OBB"));
 	
 	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
 	pd3dCommandList->IASetVertexBuffers(0, 1, &m_OBBVertexBufferView);
@@ -626,10 +627,10 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	CMaterial* pPrimaryMaterial = GetMaterial(0); 
 
 
-	if (m_pMesh && pPrimaryMaterial && pPrimaryMaterial->m_pShader)
+	if (m_pMesh && pPrimaryMaterial)
 	{
 
-		string shaderName = pPrimaryMaterial->m_pShader->m_strShaderName;
+		string shaderName = pPrimaryMaterial->GetShaderName();
 		pScene->SetGraphicsState(pd3dCommandList, shaderName);
 
 
@@ -638,10 +639,8 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress());
 		}
 		
-		CShader* pCurrentShader = pPrimaryMaterial->m_pShader; 
-		std::string shaderType = pCurrentShader->GetShaderType(); 
-		if (shaderType == "Standard" || shaderType == "Skinned" /* || shaderType == "Instancing" */) {
-			ID3D12Resource* pLightBuffer = pScene->GetLightsConstantBuffer(); 
+		if (shaderName.find("Standard") != std::string::npos || shaderName.find("Skinned") != std::string::npos) {
+			ID3D12Resource* pLightBuffer = pScene->GetLightsConstantBuffer();
 			if (pLightBuffer) {
 				pd3dCommandList->SetGraphicsRootConstantBufferView(2, pLightBuffer->GetGPUVirtualAddress());
 			}
@@ -649,21 +648,12 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
 		}
 
-		//if (shaderType == "Standard") {
-		//	// Standard 셰이더의 경우, 4번 슬롯에 그림자 맵 바인딩
-		//	pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
-		//}
-		//else if (shaderType == "Skinned") {
-		//	// Skinned 셰이더의 경우, 6번 슬롯에 그림자 맵 바인딩
-		//	pd3dCommandList->SetGraphicsRootDescriptorTable(6, pScene->GetShadowMapSrv());
-		//}
-
 		
 		for (int i = 0; i < m_nMaterials; i++)
 		{
 			CMaterial* pMaterial = GetMaterial(i); 
 			
-			if (pMaterial && pMaterial->m_pShader == pCurrentShader) 
+			if (pMaterial) 
 			{
 				
 				cbGameObjectInfo gameObjectInfo; 
@@ -707,7 +697,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 				}
 
 				
-				if (shaderType == "Skinned") {
+				if (shaderName.find("Skinned") != std::string::npos) {
 					CSkinnedMesh* pSkinnedMesh = dynamic_cast<CSkinnedMesh*>(m_pMesh);
 					if (pSkinnedMesh) {
 						
@@ -731,9 +721,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 						}
 					}
 				}
-
-
-
 				
 				m_pMesh->Render(pd3dCommandList, i); 
 			}
@@ -768,6 +755,103 @@ void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 	if (m_pChild) m_pChild->RenderShadow(pd3dCommandList);
 }
 
+
+void CGameObject::RenderGBuffer(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	CScene* pScene = m_pGameFramework ? m_pGameFramework->GetScene() : nullptr;
+	if (!pScene) return;
+
+	if (!isRender) return;
+
+
+	CMaterial* pPrimaryMaterial = GetMaterial(0);
+
+
+
+	for (int i = 0; i < m_nMaterials; i++)
+	{
+		CMaterial* pMaterial = GetMaterial(i);
+		if (!pMaterial || !m_pMesh) continue;
+
+		std::string baseShaderName = pMaterial->GetShaderName();
+		if (baseShaderName.empty()) continue;
+
+		std::string psoName = baseShaderName + "_GBuffer";
+		std::string rootSignatureName = baseShaderName;
+
+		pScene->SetGraphicsState(pd3dCommandList, psoName, rootSignatureName);
+
+		cbGameObjectInfo gameObjectInfo;
+
+		XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+
+
+		gameObjectInfo.gMaterialInfo.AmbientColor = pMaterial->m_xmf4AmbientColor;
+		gameObjectInfo.gMaterialInfo.DiffuseColor = pMaterial->m_xmf4AlbedoColor;
+		gameObjectInfo.gMaterialInfo.SpecularColor = pMaterial->m_xmf4SpecularColor;
+
+		gameObjectInfo.gMaterialInfo.EmissiveColor = pMaterial->m_xmf4EmissiveColor;
+		gameObjectInfo.gMaterialInfo.Glossiness = pMaterial->m_fGlossiness;
+		gameObjectInfo.gMaterialInfo.Smoothness = pMaterial->m_fSmoothness;
+		gameObjectInfo.gMaterialInfo.SpecularHighlight = pMaterial->m_fSpecularHighlight;
+		gameObjectInfo.gMaterialInfo.Metallic = pMaterial->m_fMetallic;
+		gameObjectInfo.gMaterialInfo.GlossyReflection = pMaterial->m_fGlossyReflection;
+
+		gameObjectInfo.gnTexturesMask = 0;
+		for (int texIdx = 0; texIdx < pMaterial->GetTextureCount(); ++texIdx) {
+
+			if (pMaterial->GetTexture(texIdx)) {
+				if (texIdx == 0) gameObjectInfo.gnTexturesMask |= MATERIAL_ALBEDO_MAP;
+				else if (texIdx == 1) gameObjectInfo.gnTexturesMask |= MATERIAL_SPECULAR_MAP;
+				else if (texIdx == 2) gameObjectInfo.gnTexturesMask |= MATERIAL_NORMAL_MAP;
+				else if (texIdx == 3) gameObjectInfo.gnTexturesMask |= MATERIAL_METALLIC_MAP;
+				else if (texIdx == 4) gameObjectInfo.gnTexturesMask |= MATERIAL_EMISSION_MAP;
+				else if (texIdx == 5) gameObjectInfo.gnTexturesMask |= MATERIAL_DETAIL_ALBEDO_MAP;
+				else if (texIdx == 6) gameObjectInfo.gnTexturesMask |= MATERIAL_DETAIL_NORMAL_MAP;
+			}
+		}
+
+		pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo, 0);
+
+
+		D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle();
+		if (textureTableHandle.ptr != 0) {
+
+			pd3dCommandList->SetGraphicsRootDescriptorTable(3, textureTableHandle);
+		}
+
+
+		if (baseShaderName.find("Skinned") != std::string::npos) {
+			CSkinnedMesh* pSkinnedMesh = dynamic_cast<CSkinnedMesh*>(m_pMesh);
+			if (pSkinnedMesh) {
+
+				ID3D12Resource* pOffsetBuffer = pSkinnedMesh->m_pd3dcbBindPoseBoneOffsets;
+				if (pOffsetBuffer) {
+					pd3dCommandList->SetGraphicsRootConstantBufferView(5, pOffsetBuffer->GetGPUVirtualAddress());
+				}
+
+				if (m_pSharedAnimController &&
+					m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms &&
+					m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]) {
+					pd3dCommandList->SetGraphicsRootConstantBufferView(6, m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]->GetGPUVirtualAddress());
+				}
+				else {
+
+					OutputDebugStringW(L"!!! Render: Skinned - Failed to get valid Bone Transform buffer (b8) via m_pSharedAnimController!\n");
+					wchar_t dbgMsg[128];
+					swprintf_s(dbgMsg, L"    m_pSharedAnimController = %p\n", (void*)m_pSharedAnimController);
+					OutputDebugStringW(dbgMsg);
+
+				}
+			}
+		}
+
+		m_pMesh->Render(pd3dCommandList, i);
+	}
+
+	if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
+	if (m_pChild) m_pChild->Render(pd3dCommandList, pCamera);
+}
 
 void CGameObject::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
@@ -1061,24 +1145,9 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 			}
 
 			
-			CShader* pMatShader = pShaderManager->GetShader(shaderName, pd3dCommandList);
-			if (pMatShader) {
-				pMaterial->SetShader(pMatShader); 
-				
-				pMatShader->Release();
-			}
-			else {
-				OutputDebugStringA(("Error: Could not get shader '" + shaderName + "' from ShaderManager! Assigning default Standard shader.\n").c_str());
-				
-				pMatShader = pShaderManager->GetShader("Standard", pd3dCommandList);
-				if (pMatShader) {
-					pMaterial->SetShader(pMatShader);
-					pMatShader->Release();
-				}
-			}
-			
+			pMaterial->SetShader(shaderName);
+			SetMaterial(nMaterial, pMaterial);
 
-			SetMaterial(nMaterial, pMaterial); 
 			OutputDebugStringW((L"    SetMaterial called for index: " + std::to_wstring(nMaterial) + L"\n").c_str());
 		}
 		else if (!strcmp(pstrToken, "<AlbedoColor>:"))
@@ -1573,15 +1642,7 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	}
 
 	
-	CShader* pTerrainShader = pShaderManager->GetShader("Terrain", pd3dCommandList); 
-	if (pTerrainShader) {
-		pTerrainMaterial->SetShader(pTerrainShader); 
-		pTerrainShader->Release(); 
-	}
-	else {
-		OutputDebugString(L"Error: Failed to get Terrain shader. Material will not have a shader.\n");
-	}
-
+	pTerrainMaterial->SetShader("Terrain");
 	SetMaterial(0, pTerrainMaterial);
 
 }
@@ -1598,9 +1659,9 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 
 	CMaterial* pMaterial = GetMaterial(0); 
-	if (m_pMesh && pMaterial && pMaterial->m_pShader)
+	if (m_pMesh && pMaterial)
 	{
-		string shaderName = pMaterial->m_pShader->m_strShaderName;
+		string shaderName = pMaterial->GetShaderName();
 		pScene->SetGraphicsState(pd3dCommandList, shaderName);
 
 		
@@ -1685,12 +1746,8 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	}
 
 	
-	CShader* pSkyBoxShader = pShaderManager->GetShader("Skybox", pd3dCommandList);
-	if (pSkyBoxShader) {
-		pSkyBoxMaterial->SetShader(pSkyBoxShader);
-		pSkyBoxShader->Release();
-	}
-
+	
+	pSkyBoxMaterial->SetShader("Skybox");
 	SetMaterial(0, pSkyBoxMaterial);
 	
 }
@@ -1706,9 +1763,9 @@ void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 	if (!pScene || !pCamera) return;
 
 	CMaterial* pMaterial = GetMaterial(0); 
-	if (m_pMesh && pMaterial && pMaterial->m_pShader)
+	if (m_pMesh && pMaterial)
 	{
-		pScene->SetGraphicsState(pd3dCommandList, pMaterial->m_pShader);
+		pScene->SetGraphicsState(pd3dCommandList, pMaterial->GetShaderName());
 
 		
 		if (pCamera->GetCameraConstantBuffer()) { 

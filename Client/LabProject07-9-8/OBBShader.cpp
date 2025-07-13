@@ -30,16 +30,16 @@ D3D12_RASTERIZER_DESC COBBShader::CreateRasterizerState()
     return d3dRasterizerDesc;
 }
 
-D3D12_SHADER_BYTECODE COBBShader::CreateVertexShader()
+D3D12_SHADER_BYTECODE COBBShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob)
 {
     // 분리된 HLSL 파일 사용
-    return CompileShaderFromFile(L"OBBShader.hlsl", "VSOBB", "vs_5_1", &m_pd3dVertexShaderBlob);
+    return CompileShaderFromFile(L"OBBShader.hlsl", "VSOBB", "vs_5_1", ppd3dShaderBlob);
 }
 
-D3D12_SHADER_BYTECODE COBBShader::CreatePixelShader()
+D3D12_SHADER_BYTECODE COBBShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob)
 {
     // 분리된 HLSL 파일 사용
-    return CompileShaderFromFile(L"OBBShader.hlsl", "PSOBB", "ps_5_1", &m_pd3dPixelShaderBlob);
+    return CompileShaderFromFile(L"OBBShader.hlsl", "PSOBB", "ps_5_1", ppd3dShaderBlob);
 }
 
 // CreateShader 함수 오버라이드 (Primitive Topology 설정 위해)

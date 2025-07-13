@@ -15,8 +15,8 @@ public:
     virtual D3D12_RASTERIZER_DESC CreateRasterizerState() override;
 
     // 셰이더 바이트코드 생성 오버라이드
-    virtual D3D12_SHADER_BYTECODE CreateVertexShader() override;
-    virtual D3D12_SHADER_BYTECODE CreatePixelShader() override;
+    virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob) override;
+    virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob) override;
 
     virtual std::string GetShaderType() const override { return "Skybox"; }
 };

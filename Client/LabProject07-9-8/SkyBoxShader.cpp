@@ -49,14 +49,14 @@ D3D12_RASTERIZER_DESC CSkyBoxShader::CreateRasterizerState()
 }
 
 
-D3D12_SHADER_BYTECODE CSkyBoxShader::CreateVertexShader()
+D3D12_SHADER_BYTECODE CSkyBoxShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob)
 {
     // 분리된 HLSL 파일 사용
-    return CompileShaderFromFile(L"SkyboxShaders.hlsl", "VSSkyBox", "vs_5_1", &m_pd3dVertexShaderBlob);
+    return CompileShaderFromFile(L"SkyboxShaders.hlsl", "VSSkyBox", "vs_5_1", ppd3dShaderBlob);
 }
 
-D3D12_SHADER_BYTECODE CSkyBoxShader::CreatePixelShader()
+D3D12_SHADER_BYTECODE CSkyBoxShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob)
 {
     // 분리된 HLSL 파일 사용
-    return CompileShaderFromFile(L"SkyboxShaders.hlsl", "PSSkyBox", "ps_5_1", &m_pd3dPixelShaderBlob);
+    return CompileShaderFromFile(L"SkyboxShaders.hlsl", "PSSkyBox", "ps_5_1", ppd3dShaderBlob);
 }

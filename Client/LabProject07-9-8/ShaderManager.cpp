@@ -61,21 +61,24 @@ ShaderManager::~ShaderManager()
 
 void ShaderManager::ReleaseAll()
 {
-    // 관리하던 CShader 객체들의 참조 카운트 감소
-    for (auto const& [key, pShader] : m_Shaders)
-    {
-        if (pShader)
-        {
-            pShader->Release(); // ShaderManager가 저장 시 AddRef 했으므로 Release
-        }
-    }
-    m_Shaders.clear();
-
-    // 루트 서명은 ComPtr이 자동으로 Release 처리
+    m_mapPipelineStates.clear();
     m_mapRootSignatures.clear();
 }
 
-// --- 루트 서명 관리 구현 ---
+
+ID3D12PipelineState* ShaderManager::GetPipelineState(const std::string& name)
+{
+    // 요청받은 이름의 PSO가 맵에 없는지 확인
+    if (m_mapPipelineStates.find(name) == m_mapPipelineStates.end())
+    {
+        // 만약 없다면, CreatePSO 함수를 호출하여 새로 생성
+        CreatePSO(name);
+    }
+
+    // 맵에서 PSO를 찾아 반환
+    return m_mapPipelineStates[name].Get();
+}
+
 ID3D12RootSignature* ShaderManager::GetRootSignature(const std::string& name)
 {
     // 1. 캐시 확인
@@ -420,137 +423,6 @@ ID3D12RootSignature* ShaderManager::CreateDeferedLightingRootSignature()
     return pd3dRootSignature;
 }
 
-
-CShader* ShaderManager::GetShader(const std::string& name, ID3D12GraphicsCommandList* pd3dCommandList)
-{
-    auto it = m_Shaders.find(name);
-    if (it != m_Shaders.end())
-    {
-        it->second->AddRef();
-        return it->second;
-    }
-    else
-    {
-        OutputDebugStringA("Creating Shader: ");
-        OutputDebugStringA(name.c_str());
-        OutputDebugStringA("\n");
-        CShader* pNewShader = CreateShaderInternal(name, pd3dCommandList);
-        if (pNewShader)
-        {
-            pNewShader->AddRef();
-            m_Shaders[name] = pNewShader;
-            pNewShader->AddRef();
-            return pNewShader;
-        }
-        else
-        {
-            OutputDebugStringA("Error: Failed to create Shader '");
-            OutputDebugStringA(name.c_str());
-            OutputDebugStringA("'\n");
-            return nullptr;
-        }
-    }
-}
-
-// 셰이더 생성 분기 로직
-CShader* ShaderManager::CreateShaderInternal(const std::string& name, ID3D12GraphicsCommandList* pd3dCommandList)
-{
-    CShader* pShader = nullptr;
-    ID3D12RootSignature* pRootSig = nullptr;
-    std::string rootSignatureName = "";
-
-    // 1. 셰이더 이름에 따라 사용할 클래스와 루트 서명 이름 결정
-    if (name == "Standard") {
-        pShader = new CStandardShader(name); // Standard 셰이더 객체 생성
-        rootSignatureName = "Standard";  // Standard 루트 서명 필요
-    }
-    else if (name == "Standard_GBuffer") {
-        pShader = new CStandardShader(name);
-        rootSignatureName = "Standard"; // 루트 서명은 기존 것을 공유
-    }
-    else if (name == "Skinned") {
-        pShader = new CSkinnedAnimationStandardShader(name);
-        rootSignatureName = "Skinned";
-    }
-    else if (name == "Terrain") {
-        pShader = new CTerrainShader(name);
-        rootSignatureName = "Terrain";
-    }
-    else if (name == "Skybox") {
-        pShader = new CSkyBoxShader(name);
-        rootSignatureName = "Skybox";
-    }
-    else if (name == "OBB") {
-        pShader = new COBBShader(name);
-        rootSignatureName = "OBB";
-    }
-    else if (name == "Shadow") {
-        pShader = new CShadowShader(name);
-        rootSignatureName = "Shadow";
-    }
-    else if (name == "Debug") {
-        pShader = new CDebugShader(name);
-        rootSignatureName = "Debug"; 
-    }
-    else if (name == "Lighting") {
-        pShader = new CLightingShader(name);
-        rootSignatureName = "Lighting"; 
-    }
-
-
-    else if (name == "Instancing") {
-        // CInstancingShader 클래스가 있다고 가정 (필요시 생성)
-        // pShader = new CInstancingShader();
-        rootSignatureName = "Instancing"; // 또는 "Standard" 루트 서명을 사용할 수도 있음
-        OutputDebugStringA("Warning: Instancing shader creation not fully implemented in example.\n");
-        // return nullptr; // 혹은 적절한 클래스 생성
-    }
-    else {
-        OutputDebugStringA("Error: Unknown shader name requested for creation!\n");
-        return nullptr; // 모르는 셰이더 이름
-    }
-
-    // 셰이더 객체 생성 실패 시
-    if (!pShader) {
-        OutputDebugStringA("Error: Failed to instantiate shader object.\n");
-        return nullptr;
-    }
-
-    // 2. 필요한 루트 서명 가져오기 (실패 시 생성된 셰이더 객체 삭제)
-    if (!rootSignatureName.empty()) {
-        pRootSig = GetRootSignature(rootSignatureName);
-        if (!pRootSig) {
-            OutputDebugStringA(("Error: Failed to get Root Signature '" + rootSignatureName + "' for shader '" + name + "'\n").c_str());
-            delete pShader; // 루트 서명 없으면 셰이더 생성 불가
-            return nullptr;
-        }
-    }
-    else {
-        OutputDebugStringA(("Error: Root Signature name not set for shader '" + name + "'\n").c_str());
-        delete pShader;
-        return nullptr;
-    }
-
-    // 3. PSO 생성
-    pShader->CreateShader(m_pd3dDevice, pd3dCommandList, pRootSig);
-
-
-    // 4. PSO 생성 성공 여부 확인
-    if (!pShader->GetPipelineState()) {
-        OutputDebugStringA(("Error: Failed to create PSO for shader '" + name + "'\n").c_str());
-        delete pShader; // PSO 생성 실패 시 객체 삭제
-        return nullptr;
-    }
-
-    // 5. 셰이더 객체에 루트 서명 포인터 저장
-    pShader->SetRootSignature(pRootSig);
-
-
-    OutputDebugStringA(("Successfully created Shader and PSO: " + name + "\n").c_str());
-    return pShader; // 성공
-}
-
-
 void ShaderManager::CreatePSO(const std::string& name)
 {
     // 이미 생성된 PSO면 바로 리턴
@@ -571,19 +443,30 @@ void ShaderManager::CreatePSO(const std::string& name)
         pTempShader = std::make_unique<CStandardShader>(name);
         rootSignatureName = "Standard";
     }
+    else if (name == "Skinned")
+    {
+        pTempShader = std::make_unique<CSkinnedAnimationStandardShader>(name);
+        rootSignatureName = "Skinned";
+    }
     else if (name == "Shadow")
     {
         pTempShader = std::make_unique<CShadowShader>(name);
         rootSignatureName = "Shadow";
     }
-    // ... 다른 셰이더들도 동일하게 추가 ...
+    // 다른 셰이더
 
-    // PSO 디스크립션(D3D12_GRAPHICS_PIPELINE_STATE_DESC)을 조립합니다.
+    if (!pTempShader) return;
+
     D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
     psoDesc.pRootSignature = GetRootSignature(rootSignatureName); // 미리 생성된 루트서명 가져오기
-    psoDesc.VS = pTempShader->CreateVertexShader();
-    psoDesc.PS = pTempShader->CreatePixelShader();
-    psoDesc.InputLayout = pTempShader->CreateInputLayout();
+
+    ID3DBlob* vsBlob = nullptr, * psBlob = nullptr;
+    psoDesc.VS = pTempShader->CreateVertexShader(&vsBlob);
+    psoDesc.PS = pTempShader->CreatePixelShader(&psBlob);
+
+    D3D12_INPUT_LAYOUT_DESC inputLayout = pTempShader->CreateInputLayout();
+    psoDesc.InputLayout = inputLayout;
+
     psoDesc.RasterizerState = pTempShader->CreateRasterizerState();
     psoDesc.BlendState = pTempShader->CreateBlendState();
     psoDesc.DepthStencilState = pTempShader->CreateDepthStencilState();
@@ -615,5 +498,20 @@ void ShaderManager::CreatePSO(const std::string& name)
     }
 
     // 최종 PSO 생성 및 맵에 저장
-    m_pd3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_mapPipelineStates[name]));
+    HRESULT hResult = m_pd3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_mapPipelineStates[name]));
+
+    if (psoDesc.InputLayout.pInputElementDescs) delete[] psoDesc.InputLayout.pInputElementDescs;
+
+    if (FAILED(hResult))
+    {
+        OutputDebugStringA(("\n!!! CRITICAL ERROR: CreateGraphicsPipelineState FAILED for shader: " + name + "\n").c_str());
+        OutputDebugStringA("!!! Querying D3D12 InfoQueue for details...\n");
+
+        // 실패 시, InfoQueue에서 상세 오류 내용을 가져와 출력합니다.
+        PrintD3D12InfoQueue(m_pd3dDevice);
+    }
+
+
+    if (vsBlob) vsBlob->Release();
+    if (psBlob) psBlob->Release();
 }

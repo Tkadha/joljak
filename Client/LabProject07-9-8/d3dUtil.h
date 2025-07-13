@@ -286,3 +286,30 @@ struct Texture
 #ifndef ReleaseCom
 #define ReleaseCom(x) { if(x){ x->Release(); x = 0; } }
 #endif
+
+
+
+// 디버깅용 함수
+inline void PrintD3D12InfoQueue(ID3D12Device* pd3dDevice)
+{
+    Microsoft::WRL::ComPtr<ID3D12InfoQueue> pInfoQueue;
+    if (SUCCEEDED(pd3dDevice->QueryInterface(IID_PPV_ARGS(&pInfoQueue))))
+    {
+        UINT64 unMessageCount = pInfoQueue->GetNumStoredMessages();
+        for (UINT64 i = 0; i < unMessageCount; i++)
+        {
+            SIZE_T nMessageLength;
+            pInfoQueue->GetMessage(i, NULL, &nMessageLength);
+
+            D3D12_MESSAGE* pMessage = (D3D12_MESSAGE*)malloc(nMessageLength);
+            pInfoQueue->GetMessage(i, pMessage, &nMessageLength);
+
+            OutputDebugStringA("\n--- D3D12 InfoQueue Message ---\n");
+            OutputDebugStringA(pMessage->pDescription);
+            OutputDebugStringA("\n-----------------------------\n");
+
+            free(pMessage);
+        }
+        pInfoQueue->ClearStoredMessages();
+    }
+}

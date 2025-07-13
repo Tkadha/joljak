@@ -84,12 +84,12 @@ public:
 	bool ProcessInput(UCHAR *pKeysBuffer);
     void AnimateObjects(float fTimeElapsed);
 	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
-	void TestRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 	//void Render(ID3D12GraphicsCommandList *pd3dCommandList,bool obbRender, CCamera *pCamera=NULL);
 
 	void ReleaseUploadBuffers();
 
 	void SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, std::string shaderName);
+	void SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, std::string& psoName, std::string& rootSignatureName);
 
 	// 조명 버퍼 접근자 
 	ID3D12Resource* GetLightsConstantBuffer() const { return m_pd3dcbLights; }

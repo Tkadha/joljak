@@ -27,8 +27,8 @@ public:
 	virtual D3D12_BLEND_DESC CreateBlendState();
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState();
 
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader();
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader();
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob);
 
 	D3D12_SHADER_BYTECODE CompileShaderFromFile(WCHAR *pszFileName, LPCSTR pszShaderName, LPCSTR pszShaderProfile, ID3DBlob **ppd3dShaderBlob);
 	D3D12_SHADER_BYTECODE ReadCompiledShaderFromFile(WCHAR *pszFileName, ID3DBlob **ppd3dShaderBlob=NULL);
@@ -62,8 +62,8 @@ public:
 	virtual std::string GetShaderType() const = 0; // 순수 가상 함수로 선언
 
 protected:
-	ID3DBlob							*m_pd3dVertexShaderBlob = NULL;
-	ID3DBlob							*m_pd3dPixelShaderBlob = NULL;
+	//ID3DBlob							*m_pd3dVertexShaderBlob = NULL;
+	//ID3DBlob							*m_pd3dPixelShaderBlob = NULL;
 
 	ID3D12PipelineState					*m_pd3dPipelineState = NULL;
 

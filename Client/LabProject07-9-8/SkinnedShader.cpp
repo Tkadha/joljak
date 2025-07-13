@@ -23,11 +23,11 @@ D3D12_INPUT_LAYOUT_DESC CSkinnedAnimationStandardShader::CreateInputLayout()
 	return(d3dInputLayoutDesc);
 }
 
-D3D12_SHADER_BYTECODE CSkinnedAnimationStandardShader::CreateVertexShader() {
-	return(CShader::CompileShaderFromFile(L"SkinnedShaders.hlsl", "VSSkinnedAnimationStandard", "vs_5_1", &m_pd3dVertexShaderBlob));
+D3D12_SHADER_BYTECODE CSkinnedAnimationStandardShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob) {
+	return(CShader::CompileShaderFromFile(L"SkinnedShaders.hlsl", "VSSkinnedAnimationStandard", "vs_5_1", ppd3dShaderBlob));
 }
 
-D3D12_SHADER_BYTECODE CSkinnedAnimationStandardShader::CreatePixelShader() {
+D3D12_SHADER_BYTECODE CSkinnedAnimationStandardShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob) {
 	// Standard ÇÈ¼¿ ¼ÎÀÌ´õ Àç»ç¿ë
-	return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "PSStandard3", "ps_5_1", &m_pd3dPixelShaderBlob));
+	return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "PSStandard3", "ps_5_1", ppd3dShaderBlob));
 }

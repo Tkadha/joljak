@@ -867,21 +867,15 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		m_pShadowMap->SetRenderTarget(pd3dCommandList);
 
 		// 그림자 생성을 위한 전용 셰이더 설정
-		CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Shadow", pd3dCommandList);
-		pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
-		pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature()); // Shadow 셰이더용 루트 서명
+		pd3dCommandList->SetPipelineState(pShaderManager->GetPipelineState("Shadow"));
+		pd3dCommandList->SetGraphicsRootSignature(pShaderManager->GetRootSignature("Shadow"));
+
 
 		// --- 빛 카메라 상수 버퍼 업데이트 및 바인딩 ---
-		XMMATRIX view = XMLoadFloat4x4(&mLightView);
-		XMMATRIX proj = XMLoadFloat4x4(&mLightProj);
-
-		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4View, XMMatrixTranspose(view));
-		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4Projection, XMMatrixTranspose(proj));
-
+		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4View, XMMatrixTranspose(XMLoadFloat4x4(&mLightView)));
+		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4Projection, XMMatrixTranspose(XMLoadFloat4x4(&mLightProj)));
 		pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbLightCamera->GetGPUVirtualAddress());
 
-
-		// 기존 Render 함수를 호출하되, Shadow 셰이더는 재질/조명 정보를 무시할 것임
 		for (auto& obj : m_vGameObjects) {
 			if (obj) obj->RenderShadow(pd3dCommandList);
 		}
@@ -890,7 +884,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 		if (m_pTerrain) m_pTerrain->RenderShadow(pd3dCommandList);
 	}
-	// 1. 그림자 맵 리소스를 픽셀 셰이더에서 읽을 수 있는 상태로 변경
+	// 그림자 맵 리소스를 픽셀 셰이더에서 읽을 수 있는 상태로 변경
 	m_pShadowMap->TransitionToReadable(pd3dCommandList);
 
 
@@ -923,10 +917,9 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		// 조명 패스에서 그림자를 계산해야 하므로, 그림자 맵은 여기서도 필요합니다.
 		pd3dCommandList->SetGraphicsRootDescriptorTable(4, m_pShadowMap->Srv()); // Standard/Skinned 기준 4번 슬롯
 
-		if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
-
+		//if (m_pTerrain) m_pTerrain->RenderGBuffer(pd3dCommandList, pCamera);
 		for (auto& obj : m_vGameObjects) {
-			if (obj && obj->isRender) obj->Render(pd3dCommandList, pCamera);
+			if (obj && obj->isRender) obj->RenderGBuffer(pd3dCommandList, pCamera);
 		}
 		// ... Player 등 다른 오브젝트 리스트들도 Render 호출 ...
 	}
@@ -944,9 +937,9 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, nullptr);
 
 	// 2. 조명 패스용 셰이더와 루트 서명을 설정합니다.
-	CShader* pLightingShader = m_pGameFramework->GetShaderManager()->GetShader("Lighting", pd3dCommandList);
-	pd3dCommandList->SetPipelineState(pLightingShader->GetPipelineState());
-	pd3dCommandList->SetGraphicsRootSignature(pLightingShader->GetRootSignature()); // DeferedLighting 루트 서명 설정
+	pd3dCommandList->SetPipelineState(pShaderManager->GetPipelineState("Lighting"));
+	pd3dCommandList->SetGraphicsRootSignature(pShaderManager->GetRootSignature("Lighting"));
+	
 
 	// --- 3. 루트 서명에 약속된 모든 리소스를 순서대로 바인딩합니다. ---
 
@@ -975,260 +968,23 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	pd3dCommandList->DrawInstanced(3, 1, 0, 0);
 
-	/*
-	{
-		// =================================================================
-		// Pass 3: 조명 패스
-		// =================================================================
+	// --- 그림자 맵 디버그 출력 ---
+	//CShader* pDebugShader = pShaderManager->GetShader("Debug", pd3dCommandList);
+	pd3dCommandList->SetPipelineState(pShaderManager->GetPipelineState("Debug"));
+	pd3dCommandList->SetGraphicsRootSignature(pShaderManager->GetRootSignature("Debug"));
 
-		// 1. 렌더 타겟을 다시 화면(백버퍼)으로 설정합니다.
-		D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pGameFramework->GetCurrentRtvCPUDescriptorHandle();
-		pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, nullptr); // 깊이 버퍼는 사용 안 함
-
-		// 2. 조명 패스용 셰이더와 루트 서명을 설정합니다.
-		CShader* pLightingShader = pShaderManager->GetShader("Lighting", pd3dCommandList);
-		pd3dCommandList->SetPipelineState(pLightingShader->GetPipelineState());
-		pd3dCommandList->SetGraphicsRootSignature(pLightingShader->GetRootSignature());
-
-		// 3. 필요한 모든 리소스(G-Buffer, 그림자 맵 등)를 셰이더에 바인딩합니다.
-		//    G-Buffer들의 시작 SRV 핸들을 가져옵니다.
-		D3D12_GPU_DESCRIPTOR_HANDLE d3dGbufferSrvGPUHandle = m_pGameFramework->GetGbufferSrvGPUHandle();
-		// 루트 서명에 정의된 슬롯에 G-Buffer 테이블을 바인딩합니다.
-		pd3dCommandList->SetGraphicsRootDescriptorTable(2, d3dGbufferSrvGPUHandle); // 예: 2번 슬롯
-
-		// 4. 화면 전체에 삼각형 하나를 그려서 픽셀 셰이더를 실행시킵니다.
-		pd3dCommandList->IASetVertexBuffers(0, 0, nullptr);
-		pd3dCommandList->IASetIndexBuffer(nullptr);
-		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		pd3dCommandList->DrawInstanced(3, 1, 0, 0); // 정점 3개로 화면 전체를 덮음
-
-		// =================================================================
-		// Pass 3: 조명 패스 (아직 구현 안 함, 최종 결과를 백버퍼에 그리는 단계)
-		// =================================================================
-		// 지금은 임시로 백버퍼를 다시 렌더타겟으로 설정하고 초기화만 합니다.
-		D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pGameFramework->GetDsvCPUDescriptorHandle();
-		//D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pGameFramework->GetCurrentRtvCPUDescriptorHandle();
-		pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
-		pd3dCommandList->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, Colors::CornflowerBlue, 0, nullptr);
+	// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
+	pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
 
 
-		// 2. 렌더 타겟을 다시 화면(메인 백버퍼)과 메인 깊이 버퍼로 설정
-		//D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pGameFramework->GetDsvCPUDescriptorHandle();
-		pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
-
-		// 3. 뷰포트와 시저 렉트도 메인 카메라 기준으로 다시 설정
-		pCamera->SetViewportsAndScissorRects(pd3dCommandList);
-
-
-		pCamera->UpdateShaderVariables(pd3dCommandList);
-		UpdateShaderVariables(pd3dCommandList);
-
-
-		ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() };
-		if (ppHeaps[0]) {
-			pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-		}
-		else {
-			assert(!"CBV/SRV Descriptor Heap is NULL in CScene::Render!");
-			return;
-		}
-
-
-		m_pCurrentRootSignature = nullptr;
-		m_pCurrentPSO = nullptr;
-		m_pCurrentShader = nullptr;
-
-
-
-
-		if (m_pSkyBox) {
-			m_pSkyBox->Render(pd3dCommandList, pCamera);
-		}
-
-
-		if (m_pTerrain) {
-			m_pTerrain->Render(pd3dCommandList, pCamera);
-		}
-
-		//std::vector<tree_obj*> results;
-		//tree_obj player_obj{ -1, m_pPlayer->GetPosition() };
-		//octree.query(player_obj, XMFLOAT3{ 2500,1000,2500 }, results);
-		//{
-		//	std::lock_guard<std::mutex> lock(m_Mutex);
-		//	for (auto& obj : results) {
-		//		if (m_vGameObjects[obj->u_id]) {
-		//			if (m_vGameObjects[obj->u_id]->FSM_manager) m_vGameObjects[obj->u_id]->FSMUpdate();
-		//			//if (m_vGameObjects[obj->u_id]->m_pSkinnedAnimationController) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
-		//			if (m_vGameObjects[obj->u_id]) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
-		//			if (m_vGameObjects[obj->u_id]->isRender) m_vGameObjects[obj->u_id]->Render(pd3dCommandList, pCamera);
-		//		}
-		//	}
-		//}
-
-		{
-			std::lock_guard<std::mutex> lock(m_Mutex);
-			for (auto& obj : m_vGameObjects) {
-				if (obj) obj->Animate(m_fElapsedTime);
-				if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
-			}
-		}
-
-
-
-		for (auto branch : m_listBranchObjects) {
-			if (branch->isRender) {
-				branch->Animate(m_fElapsedTime);
-				branch->Render(pd3dCommandList, pCamera);
-			}
-		}
-
-		for (auto branch : m_listRockObjects) {
-			if (branch->isRender) {
-				branch->Animate(m_fElapsedTime);
-				branch->Render(pd3dCommandList, pCamera);
-			}
-		}
-
-		//if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
-
-		if (m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
-
-
-		if (m_pPlayer) {
-			if (m_pPlayer->invincibility) {
-				auto endtime = std::chrono::system_clock::now();
-				auto exectime = endtime - m_pPlayer->starttime;
-				auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
-				if (exec_ms > 1000.f) {
-					m_pPlayer->SetInvincibility();
-				}
-			}
-			m_pPlayer->Render(pd3dCommandList, pCamera);
-		}
-		for (auto& p : PlayerList) {
-			if (p.second->m_pSkinnedAnimationController) p.second->Animate(m_fElapsedTime);
-			if (p.second->isRender) p.second->Render(pd3dCommandList, pCamera);
-		}
-
-
-		if (obbRender) {
-			CShader* pOBBShader = pShaderManager->GetShader("OBB", pd3dCommandList);
-			if (pOBBShader) {
-				SetGraphicsState(pd3dCommandList, pOBBShader);
-				for (auto& obj : m_vGameObjects) {
-					if (obj->ShouldRenderOBB()) {
-						obj->RenderOBB(pd3dCommandList, pCamera);
-					}
-				}
-
-
-				for (auto& branch : m_listBranchObjects) {
-					if (branch->ShouldRenderOBB()) {
-						branch->RenderOBB(pd3dCommandList, pCamera);
-					}
-				}
-				for (auto& rock : m_listRockObjects) {
-					if (rock->ShouldRenderOBB()) {
-						rock->RenderOBB(pd3dCommandList, pCamera);
-					}
-				}
-
-				if (m_pPreviewPine && m_pPreviewPine->ShouldRenderOBB()) {
-					m_pPreviewPine->RenderOBB(pd3dCommandList, pCamera);
-				}
-
-
-
-				if (m_pPlayer && m_pPlayer->ShouldRenderOBB()) {
-					m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
-				}
-
-
-				//for (auto& entry : PlayerList) {
-				//    CPlayer* pOtherPlayer = entry.second;
-				//    if (pOtherPlayer && pOtherPlayer->ShouldRenderOBB()) {
-				//        pOtherPlayer->RenderOBB(pd3dCommandList, pCamera);
-				//    }
-				//}
-			}
-			else {
-				assert(!"OBB Shader (named 'OBB') not found in ShaderManager!");
-			}
-		}
-
-
-		// --- 그림자 맵 디버그 출력 ---
-		CShader* pDebugShader = pShaderManager->GetShader("Debug", pd3dCommandList);
-		pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
-		pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
-
-		// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
-		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
-
-
-		// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
-		pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
-		pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
-		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
-	}
-	*/
-}
-
-void CScene::TestRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
-{
-	// ------------------------------------------------------------------
-	// 기존의 모든 CScene::Render 내용을 이 코드로 완전히 교체합니다.
-	// ------------------------------------------------------------------
-
-	OutputDebugString(L"--- CScene::Render START ---\n");
-
-	// 1. 필요한 포인터 가져오기
-	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
-
-	// 2. 렌더 타겟, 뷰포트, 디스크립터 힙을 명시적으로 다시 설정합니다.
-	//    (이전 상태에 관계없이 우리가 원하는 상태로 강제합니다)
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pGameFramework->GetCurrentRtvCPUDescriptorHandle();
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pGameFramework->GetDsvCPUDescriptorHandle();
-	pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
-
-	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
-
-//	ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() };
-	ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->m_pd3dSrvDescriptorHeapForImGui };
-
-	pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-
-	// 3. 디버그 셰이더와 PSO, 루트 서명 설정
-	CShader* pDebugShader = pShaderManager->GetShader("Debug", pd3dCommandList);
-	if (!pDebugShader || !pDebugShader->GetPipelineState())
-	{
-		OutputDebugString(L"Error: Debug shader or PSO is null.\n");
-		return;
-	}
-
-	pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
-	pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
-
-	D3D12_GPU_DESCRIPTOR_HANDLE shadowMapSrv = m_pShadowMap->Srv();
-	if (shadowMapSrv.ptr != 0) {
-		pd3dCommandList->SetGraphicsRootDescriptorTable(0, shadowMapSrv);
-	}
-
-
-	// 4. 디버그 사각형 그리기
-	D3D12_VERTEX_BUFFER_VIEW vbView = m_pGameFramework->GetDebugQuadVBView();
-	D3D12_INDEX_BUFFER_VIEW ibView = m_pGameFramework->GetDebugQuadIBView();
-
-	pd3dCommandList->IASetVertexBuffers(0, 1, &vbView);
-	pd3dCommandList->IASetIndexBuffer(&ibView);
+	// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
+	pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
+	pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
 	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	OutputDebugString(L"Attempting to draw the debug quad...\n");
 	pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
-	OutputDebugString(L"--- CScene::Render END ---\n");
 }
+
 
 
 void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, std::string shaderName)
@@ -1254,6 +1010,29 @@ void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, std::s
 		}
 	}	
 }
+
+
+void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, std::string& psoName, std::string& rootSignatureName)
+{
+	if (!pd3dCommandList) return;
+
+	ShaderManager* pShaderManager = GetShaderManager();
+
+	// 루트 서명은 rootSignatureName으로 찾습니다.
+	ID3D12RootSignature* pRootSig = pShaderManager->GetRootSignature(rootSignatureName);
+	if (pRootSig && pRootSig != m_pCurrentRootSignature) {
+		pd3dCommandList->SetGraphicsRootSignature(pRootSig);
+		m_pCurrentRootSignature = pRootSig;
+	}
+
+	// PSO는 psoName으로 찾습니다.
+	ID3D12PipelineState* pPSO = pShaderManager->GetPipelineState(psoName);
+	if (pPSO && pPSO != m_pCurrentPSO) {
+		pd3dCommandList->SetPipelineState(pPSO);
+		m_pCurrentPSO = pPSO;
+	}
+}
+
 
 ShaderManager* CScene::GetShaderManager() const {
 	return m_pGameFramework ? m_pGameFramework->GetShaderManager() : nullptr;

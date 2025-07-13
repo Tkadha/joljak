@@ -33,14 +33,18 @@ public:
 	void Release() { if (--m_nReferences <= 0) delete this; }
 
 public:
-	CShader* m_pShader = NULL;
+	//CShader* m_pShader = NULL;
+	std::string m_strShaderName;
 
 	XMFLOAT4 m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); 
 	XMFLOAT4 m_xmf4EmissiveColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 	XMFLOAT4 m_xmf4SpecularColor = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f); // 약간의 회색 반사광
 	XMFLOAT4 m_xmf4AmbientColor = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);  // 약간의 주변광 반응
 
-	void SetShader(CShader* pShader);
+	//void SetShader(CShader* pShader);
+	void SetShader(const std::string& shaderName) { m_strShaderName = shaderName; }
+	std::string GetShaderName() const { return m_strShaderName; }
+
 	void SetMaterialType(UINT nType) { m_nType |= nType; }
 	
 	virtual void ReleaseUploadBuffers();

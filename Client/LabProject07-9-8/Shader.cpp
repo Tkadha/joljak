@@ -17,7 +17,7 @@ CShader::~CShader()
 	if (m_pd3dPipelineState) m_pd3dPipelineState->Release();
 }
 
-D3D12_SHADER_BYTECODE CShader::CreateVertexShader()
+D3D12_SHADER_BYTECODE CShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob)
 {
 	D3D12_SHADER_BYTECODE d3dShaderByteCode;
 	d3dShaderByteCode.BytecodeLength = 0;
@@ -26,7 +26,7 @@ D3D12_SHADER_BYTECODE CShader::CreateVertexShader()
 	return(d3dShaderByteCode);
 }
 
-D3D12_SHADER_BYTECODE CShader::CreatePixelShader()
+D3D12_SHADER_BYTECODE CShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob)
 {
 	D3D12_SHADER_BYTECODE d3dShaderByteCode;
 	d3dShaderByteCode.BytecodeLength = 0;

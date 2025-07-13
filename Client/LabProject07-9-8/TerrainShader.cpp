@@ -24,14 +24,14 @@ D3D12_INPUT_LAYOUT_DESC CTerrainShader::CreateInputLayout()
     return d3dInputLayoutDesc;
 }
 
-D3D12_SHADER_BYTECODE CTerrainShader::CreateVertexShader()
+D3D12_SHADER_BYTECODE CTerrainShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob)
 {
     // 분리된 HLSL 파일 사용
-    return CompileShaderFromFile(L"TerrainShaders.hlsl", "VSTerrain", "vs_5_1", &m_pd3dVertexShaderBlob);
+    return CompileShaderFromFile(L"TerrainShaders.hlsl", "VSTerrain", "vs_5_1", ppd3dShaderBlob);
 }
 
-D3D12_SHADER_BYTECODE CTerrainShader::CreatePixelShader()
+D3D12_SHADER_BYTECODE CTerrainShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob)
 {
     // 분리된 HLSL 파일 사용
-    return CompileShaderFromFile(L"TerrainShaders.hlsl", "PSTerrain", "ps_5_1", &m_pd3dPixelShaderBlob);
+    return CompileShaderFromFile(L"TerrainShaders.hlsl", "PSTerrain", "ps_5_1", ppd3dShaderBlob);
 }

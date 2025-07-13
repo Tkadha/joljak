@@ -25,16 +25,16 @@ D3D12_INPUT_LAYOUT_DESC CLightingShader::CreateInputLayout()
 }
 
 
-D3D12_SHADER_BYTECODE CLightingShader::CreateVertexShader()
+D3D12_SHADER_BYTECODE CLightingShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob)
 {
     // "Shadow.hlsl" 파일을 컴파일합니다.
     //return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "VSStandard", "vs_5_1", &m_pd3dVertexShaderBlob));
 
-    return(CShader::CompileShaderFromFile(L"DefetedLighting.hlsl", "VS", "vs_5_1", &m_pd3dVertexShaderBlob));
+    return(CShader::CompileShaderFromFile(L"DefetedLighting.hlsl", "VS", "vs_5_1", ppd3dShaderBlob));
 }
 
-D3D12_SHADER_BYTECODE CLightingShader::CreatePixelShader()
+D3D12_SHADER_BYTECODE CLightingShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob)
 {
     // 픽셀 셰이더는 아무 작업도 하지 않으므로 NULL을 반환합니다.
-    return(CShader::CompileShaderFromFile(L"DefetedLighting.hlsl", "PS", "ps_5_1", &m_pd3dVertexShaderBlob));
+    return(CShader::CompileShaderFromFile(L"DefetedLighting.hlsl", "PS", "ps_5_1", ppd3dShaderBlob));
 }

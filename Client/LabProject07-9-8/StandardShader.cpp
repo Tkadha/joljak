@@ -60,15 +60,15 @@ D3D12_INPUT_LAYOUT_DESC CStandardShader::CreateInputLayout() {
 	return(d3dInputLayoutDesc);
 }
 
-D3D12_SHADER_BYTECODE CStandardShader::CreateVertexShader() {
+D3D12_SHADER_BYTECODE CStandardShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob) {
 	// "StandardShader.hlsl" 파일의 "VSStandard" 함수를 컴파일하도록 수정
-	return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "VSStandard", "vs_5_1", &m_pd3dVertexShaderBlob));
+	return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "VSStandard", "vs_5_1", ppd3dShaderBlob));
 }
 
-D3D12_SHADER_BYTECODE CStandardShader::CreatePixelShader() {
+D3D12_SHADER_BYTECODE CStandardShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob) {
 	// "StandardShader.hlsl" 파일의 "PSStandard" 함수를 컴파일하도록 수정
 	if (m_strShaderName == "Standard_GBuffer")
-		return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "PSStandard_GBuffer", "ps_5_1", &m_pd3dPixelShaderBlob));
+		return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "PSStandard_GBuffer", "ps_5_1", ppd3dShaderBlob));
 	else
-		return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "PSStandard3", "ps_5_1", &m_pd3dPixelShaderBlob));
+		return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "PSStandard3", "ps_5_1", ppd3dShaderBlob));
 }

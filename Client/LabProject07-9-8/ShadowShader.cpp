@@ -67,18 +67,22 @@ D3D12_DEPTH_STENCIL_DESC CShadowShader::CreateDepthStencilState()
 }
 
 
-D3D12_SHADER_BYTECODE CShadowShader::CreateVertexShader()
+D3D12_SHADER_BYTECODE CShadowShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob)
 {
-    // "Shadow.hlsl" 파일을 컴파일합니다.
-    //return(CShader::CompileShaderFromFile(L"StandardShaders.hlsl", "VSStandard", "vs_5_1", &m_pd3dVertexShaderBlob));
-
-    return(CShader::CompileShaderFromFile(L"Shadow.hlsl", "VS", "vs_5_1", &m_pd3dVertexShaderBlob));
+    return(CShader::CompileShaderFromFile(L"Shadow.hlsl", "VS", "vs_5_1", ppd3dShaderBlob));
 }
 
-D3D12_SHADER_BYTECODE CShadowShader::CreatePixelShader()
+D3D12_SHADER_BYTECODE CShadowShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob)
 {
     // 픽셀 셰이더는 아무 작업도 하지 않으므로 NULL을 반환합니다.
-    return(CShader::CompileShaderFromFile(L"Shadow.hlsl", "PS", "ps_5_1", &m_pd3dVertexShaderBlob));
+    //return(CShader::CompileShaderFromFile(L"Shadow.hlsl", "PS", "ps_5_1", ppd3dShaderBlob));
+
+
+    // 1. 전달받은 포인터가 가리키는 곳을 명시적으로 nullptr로 만듭니다.
+    *ppd3dShaderBlob = nullptr;
+
+    // 2. 포인터도 NULL이고, 크기도 0인 비어있는 바이트코드 구조체를 반환합니다.
+    return(D3D12_SHADER_BYTECODE{ nullptr, 0 });
 }
 
 D3D12_RASTERIZER_DESC CShadowShader::CreateRasterizerState()

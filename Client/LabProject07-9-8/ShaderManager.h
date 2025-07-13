@@ -34,8 +34,6 @@ private:
     ID3D12RootSignature* CreateDebugRootSignature();
     ID3D12RootSignature* CreateDeferedLightingRootSignature();
 
-    // 셰이더 생성 함수
-    CShader* CreateShaderInternal(const std::string& name, ID3D12GraphicsCommandList* pd3dCommandList);
 
     void CreatePSO(const std::string& name);
 
@@ -50,7 +48,6 @@ public:
     ID3D12PipelineState* GetPipelineState(const std::string& name);
     ID3D12RootSignature* GetRootSignature(const std::string& name);
 
-    CShader* GetShader(const std::string& name, ID3D12GraphicsCommandList* pd3dCommandList);
 
     void ReleaseAll(); // 모든 캐시된 리소스 해제
 };

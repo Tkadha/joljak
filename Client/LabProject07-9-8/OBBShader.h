@@ -14,8 +14,8 @@ public:
     virtual D3D12_RASTERIZER_DESC CreateRasterizerState() override;
 
     // 셰이더 바이트코드 생성 오버라이드
-    virtual D3D12_SHADER_BYTECODE CreateVertexShader() override;
-    virtual D3D12_SHADER_BYTECODE CreatePixelShader() override;
+    virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob) override;
+    virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob) override;
 
     // PSO 생성 시 Primitive Topology Type을 LINE으로 설정하기 위해 CreateShader 오버라이드
     //virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature) override;

@@ -149,6 +149,8 @@ public:
 
 	// 그림자 렌더용 함수
 	virtual void RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList);
+	// G - Buffer 패스 전용 렌더링 함수
+	virtual void RenderGBuffer(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 	virtual void OnLateUpdate() { }
 

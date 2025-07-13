@@ -68,14 +68,14 @@ D3D12_RASTERIZER_DESC CDebugShader::CreateRasterizerState()
 }
 
 
-D3D12_SHADER_BYTECODE CDebugShader::CreateVertexShader()
+D3D12_SHADER_BYTECODE CDebugShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob)
 {
     // 분리된 HLSL 파일 사용
-    return CompileShaderFromFile(L"Debug.hlsl", "VS", "vs_5_1", &m_pd3dVertexShaderBlob);
+    return CompileShaderFromFile(L"Debug.hlsl", "VS", "vs_5_1", ppd3dShaderBlob);
 }
 
-D3D12_SHADER_BYTECODE CDebugShader::CreatePixelShader()
+D3D12_SHADER_BYTECODE CDebugShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob)
 {
     // 분리된 HLSL 파일 사용
-    return CompileShaderFromFile(L"Debug.hlsl", "PS", "ps_5_1", &m_pd3dPixelShaderBlob);
+    return CompileShaderFromFile(L"Debug.hlsl", "PS", "ps_5_1", ppd3dShaderBlob);
 }

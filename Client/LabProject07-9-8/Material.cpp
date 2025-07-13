@@ -4,14 +4,14 @@
 #include "GameFramework.h"
 #include "ResourceManager.h"
 
-CMaterial::CMaterial(int nTextures): m_nTextures(nTextures), m_pShader(nullptr),
+CMaterial::CMaterial(int nTextures): m_nTextures(nTextures),
 m_d3dCpuSrvStartHandle({ 0 }), m_d3dSrvGpuStartHandle({ 0 }), m_nCbvSrvDescriptorIncrementSize(0)
 {
 
 }
 
 CMaterial::CMaterial(int nTextures, CGameFramework* pGameFramework)
-	: m_nTextures(nTextures), m_pShader(nullptr), m_pGameFramework(pGameFramework),
+	: m_nTextures(nTextures), m_pGameFramework(pGameFramework),
     m_d3dCpuSrvStartHandle({ 0 }), m_d3dSrvGpuStartHandle({ 0 }), m_nCbvSrvDescriptorIncrementSize(0)
 {
 	assert(pGameFramework != nullptr && "GameFramework pointer is needed for CMaterial!");
@@ -42,17 +42,17 @@ CMaterial::CMaterial(int nTextures, CGameFramework* pGameFramework)
 
 // CMaterial 소멸자 수정
 CMaterial::~CMaterial() {
-    if (m_pShader) m_pShader->Release();
+    //if (m_pShader) m_pShader->Release();
     if (m_ppstrTextureNames) delete[] m_ppstrTextureNames;
     // SRV 핸들 해제는 불필요 (힙 자체 관리)
 }
 
-void CMaterial::SetShader(CShader* pShader)
-{
-	if (m_pShader) m_pShader->Release();
-	m_pShader = pShader;
-	if (m_pShader) m_pShader->AddRef();
-}
+//void CMaterial::SetShader(CShader* pShader)
+//{
+//	//if (m_pShader) m_pShader->Release();
+//	//m_pShader = pShader;
+//	//if (m_pShader) m_pShader->AddRef();
+//}
 
 CTexture* CMaterial::GetTexture(int index) const {
     return (index >= 0 && index < m_vTextures.size()) ? m_vTextures[index].get() : nullptr;
