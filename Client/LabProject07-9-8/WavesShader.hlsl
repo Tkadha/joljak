@@ -18,6 +18,13 @@ cbuffer cbGameObjectInfo : register(b2)
     uint gnTexturesMask : packoffset(c8);
 };
 
+struct VS_IN
+{
+    float3 PosL : POSITION;
+    float3 NormalL : NORMAL;
+    float2 TexC : TEXCOORD0;
+};
+
 struct VS_WAVES_OUT
 {
     float4 PosH : SV_POSITION;
