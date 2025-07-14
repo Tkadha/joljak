@@ -3,14 +3,29 @@
 #include "../Global.h"
 #include "FSMManager.h"
 
+#include <unordered_map>
+#include <mutex>
+class OBB_Manager {
+public:
+	static std::unordered_map<OBJECT_TYPE, std::shared_ptr<BoundingOrientedBox>> obb_list;
+	static void AddOBB(OBJECT_TYPE type, const BoundingOrientedBox& obb) {
+		if (obb_list.find(type) == obb_list.end())
+			obb_list[type] = make_shared<BoundingOrientedBox>(obb);
+	}
+};
+
+
 class GameObject
 {
 	OBJECT_TYPE type;
 	ANIMATION_TYPE animationType;
-	XMFLOAT4X4	xmf4x4; // 11 12 13 right, 21 22 23 up, 31 32 33 look, 41 42 43 position
+	XMFLOAT4X4	xmf4x4; 
+	// 11 12 13 right, 21 22 23 up, 31 32 33 look, 41 42 43 position
 	int o_id{ -1 };
-
 public:
+	static std::vector<shared_ptr<GameObject>> gameObjects;
+	float fly_height{ 0 };
+
 	GameObject();
 	virtual ~GameObject();
 
@@ -21,6 +36,7 @@ public:
 		xmf4x4._41 = x;
 		xmf4x4._42 = y;
 		xmf4x4._43 = z;
+		UpdateTransform();
 	}
 	void SetPosition(XMFLOAT3 pos) {
 		SetPosition(pos.x, pos.y, pos.z);
@@ -69,23 +85,42 @@ public:
 
 	void MoveForward(float fDistance = 1.0f);
 	void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
-
+	void UpdateTransform();
 public:
 	bool is_alive;
 	std::shared_ptr<FSMManager<GameObject>> FSM_manager = NULL;
+	mutable mutex FSM_mutex;
 	void FSMUpdate()
 	{
+		lock_guard<mutex> lock(FSM_mutex);
 		if (FSM_manager) FSM_manager->Update();
 	}
 	void ChangeState(std::shared_ptr<FSMState<GameObject>> newstate)
 	{
-		FSM_manager->ChangeState(newstate);
+		lock_guard<mutex> lock(FSM_mutex);
+		if (FSM_manager) FSM_manager->ChangeState(newstate);
+	}
+	void SetInvincible() {
+		lock_guard<mutex> lock(FSM_mutex);
+		if (FSM_manager) FSM_manager->SetInvincible();
+	}
+	bool GetInvincible() const {
+		lock_guard<mutex> lock(FSM_mutex);
+		if (FSM_manager) return FSM_manager->GetInvincible();
+	}
+	void SetAtkDelay() {
+		lock_guard<mutex> lock(FSM_mutex);
+		if (FSM_manager) FSM_manager->SetAtkDelay();
+	}
+	bool GetAtkDelay() const {
+		lock_guard<mutex> lock(FSM_mutex);
+		if (FSM_manager) return FSM_manager->GetAtkDelay();
 	}
 
 public:
 	int _level = 0;
 	int _hp = 20;
-	int _atk = 3;
+	int _atk = 5;
 	void Sethp(int hp) { _hp = hp; }
 	void Decreasehp(int num) { _hp -= num; }
 	int Gethp() { return _hp; }
@@ -93,8 +128,7 @@ public:
 
 public:
 	// 해당 부분에 bin파일의 정점만 불러와서 obb를 만드는 코드 필요
-
-
-
+	BoundingOrientedBox local_obb;
+	BoundingOrientedBox world_obb;
 };
 

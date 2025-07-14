@@ -1,16 +1,14 @@
 #pragma once
 
 ///---------¼­¹ö ¿¬°á------------
-//#define ONLINE
+#define ONLINE
 
 
-#define WIN32_LEAN_AND_MEAN             // ê±°ì˜ ?¬ìš©?˜ì? ?ŠëŠ” ?´ìš©?€ Windows ?¤ë”?ì„œ ?œì™¸?©ë‹ˆ??
-// Windows ?¤ë” ?Œì¼:
+#define WIN32_LEAN_AND_MEAN     
 #define NOMINMAX
 
 #include <windows.h>
 
-// Cï¿½ï¿½ ï¿½ï¿½Å¸ï¿½ï¿½ ï¿½ï¿½ï¿?ï¿½ï¿½ï¿½ï¿½ï¿½Ô´Ï´ï¿½.
 #include <stdlib.h>
 #include <malloc.h>
 #include <memory.h>

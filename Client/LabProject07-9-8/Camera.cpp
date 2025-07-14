@@ -73,11 +73,6 @@ void CCamera::SetScissorRect(LONG xLeft, LONG yTop, LONG xRight, LONG yBottom)
 
 void CCamera::GenerateProjectionMatrix(float fNearPlaneDistance, float fFarPlaneDistance, float fAspectRatio, float fFOVAngle)
 {
-	m_fFovAngle = fFOVAngle;
-	m_fAspectRatio = fAspectRatio;
-	m_fNearPlaneDistance = fNearPlaneDistance;
-	m_fFarPlaneDistance = fFarPlaneDistance;
-
 	m_xmf4x4Projection = Matrix4x4::PerspectiveFovLH(XMConvertToRadians(fFOVAngle), fAspectRatio, fNearPlaneDistance, fFarPlaneDistance);
 //	XMMATRIX xmmtxProjection = XMMatrixPerspectiveFovLH(XMConvertToRadians(fFOVAngle), fAspectRatio, fNearPlaneDistance, fFarPlaneDistance);
 //	XMStoreFloat4x4(&m_xmf4x4Projection, xmmtxProjection);
@@ -113,26 +108,26 @@ void CCamera::RegenerateViewMatrix()
 
 void CCamera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	UINT ncbElementBytes = ((sizeof(VS_CB_CAMERA_INFO) + 255) & ~255); // 256의 배수
+	UINT ncbElementBytes = ((sizeof(VS_CB_CAMERA_INFO) + 255) & ~255); // 256??배수
 
-	// 리소스 생성 함수 결과 확인
+	// 리소???�성 ?�수 결과 ?�인
 	m_pd3dcbCamera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
-	// --- 리소스 생성 확인 ---
+	// --- 리소???�성 ?�인 ---
 	if (!m_pd3dcbCamera) {
 		OutputDebugString(L"!!!!!!!! ERROR: Failed to create Camera Constant Buffer! !!!!!!!!\n");
-		// 실패 시 m_pcbMappedCamera도 당연히 nullptr 상태 유지
+		// ?�패 ??m_pcbMappedCamera???�연??nullptr ?�태 ?��?
 		return;
 	}
 
-	// 맵핑 시도 및 결과 확인
+	// 맵핑 ?�도 �?결과 ?�인
 	HRESULT hResult = m_pd3dcbCamera->Map(0, NULL, (void**)&m_pcbMappedCamera);
 
-	// --- 맵핑 확인 ---
+	// --- 맵핑 ?�인 ---
 	if (FAILED(hResult) || !m_pcbMappedCamera) {
 		OutputDebugString(L"!!!!!!!! ERROR: Failed to map Camera Constant Buffer! !!!!!!!!\n");
-		m_pcbMappedCamera = nullptr; // 안전하게 nullptr 처리
-		// 필요시 m_pd3dcbCamera도 Release 처리 고려
+		m_pcbMappedCamera = nullptr; // ?�전?�게 nullptr 처리
+		// ?�요??m_pd3dcbCamera??Release 처리 고려
 	}
 }
 
@@ -140,23 +135,23 @@ void CCamera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 void CCamera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// --- 중요: 맵핑된 포인터 유효성 검사 ---
+	// --- 중요: 맵핑???�인???�효??검??---
 	if (!m_pcbMappedCamera || !m_pd3dcbCamera) {
 		OutputDebugString(L"!!!!!!!! ERROR: Camera Constant Buffer or Mapped Pointer is NULL in UpdateShaderVariables! !!!!!!!!\n");
-		return; // 업데이트 및 바인딩 불가
+		return; // ?�데?�트 �?바인??불�?
 	}
 
-	// 데이터 복사 (memcpy 대신 구조체 멤버 직접 대입이 더 안전할 수 있음)
+	// ?�이??복사 (memcpy ?�??구조�?멤버 직접 ?�?�이 ???�전?????�음)
 	XMMATRIX viewMatrix = XMLoadFloat4x4(&m_xmf4x4View);
 	XMMATRIX projMatrix = XMLoadFloat4x4(&m_xmf4x4Projection);
 
-	// Transpose는 HLSL에서 수행하거나 C++에서 수행 (일관성 유지)
-	// HLSL에서 Transpose 안 한다면 여기서 수행
+	// Transpose??HLSL?�서 ?�행?�거??C++?�서 ?�행 (?��????��?)
+	// HLSL?�서 Transpose ???�다�??�기???�행
 	XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4View, XMMatrixTranspose(viewMatrix));
 	XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4Projection, XMMatrixTranspose(projMatrix));
 	m_pcbMappedCamera->m_xmf3Position = m_xmf3Position;
 
-	// 안개 적용
+	// ?�개 ?�용
 	m_pcbMappedCamera->FogColor = m_xmf4FogColor;
 	m_pcbMappedCamera->FogStart = m_fFogStart;
 	m_pcbMappedCamera->FogRange = m_fFogRange;
@@ -176,17 +171,6 @@ void CCamera::SetViewportsAndScissorRects(ID3D12GraphicsCommandList *pd3dCommand
 {
 	pd3dCommandList->RSSetViewports(1, &m_d3dViewport);
 	pd3dCommandList->RSSetScissorRects(1, &m_d3dScissorRect);
-}
-
-// 그림자
-void CCamera::UpdateShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4ShadowTransform)
-{
-	// m_pcbMappedCamera는 UpdateShaderVariables에서 이미 매핑되어 있다고 가정합니다.
-	if (m_pcbMappedCamera)
-	{
-		// VS_CB_CAMERA_INFO 구조체에 있는 m_xmf4x4ShadowTransform 멤버에 값을 복사합니다.
-		XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4ShadowTransform, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4ShadowTransform)));
-	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -462,38 +446,4 @@ void CThirdPersonCamera::Rotate(float pitchDelta, float yawDelta, float rollDelt
 	// if (m_pPlayer) {
 	//     LookAt(m_pPlayer->GetPosition()); // LookAt 함수는 카메라가 특정 지점을 바라보도록 m_xmf3Look 등을 설정
 	// }
-}
-
-
-void CCamera::GetFrustumCorners(XMFLOAT3* pCorners) const
-{
-	// 1. FOV를 이용해 Near/Far 평면의 높이와 너비를 계산합니다.
-	float halfFovY = XMConvertToRadians(m_fFovAngle * 0.5f);
-	float nearHeight = 2.0f * m_fNearPlaneDistance * tanf(halfFovY);
-	float nearWidth = nearHeight * m_fAspectRatio;
-	float farHeight = 2.0f * m_fFarPlaneDistance * tanf(halfFovY);
-	float farWidth = farHeight * m_fAspectRatio;
-
-	// 2. 카메라의 로컬 축(Right, Up, Look)과 위치를 XMVECTOR로 로드합니다.
-	XMVECTOR xmvPosition = XMLoadFloat3(&m_xmf3Position);
-	XMVECTOR xmvRight = XMLoadFloat3(&m_xmf3Right);
-	XMVECTOR xmvUp = XMLoadFloat3(&m_xmf3Up);
-	XMVECTOR xmvLook = XMLoadFloat3(&m_xmf3Look);
-
-	// 3. Near/Far 평면의 중심점을 계산합니다.
-	XMVECTOR nearPlaneCenter = xmvPosition + (xmvLook * m_fNearPlaneDistance);
-	XMVECTOR farPlaneCenter = xmvPosition + (xmvLook * m_fFarPlaneDistance);
-
-	// 4. 8개의 꼭짓점을 계산합니다.
-	// Near Plane (카메라와 가까운 면)
-	XMStoreFloat3(&pCorners[0], nearPlaneCenter - (xmvRight * (nearWidth * 0.5f)) - (xmvUp * (nearHeight * 0.5f))); // 왼쪽 아래
-	XMStoreFloat3(&pCorners[1], nearPlaneCenter - (xmvRight * (nearWidth * 0.5f)) + (xmvUp * (nearHeight * 0.5f))); // 왼쪽 위
-	XMStoreFloat3(&pCorners[2], nearPlaneCenter + (xmvRight * (nearWidth * 0.5f)) + (xmvUp * (nearHeight * 0.5f))); // 오른쪽 위
-	XMStoreFloat3(&pCorners[3], nearPlaneCenter + (xmvRight * (nearWidth * 0.5f)) - (xmvUp * (nearHeight * 0.5f))); // 오른쪽 아래
-
-	// Far Plane (카메라와 먼 면)
-	XMStoreFloat3(&pCorners[4], farPlaneCenter - (xmvRight * (farWidth * 0.5f)) - (xmvUp * (farHeight * 0.5f))); // 왼쪽 아래
-	XMStoreFloat3(&pCorners[5], farPlaneCenter - (xmvRight * (farWidth * 0.5f)) + (xmvUp * (farHeight * 0.5f))); // 왼쪽 위
-	XMStoreFloat3(&pCorners[6], farPlaneCenter + (xmvRight * (farWidth * 0.5f)) + (xmvUp * (farHeight * 0.5f))); // 오른쪽 위
-	XMStoreFloat3(&pCorners[7], farPlaneCenter + (xmvRight * (farWidth * 0.5f)) - (xmvUp * (farHeight * 0.5f))); // 오른쪽 아래
 }

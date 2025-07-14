@@ -59,8 +59,8 @@ public:
 	CPlayer(CGameFramework* pGameFramework);
 	virtual ~CPlayer();
 	bool					    checkmove = false;
-	float PlayerHunger = 1.0f;
-	float PlayerThirst = 1.0f;
+	float PlayerHunger = 100.0f;
+	float PlayerThirst = 100.0f;
 	int PlayerLevel = 1;
 	int Playerhp = 300;
 	int Maxhp = 300;
@@ -69,6 +69,7 @@ public:
 	int StatPoint = 5;
 	int PlayerAttack = 10;
 	float PlayerSpeed = 10.0f;
+	int PlayerSpeedLevel = 0;
 	int Playerxp = 0;
 	int Totalxp = 20;
 	bool invincibility = false;
@@ -109,6 +110,7 @@ public:
 	void Rotate(float x, float y, float z);
 
 	virtual void Update(float fTimeElapsed);
+	void UpdateTraits();
 
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed) { }
 	void SetPlayerUpdatedContext(LPVOID pContext) { m_pPlayerUpdatedContext = pContext; }

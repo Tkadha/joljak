@@ -16,6 +16,7 @@
 #include "ShaderManager.h"
 #include "ConstructionSystem.h"
 #include "../../Server/Global.h"
+#include <chrono>
 using namespace Microsoft::WRL; // 추가
 
 
@@ -109,7 +110,10 @@ public:
 	void InitializeItemIcons();
 	void UpdateFurnace(float deltaTime);
 	std::vector<CraftItem> m_vecCraftableItems;
-
+	int m_nCurrentSkybox = 0;
+	std::chrono::high_resolution_clock::time_point startTime = std::chrono::high_resolution_clock::now();
+	double eventInterval = 10.0; // 3초마다 이벤트
+	double lastEventTime = 0.0;
 
 
 	void NerworkThread();
@@ -127,6 +131,7 @@ private:
 	bool						ShowCraftingUI = false; 
 	bool						BuildMode = false;
 	bool						ShowFurnaceUI = false;
+	bool						ShowTraitUI = false;
 	bool					bPrevBuildMode = false;
 	int							selectedCraftItemIndex = -1;
 	CPineObject*				m_pPreviewObject = nullptr;
@@ -159,12 +164,14 @@ private:
 	HANDLE						m_hFenceEvent;
 	int							m_nIconCount;
 	
+	ID3D12CommandAllocator* m_pd3dUploadCommandAllocator = nullptr;
+	ID3D12GraphicsCommandList* m_pd3dUploadCommandList = nullptr;
+
 	// --- 종료 동기화용 펜스 값 추가 ---
 	UINT64                      m_nMasterFenceValue = 0;
 private:
 	ComPtr<ID3D12DescriptorHeap>	m_pd3dCbvSrvDescriptorHeap;
 	UINT							m_nCbvSrvDescriptorIncrementSize;
-	UINT							m_nRtvDescriptorIncrementSize;		// 추가(그림자)
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dCbvCpuHandleStart;
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dCbvGpuHandleStart;
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCpuHandleStart;
@@ -185,8 +192,6 @@ private:
 	std::unique_ptr<ResourceManager> m_pResourceManager;
 	//ShaderManager* m_pShaderManager;
 	std::unique_ptr<ShaderManager> m_pShaderManager;
-
-
 
 public:
 	bool AllocateCbvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle);
@@ -262,7 +267,7 @@ public:
 	ULONGLONG					_MyID = -1;
 
 	std::queue<log_inout> 	m_logQueue;
-
+	std::list<GameObjectType> gameobj_list;
 	// 서버연결 확인코드
 	bool serverConnected = false;
 	std::atomic_bool b_running;

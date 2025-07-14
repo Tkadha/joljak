@@ -11,18 +11,10 @@ struct VS_CB_CAMERA_INFO
 {
 	XMFLOAT4X4						m_xmf4x4View;
 	XMFLOAT4X4						m_xmf4x4Projection;
-
-	// 그림자 변환 행렬
-	XMFLOAT4X4  m_xmf4x4ShadowTransform;
-
 	XMFLOAT3						m_xmf3Position;
-	float		m_fCameraPadding;
-
-
 	DirectX::XMFLOAT4 FogColor;    // �Ȱ� ����
 	float FogStart;                // �Ȱ� ���� �Ÿ�
 	float FogRange;                // �Ȱ� ����
-	float		m_fFogPadding[2];
 
 };
 
@@ -48,11 +40,6 @@ protected:
 
 	XMFLOAT4X4						m_xmf4x4View;
 	XMFLOAT4X4						m_xmf4x4Projection;
-	
-    float                           m_fFovAngle;
-    float                           m_fAspectRatio;
-    float                           m_fNearPlaneDistance;
-    float                           m_fFarPlaneDistance;
 
 	D3D12_VIEWPORT					m_d3dViewport;
 	D3D12_RECT						m_d3dScissorRect;
@@ -126,15 +113,6 @@ public:
 	virtual void SetLookAt(XMFLOAT3& xmf3LookAt) { }
 
 	ID3D12Resource* GetCameraConstantBuffer() const { return m_pd3dcbCamera; } // ���� ������ �߰�
-
-
-
-	// 그림자
-	void SetViewMatrix(const XMFLOAT4X4& xmf4x4View) { m_xmf4x4View = xmf4x4View; }
-	void SetProjectionMatrix(const XMFLOAT4X4& xmf4x4Projection) { m_xmf4x4Projection = xmf4x4Projection; }
-
-	void UpdateShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4ShadowTransform);
-	void GetFrustumCorners(XMFLOAT3* pCorners) const;
 };
 
 class CSpaceShipCamera : public CCamera

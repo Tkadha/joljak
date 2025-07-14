@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+ï»¿//-----------------------------------------------------------------------------
 // File: CGameObject.cpp
 //-----------------------------------------------------------------------------
 
@@ -71,13 +71,15 @@ CGameObject::~CGameObject()
 			if (m_ppMaterials[i]) m_ppMaterials[i]->Release();
 		}
 	}
-	if (m_ppMaterials) delete[] m_ppMaterials;
+	if (m_ppMaterials) {
+		delete[] m_ppMaterials;
+		m_ppMaterials = nullptr;
+	}
 
 	if (m_pSkinnedAnimationController) {
 		delete m_pSkinnedAnimationController;
 		m_pSkinnedAnimationController = nullptr;
 	}
-	//if (FSM_manager) delete FSM_manager;
 }
 
 void CGameObject::AddRef() 
@@ -123,6 +125,7 @@ void CGameObject::Check_attack()
 	case GameObjectType::Turtle:
 	case GameObjectType::Pig:
 	case GameObjectType::Snake:
+	case GameObjectType::Raptor:
 		if (m_anitype != 11) return;
 		break;
 	case GameObjectType::Snail:
@@ -159,7 +162,7 @@ void CGameObject::Check_attack()
 				p_info->DecreaseHp(obj->GetAtk());
 				p_info->SetInvincibility();
 
-				// ¹Ð·Á³ª±â
+				// ë°€ë ¤ë‚˜ê¸°
 				XMFLOAT3 monsterlook = obj->GetLook();
 				const float KnockBackDistance = 10.f;
 				XMFLOAT3 playerPos = p_info->GetPosition();
@@ -176,12 +179,22 @@ void CGameObject::Check_attack()
 				}
 
 				auto& nwManager = NetworkManager::GetInstance();
+				{
 				auto pos = p_info->GetPosition();
-				POSITION_PACKET p;
-				p.position.x = pos.x;
-				p.position.y = pos.y;
-				p.position.z = pos.z;
-				nwManager.PushSendQueue(p, p.size);
+					POSITION_PACKET p;
+					p.position.x = pos.x;
+					p.position.y = pos.y;
+					p.position.z = pos.z;
+					nwManager.PushSendQueue(p, p.size);
+				}
+				{
+					SET_HP_HIT_OBJ_PACKET p;
+					p.hit_obj_id = obj->m_id;
+					p.hp = p_info->getHp();
+					p.size = sizeof(SET_HP_HIT_OBJ_PACKET);
+					p.type = static_cast<char>(E_PACKET::E_P_SETHP);
+					nwManager.PushSendQueue(p, p.size);
+				}
 			}
 		}
 	}
@@ -200,6 +213,7 @@ void CGameObject::ChangeAnimation(ANIMATION_TYPE type)
 	case GameObjectType::Turtle:
 	case GameObjectType::Pig:
 	case GameObjectType::Snake:
+	case GameObjectType::Raptor:
 		switch (type)
 		{
 		case ANIMATION_TYPE::IDLE:
@@ -378,9 +392,9 @@ void CGameObject::SetOBB(float scalex, float scaley, float scalez, const XMFLOAT
 			(minPos.z + maxPos.z) * 0.5f+centerOffset.z
 		);
 		m_localOBB.Extents = XMFLOAT3(
-			(maxPos.x - minPos.x) * 0.5f* scalex,
-			(maxPos.y - minPos.y) * 0.5f*scaley,
-			(maxPos.z - minPos.z) * 0.5f*scalez
+			(maxPos.x - minPos.x) * 0.5f * scalex,
+			(maxPos.y - minPos.y) * 0.5f * scaley,
+			(maxPos.z - minPos.z) * 0.5f * scalez
 		);
 		m_localOBB.Orientation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);  
 	}
@@ -421,6 +435,15 @@ void CGameObject::SetOBB(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	if (m_pSibling) m_pSibling->SetOBB();
 	if (m_pChild) m_pChild->SetOBB();
 	*/
+}
+
+BoundingOrientedBox CGameObject::GetOBB()
+{
+	if (m_pMesh) {
+		return m_localOBB;
+	}
+	if (m_pSibling) return m_pSibling->GetOBB();
+	if (m_pChild) return m_pChild->GetOBB();
 }
 
 void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)
@@ -571,17 +594,21 @@ CGameObject *CGameObject::FindFrame(char *pstrFrameName)
 void CGameObject::UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent)
 {
 	m_xmf4x4World = (pxmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4ToParent, *pxmf4x4Parent) : m_xmf4x4ToParent;
+
 	
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+
 	
 	XMVECTOR localCenter = XMLoadFloat3(&m_localOBB.Center);
 	XMVECTOR worldCenter = XMVector3TransformCoord(localCenter, worldMatrix);
 	XMStoreFloat3(&m_worldOBB.Center, worldCenter);
+
 	
 	XMMATRIX rotationMatrix = worldMatrix;
 	rotationMatrix.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);  
 	XMVECTOR orientation = XMQuaternionRotationMatrix(rotationMatrix);
 	XMStoreFloat4(&m_worldOBB.Orientation, orientation);
+
 	
 	XMFLOAT3 scale;
 	scale.x = XMVectorGetX(XMVector3Length(worldMatrix.r[0]));
@@ -648,11 +675,11 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		}
 
 		//if (shaderType == "Standard") {
-		//	// Standard ¼ÎÀÌ´õÀÇ °æ¿ì, 4¹ø ½½·Ô¿¡ ±×¸²ÀÚ ¸Ê ¹ÙÀÎµù
+		//	// Standard ì…°ì´ë”ì˜ ê²½ìš°, 4ë²ˆ ìŠ¬ë¡¯ì— ê·¸ë¦¼ìž ë§µ ë°”ì¸ë”©
 		//	pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
 		//}
 		//else if (shaderType == "Skinned") {
-		//	// Skinned ¼ÎÀÌ´õÀÇ °æ¿ì, 6¹ø ½½·Ô¿¡ ±×¸²ÀÚ ¸Ê ¹ÙÀÎµù
+		//	// Skinned ì…°ì´ë”ì˜ ê²½ìš°, 6ë²ˆ ìŠ¬ë¡¯ì— ê·¸ë¦¼ìž ë§µ ë°”ì¸ë”©
 		//	pd3dCommandList->SetGraphicsRootDescriptorTable(6, pScene->GetShadowMapSrv());
 		//}
 
@@ -1198,7 +1225,7 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 		else if (!strcmp(pstrToken, "<TransformMatrix>:"))
 		{
 			nReads = (UINT)::fread(&pGameObject->m_xmf4x4ToParent, sizeof(float), 16, pInFile);
-			//XMFLOAT4X4 xmf4x4TempWorldMatrix; // ÀÓ½Ã º¯¼ö
+			//XMFLOAT4X4 xmf4x4TempWorldMatrix; // ìž„ì‹œ ë³€ìˆ˜
 			//nReads = (UINT)::fread(&xmf4x4TempWorldMatrix, sizeof(float), 16, pInFile);
 
 		}
@@ -1372,7 +1399,7 @@ CLoadedModelInfo *CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device *pd
 				::ReadStringFromFile(pInFile, pstrToken); //"</Hierarchy>"
 
 
-				// ½ºÅ²µå ¸Þ½¬ Á¤º¸ ÁØºñ
+				// ìŠ¤í‚¨ë“œ ë©”ì‰¬ ì •ë³´ ì¤€ë¹„
 				if (pLoadedModel->m_pModelRootObject && pLoadedModel->m_nSkinnedMeshes > 0) {
 					pLoadedModel->FindAndCacheSkinnedMeshes();
 				}
@@ -1640,15 +1667,15 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 void CHeightMapTerrain::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// ¿ùµå Çà·ÄÀ» ´ÜÀ§ Çà·Ä·Î ¸¸µì´Ï´Ù.
+	// ì›”ë“œ í–‰ë ¬ì„ ë‹¨ìœ„ í–‰ë ¬ë¡œ ë§Œë“­ë‹ˆë‹¤.
 	XMMATRIX mtxIdentity = XMMatrixIdentity();
 
 	cbGameObjectInfo gameObjectInfo;
 	XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(mtxIdentity));
 
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo.gmtxGameObject, 0); // ¿ùµå Çà·Ä¸¸ Àü´Þ
+	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo.gmtxGameObject, 0); // ì›”ë“œ í–‰ë ¬ë§Œ ì „ë‹¬
 
-	// ¸Þ½Ã ÀüÃ¼¸¦ ±×¸³´Ï´Ù.
+	// ë©”ì‹œ ì „ì²´ë¥¼ ê·¸ë¦½ë‹ˆë‹¤.
 	if (m_pMesh && m_nMaterials > 0)
 	{
 		for (int i = 0; i < m_nMaterials; i++)
@@ -1657,7 +1684,6 @@ void CHeightMapTerrain::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 		}
 	}
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
@@ -1734,6 +1760,41 @@ void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 		
 		m_pMesh->Render(pd3dCommandList, 0); 
 
+	}
+}
+
+void CSkyBox::SetSkyboxIndex(int index)
+{
+	if (index >= 0 && index < m_vSkyboxTextures.size())
+	{
+		m_nCurrentTextureIndex = index;
+
+		
+		CMaterial* pMaterial = GetMaterial(0);
+		if (pMaterial)
+		{
+			pMaterial->AssignTexture(0, m_vSkyboxTextures[index], m_pGameFramework->GetDevice());
+		}
+	}
+}
+
+void CSkyBox::LoadTextures(ID3D12GraphicsCommandList* cmdList, const std::vector<std::wstring>& texturePaths)
+{
+	ResourceManager* pRes = m_pGameFramework->GetResourceManager();
+	for (const auto& path : texturePaths)
+	{
+		auto tex = pRes->GetTexture(path.c_str(), cmdList);
+		if (tex) m_vSkyboxTextures.push_back(tex);
+	}
+
+
+	if (!m_vSkyboxTextures.empty())
+	{
+		CMaterial* pMaterial = GetMaterial(0);
+		if (pMaterial)
+		{
+			pMaterial->AssignTexture(0, m_vSkyboxTextures[0], m_pGameFramework->GetDevice());
+		}
 	}
 }
 
@@ -2255,4 +2316,86 @@ CConstructionObject::CConstructionObject(ID3D12Device* pd3dDevice, ID3D12Graphic
 
 	
 	if (pInFile) fclose(pInFile); 
+}
+
+CRockShardEffect::CRockShardEffect(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework)
+	: CGameObject(1, framework)
+{
+	m_pGameFramework = framework;
+
+	FILE* pInFile = nullptr;
+	::fopen_s(&pInFile, "Model/Branch_A.bin", "rb");
+	if (!pInFile) {
+		OutputDebugStringA("[âŒ] RockCluster_A_LOD0.bin íŒŒì¼ ì—´ê¸° ì‹¤íŒ¨!\n");
+		return;
+	}
+	::rewind(pInFile);
+
+	CGameObject* rockObj = CGameObject::LoadFrameHierarchyFromFile(
+		device, cmdList, NULL, pInFile, NULL, framework);
+
+	if (pInFile) fclose(pInFile);
+
+	if (rockObj && rockObj->m_pMesh)
+	{
+		SetMesh(rockObj->m_pMesh); // íŒŒíŽ¸ ë©”ì‹œì— ë³µì‚¬
+	}
+
+	m_ppMaterials = new CMaterial * [1];
+	m_ppMaterials[0] = new CMaterial(0, framework);
+	m_nMaterials = 1;
+
+	isRender = true;
+}
+
+void CRockShardEffect::Activate(const XMFLOAT3& position, const XMFLOAT3& velocity)
+{
+
+	char buf[256];
+	sprintf_s(buf, "âœ… Activate called! pos=(%.2f, %.2f, %.2f), vel=(%.2f, %.2f, %.2f)\n",
+		position.x, position.y, position.z,
+		velocity.x, velocity.y, velocity.z);
+	OutputDebugStringA(buf);
+
+
+	SetPosition(position);
+	SetScale(1.0f, 1.0f, 1.0f);
+	m_vVelocity = velocity;
+	m_fElapsedTime = 0.0f;
+	isRender = true;
+	m_bActive = true;
+}
+
+void CRockShardEffect::Update(float deltaTime)
+{
+	if (!m_bActive) {
+		//OutputDebugStringA("âŒ Update skipped (not active)\n");
+		return;
+	}
+
+	//char buf[128];
+	//sprintf_s(buf, "ðŸŒ€ Update: elapsed=%.2f / %.2f\n", m_fElapsedTime, m_fLifeTime);
+	//OutputDebugStringA(buf);
+
+	char buf[128];
+	sprintf_s(buf, "ðŸ§­ deltaTime = %.4f\n", deltaTime);
+	OutputDebugStringA(buf);
+	m_fElapsedTime += deltaTime;
+	/*
+	if (m_fElapsedTime > m_fLifeTime)
+	{
+		isRender = false;
+		m_bActive = false;
+		return;
+	}
+	
+	*/
+	m_vVelocity.y -= 9.8f * deltaTime;
+
+	XMFLOAT3 pos = GetPosition();
+	pos.x += m_vVelocity.x * deltaTime;
+	pos.y += m_vVelocity.y * deltaTime;
+	pos.z += m_vVelocity.z * deltaTime;
+	SetPosition(pos);
+
 }

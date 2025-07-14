@@ -3,7 +3,7 @@
 #include <vector>
 #include <mutex>
 
-static XMFLOAT3 oct_distance{ 2000,1000,2000 };
+static XMFLOAT3 oct_distance{ 2000,5000,2000 };
 
 struct tree_obj {
     long long u_id;

@@ -12,6 +12,7 @@ enum class E_PACKET
 	E_P_POSITION = 6,
 	E_P_LOGIN = 7,
 	E_P_LOGOUT = 8,
+
 	E_O_ADD = 9,
 	E_O_REMOVE = 10,
 	E_O_CHANGEANIMATION = 11,
@@ -19,6 +20,10 @@ enum class E_PACKET
 	E_O_HIT = 13,
 	E_O_INVINCIBLE = 14, 
 	E_O_SETHP = 15, 
+	E_O_SETOBB = 16,
+
+	E_P_SETHP = 17,
+	E_P_CHANGE_STAT = 18,
 
 
 	E_DB_REGISTER = 100,
@@ -41,7 +46,8 @@ enum class OBJECT_TYPE
 	OB_SNAKE = 10,
 	OB_TURTLE = 11,
 	OB_SNAIL = 12,
-	OB_SPIDER = 13
+	OB_SPIDER = 13,
+	OB_RAPTOR = 14
 };
 
 enum class ANIMATION_TYPE
@@ -55,6 +61,17 @@ enum class ANIMATION_TYPE
 	HIT,
 };
 
+enum class E_STAT
+{
+	STAMINA = 0, // 스태미나
+	HUNGER = 1, // 허기
+	THIRST = 2, // 갈증
+	HP = 3, // 체력
+	MAX_STAMINA = 4, // 최대 스태미나
+	MAX_HP = 5, // 최대 체력
+	SPEED = 6, // 이동 속도
+	NONE = 7 // 상태 없음
+};
 const int MAX_BUF_SIZE = 1024; // 버퍼 최대 크기
 
 
@@ -90,6 +107,13 @@ public:
 	float x, y, z;
 	FLOAT3() = default;
 	FLOAT3(float x, float y, float z) : x(x), y(y), z(z) {}
+};
+class FLOAT4
+{
+public:
+	float x, y, z, w;
+	FLOAT4() = default;
+	FLOAT4(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
 };
 
 class PACKET
@@ -166,6 +190,34 @@ public:
 		uid = -1;
 		size = sizeof(POSITION_PACKET);
 		type = static_cast<char>(E_PACKET::E_P_POSITION);
+	}
+};
+
+class SET_HP_HIT_OBJ_PACKET : public PACKET
+{
+public:
+	int hit_obj_id;
+	int hp;
+	SET_HP_HIT_OBJ_PACKET() {
+		hit_obj_id = -1;
+		hp = 0;
+		size = sizeof(SET_HP_HIT_OBJ_PACKET);
+		type = static_cast<char>(E_PACKET::E_P_SETHP);
+	}
+};
+
+class CHANGE_STAT_PACKET : public PACKET
+{
+public:
+	int oid; // 객체 ID
+	E_STAT stat; // 상태 (예: 0: 일반, 1: 공격, 2: 방어 등)
+	float value;
+	CHANGE_STAT_PACKET() {
+		oid = -1;
+		stat = E_STAT::NONE;
+		value = -1;
+		size = sizeof(CHANGE_STAT_PACKET);
+		type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
 	}
 };
 
@@ -261,7 +313,19 @@ class OBJ_INVINCIBLE_PACKET : public PACKET
 	}
 };
 
-
+class OBJ_OBB_PACKET : public PACKET
+{
+public:
+	int oid;
+	FLOAT3 Center{};
+	FLOAT3 Extents{};
+	FLOAT4 Orientation{};
+	OBJ_OBB_PACKET() {
+		oid = -1;
+		size = sizeof(OBJ_OBB_PACKET);
+		type = static_cast<char>(E_PACKET::E_O_SETOBB);
+	}
+};
 
 
 

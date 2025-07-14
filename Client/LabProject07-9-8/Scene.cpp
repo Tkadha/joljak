@@ -194,7 +194,15 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		return;
 	}
 
+	std::vector<std::wstring> skyboxTextures = {
+	   L"Skybox/SkyBox_0.dds",
+	   L"Skybox/SkyBox_1.dds",
+	   L"Skybox/day123.dds"
+	};
+
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	m_pSkyBox->LoadTextures(pd3dCommandList, skyboxTextures);
+	
 	srand((unsigned int)time(NULL));
 
 	XMFLOAT3 xmf3Scale(5.f, 0.2f, 5.f);
@@ -671,7 +679,13 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		if (pWolfModel) delete pWolfModel;
 	}
 
-	// 플레이어 커스터마이징(임시)
+	const int rockShardPoolSize = 20;
+	for (int i = 0; i < rockShardPoolSize; ++i)
+	{
+		auto* shard = new CRockShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		m_vRockShards.push_back(shard);
+		m_vGameObjects.emplace_back(shard);
+	}
 
 	//int materialIndexToChange = 0;
 	//UINT albedoTextureSlot = 0;
@@ -888,6 +902,11 @@ void CScene::AnimateObjects(float fTimeElapsed)
 	}
 
 	if (m_pWavesObject) m_pWavesObject->Animate(fTimeElapsed);
+
+	for (auto& shard : m_vRockShards)
+	{
+		shard->Update(fTimeElapsed);
+	}
 }
 
 
@@ -966,11 +985,12 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	m_pCurrentShader = nullptr;
 
 
+	
 
-
-	if (m_pSkyBox) {
+	if (m_pSkyBox)
 		m_pSkyBox->Render(pd3dCommandList, pCamera);
-	}
+
+	
 
 
 	if (m_pTerrain) {
@@ -1156,7 +1176,6 @@ void CScene::TestRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCa
 
 	OutputDebugString(L"--- CScene::Render END ---\n");
 }
-
 
 void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader)
 {

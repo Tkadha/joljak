@@ -13,8 +13,6 @@
 #include <unordered_map>
 #include <mutex>
 
-#include "ShadowMap.h"
-
 #define MAX_LIGHTS						16 
 
 #define POINT_LIGHT						1
@@ -85,7 +83,6 @@ public:
 	bool ProcessInput(UCHAR *pKeysBuffer);
     void AnimateObjects(float fTimeElapsed);
 	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
-	void TestRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 	//void Render(ID3D12GraphicsCommandList *pd3dCommandList,bool obbRender, CCamera *pCamera=NULL);
 
 	void ReleaseUploadBuffers();
@@ -107,6 +104,7 @@ public:
 	void CheckPlayerInteraction(CPlayer* pPlayer);
 
 
+	CSkyBox* GetSkyBox() const { return m_pSkyBox; }
 
 	CPlayer* GetPlayerInfo() { return m_pPlayer; };
 	CPlayer								*m_pPlayer = NULL;
@@ -116,6 +114,7 @@ public:
 
 	std::mutex							m_Mutex; // 멀티스레드 안전성을 위한 뮤텍스
 	vector<CGameObject*>				m_vGameObjects{};
+	std::list<CGameObject*> 			m_listGameObjects;
 	std::unordered_map<std::string, CGameObject*> m_mapBuildPrefabs;
 	CGameObject* m_pPreviewPine = nullptr;
 
@@ -129,6 +128,10 @@ public:
 	XMFLOAT3							m_xmf3RotatePosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
 	CSkyBox								*m_pSkyBox = NULL;
+
+	
+
+
 	CHeightMapTerrain					*m_pTerrain = NULL;
 
 	LIGHT								*m_pLights = NULL;
@@ -138,10 +141,6 @@ public:
 
 	ID3D12Resource						*m_pd3dcbLights = NULL;
 	LIGHTS								*m_pcbMappedLights = NULL;
-
-	// 그림자매핑을 위한 임시 카메라
-	ID3D12Resource* m_pd3dcbLightCamera = nullptr;
-	VS_CB_CAMERA_INFO* m_pcbMappedLightCamera = nullptr;
 
 	// 인스턴싱
 	ID3D12Resource* m_pd3dcbGameObjects = NULL;
@@ -167,41 +166,11 @@ public:
 
 	vector<CGameObject*> m_listBranchObjects; // 생성된 나뭇가지 저장 리스트
 	vector<CGameObject*> m_listRockObjects; // 생성된 나뭇가지 저장 리스트
+	std::vector<CRockShardEffect*> m_vRockShards; //돌파편
 
 	void SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 	void SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
+	void SpawnRockShardEffect(const XMFLOAT3& origin);
+	void SpawnRockShardEffectAtPlayer();
 
-
-
-	// 그림자
-	std::unique_ptr<ShadowMap> m_pShadowMap;
-
-	DirectX::BoundingSphere mSceneBounds;
-
-	float mLightNearZ = 0.0f;
-	float mLightFarZ = 0.0f;
-	XMFLOAT3 mLightPosW;
-	DirectX::XMFLOAT4X4 mLightView = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 mLightProj = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 mShadowTransform = MathHelper::Identity4x4();
-
-	float mLightRotationAngle = 0.0f;
-	XMFLOAT3 mBaseLightDirections[3] = {
-		XMFLOAT3(0.57735f, -0.57735f, 0.57735f),
-		XMFLOAT3(-0.57735f, -0.57735f, 0.57735f),
-		XMFLOAT3(0.0f, -0.707f, -0.707f)
-	};
-	XMFLOAT3 mRotatedLightDirections[3];
-
-	POINT mLastMousePos;
-
-	void UpdateShadowTransform(const XMFLOAT3& focusPoint);
-	void UpdateShadowTransform();
-
-
-	D3D12_GPU_DESCRIPTOR_HANDLE GetShadowMapSrv() { return m_pShadowMap->Srv(); }
-
-	float m_fLightRotationAngle = 0.0f;
-	
-	void UpdateLights(float fTimeElapsed);
 };

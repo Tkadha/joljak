@@ -52,7 +52,8 @@ enum class GameObjectType : int {
 	Snake,
 	Turtle,
 	Snail,
-	Spider
+	Spider,
+	Raptor
 
 };
 
@@ -147,9 +148,6 @@ public:
 	//virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, bool obbRender, CCamera* pCamera = NULL);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, UINT nInstances, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView);
 
-	// 그림자 렌더용 함수
-	virtual void RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList);
-
 	virtual void OnLateUpdate() { }
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
@@ -197,6 +195,7 @@ public:
 	void SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
 	void SetOBB(float scalex, float scaley, float scalez, const XMFLOAT3& centerOffset);
 	void SetOBB(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CShader* shader);
+	BoundingOrientedBox GetOBB();
 	void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList);
 	void InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void SetColor(const XMFLOAT4& color);
@@ -240,7 +239,7 @@ public:
 public:
 	int hp{ 20 };
 	int level = 0;
-	int atk = 3;
+	int atk = 5;
 
 	int getHp() { return hp; }
 	void setHp(int n) { hp = n; }
@@ -282,7 +281,6 @@ public:
 
 	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
 
-	virtual void RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList);
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -290,10 +288,17 @@ public:
 class CSkyBox : public CGameObject
 {
 public:
-	CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CGameFramework* pGameFramework);
+	CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
+
 	virtual ~CSkyBox();
 
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL) override;
+	void SetSkyboxIndex(int index);
+	void LoadTextures(ID3D12GraphicsCommandList* cmdList, const std::vector<std::wstring>& texturePaths);
+	int  GetTextureCount() const { return static_cast<int>(m_vSkyboxTextures.size()); }
+private:
+	std::vector<std::shared_ptr<CTexture>> m_vSkyboxTextures;
+	int m_nCurrentTextureIndex = 0;
 };
 
 
@@ -538,4 +543,20 @@ class CConstructionObject : public CGameObject
 public:
 	CConstructionObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CConstructionObject() {}
+};
+
+class CRockShardEffect : public CGameObject
+{
+public:
+	CRockShardEffect(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework);
+
+	void Activate(const XMFLOAT3& position, const XMFLOAT3& velocity);
+	void Update(float deltaTime);
+	bool IsActive() const { return m_bActive; }
+
+private:
+	bool m_bActive = false;
+	float m_fElapsedTime = 0.0f;
+	float m_fLifeTime = 2.0f;
+	XMFLOAT3 m_vVelocity = { 0, 0, 0 };
 };
