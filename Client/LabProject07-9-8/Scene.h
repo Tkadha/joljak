@@ -10,6 +10,7 @@
 #include "Octree.h"
 #include "ResourceManager.h"
 #include "ShaderManager.h"
+#include "ShadowMap.h"
 #include <unordered_map>
 #include <mutex>
 
@@ -129,8 +130,8 @@ public:
 
 	CSkyBox								*m_pSkyBox = NULL;
 
-	
-
+	ID3D12Resource* m_pd3dcbLightCamera = nullptr;
+	VS_CB_CAMERA_INFO* m_pcbMappedLightCamera = nullptr;
 
 	CHeightMapTerrain					*m_pTerrain = NULL;
 
@@ -170,7 +171,38 @@ public:
 
 	void SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 	void SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
-	void SpawnRockShardEffect(const XMFLOAT3& origin);
-	void SpawnRockShardEffectAtPlayer();
+	//void SpawnRockShardEffect(const XMFLOAT3& origin);
+	//void SpawnRockShardEffectAtPlayer();
 
+public:
+		std::unique_ptr<ShadowMap> m_pShadowMap;
+
+		DirectX::BoundingSphere mSceneBounds;
+
+		float mLightNearZ = 0.0f;
+		float mLightFarZ = 0.0f;
+		XMFLOAT3 mLightPosW;
+		DirectX::XMFLOAT4X4 mLightView = MathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 mLightProj = MathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 mShadowTransform = MathHelper::Identity4x4();
+
+		float mLightRotationAngle = 0.0f;
+		XMFLOAT3 mBaseLightDirections[3] = {
+			XMFLOAT3(0.57735f, -0.57735f, 0.57735f),
+			XMFLOAT3(-0.57735f, -0.57735f, 0.57735f),
+			XMFLOAT3(0.0f, -0.707f, -0.707f)
+		};
+		XMFLOAT3 mRotatedLightDirections[3];
+
+		POINT mLastMousePos;
+
+		void UpdateShadowTransform(const XMFLOAT3& focusPoint);
+		void UpdateShadowTransform();
+
+
+		D3D12_GPU_DESCRIPTOR_HANDLE GetShadowMapSrv() { return m_pShadowMap->Srv(); }
+
+		float m_fLightRotationAngle = 0.0f;
+
+		void UpdateLights(float fTimeElapsed);
 };

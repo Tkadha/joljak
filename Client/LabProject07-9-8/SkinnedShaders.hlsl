@@ -25,6 +25,7 @@ cbuffer cbBoneTransforms : register(b8)
 };
 
 // --- 텍스처 (Standard와 동일) ---
+Texture2D gShadowMap : register(t3);
 Texture2D gtxtAlbedoTexture : register(t6);
 Texture2D gtxtSpecularTexture : register(t7);
 Texture2D gtxtNormalTexture : register(t8);
@@ -51,6 +52,8 @@ struct VS_STANDARD_OUTPUT
     float3 tangentW : TANGENT;
     float3 bitangentW : BITANGENT;
     float2 uv : TEXCOORD;
+    
+    float4 ShadowPosH : TEXCOORD1; // 그림자 좌표를 위한 공간 추가
 };
 
 
@@ -83,7 +86,9 @@ VS_STANDARD_OUTPUT VSSkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
     output.position = mul(output.position, gmtxProjection);
 
     output.uv = input.uv;
-
+    
+    output.ShadowPosH = mul(float4(output.positionW, 1.0f), gmtxShadowTransform);
+    
     return output;
 }
 

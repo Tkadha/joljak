@@ -150,6 +150,7 @@
     <ClCompile Include="d3dUtil.cpp" />
     <ClCompile Include="DDSTextureLoader.cpp" />
     <ClCompile Include="DDSTextureLoader12.cpp" />
+    <ClCompile Include="DebugShader.cpp" />
     <ClCompile Include="FSMManager.cpp" />
     <ClCompile Include="FSMState.cpp" />
     <ClCompile Include="GameFramework.cpp" />
@@ -178,6 +179,8 @@
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="ShaderManager.cpp" />
+    <ClCompile Include="ShadowMap.cpp" />
+    <ClCompile Include="ShadowShader.cpp" />
     <ClCompile Include="SkinnedShader.cpp" />
     <ClCompile Include="SkyBoxShader.cpp" />
     <ClCompile Include="StandardShader.cpp" />
@@ -200,6 +203,7 @@
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DDSTextureLoader.h" />
     <ClInclude Include="DDSTextureLoader12.h" />
+    <ClInclude Include="DebugShader.h" />
     <ClInclude Include="FSMManager.h" />
     <ClInclude Include="FSMState.h" />
     <ClInclude Include="GameFramework.h" />
@@ -229,6 +233,8 @@
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="ShaderManager.h" />
+    <ClInclude Include="ShadowMap.h" />
+    <ClInclude Include="ShadowShader.h" />
     <ClInclude Include="SkinnedShader.h" />
     <ClInclude Include="SkyBoxShader.h" />
     <ClInclude Include="StandardShader.h" />
@@ -247,6 +253,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </FxCompile>
+    <FxCompile Include="Debug.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="InstancingShaders.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Geometry</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
@@ -258,6 +267,9 @@
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.0</ShaderModel>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Shadow.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="WavesShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Geometry</ShaderType>

@@ -172,6 +172,7 @@ private:
 private:
 	ComPtr<ID3D12DescriptorHeap>	m_pd3dCbvSrvDescriptorHeap;
 	UINT							m_nCbvSrvDescriptorIncrementSize;
+	UINT							m_nRtvDescriptorIncrementSize;
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dCbvCpuHandleStart;
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dCbvGpuHandleStart;
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCpuHandleStart;

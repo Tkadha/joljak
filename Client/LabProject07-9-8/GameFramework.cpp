@@ -695,7 +695,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				ShowTraitUI = !ShowTraitUI;
 				break;
 			case 'Y':
-				m_pScene->SpawnRockShardEffectAtPlayer();
+				//m_pScene->SpawnRockShardEffectAtPlayer();
 				break;
 			}
 			break;
@@ -2043,7 +2043,7 @@ void CGameFramework::FrameAdvance()
 		lastEventTime = currentTime;
 	}
 
-	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	//std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);

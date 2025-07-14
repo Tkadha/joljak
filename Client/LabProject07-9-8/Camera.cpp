@@ -356,94 +356,120 @@ void CThirdPersonCamera::SetLookAt(XMFLOAT3& xmf3LookAt)
 
 void CThirdPersonCamera::Rotate(float pitchDelta, float yawDelta, float rollDelta)
 {
-	// Pitch 회전 (카메라의 로컬 Right 벡터 기준)
-	// 카메라가 플레이어를 바라보면서 위아래로 움직이는 효과
-	if (pitchDelta != 0.0f && m_pPlayer) // 플레이어가 있을 때만
+	// Pitch ?�전 (카메?�의 로컬 Right 벡터 기�?)
+	// 카메?��? ?�레?�어�?바라보면???�아?�로 ?�직이???�과
+	if (pitchDelta != 0.0f && m_pPlayer) // ?�레?�어가 ?�을 ?�만
 	{
 		XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3Right), XMConvertToRadians(pitchDelta));
 
-		// 카메라의 Look, Up 벡터를 회전
+		// 카메?�의 Look, Up 벡터�??�전
 		m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
 		m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
 
-		// Pitch 회전 시 카메라 위치도 업데이트 (플레이어 중심)
+		// Pitch ?�전 ??카메???�치???�데?�트 (?�레?�어 중심)
 		XMFLOAT3 playerPos = m_pPlayer->GetPosition();
 		XMVECTOR camPosGlobal = XMLoadFloat3(&m_xmf3Position);
 		XMVECTOR playerPosGlobal = XMLoadFloat3(&playerPos);
 
-		// 1. 카메라 위치를 플레이어의 로컬 공간으로 변환 (카메라 위치 - 플레이어 위치)
+		// 1. 카메???�치�??�레?�어??로컬 공간?�로 변??(카메???�치 - ?�레?�어 ?�치)
 		XMVECTOR relativeCamPos = camPosGlobal - playerPosGlobal;
-		// 2. 로컬 공간에서 회전 (카메라의 Right 벡터 기준)
+		// 2. 로컬 공간?�서 ?�전 (카메?�의 Right 벡터 기�?)
 		relativeCamPos = XMVector3TransformCoord(relativeCamPos, xmmtxRotate);
-		// 3. 다시 월드 공간으로 변환 (회전된 상대 위치 + 플레이어 위치)
+		// 3. ?�시 ?�드 공간?�로 변??(?�전???��? ?�치 + ?�레?�어 ?�치)
 		XMStoreFloat3(&m_xmf3Position, relativeCamPos + playerPosGlobal);
 	}
 
-	// Yaw 회전 (플레이어의 월드 Up 벡터 또는 플레이어의 Up 벡터 기준)
-	// 카메라가 플레이어 주위를 수평으로 도는 효과
-	if (yawDelta != 0.0f && m_pPlayer) // 플레이어가 있을 때만
+	// Yaw ?�전 (?�레?�어???�드 Up 벡터 ?�는 ?�레?�어??Up 벡터 기�?)
+	// 카메?��? ?�레?�어 주위�??�평?�로 ?�는 ?�과
+	if (yawDelta != 0.0f && m_pPlayer) // ?�레?�어가 ?�을 ?�만
 	{
-		XMFLOAT3 playerUp = m_pPlayer->GetUpVector(); // 플레이어의 Up 벡터 사용
-		// 또는 월드 Up 벡터 사용: XMFLOAT3 playerUp = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		XMFLOAT3 playerUp = m_pPlayer->GetUpVector(); // ?�레?�어??Up 벡터 ?�용
+		// ?�는 ?�드 Up 벡터 ?�용: XMFLOAT3 playerUp = XMFLOAT3(0.0f, 1.0f, 0.0f);
 		XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&playerUp), XMConvertToRadians(yawDelta));
 
-		// 카메라의 Look, Up, Right 벡터를 회전
+		// 카메?�의 Look, Up, Right 벡터�??�전
 		m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
 		m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
 		m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
 
-		// 카메라 위치도 플레이어 중심으로 회전
 		XMFLOAT3 playerPos = m_pPlayer->GetPosition();
 		XMVECTOR camPosGlobal = XMLoadFloat3(&m_xmf3Position);
 		XMVECTOR playerPosGlobal = XMLoadFloat3(&playerPos);
 
-		// 1. 카메라 위치를 플레이어의 로컬 공간으로 변환
 		XMVECTOR relativeCamPos = camPosGlobal - playerPosGlobal;
-		// 2. 로컬 공간에서 회전 (플레이어의 Up 벡터 기준)
 		relativeCamPos = XMVector3TransformCoord(relativeCamPos, xmmtxRotate);
-		// 3. 다시 월드 공간으로 변환
 		XMStoreFloat3(&m_xmf3Position, relativeCamPos + playerPosGlobal);
 	}
 
-	// Roll 회전 (카메라의 로컬 Look 벡터 기준)
-	// 카메라 자체가 기울어지는 효과
 	if (rollDelta != 0.0f)
 	{
 		XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3Look), XMConvertToRadians(rollDelta));
-		// 카메라의 Up과 Right 벡터를 회전
 		m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
 		m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
 
-		// Roll 회전 시에는 일반적으로 카메라 위치는 변경하지 않으나,
-		// 만약 플레이어의 특정 지점을 중심으로 Roll하고 싶다면 위치 계산이 추가될 수 있습니다.
-		// 여기서는 기존 코드에서 z 회전 시 위치를 변경했던 로직을 참고하여,
-		// 플레이어가 있고, 플레이어의 Look 벡터 기준으로 Roll 하면서 위치를 조정하는 로직은
-		// 필요하다면 추가할 수 있습니다. 현재는 카메라 자체 Look 기준 Roll만 구현.
 	}
 
-	// 회전 후, 카메라 벡터들이 서로 직교하고 정규화되도록 합니다. (Gimbal Lock 방지 및 안정성)
 	XMVECTOR L = XMLoadFloat3(&m_xmf3Look);
 	XMVECTOR U = XMLoadFloat3(&m_xmf3Up);
 	XMVECTOR R = XMLoadFloat3(&m_xmf3Right);
 
-	L = XMVector3Normalize(L); // Look 벡터 정규화
+	L = XMVector3Normalize(L); 
 
-	// Right 벡터 재계산 및 정규화 (World Up 기준 또는 플레이어 Up 기준)
 	XMFLOAT3 worldOrPlayerUpFloat = m_pPlayer ? m_pPlayer->GetUpVector() : XMFLOAT3(0.0f, 1.0f, 0.0f);
 	XMVECTOR worldOrPlayerUp = XMLoadFloat3(&worldOrPlayerUpFloat);
-	R = XMVector3Normalize(XMVector3Cross(worldOrPlayerUp, L)); // Right = Up x Look (DirectX 왼손 좌표계 기준)
+	R = XMVector3Normalize(XMVector3Cross(worldOrPlayerUp, L)); // Right = Up x Look 
 
-	// Up 벡터 재계산 및 정규화
+
 	U = XMVector3Normalize(XMVector3Cross(L, R)); // Up = Look x Right
 
 	XMStoreFloat3(&m_xmf3Look, L);
 	XMStoreFloat3(&m_xmf3Up, U);
 	XMStoreFloat3(&m_xmf3Right, R);
 
-	// 최종적으로, 카메라가 항상 플레이어를 바라보도록 설정할 수 있습니다 (선택 사항).
-	// 위에서 이미 Look 벡터를 회전시켰으므로, 플레이어를 바라보도록 강제하면 회전 효과가 무시될 수 있습니다.
-	// 대신, 카메라의 위치(m_xmf3Position)와 Look 벡터를 사용하여 View Matrix를 생성합니다.
+	
 	// if (m_pPlayer) {
-	//     LookAt(m_pPlayer->GetPosition()); // LookAt 함수는 카메라가 특정 지점을 바라보도록 m_xmf3Look 등을 설정
+	//     LookAt(m_pPlayer->GetPosition()); 
 	// }
+}
+
+void CCamera::UpdateShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4ShadowTransform)
+{
+	// m_pcbMappedCamera�� UpdateShaderVariables���� �̹� ���εǾ� �ִٰ� �����մϴ�.
+	if (m_pcbMappedCamera)
+	{
+		// VS_CB_CAMERA_INFO ����ü�� �ִ� m_xmf4x4ShadowTransform ����� ���� �����մϴ�.
+		XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4ShadowTransform, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4ShadowTransform)));
+	}
+}
+void CCamera::GetFrustumCorners(XMFLOAT3* pCorners) const
+{
+	// 1. FOV�� �̿��� Near/Far ����� ���̿� �ʺ� ����մϴ�.
+	float halfFovY = XMConvertToRadians(m_fFovAngle * 0.5f);
+	float nearHeight = 2.0f * m_fNearPlaneDistance * tanf(halfFovY);
+	float nearWidth = nearHeight * m_fAspectRatio;
+	float farHeight = 2.0f * m_fFarPlaneDistance * tanf(halfFovY);
+	float farWidth = farHeight * m_fAspectRatio;
+
+	// 2. ī�޶��� ���� ��(Right, Up, Look)�� ��ġ�� XMVECTOR�� �ε��մϴ�.
+	XMVECTOR xmvPosition = XMLoadFloat3(&m_xmf3Position);
+	XMVECTOR xmvRight = XMLoadFloat3(&m_xmf3Right);
+	XMVECTOR xmvUp = XMLoadFloat3(&m_xmf3Up);
+	XMVECTOR xmvLook = XMLoadFloat3(&m_xmf3Look);
+
+	// 3. Near/Far ����� �߽����� ����մϴ�.
+	XMVECTOR nearPlaneCenter = xmvPosition + (xmvLook * m_fNearPlaneDistance);
+	XMVECTOR farPlaneCenter = xmvPosition + (xmvLook * m_fFarPlaneDistance);
+
+	// 4. 8���� �������� ����մϴ�.
+	// Near Plane (ī�޶�� ����� ��)
+	XMStoreFloat3(&pCorners[0], nearPlaneCenter - (xmvRight * (nearWidth * 0.5f)) - (xmvUp * (nearHeight * 0.5f))); // ���� �Ʒ�
+	XMStoreFloat3(&pCorners[1], nearPlaneCenter - (xmvRight * (nearWidth * 0.5f)) + (xmvUp * (nearHeight * 0.5f))); // ���� ��
+	XMStoreFloat3(&pCorners[2], nearPlaneCenter + (xmvRight * (nearWidth * 0.5f)) + (xmvUp * (nearHeight * 0.5f))); // ������ ��
+	XMStoreFloat3(&pCorners[3], nearPlaneCenter + (xmvRight * (nearWidth * 0.5f)) - (xmvUp * (nearHeight * 0.5f))); // ������ �Ʒ�
+
+	// Far Plane (ī�޶�� �� ��)
+	XMStoreFloat3(&pCorners[4], farPlaneCenter - (xmvRight * (farWidth * 0.5f)) - (xmvUp * (farHeight * 0.5f))); // ���� �Ʒ�
+	XMStoreFloat3(&pCorners[5], farPlaneCenter - (xmvRight * (farWidth * 0.5f)) + (xmvUp * (farHeight * 0.5f))); // ���� ��
+	XMStoreFloat3(&pCorners[6], farPlaneCenter + (xmvRight * (farWidth * 0.5f)) + (xmvUp * (farHeight * 0.5f))); // ������ ��
+	XMStoreFloat3(&pCorners[7], farPlaneCenter + (xmvRight * (farWidth * 0.5f)) - (xmvUp * (farHeight * 0.5f))); // ������ �Ʒ�
 }

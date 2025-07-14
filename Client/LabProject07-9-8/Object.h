@@ -131,6 +131,11 @@ public:
 	virtual void FSMUpdate() {}
 	void ChangeAnimation(ANIMATION_TYPE type);
 
+
+	// 그림자 렌더용 함수
+	virtual void RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList);
+
+
 	void SetMesh(CMesh *pMesh);
 	//void SetShader(CShader *pShader);
 	void SetShader(int nMaterial, CShader *pShader);
@@ -280,7 +285,7 @@ public:
 	float GetLength() { return(m_nLength * m_xmf3Scale.z); }
 
 	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
-
+	virtual void RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList);
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
