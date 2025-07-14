@@ -1,7 +1,6 @@
 // Shaders.hlsl 파일 맨 아래에 추가
 
 #include "Common.hlsl"
-#include "Light.hlsl"
 
 struct MATERIAL
 {

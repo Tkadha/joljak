@@ -2,13 +2,33 @@
 #include "Scene.h"
 #include "GameFramework.h"
 
+
+struct cbGameObjectInfo {
+    XMFLOAT4X4    gmtxGameObject;     // 16 DWORDS
+    struct MaterialInfoCpp {
+        XMFLOAT4   AmbientColor;  // 4
+        XMFLOAT4   DiffuseColor;  // 4
+        XMFLOAT4   SpecularColor; // 4
+        XMFLOAT4   EmissiveColor; // 4
+        float      Glossiness;        // 1
+        float      Smoothness;        // 1
+        float      SpecularHighlight; // 1
+        float      Metallic;          // 1
+        float      GlossyReflection;  // 1
+        XMFLOAT3   Padding;           // 3 => MaterialInfoCpp = 24 DWORDS
+    } gMaterialInfo;
+    UINT          gnTexturesMask;     // 1 DWORD
+
+};
+
+
 // Object.cpp 파일 최하단에 추가
 CWavesObject::CWavesObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework)
     : CGameObject(1, pGameFramework)
 {
     // 1. Waves 시뮬레이션 객체를 생성합니다.
     // 인자: (행, 열, 그리드 간격, 시간 간격, 속도, 감쇠)
-    m_pWaves = std::make_unique<Waves>(200, 200, 4.8f, 0.03f, 3.25f, 0.4f);
+    m_pWaves = std::make_unique<Waves>(400, 400, 3.8f, 0.03f, 3.25f, 0.4f);
 
     // 2. 물결 메시를 그릴 인덱스 데이터를 생성합니다.
     // 이 데이터는 한번 생성되면 변하지 않습니다.
@@ -104,13 +124,38 @@ void CWavesObject::Animate(float fTimeElapsed)
 void CWavesObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
     // CGameObject::Render를 기반으로 하되, 메시를 직접 그리는 방식으로 수정합니다.
+    CScene* pScene = m_pGameFramework ? m_pGameFramework->GetScene() : nullptr;
+    if (!pScene) return;
+
     if (!pCamera) return;
 
     CMaterial* pMaterial = GetMaterial(0);
     if (pMaterial && pMaterial->m_pShader)
     {
+
         // 파이프라인 상태 설정(셰이더, 루트 시그니처 등)
         m_pGameFramework->GetScene()->SetGraphicsState(pd3dCommandList, pMaterial->m_pShader);
+
+        cbGameObjectInfo gameObjectInfo;
+
+        XMFLOAT4X4 xmf4x4World;
+        XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+        pd3dCommandList->SetGraphicsRoot32BitConstants(1, 16, &xmf4x4World, 0); 
+
+
+
+        // 2. 메인 카메라의 상수 버퍼를 루트 파라미터 0번 슬롯에 명시적으로 바인딩합니다.
+        //    (그림자 패스에서 설정된 빛의 카메라 상태를 덮어씁니다.)
+        pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress());
+
+        // 3. 조명 정보를 루트 파라미터 2번 슬롯에 바인딩합니다.
+        ID3D12Resource* pLightBuffer = pScene->GetLightsConstantBuffer();
+        if (pLightBuffer) {
+            pd3dCommandList->SetGraphicsRootConstantBufferView(2, pLightBuffer->GetGPUVirtualAddress());
+        }
+
+        // 4. 그림자 맵을 루트 파라미터 4번 슬롯에 바인딩합니다.
+        pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
 
         // 변환 행렬 및 재질 업데이트
         UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
