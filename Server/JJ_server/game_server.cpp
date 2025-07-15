@@ -710,7 +710,7 @@ void BuildObject()
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
 
-	int CowCount = 50;
+	int CowCount = 70;
 	for (int i = 0; i < CowCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -729,7 +729,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int PigCount = 50;
+	int PigCount = 70;
 	for (int i = 0; i < PigCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -749,7 +749,7 @@ void BuildObject()
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
 
-	int SpiderCount = 70;
+	int SpiderCount = 50;
 	for (int i = 0; i < SpiderCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -768,7 +768,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int WolfCount = 70;
+	int WolfCount = 50;
 	for (int i = 0; i < WolfCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -787,7 +787,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int ToadCount = 70;
+	int ToadCount = 50;
 	for (int i = 0; i < ToadCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -806,7 +806,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int BatCount = 70;
+	int BatCount = 50;
 	for (int i = 0; i < BatCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		obj->fly_height = 15.f;
@@ -826,7 +826,7 @@ void BuildObject()
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
 
-	int RaptorCount = 70;
+	int RaptorCount = 50;
 	for (int i = 0; i < RaptorCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);

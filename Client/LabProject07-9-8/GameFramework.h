@@ -139,6 +139,7 @@ private:
         
 	IDXGIFactory4				*m_pdxgiFactory = NULL;
 	IDXGISwapChain3				*m_pdxgiSwapChain = NULL;
+public:
 	ID3D12Device				*m_pd3dDevice = NULL;
 
 	bool						m_bMsaa4xEnable = false;

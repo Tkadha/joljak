@@ -502,12 +502,12 @@ void CGameFramework::CreateCommandQueueAndList()
 	d3dCommandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 	d3dCommandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 	hResult = m_pd3dDevice->CreateCommandQueue(&d3dCommandQueueDesc, _uuidof(ID3D12CommandQueue), (void **)&m_pd3dCommandQueue);
-	hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&m_pd3dUploadCommandAllocator);
 	hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void **)&m_pd3dCommandAllocator);
 
 	hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dCommandAllocator, NULL, __uuidof(ID3D12GraphicsCommandList), (void **)&m_pd3dCommandList);
 	hResult = m_pd3dCommandList->Close();
 
+	hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&m_pd3dUploadCommandAllocator);
 	hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dUploadCommandAllocator, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&m_pd3dUploadCommandList);
 	hResult = m_pd3dUploadCommandList->Close();
 }
@@ -1921,8 +1921,9 @@ void CGameFramework::FrameAdvance()
 	if (m_logQueue.size() > 0) {
 		m_pd3dUploadCommandAllocator->Reset();
 		m_pd3dUploadCommandList->Reset(m_pd3dUploadCommandAllocator, NULL);
-
-		while (m_logQueue.size() > 0) {
+		const int MAX_LOOP_SIZE = 1;
+		int loop_count = 0;
+		while (m_logQueue.size() > 0 || loop_count < MAX_LOOP_SIZE) {
 			auto log = m_logQueue.front();
 			m_logQueue.pop();
 			switch (log.packetType)
@@ -1957,10 +1958,13 @@ void CGameFramework::FrameAdvance()
 			case E_PACKET::E_O_ADD:
 			{
 				std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+
 				auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(),
 					[log](CGameObject* obj) { return obj && obj->m_id == log.id; });
+
 				auto it2 = std::find_if(m_pScene->m_listGameObjects.begin(), m_pScene->m_listGameObjects.end(),
 					[log](CGameObject* obj) { return obj && obj->m_id == log.id; });
+
 				if (it == m_pScene->m_vGameObjects.end() && it2 == m_pScene->m_listGameObjects.end()) {
 					AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id);
 				}
@@ -1969,7 +1973,9 @@ void CGameFramework::FrameAdvance()
 			default:
 				break;
 			}
+			loop_count++;
 		}
+
 		m_pd3dUploadCommandList->Close();
 		ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dUploadCommandList };
 		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
@@ -2117,67 +2123,68 @@ void CGameFramework::FrameAdvance()
 
 
 	//////////////////////////////////////////////////플레이어 UI
+	{
+		const float hudWidth = 300.0f;
+		const float hudHeight = 100.0f;
+		const float barWidth = 100.0f;
+		const float barHeight = 15.0f;
 
-	const float hudWidth = 300.0f;
-	const float hudHeight = 100.0f;
-	const float barWidth = 100.0f;
-	const float barHeight = 15.0f;
+		ImVec2 hudPos = ImVec2(displaySize.x - hudWidth + 10.0f, displaySize.y - hudHeight);
 
-	ImVec2 hudPos = ImVec2(displaySize.x - hudWidth+10.0f, displaySize.y - hudHeight);
+		ImGui::SetNextWindowPos(hudPos);
+		ImGui::SetNextWindowSize(ImVec2(hudWidth, hudHeight));
+		ImGui::Begin("StatusBars", nullptr,
+			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoCollapse);
 
-	ImGui::SetNextWindowPos(hudPos);
-	ImGui::SetNextWindowSize(ImVec2(hudWidth, hudHeight));
-	ImGui::Begin("StatusBars", nullptr,
-		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
-		ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoCollapse);
 
-	
-	ImGui::BeginGroup();
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Hp"); // 체력 
-	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-	ImGui::ProgressBar(
-		(float)m_pPlayer->Playerhp / (float)m_pPlayer->Maxhp,
-		ImVec2(barWidth, barHeight),
-		std::to_string(m_pPlayer->Playerhp).c_str()
-	);
-	ImGui::PopStyleColor();
-	ImGui::EndGroup();
+		ImGui::BeginGroup();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Hp"); // 체력 
+		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+		ImGui::ProgressBar(
+			(float)m_pPlayer->Playerhp / (float)m_pPlayer->Maxhp,
+			ImVec2(barWidth, barHeight),
+			std::to_string(m_pPlayer->Playerhp).c_str()
+		);
+		ImGui::PopStyleColor();
+		ImGui::EndGroup();
 
-	ImGui::SameLine(0.0f, 50.0f); 
-	ImGui::BeginGroup();
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Stamina"); // 스태미너
-	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.5f, 1.0f, 1.0f));
-	ImGui::ProgressBar(
-		(float)m_pPlayer->Playerstamina / (float)m_pPlayer->Maxstamina,
-		ImVec2(barWidth, barHeight),
-		std::to_string(m_pPlayer->Playerstamina).c_str()
-	);
-	ImGui::PopStyleColor();
-	ImGui::EndGroup();
+		ImGui::SameLine(0.0f, 50.0f);
+		ImGui::BeginGroup();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Stamina"); // 스태미너
+		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.5f, 1.0f, 1.0f));
+		ImGui::ProgressBar(
+			(float)m_pPlayer->Playerstamina / (float)m_pPlayer->Maxstamina,
+			ImVec2(barWidth, barHeight),
+			std::to_string(m_pPlayer->Playerstamina).c_str()
+		);
+		ImGui::PopStyleColor();
+		ImGui::EndGroup();
 
-	
-	ImGui::BeginGroup();
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Hunger"); // 허기
-	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
-	ImGui::ProgressBar(m_pPlayer->PlayerHunger / 100.f, ImVec2(barWidth, barHeight));
-	ImGui::PopStyleColor();
-	ImGui::EndGroup();
 
-	ImGui::SameLine(0.0f, 50.0f);
+		ImGui::BeginGroup();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Hunger"); // 허기
+		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
+		ImGui::ProgressBar(m_pPlayer->PlayerHunger / 100.f, ImVec2(barWidth, barHeight));
+		ImGui::PopStyleColor();
+		ImGui::EndGroup();
 
-	ImGui::BeginGroup();
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Thirst"); // 갈증
-	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 0.2f, 1.0f, 1.0f));
-	ImGui::ProgressBar(m_pPlayer->PlayerThirst / 100.f, ImVec2(barWidth, barHeight));
-	ImGui::PopStyleColor();
-	ImGui::EndGroup();
+		ImGui::SameLine(0.0f, 50.0f);
 
-	ImGui::End();
+		ImGui::BeginGroup();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Thirst"); // 갈증
+		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 0.2f, 1.0f, 1.0f));
+		ImGui::ProgressBar(m_pPlayer->PlayerThirst / 100.f, ImVec2(barWidth, barHeight));
+		ImGui::PopStyleColor();
+		ImGui::EndGroup();
+
+		ImGui::End();
+	}
 	//////////////////////////////////////////////////////// 인벤토리
 	if (ShowInventory)
 	{
@@ -2736,11 +2743,24 @@ void CGameFramework::FrameAdvance()
 	m_pdxgiSwapChain->Present1(1, 0, &dxgiPresentParameters);
 #else
 #ifdef _WITH_SYNCH_SWAPCHAIN
-	m_pdxgiSwapChain->Present(1, 0);
+	HRESULT hr = m_pdxgiSwapChain->Present(1, 0);
 #else
-	m_pdxgiSwapChain->Present(0, 0);
+	HRESULT hr = m_pdxgiSwapChain->Present(0, 0);
 #endif
 #endif
+	if (hr == DXGI_ERROR_DEVICE_REMOVED)
+	{
+		// 장치가 제거된 정확한 원인을 확인합니다.
+		HRESULT reason = m_pd3dDevice->GetDeviceRemovedReason();
+
+		// 디버그 창에 원인을 출력합니다.
+		wchar_t out_str[256];
+		swprintf_s(out_str, L"Device Removed! Reason: 0x%08X\n", reason);
+		OutputDebugString(out_str);
+
+		// 여기서 reason 값을 보고 원인을 분석할 수 있습니다.
+		// 예: DXGI_ERROR_DEVICE_HUNG, DXGI_ERROR_DEVICE_RESET 등
+	}
 
 	MoveToNextFrame();
 
@@ -2749,6 +2769,7 @@ void CGameFramework::FrameAdvance()
 	XMFLOAT3 xmf3Position = m_pPlayer->GetPosition();
 	_stprintf_s(m_pszFrameRate + nLength, 70 - nLength, _T("(%4f, %4f, %4f)"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
 	::SetWindowText(m_hWnd, m_pszFrameRate);
+
 }
 void CGameFramework::CreateCbvSrvDescriptorHeap()
 {

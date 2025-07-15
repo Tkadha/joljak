@@ -71,6 +71,7 @@ public:
 	}
 	void PushRecvQueue(char* packet, short size)
 	{
+		if (size <= 0)return;
 		auto buffer = make_unique<char[]>(size);
 		memcpy(buffer.get(), packet, size);
 		lock_guard<mutex> lock(r_mu);

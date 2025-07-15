@@ -152,7 +152,7 @@ void CPlayer::ReleaseShaderVariables()
 
 
 
-void CPlayer::SetCollisionTargets(const std::vector<CGameObject*>& targets)
+void CPlayer::SetCollisionTargets(const std::list<CGameObject*>& targets)
 {
 
 	m_pCollisionTargets = &targets;

@@ -108,7 +108,20 @@ void CWavesObject::Animate(float fTimeElapsed)
     // 2. 시뮬레이션 결과를 바탕으로 정점 버퍼의 내용을 업데이트합니다.
     Vertex* pVertices = nullptr;
     // Map을 통해 CPU에서 GPU 메모리에 접근할 수 있는 포인터를 얻습니다.
-    m_pd3dVertexBuffer->Map(0, nullptr, (void**)&pVertices);
+    HRESULT hr = m_pd3dVertexBuffer->Map(0, nullptr, (void**)&pVertices);
+    if (hr == DXGI_ERROR_DEVICE_REMOVED)
+    {
+        // 장치가 제거된 정확한 원인을 확인합니다.
+        HRESULT reason = m_pGameFramework->m_pd3dDevice->GetDeviceRemovedReason();
+
+        // 디버그 창에 원인을 출력합니다.
+        wchar_t out_str[256];
+        swprintf_s(out_str, L"Device Removed! Reason: 0x%08X\n", reason);
+        OutputDebugString(out_str);
+
+        // 여기서 reason 값을 보고 원인을 분석할 수 있습니다.
+        // 예: DXGI_ERROR_DEVICE_HUNG, DXGI_ERROR_DEVICE_RESET 등
+    }
 
     for (int i = 0; i < m_pWaves->VertexCount(); ++i)
     {

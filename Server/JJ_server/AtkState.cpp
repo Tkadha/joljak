@@ -345,6 +345,11 @@ void AtkNPCDieState::Execute(std::shared_ptr<GameObject> npc)
 		npc->FSM_manager->ChangeState(std::make_shared<AtkNPCRespawnState>());
 		return;
 	}
+	if(npc->GetType() == OBJECT_TYPE::OB_BAT && npc->fly_height > 0.f) {
+		npc->fly_height -= 1.f;
+		if (npc->fly_height < 0.f) npc->fly_height = 0.f;
+		npc->MoveForward(0.f);
+	}
 }
 
 void AtkNPCDieState::Exit(std::shared_ptr<GameObject> npc)
@@ -391,7 +396,8 @@ void AtkNPCRespawnState::Execute(std::shared_ptr<GameObject> npc)
 		float fHeight = Terrain::terrain->GetHeight(randompos.first, randompos.second, bReverseQuad) + 0.0f;
 		float y{};
 		if (y < fHeight) y = fHeight;
-
+		if (npc->GetType() == OBJECT_TYPE::OB_BAT)
+			npc->fly_height = 15.f;
 		npc->SetPosition(randompos.first, y, randompos.second);
 
 		Octree::GameObjectOctree.update(npc->GetID(), npc->GetPosition());
