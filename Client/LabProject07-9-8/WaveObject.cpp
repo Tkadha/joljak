@@ -28,7 +28,7 @@ CWavesObject::CWavesObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 {
     // 1. Waves 시뮬레이션 객체를 생성합니다.
     // 인자: (행, 열, 그리드 간격, 시간 간격, 속도, 감쇠)
-    m_pWaves = std::make_unique<Waves>(400, 400, 3.8f, 0.03f, 3.25f, 0.4f);
+    m_pWaves = std::make_unique<Waves>(400, 400, 3.8f, 0.03f, 5.0f, 0.2f);
 
     // 2. 물결 메시를 그릴 인덱스 데이터를 생성합니다.
     // 이 데이터는 한번 생성되면 변하지 않습니다.
@@ -99,7 +99,7 @@ void CWavesObject::Animate(float fTimeElapsed)
             t_base += 0.25f;
             int i = 5 + rand() % (m_pWaves->RowCount() - 10);
             int j = 5 + rand() % (m_pWaves->ColumnCount() - 10);
-            float r = MathHelper::RandF(1.0f, 2.0f);
+            float r = MathHelper::RandF(0.5f, 1.0f);
             m_pWaves->Disturb(i, j, r);
         }
         m_pWaves->Update(fTimeElapsed);
