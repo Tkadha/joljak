@@ -339,8 +339,8 @@ void CGameObject::SetShader(int nMaterial, CShader *pShader)
 void CGameObject::SetMaterial(int nIndex, CMaterial *pMaterial)
 {
 	wchar_t buffer[128];
-	swprintf_s(buffer, L"SetMaterial: Index=%d, pMaterial=%p\n", nIndex, (void*)pMaterial);
-	OutputDebugStringW(buffer);
+	/*swprintf_s(buffer, L"SetMaterial: Index=%d, pMaterial=%p\n", nIndex, (void*)pMaterial);
+	OutputDebugStringW(buffer);*/
 
 	if (m_ppMaterials && (nIndex < m_nMaterials))
 	{
@@ -349,7 +349,7 @@ void CGameObject::SetMaterial(int nIndex, CMaterial *pMaterial)
 		if (m_ppMaterials[nIndex]) m_ppMaterials[nIndex]->AddRef(); 
 	}
 	else {
-		OutputDebugStringW(L"  --> SetMaterial FAILED: Invalid index or m_ppMaterials is null.\n");
+		//OutputDebugStringW(L"  --> SetMaterial FAILED: Invalid index or m_ppMaterials is null.\n");
 	}
 }
 
@@ -520,7 +520,7 @@ void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12Graphic
 		ID3D12Resource* pVertexUploadBuffer = nullptr;
 		m_pOBBVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, corners, sizeof(XMFLOAT3) * 8, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &pVertexUploadBuffer);
 		if (!m_pOBBVertexBuffer) {
-			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Vertex Buffer! !!!!!!!!\n");
+			//OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Vertex Buffer! !!!!!!!!\n");
 				
 		}
 		else {
@@ -537,7 +537,7 @@ void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12Graphic
 		ID3D12Resource* pIndexUploadBuffer = nullptr; 
 		m_pOBBIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, indices, sizeof(UINT) * 24, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &pIndexUploadBuffer);
 		if (!m_pOBBIndexBuffer) {
-			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Index Buffer! !!!!!!!!\n");
+			//OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Index Buffer! !!!!!!!!\n");
 		}
 		else {
 			m_OBBIndexBufferView.BufferLocation = m_pOBBIndexBuffer->GetGPUVirtualAddress();
@@ -549,14 +549,14 @@ void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12Graphic
 		UINT ncbElementBytes = (((sizeof(XMFLOAT4X4)) + 255) & ~255);
 		m_pd3dcbOBBTransform = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 		if (!m_pd3dcbOBBTransform) {
-			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Transform CBV! !!!!!!!!\n");
+			//OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Transform CBV! !!!!!!!!\n");
 			m_pcbMappedOBBTransform = nullptr; 
 		}
 		else {
 				
 			HRESULT hr = m_pd3dcbOBBTransform->Map(0, NULL, (void**)&m_pcbMappedOBBTransform);
 			if (FAILED(hr) || !m_pcbMappedOBBTransform) {
-				OutputDebugString(L"!!!!!!!! ERROR: Failed to map OBB Transform CBV! !!!!!!!!\n");
+				//OutputDebugString(L"!!!!!!!! ERROR: Failed to map OBB Transform CBV! !!!!!!!!\n");
 				m_pcbMappedOBBTransform = nullptr;
 					
 			}
@@ -748,10 +748,10 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 						}
 						else {
 							
-							OutputDebugStringW(L"!!! Render: Skinned - Failed to get valid Bone Transform buffer (b8) via m_pSharedAnimController!\n");
-							wchar_t dbgMsg[128];
-							swprintf_s(dbgMsg, L"    m_pSharedAnimController = %p\n", (void*)m_pSharedAnimController); 
-							OutputDebugStringW(dbgMsg);
+							//OutputDebugStringW(L"!!! Render: Skinned - Failed to get valid Bone Transform buffer (b8) via m_pSharedAnimController!\n");
+							//wchar_t dbgMsg[128];
+							//swprintf_s(dbgMsg, L"    m_pSharedAnimController = %p\n", (void*)m_pSharedAnimController); 
+							//OutputDebugStringW(dbgMsg);
 							
 						}
 					}
@@ -1046,9 +1046,9 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 
 	m_nMaterials = ReadIntegerFromFile(pInFile);
 
-	wchar_t buffer[128];
-	swprintf_s(buffer, L"LoadMaterialsFromFile: Expecting %d materials.\n", m_nMaterials);
-	OutputDebugStringW(buffer);
+	//wchar_t buffer[128];
+	//swprintf_s(buffer, L"LoadMaterialsFromFile: Expecting %d materials.\n", m_nMaterials);
+	//OutputDebugStringW(buffer);
 
 	if (m_nMaterials <= 0) return; 
 
@@ -1061,18 +1061,18 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 	for (; ; )
 	{
 		::ReadStringFromFile(pInFile, pstrToken);
-			OutputDebugStringA("LoadMaterialsFromFile: Read Token: ");
+		/*	OutputDebugStringA("LoadMaterialsFromFile: Read Token: ");
 		OutputDebugStringA(pstrToken);
-		OutputDebugStringA("\n");
+		OutputDebugStringA("\n");*/
 
 
 		if (!strcmp(pstrToken, "<Material>:"))
 		{
 			nMaterial = ReadIntegerFromFile(pInFile);
-			OutputDebugStringW((L"  Processing <Material> index: " + std::to_wstring(nMaterial) + L"\n").c_str());
+			//OutputDebugStringW((L"  Processing <Material> index: " + std::to_wstring(nMaterial) + L"\n").c_str());
 
 			pMaterial = new CMaterial(7, pGameFramework); // Assume 7 textures for now
-			OutputDebugStringW((L"    new CMaterial result: " + std::wstring(pMaterial ? L"Success" : L"FAILED!") + L"\n").c_str());
+			//OutputDebugStringW((L"    new CMaterial result: " + std::wstring(pMaterial ? L"Success" : L"FAILED!") + L"\n").c_str());
 
 			if (!pMaterial) continue; 
 
@@ -1099,7 +1099,7 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 				pMaterial->SetShader(pMatShader);
 			}
 			else {
-				OutputDebugStringA(("Error: Could not get shader '" + shaderName + "' from ShaderManager! Assigning default Standard shader.\n").c_str());
+				//OutputDebugStringA(("Error: Could not get shader '" + shaderName + "' from ShaderManager! Assigning default Standard shader.\n").c_str());
 				
 				pMatShader = pShaderManager->GetShader("Standard");
 				if (pMatShader) {
@@ -1109,7 +1109,7 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 			
 
 			SetMaterial(nMaterial, pMaterial); 
-			OutputDebugStringW((L"    SetMaterial called for index: " + std::to_wstring(nMaterial) + L"\n").c_str());
+			//OutputDebugStringW((L"    SetMaterial called for index: " + std::to_wstring(nMaterial) + L"\n").c_str());
 		}
 		else if (!strcmp(pstrToken, "<AlbedoColor>:"))
 		{
@@ -1173,16 +1173,16 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		}
 		else if (!strcmp(pstrToken, "</Materials>"))
 		{
-			OutputDebugStringW(L"LoadMaterialsFromFile: Found </Materials>, exiting loop.\n");
+			//OutputDebugStringW(L"LoadMaterialsFromFile: Found </Materials>, exiting loop.\n");
 			break;
 		}
 	}
 
 	
-	for (int i = 0; i < m_nMaterials; ++i) {
-		swprintf_s(buffer, L"LoadMaterialsFromFile: Final check - Material[%d] pointer: %p\n", i, (void*)m_ppMaterials[i]);
-		OutputDebugStringW(buffer);
-	}
+	//for (int i = 0; i < m_nMaterials; ++i) {
+	//	//swprintf_s(buffer, L"LoadMaterialsFromFile: Final check - Material[%d] pointer: %p\n", i, (void*)m_ppMaterials[i]);
+	//	//OutputDebugStringW(buffer);
+	//}
 }
 
 CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CGameObject *pParent, FILE *pInFile, int *pnSkinnedMeshes, CGameFramework* pGameFramework)
@@ -1281,8 +1281,8 @@ void CGameObject::PrintFrameInfo(CGameObject *pGameObject, CGameObject *pParent)
 {
 	TCHAR pstrDebug[256] = { 0 };
 
-	_stprintf_s(pstrDebug, 256, _T("(Frame: %p) (Parent: %p)\n"), pGameObject, pParent);
-	OutputDebugString(pstrDebug);
+	//_stprintf_s(pstrDebug, 256, _T("(Frame: %p) (Parent: %p)\n"), pGameObject, pParent);
+	//OutputDebugString(pstrDebug);
 	
 	ofstream fout("Player.txt", ios::app);
 	
@@ -1563,6 +1563,63 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
      if (m_pSibling) m_pSibling->PropagateAnimController(controller);    
  }
 
+ void CGameObject::CopyDataFrom(CGameObject* pSource)
+ {
+	 // 메쉬와 머티리얼 포인터 공유
+	 this->SetMesh(pSource->m_pMesh);
+
+	 if (this->m_ppMaterials) delete[] this->m_ppMaterials;
+	 this->m_nMaterials = pSource->m_nMaterials;
+	 this->m_ppMaterials = nullptr;
+	 if (this->m_nMaterials > 0) {
+		 this->m_ppMaterials = new CMaterial * [this->m_nMaterials];
+		 for (int i = 0; i < this->m_nMaterials; i++) this->m_ppMaterials[i] = nullptr;
+	 }
+
+	 for (int i = 0; i < pSource->m_nMaterials; i++) {
+		 this->SetMaterial(i, pSource->m_ppMaterials[i]);
+	 }
+
+	 strcpy_s(this->m_pstrFrameName, 64, pSource->m_pstrFrameName);
+	 this->m_objectType = pSource->m_objectType;
+	 this->m_pGameFramework = pSource->m_pGameFramework;
+	 this->m_localOBB = pSource->m_localOBB; 
+
+	 this->hp = pSource->hp;
+	 this->atk = pSource->atk;
+	 this->level = pSource->level;
+	 this->isRender = pSource->isRender;
+	 this->_invincible = pSource->_invincible;
+
+	 // 자식 계층 구조를 재귀적으로 복제
+	 if (pSource->m_pChild) {
+		 CGameObject* pClonedChild = pSource->m_pChild->Clone();
+		 this->SetChild(pClonedChild, true);
+
+		 // 첫째 자식의 형제들도 모두 복제
+		 CGameObject* pCurrentSourceSibling = pSource->m_pChild->m_pSibling;
+		 CGameObject* pLastClonedSibling = pClonedChild;
+		 while (pCurrentSourceSibling) {
+			 CGameObject* pClonedSibling = pCurrentSourceSibling->Clone();
+			 pClonedSibling->m_pParent = this;
+			 pLastClonedSibling->m_pSibling = pClonedSibling;
+
+			 pLastClonedSibling = pClonedSibling;
+			 pCurrentSourceSibling = pCurrentSourceSibling->m_pSibling;
+		 }
+	 }
+ }
+
+ CGameObject* CGameObject::Clone()
+ {
+	 // 이 기본 구현은 CGameObject 타입의 인스턴스를 만듭니다.
+	 // 파생 클래스는 이 함수를 반드시 재정의해야 합니다.
+	 CGameObject* pNewInstance = new CGameObject(this->m_pGameFramework);
+	 pNewInstance->CopyDataFrom(this);
+	 return pNewInstance;
+ }
+
+
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1608,7 +1665,7 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainMaterial->SetShader(pTerrainShader); 
 	}
 	else {
-		OutputDebugString(L"Error: Failed to get Terrain shader. Material will not have a shader.\n");
+		//OutputDebugString(L"Error: Failed to get Terrain shader. Material will not have a shader.\n");
 	}
 
 	SetMaterial(0, pTerrainMaterial);
@@ -1652,9 +1709,6 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 		if (textureTableHandle.ptr != 0) {
 			
 			pd3dCommandList->SetGraphicsRootDescriptorTable(2, textureTableHandle);
-		}
-		else {
-			OutputDebugString(L"Warning: Terrain material has null texture handle for binding.\n");
 		}
 
 		
@@ -1707,10 +1761,6 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	if (pSkyBoxTexture) {
 		pSkyBoxMaterial->AssignTexture(0, pSkyBoxTexture, pd3dDevice); 
 	}
-	else {
-		
-		OutputDebugString(L"Error: Failed to load SkyBox texture using ResourceManager.\n");
-	}
 
 	
 	CShader* pSkyBoxShader = pShaderManager->GetShader("Skybox");
@@ -1752,9 +1802,6 @@ void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 		if (textureTableHandle.ptr != 0) {
 			
 			pd3dCommandList->SetGraphicsRootDescriptorTable(1, textureTableHandle);
-		}
-		else {
-			OutputDebugString(L"Warning: Skybox material has null texture handle for binding.\n");
 		}
 
 		
@@ -2014,9 +2061,6 @@ CBranchObject::CBranchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 			SetMaterial(0, pBranchModel->m_pModelRootObject->m_ppMaterials[0]); 
 		delete pBranchModel;
 	}
-	else {
-		OutputDebugStringA("Error: Failed to load Branch.bin model.\n");
-	}
 	SetScale(5.0f, 5.0f, 5.0f);
 }
 
@@ -2134,9 +2178,6 @@ CRockDropObject::CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		if (pBranchModel->m_pModelRootObject->m_nMaterials > 0 && pBranchModel->m_pModelRootObject->m_ppMaterials[0])
 			SetMaterial(0, pBranchModel->m_pModelRootObject->m_ppMaterials[0]);
 		delete pBranchModel;
-	}
-	else {
-		OutputDebugStringA("Error: Failed to load Branch.bin model.\n");
 	}
 	SetScale(50.0f, 50.0f, 50.0f);
 }
@@ -2326,7 +2367,6 @@ CRockShardEffect::CRockShardEffect(ID3D12Device* device, ID3D12GraphicsCommandLi
 	FILE* pInFile = nullptr;
 	::fopen_s(&pInFile, "Model/Branch_A.bin", "rb");
 	if (!pInFile) {
-		OutputDebugStringA("[❌] RockCluster_A_LOD0.bin 파일 열기 실패!\n");
 		return;
 	}
 	::rewind(pInFile);

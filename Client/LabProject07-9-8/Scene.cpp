@@ -126,7 +126,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	BuildDefaultLightsAndMaterials();
 
 	if (!pResourceManager) {
-		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
+		//OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
 		return;
 	}
 
@@ -207,7 +207,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 	if (!pResourceManager) {
 		
-		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
+		//OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
 		return;
 	}
 
@@ -811,7 +811,7 @@ void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 	if (m_pcbMappedLights && m_pLights) {
 		assert(m_nLights >= 0 && m_nLights <= MAX_LIGHTS && "Invalid number of lights!");
 		if (m_nLights < 0 || m_nLights > MAX_LIGHTS) {
-			OutputDebugStringA("!!!!!!!! ERROR: Invalid m_nLights value detected! Clamping to 0. !!!!!!!!\n");
+			//OutputDebugStringA("!!!!!!!! ERROR: Invalid m_nLights value detected! Clamping to 0. !!!!!!!!\n");
 			m_nLights = 0; 
 		}
 		::memcpy(m_pcbMappedLights->m_pLights, m_pLights, sizeof(LIGHT) * m_nLights);

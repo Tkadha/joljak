@@ -115,7 +115,7 @@ void CCamera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 	// --- ë¦¬ì†Œ???ì„± ?•ì¸ ---
 	if (!m_pd3dcbCamera) {
-		OutputDebugString(L"!!!!!!!! ERROR: Failed to create Camera Constant Buffer! !!!!!!!!\n");
+		//OutputDebugString(L"!!!!!!!! ERROR: Failed to create Camera Constant Buffer! !!!!!!!!\n");
 		// ?¤íŒ¨ ??m_pcbMappedCamera???¹ì—°??nullptr ?íƒœ ? ì?
 		return;
 	}
@@ -125,7 +125,7 @@ void CCamera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 	// --- ë§µí•‘ ?•ì¸ ---
 	if (FAILED(hResult) || !m_pcbMappedCamera) {
-		OutputDebugString(L"!!!!!!!! ERROR: Failed to map Camera Constant Buffer! !!!!!!!!\n");
+		//OutputDebugString(L"!!!!!!!! ERROR: Failed to map Camera Constant Buffer! !!!!!!!!\n");
 		m_pcbMappedCamera = nullptr; // ?ˆì „?˜ê²Œ nullptr ì²˜ë¦¬
 		// ?„ìš”??m_pd3dcbCamera??Release ì²˜ë¦¬ ê³ ë ¤
 	}
@@ -137,7 +137,7 @@ void CCamera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	// --- ì¤‘ìš”: ë§µí•‘???¬ì¸??? íš¨??ê²€??---
 	if (!m_pcbMappedCamera || !m_pd3dcbCamera) {
-		OutputDebugString(L"!!!!!!!! ERROR: Camera Constant Buffer or Mapped Pointer is NULL in UpdateShaderVariables! !!!!!!!!\n");
+		//OutputDebugString(L"!!!!!!!! ERROR: Camera Constant Buffer or Mapped Pointer is NULL in UpdateShaderVariables! !!!!!!!!\n");
 		return; // ?…ë°?´íŠ¸ ë°?ë°”ì¸??ë¶ˆê?
 	}
 
