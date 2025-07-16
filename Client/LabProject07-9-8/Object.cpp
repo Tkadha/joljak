@@ -1591,12 +1591,11 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
 	 this->isRender = pSource->isRender;
 	 this->_invincible = pSource->_invincible;
 
-	 // 자식 계층 구조를 재귀적으로 복제
+	 // 자식 계층 구조 복제
 	 if (pSource->m_pChild) {
 		 CGameObject* pClonedChild = pSource->m_pChild->Clone();
 		 this->SetChild(pClonedChild, true);
 
-		 // 첫째 자식의 형제들도 모두 복제
 		 CGameObject* pCurrentSourceSibling = pSource->m_pChild->m_pSibling;
 		 CGameObject* pLastClonedSibling = pClonedChild;
 		 while (pCurrentSourceSibling) {
@@ -1612,8 +1611,6 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
 
  CGameObject* CGameObject::Clone()
  {
-	 // 이 기본 구현은 CGameObject 타입의 인스턴스를 만듭니다.
-	 // 파생 클래스는 이 함수를 반드시 재정의해야 합니다.
 	 CGameObject* pNewInstance = new CGameObject(this->m_pGameFramework);
 	 pNewInstance->CopyDataFrom(this);
 	 return pNewInstance;

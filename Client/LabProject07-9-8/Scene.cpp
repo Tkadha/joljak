@@ -274,7 +274,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 
 	float spawnMin = 500, spawnMax = 9500;
-	float objectMinSize = 15, objectMaxSize = 20;
+	float objectMinSize = 5, objectMaxSize = 30;
 
 	int nTreeObjects = 100;
 
@@ -284,8 +284,6 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	std::shared_ptr<CGameObject> pinePrefab = pResourceManager->GetPrefab("PineTree");
 
 	for (int i = 0; i < nTreeObjects; ++i) {
-
-		//CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		CGameObject* gameObj = pinePrefab->Clone();
 		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
@@ -297,8 +295,14 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
 	}
-	/*for (int i = 0; i < nTreeObjects; ++i) {
-		CGameObject* gameObj = new CBirchObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+
+
+	auto pBirchPrefab = std::make_shared<CBirchObject>(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	pResourceManager->RegisterPrefab("BirchTree", pBirchPrefab);
+
+	std::shared_ptr<CGameObject> BirchPrefab = pResourceManager->GetPrefab("BirchTree");
+	for (int i = 0; i < nTreeObjects; ++i) {
+		CGameObject* gameObj = BirchPrefab->Clone();
 		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
@@ -309,13 +313,13 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		UINT albedoTextureSlot = 0;
 		const wchar_t* textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
 
-		ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+		//ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
 
 		m_vGameObjects.emplace_back(gameObj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
 	}
-	for (int i = 0; i < nTreeObjects; ++i) {
+	/*for (int i = 0; i < nTreeObjects; ++i) {
 		CGameObject* gameObj = new CWillowObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
