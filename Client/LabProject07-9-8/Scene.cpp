@@ -277,8 +277,16 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	float objectMinSize = 15, objectMaxSize = 20;
 
 	int nTreeObjects = 100;
+
+	auto pPinePrefab = std::make_shared<CPineObject>(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	pResourceManager->RegisterPrefab("PineTree", pPinePrefab);
+
+	std::shared_ptr<CGameObject> pinePrefab = pResourceManager->GetPrefab("PineTree");
+
 	for (int i = 0; i < nTreeObjects; ++i) {
-		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+
+		//CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		CGameObject* gameObj = pinePrefab->Clone();
 		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
@@ -289,7 +297,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
 	}
-	for (int i = 0; i < nTreeObjects; ++i) {
+	/*for (int i = 0; i < nTreeObjects; ++i) {
 		CGameObject* gameObj = new CBirchObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
@@ -315,18 +323,10 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		gameObj->SetScale(w, h, w);
 		gameObj->m_treecount = tree_obj_count;
 
-		////XMFLOAT3 position = gameObj->GetPosition();
-		//XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		////position.y += 50.0f;
-		//XMFLOAT3 size = XMFLOAT3(1.0f, 10.0f, 1.0f);
-		//XMFLOAT4 rotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-		//gameObj->SetOBB(position, size, rotation);
-		//gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
-
 		m_vGameObjects.emplace_back(gameObj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
-	}
+	}*/
 
 
 	int nRockObjects = 100;	objectMinSize = 10, objectMaxSize = 15;

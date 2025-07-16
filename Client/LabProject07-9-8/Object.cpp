@@ -2025,6 +2025,20 @@ CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	if (pInFile) fclose(pInFile);
 }
 
+CPineObject::CPineObject(CGameFramework* pGameFramework)
+	: CTreeObject()
+{
+}
+
+CGameObject* CPineObject::Clone()
+{
+	CPineObject* pNewInstance = new CPineObject(m_pGameFramework);
+
+	pNewInstance->CopyDataFrom(this);
+
+	return pNewInstance;
+}
+
 CBirchObject::CBirchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;

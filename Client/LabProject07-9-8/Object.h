@@ -472,8 +472,8 @@ public:
 	CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CPineObject() {}
 
-	//CPineObject(CGameFramework* pGameFramework);
-	//virtual CGameObject* Clone();
+	CPineObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
 class CBranchObject : public CItemObject {
