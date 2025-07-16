@@ -46,6 +46,20 @@ vector<shared_ptr<thread>> worker_threads;
 shared_ptr<thread> g_event_thread;
 Timer g_timer;
 
+std::atomic<bool> g_is_shutting_down{ false };
+
+BOOL WINAPI ConsoleHandler(DWORD dwCtrlType) {
+	if (dwCtrlType == CTRL_C_EVENT) {
+		std::cout << "\nINFO: Ctrl+C 신호 감지. 서버 종료 절차를 시작합니다..." << std::endl;
+		// 전역 플래그를 true로 설정하여 모든 루프를 중단시킴
+		g_is_shutting_down = true;
+
+		// 핸들러가 신호를 처리했음을 알림 (true를 반환해야 정상 종료 로직이 실행됨)
+		return TRUE;
+	}
+	return FALSE;
+}
+
 void ProcessClientLeave(shared_ptr<PlayerClient> remoteClient)
 {
 	// 에러 혹은 소켓 종료이다.
@@ -75,7 +89,7 @@ void BuildObject();
 void worker_thread()
 {
 	try {
-		while (1)
+		while (!g_is_shutting_down)
 		{
 			// I/O 완료 이벤트가 있을 때까지 기다립니다.
 			IocpEvents readEvents;
@@ -86,6 +100,11 @@ void worker_thread()
 			{
 				auto& readEvent = readEvents.m_events[i];
 				auto p_read_over = (OVER_EXP*)readEvent.lpOverlapped;
+
+				if (readEvent.lpCompletionKey == 0 && p_read_over == nullptr) {
+					// 스레드 종료
+					return;
+				}
 
 				if (COMP_TYPE::OP_SEND == p_read_over->comp_type) {
 
@@ -130,12 +149,16 @@ void worker_thread()
 
 							// 패킷 재조립
 							int remain_data = recv_buf_length + remoteClient->tcpConnection.m_prev_remain;
-							int packet_size = recv_buf[0];
-							while (remain_data > 0 && packet_size <= remain_data) {
+							while (remain_data > 0) {
+								int packet_size = recv_buf[0];
+								if (packet_size > remain_data) break;
+								if (packet_size < 1) {
+									remain_data = 0;
+									break;
+								}
 								ProcessPacket(remoteClient, recv_buf);
 								recv_buf += packet_size;
 								remain_data -= packet_size;
-								packet_size = recv_buf[0];
 							}
 							remoteClient->tcpConnection.m_prev_remain = remain_data;
 							if (remain_data > 0)
@@ -289,7 +312,7 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 
 void event_thread()
 {
-	while (true)
+	while (!g_is_shutting_down)
 	{
 		if (!EVENT::event_queue.empty()) {
 			EVENT ev;
@@ -438,6 +461,11 @@ void event_thread()
 int main(int argc, char* argv[])
 {
 	SetConsoleTitle(L"GameServer");
+	if (!SetConsoleCtrlHandler(ConsoleHandler, TRUE)) {
+		std::cerr << "오류: 콘솔 제어 핸들러를 등록할 수 없습니다." << std::endl;
+		return 1;
+	}
+
 	try
 	{
 		g_l_socket = make_shared<Socket>(SocketType::Tcp);
@@ -465,7 +493,7 @@ int main(int argc, char* argv[])
 		g_event_thread = make_shared<thread>(event_thread);
 
 		g_timer.Start();
-		while (true) {
+		while (!g_is_shutting_down) {
 			g_timer.Tick(120.f);
 			float deltaTime = g_timer.GetTimeElapsed(); // Use Tick same deltaTime
 
@@ -518,13 +546,13 @@ int main(int argc, char* argv[])
 				}
 			}
 		}
-
-		for (auto& th : worker_threads) th->join();
-		g_event_thread->join();
 	}
 	catch (Exception& e)
 	{
 		cout << "Exception! " << e.what() << endl;
+		if (!g_is_shutting_down) {
+			g_is_shutting_down = true; // 플래그 설정 후 정리
+		}
 
 	}
 	CloseServer();
@@ -848,51 +876,38 @@ void BuildObject()
 }
 void CloseServer()
 {
-	lock_guard<recursive_mutex> lock_accept(mx_accept);
-	// i/o 완료 체크
-	g_l_socket->Close();
+	cout << "서버의 모든 리소스를 정리하고 종료합니다." << endl;
 
-
-	for (auto i : PlayerClient::PlayerClients)
-	{
-		i.second->tcpConnection.Close();
+	cout << "Waking up all worker threads..." << endl;
+	for (int i = 0; i < iocpcount; ++i) {
+		PostQueuedCompletionStatus(iocp.m_hIocp, 0, 0, NULL);
 	}
 
-
-	// 서버를 종료하기 위한 정리중
-	cout << "서버를 종료하고 있습니다...\n";
-	while (PlayerClient::PlayerClients.size() > 0)
-	{
-		// I/O completion이 없는 상태의 RemoteClient를 제거한다.
-		for (auto i = PlayerClient::PlayerClients.begin(); i != PlayerClient::PlayerClients.end(); ++i)
-		{
-			if (!i->second->tcpConnection.m_isReadOverlapped) {
-				PlayerClient::PlayerClients.erase(i);
-			}
-		}
-
-		// I/O completion이 발생하면 더 이상 Overlapped I/O를 걸지 말고 정리해야함을 나타낸다.
-		IocpEvents readEvents;
-		iocp.Wait(readEvents, 100);
-
-		// 받은 이벤트 각각을 처리합니다.
-		for (int i = 0; i < readEvents.m_eventCount; i++)
-		{
-			auto& readEvent = readEvents.m_events[i];
-			if (readEvent.lpCompletionKey == 0) // 리슨소켓이면
-			{
-				g_l_socket->m_isReadOverlapped = false;
-			}
-			else
-			{
-				shared_ptr<PlayerClient> remoteClient = PlayerClient::PlayerClients[(PlayerClient*)readEvent.lpCompletionKey];
-				if (remoteClient)
-				{
-					remoteClient->tcpConnection.m_isReadOverlapped = false;
-				}
-			}
+	cout << "Waiting for worker threads to join..." << endl;
+	for (auto& th : worker_threads) {
+		if (th->joinable()) {
+			th->join();
 		}
 	}
+	cout << "All worker threads have been joined." << endl;
 
-	cout << "서버 끝.\n";
+	cout << "Waiting for event thread to join..." << endl;
+	if (g_event_thread->joinable()) {
+		g_event_thread->join();
+	}
+	cout << "Event thread has been joined." << endl;
+
+	cout << "Closing all sockets and clearing resources..." << endl;
+	if (g_l_socket) {
+		g_l_socket->Close();
+	}
+	for (auto& client_pair : PlayerClient::PlayerClients)
+	{
+		if (client_pair.second) {
+			client_pair.second->tcpConnection.Close();
+		}
+	}
+	PlayerClient::PlayerClients.clear(); // 클라이언트 목록 비우기
+
+	cout << "서버가 성공적으로 종료되었습니다." << endl;
 }

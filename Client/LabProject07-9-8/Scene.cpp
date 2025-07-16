@@ -152,8 +152,8 @@ void CScene::ServerBuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 	// 1. Waves 객체를 생성합니다.
 	m_pWavesObject = new CWavesObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 	// 물결이 보일 위치를 설정합니다. (맵의 중앙 근처, 수면 높이)
-	m_pWavesObject->SetPosition(5000.0f, 2600.0f, 5000.0f);
-
+	m_pWavesObject->SetPosition(5000.0f, 2170.0f, 5000.0f);
+	m_pWavesObject->SetScale(10.f, 1.f, 10.f);
 	// 2. Waves를 위한 재질(Material)을 생성합니다.
 	CMaterial* pWavesMaterial = new CMaterial(1, m_pGameFramework);
 
@@ -171,7 +171,7 @@ void CScene::ServerBuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 
 
 	// 1. 그림자 맵 객체 생성
-	m_pShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 4096, 4096);
+	m_pShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 4096 * 2, 4096 * 2);
 
 	// 2. SRV 핸들 할당: Framework의 AllocateSrvDescriptors 함수를 사용합니다.
 	D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandle;
@@ -305,7 +305,7 @@ void CScene::ServerBuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 	//}
 
 
-	int nRockObjects = 30;	objectMinSize = 30, objectMaxSize = 50;
+	int nRockObjects = 1;	objectMinSize = 30, objectMaxSize = 50;
 	spawnMin = 1700, spawnMax = 9000;
 	for (int i = 0; i < nRockObjects; ++i) {
 		CGameObject* gameObj = new CCliffFObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
@@ -354,7 +354,7 @@ void CScene::ServerBuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 
 
 
-	int nBushObject = 100;
+	int nBushObject = 1;
 	objectMinSize = 10, objectMaxSize = 15;
 	for (int i = 0; i < nBushObject; ++i) {
 		CGameObject* gameObj = new CBushAObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
@@ -368,7 +368,7 @@ void CScene::ServerBuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
 	}
-	int nVegetationObject = 20;
+	int nVegetationObject = 1;
 	for (int i = 0; i < nVegetationObject; ++i) {
 		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/ChervilCluster.bin", m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
@@ -482,7 +482,7 @@ void CScene::ServerBuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 
 
 
-	int nCowObjects = 10;
+	int nCowObjects = 1;
 	int animate_count = 13;
 	for (int i = 0; i < nCowObjects; ++i)
 	{
@@ -509,7 +509,7 @@ void CScene::ServerBuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		octree.insert(std::move(t_obj));
 		if (pCowModel) delete pCowModel;
 	}
-	int nPigObjects = 10;
+	int nPigObjects = 1;
 	for (int i = 0; i < nPigObjects; ++i)
 	{
 		CLoadedModelInfo* pPigModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Pig.bin", m_pGameFramework);
@@ -536,7 +536,7 @@ void CScene::ServerBuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		if (pPigModel) delete pPigModel;
 	}
 
-	int nSpiderObjects = 10;
+	int nSpiderObjects = 1;
 	for (int i = 0; i < nSpiderObjects; ++i)
 	{
 		CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Spider.bin", m_pGameFramework);
@@ -562,7 +562,7 @@ void CScene::ServerBuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		octree.insert(std::move(t_obj));
 		if (pSpiderModel) delete pSpiderModel;
 	}
-	int nToadObjects = 10;
+	int nToadObjects = 1;
 	for (int i = 0; i < nToadObjects; ++i)
 	{
 		CLoadedModelInfo* pToadModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Toad.bin", m_pGameFramework);
@@ -588,7 +588,7 @@ void CScene::ServerBuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		octree.insert(std::move(t_obj));
 		if (pToadModel) delete pToadModel;
 	}
-	int nWolfObjects = 10;
+	int nWolfObjects = 1;
 	for (int i = 0; i < nWolfObjects; ++i)
 	{
 		CLoadedModelInfo* pWolfModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Wolf.bin", m_pGameFramework);
@@ -615,7 +615,7 @@ void CScene::ServerBuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		if (pWolfModel) delete pWolfModel;
 	}
 
-	const int rockShardPoolSize = 20;
+	const int rockShardPoolSize = 1;
 	for (int i = 0; i < rockShardPoolSize; ++i)
 	{
 		auto* shard = new CRockShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework);
@@ -742,7 +742,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 
 	// 1. 그림자 맵 객체 생성
-	m_pShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 4096, 4096);
+	m_pShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 4096 * 2, 4096 * 2);
 
 	// 2. SRV 핸들 할당: Framework의 AllocateSrvDescriptors 함수를 사용합니다.
 	D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandle;

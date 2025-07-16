@@ -114,9 +114,9 @@ void NetworkManager::Process_Packet(char* packet)
 	case E_PACKET::E_P_CHANGEPORT: {
 		CHANGEPORT_PACKET* recv_p = reinterpret_cast<CHANGEPORT_PACKET*>(packet);
 		//cout << "Changing server to " << recv_p->addr << ":" << recv_p->port << endl;
-		ReconnectToNewServer(recv_p->addr, recv_p->port);
-		if (recv_p->port = 9000) s_type = SERVER_TYPE::E_GAME;
-		else s_type = SERVER_TYPE::E_LOBBY;
+		//ReconnectToNewServer(recv_p->addr, recv_p->port);
+		//if (recv_p->port = 9000) s_type = SERVER_TYPE::E_GAME;
+		//else s_type = SERVER_TYPE::E_LOBBY;
 	}
 								 break;
 	case E_PACKET::E_DB_SUCCESS_FAIL: {

@@ -8,7 +8,7 @@
 #pragma comment (lib, "WS2_32.LIB")
 #include "../../Server/Global.h"
 
-#define BUFSIZE 1024 // 패킷(현재는 버퍼)크기
+#define BUFSIZE 1024 * 4 // 패킷(현재는 버퍼)크기
 
 
 using namespace std;
@@ -71,7 +71,6 @@ public:
 	}
 	void PushRecvQueue(char* packet, short size)
 	{
-		if (size <= 0)return;
 		auto buffer = make_unique<char[]>(size);
 		memcpy(buffer.get(), packet, size);
 		lock_guard<mutex> lock(r_mu);

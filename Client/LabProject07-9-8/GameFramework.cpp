@@ -1992,7 +1992,7 @@ void CGameFramework::FrameAdvance()
 		}
 	}
 
-	m_GameTimer.Tick(144.0f);
+	m_GameTimer.Tick(300.0f);
 
 	ProcessInput();
 	UpdateFurnace(m_GameTimer.GetTimeElapsed());
@@ -2002,7 +2002,6 @@ void CGameFramework::FrameAdvance()
 		m_pConstructionSystem->UpdatePreviewPosition(m_pCamera);
 	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
-
 
 	HRESULT hResult = m_pd3dCommandAllocator->Reset();
 	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
