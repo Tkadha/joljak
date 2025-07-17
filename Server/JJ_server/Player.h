@@ -56,6 +56,8 @@ public:
 	std::atomic_int Maxstamina = 150;
 	std::atomic<float> PlayerHunger = 100.0f;
 	std::atomic<float> PlayerThirst = 100.0f;
+
+	int stamina_counter = 0;
 public:
 	PlayerClient() : RemoteClient()
 	{

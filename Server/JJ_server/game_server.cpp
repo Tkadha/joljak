@@ -244,6 +244,15 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 	{
 		INPUT_PACKET* r_packet = reinterpret_cast<INPUT_PACKET*>(packet);
 		client->processInput(r_packet->inputData);
+		if (r_packet->inputData.Attack) {
+			client->Playerstamina -= 5;
+			CHANGE_STAT_PACKET s_packet;
+			s_packet.size = sizeof(CHANGE_STAT_PACKET);
+			s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+			s_packet.stat = E_STAT::STAMINA;
+			s_packet.value = client->Playerstamina.load();
+			client->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+		}
 		client->BroadCastInputPacket();
 	}
 	break;
@@ -513,11 +522,34 @@ int main(int argc, char* argv[])
 			for (auto& cl : PlayerClient::PlayerClients) {
 				if (cl.second->state != PC_INGAME) continue;
 				auto& beforepos = cl.second->GetPosition();
-				cl.second->Update_test(deltaTime);
+				if (cl.second->Playerstamina.load() > 0)
+					cl.second->Update_test(deltaTime);
 				auto& pos = cl.second->GetPosition();
 				if (beforepos.x != pos.x || beforepos.y != pos.y || beforepos.z != pos.z)
 				{
 					cl.second->BroadCastPosPacket();
+					int stamina = cl.second->Playerstamina.load();
+
+					if (stamina > 0) {
+						cl.second->stamina_counter++;
+						if (cl.second->stamina_counter > 10) {
+							int desiredstamina = stamina - 1;
+							if (desiredstamina < 0) {
+								desiredstamina = 0;
+							}
+
+							if (cl.second->Playerstamina.compare_exchange_weak(stamina, desiredstamina)) {
+								// 패킷전송
+								CHANGE_STAT_PACKET s_packet;
+								s_packet.size = sizeof(CHANGE_STAT_PACKET);
+								s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+								s_packet.stat = E_STAT::STAMINA;
+								s_packet.value = cl.second->Playerstamina.load();
+								cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+							}
+							cl.second->stamina_counter = 0;
+						}
+					}
 				}
 				Octree::PlayerOctree.update(cl.second->m_id, cl.second->GetPosition());
 
