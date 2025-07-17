@@ -7,7 +7,6 @@ class FSMManager
 	std::shared_ptr<entity_type> Owner;
 	std::shared_ptr<FSMState<entity_type>> Currentstate;
 	std::shared_ptr<FSMState<entity_type>> Globalstate;
-	
 public:
 	FSMManager(entity_type* owner) : Owner(owner), Currentstate(NULL), Globalstate(NULL) {}
 	virtual ~FSMManager() {}
@@ -15,8 +14,10 @@ public:
 	FSMManager(const FSMManager&) = delete;
 	FSMManager& operator=(const FSMManager&) = delete;
 
-	void SetCurrentState(std::shared_ptr<FSMState<entity_type>> s) { Currentstate = s; }
-	void SetGlobalState(std::shared_ptr<FSMState<entity_type>> s) { Globalstate = s; }
+	void SetCurrentState(std::shared_ptr<FSMState<entity_type>> s) { 
+		Currentstate = s; }
+	void SetGlobalState(std::shared_ptr<FSMState<entity_type>> s) { 
+		Globalstate = s; }
 
 	void Update()const
 	{
@@ -31,9 +32,14 @@ public:
 		Currentstate->Enter(Owner);
 	}
 
-	std::shared_ptr<FSMState<entity_type>> GetCurrentState()  const { return Currentstate; }
-	void SetInvincible() { Globalstate->SetInvincible(); }
-	bool GetInvincible() const { return Globalstate->GetInvincible(); }
-	void SetAtkDelay() { Globalstate->SetAtkDelay(); }
-	bool GetAtkDelay() const { return Globalstate->GetAtkDelay(); }
+	std::shared_ptr<FSMState<entity_type>> GetCurrentState()  const { 
+		return Currentstate; }
+	void SetInvincible() { 
+		Globalstate->SetInvincible(); }
+	bool GetInvincible() const { 
+		return Globalstate->GetInvincible(); }
+	void SetAtkDelay() { 
+		Globalstate->SetAtkDelay(); }
+	bool GetAtkDelay() const { 
+		return Globalstate->GetAtkDelay(); }
 };

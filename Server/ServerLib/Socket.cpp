@@ -16,12 +16,10 @@ using namespace std;
 
 std::string GetLastErrorAsString();
 
-// ������ �����ϴ� ������.
 Socket::Socket(SocketType socketType)
 {
 	g_socketInit.Touch();
 
-	// overlapped I/O�� ������ socket() ���� WSASocket�� ��� �մϴ�.
 	if(socketType==SocketType::Tcp)
 	{
 #ifdef _WIN32
@@ -44,7 +42,6 @@ Socket::Socket(SocketType socketType)
 #endif
 }
 
-// �ܺ� ���� �ڵ��� �޴� ������.
 Socket::Socket(SOCKET fd)
 {
 	g_socketInit.Touch();
@@ -55,7 +52,6 @@ Socket::Socket(SOCKET fd)
 #endif
 }
 
-// ������ ���������� �ʴ´�.
 Socket::Socket()
 {
 #ifdef _WIN32
@@ -84,7 +80,6 @@ void Socket::Bind(const Endpoint& endpoint)
 	}
 }
 
-// endpoint�� ����Ű�� �ּҷ��� ������ �մϴ�.
 void Socket::Connect(const Endpoint& endpoint)
 {
 	if (connect(m_fd, (sockaddr*)&endpoint.m_ipv4Endpoint, sizeof(endpoint.m_ipv4Endpoint)) < 0)
@@ -95,7 +90,6 @@ void Socket::Connect(const Endpoint& endpoint)
 	}
 }
 
-// �۽��� �մϴ�.
 int Socket::Send(const char* data, int length)
 {
 	return ::send(m_fd, data, length, 0);
@@ -121,9 +115,6 @@ void Socket::Listen()
 	listen(m_fd, SOMAXCONN);
 }
 
-// �����ϸ� 0, �����ϸ� �ٸ� ���� �����մϴ�.
-// errorText���� ���н� ���������� �ؽ�Ʈ��  ä�����ϴ�.
-// acceptedSocket���� accept�� ���� �ڵ��� ���ϴ�.
 int Socket::Accept(Socket& acceptedSocket, string& errorText)
 {
 	acceptedSocket.m_fd = accept(m_fd, NULL, 0);
@@ -138,16 +129,11 @@ int Socket::Accept(Socket& acceptedSocket, string& errorText)
 
 #ifdef _WIN32
 
-// �����ϸ� true, �����ϸ� false�� �����մϴ�.
-// errorText���� ���н� ���������� �ؽ�Ʈ��  ä�����ϴ�.
-// acceptCandidateSocket���� �̹� ������� ���� �ڵ��� ����, accept�� �ǰ� ���� �� ���� �ڵ��� TCP ���� ��ü�� �����մϴ�.
 bool Socket::AcceptOverlapped(Socket& acceptCandidateSocket, string& errorText)
 {
 	if (AcceptEx == NULL)
 	{
 		DWORD bytes;
-		// AcceptEx�� ��Ÿ �����Լ��� �޸� ���� ȣ���ϴ� ���� �ƴϰ�,
-		// �Լ� �����͸� ���� ������ ���� ȣ���� �� �ִ�. �װ��� ���⼭ �Ѵ�.
 		UUID uuid{ UUID(WSAID_ACCEPTEX) };
 		WSAIoctl(m_fd,
 			SIO_GET_EXTENSION_FUNCTION_POINTER,
@@ -166,7 +152,6 @@ bool Socket::AcceptOverlapped(Socket& acceptCandidateSocket, string& errorText)
 	}
 
 
-	// ���⿡�� accept�� ������ �����ּҿ� ����Ʈ�ּҰ� ä�����ϴٸ� �� �������� ���ڵ鿡�� �������� ������ ����Ƿ� �׳� �����ϴ�.
 	char ignored[200];
 	DWORD ignored2 = 0;
 
@@ -184,8 +169,6 @@ bool Socket::AcceptOverlapped(Socket& acceptCandidateSocket, string& errorText)
 }
 
 
-// AcceptEx�� I/O �ϷḦ �ϴ��� ���� TCP ���� �ޱ� ó���� �� ���� ���� �ƴϴ�.
-// �� �Լ��� ȣ�����־�߸� �Ϸᰡ �ȴ�.
 int Socket::UpdateAcceptContext(Socket& listenSocket)
 {
 	sockaddr_in ignore1;
@@ -228,10 +211,6 @@ Endpoint Socket::GetPeerAddr()
 	return ret;
 }
 
-// ���� ������ �մϴ�. 
-// ���ŷ �����̸� 1����Ʈ�� �����ϰų� ���� ������ ���ų� ���� ������ ������ ������ ��ٸ��ϴ�.
-// ����ŷ �����̸� ��ٷ��� �ϴ� ��� ��� �����ϰ� EWOULDBLOCK�� errno�� GetLastError���� ������ �˴ϴ�.
-// ���ϰ�: recv ���ϰ� �״���Դϴ�.
 int Socket::Receive()
 {
 	return (int)recv(m_fd, m_recv_over.send_buf, BUFSIZE, 0);
@@ -239,13 +218,9 @@ int Socket::Receive()
 
 #ifdef _WIN32
 
-// overlapeed ������ �̴ϴ�. �� ��׶���� ���� ó���� �մϴ�.
-// ���ŵǴ� �����ʹ� m_receiveBuffer�� �񵿱�� ä�����ϴ�.
-// ���ϰ�: WSARecv�� ���ϰ� �״���Դϴ�.
 int Socket::ReceiveOverlapped()
 {
 
-	// overlapped I/O�� ����Ǵ� ���� ���� ���� ä�����ϴ�.
 	m_readFlags = 0;
 	memset(&m_recv_over.over, 0, sizeof(m_recv_over.over));
 	m_recv_over.wsabuf.len = BUFSIZE - m_prev_remain;
@@ -256,7 +231,6 @@ int Socket::ReceiveOverlapped()
 
 #endif
 
-// �ͺ�� �������� ��带 �����մϴ�.
 void Socket::SetNonblocking()
 {
 	u_long val = 1;
@@ -273,8 +247,6 @@ void Socket::SetNonblocking()
 	}
 }
 
-//Returns the last Win32 error, in string format. Returns an empty string if there is no error.
-// ��ó: https://stackoverflow.com/questions/1387064/how-to-get-the-error-message-from-the-error-code-returned-by-getlasterror
 std::string GetLastErrorAsString()
 {
 #ifdef _WIN32

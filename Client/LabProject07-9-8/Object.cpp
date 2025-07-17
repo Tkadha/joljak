@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+ï»¿//-----------------------------------------------------------------------------
 // File: CGameObject.cpp
 //-----------------------------------------------------------------------------
 
@@ -71,13 +71,15 @@ CGameObject::~CGameObject()
 			if (m_ppMaterials[i]) m_ppMaterials[i]->Release();
 		}
 	}
-	if (m_ppMaterials) delete[] m_ppMaterials;
+	if (m_ppMaterials) {
+		delete[] m_ppMaterials;
+		m_ppMaterials = nullptr;
+	}
 
 	if (m_pSkinnedAnimationController) {
 		delete m_pSkinnedAnimationController;
 		m_pSkinnedAnimationController = nullptr;
 	}
-	//if (FSM_manager) delete FSM_manager;
 }
 
 void CGameObject::AddRef() 
@@ -123,6 +125,7 @@ void CGameObject::Check_attack()
 	case GameObjectType::Turtle:
 	case GameObjectType::Pig:
 	case GameObjectType::Snake:
+	case GameObjectType::Raptor:
 		if (m_anitype != 11) return;
 		break;
 	case GameObjectType::Snail:
@@ -159,7 +162,7 @@ void CGameObject::Check_attack()
 				p_info->DecreaseHp(obj->GetAtk());
 				p_info->SetInvincibility();
 
-				// ¹Ð·Á³ª±â
+				// ë°€ë ¤ë‚˜ê¸°
 				XMFLOAT3 monsterlook = obj->GetLook();
 				const float KnockBackDistance = 10.f;
 				XMFLOAT3 playerPos = p_info->GetPosition();
@@ -176,12 +179,22 @@ void CGameObject::Check_attack()
 				}
 
 				auto& nwManager = NetworkManager::GetInstance();
+				{
 				auto pos = p_info->GetPosition();
-				POSITION_PACKET p;
-				p.position.x = pos.x;
-				p.position.y = pos.y;
-				p.position.z = pos.z;
-				nwManager.PushSendQueue(p, p.size);
+					POSITION_PACKET p;
+					p.position.x = pos.x;
+					p.position.y = pos.y;
+					p.position.z = pos.z;
+					nwManager.PushSendQueue(p, p.size);
+				}
+				{
+					SET_HP_HIT_OBJ_PACKET p;
+					p.hit_obj_id = obj->m_id;
+					p.hp = p_info->getHp();
+					p.size = sizeof(SET_HP_HIT_OBJ_PACKET);
+					p.type = static_cast<char>(E_PACKET::E_P_SETHP);
+					nwManager.PushSendQueue(p, p.size);
+				}
 			}
 		}
 	}
@@ -200,6 +213,7 @@ void CGameObject::ChangeAnimation(ANIMATION_TYPE type)
 	case GameObjectType::Turtle:
 	case GameObjectType::Pig:
 	case GameObjectType::Snake:
+	case GameObjectType::Raptor:
 		switch (type)
 		{
 		case ANIMATION_TYPE::IDLE:
@@ -325,8 +339,8 @@ void CGameObject::SetShader(int nMaterial, CShader *pShader)
 void CGameObject::SetMaterial(int nIndex, CMaterial *pMaterial)
 {
 	wchar_t buffer[128];
-	swprintf_s(buffer, L"SetMaterial: Index=%d, pMaterial=%p\n", nIndex, (void*)pMaterial);
-	OutputDebugStringW(buffer);
+	/*swprintf_s(buffer, L"SetMaterial: Index=%d, pMaterial=%p\n", nIndex, (void*)pMaterial);
+	OutputDebugStringW(buffer);*/
 
 	if (m_ppMaterials && (nIndex < m_nMaterials))
 	{
@@ -335,7 +349,7 @@ void CGameObject::SetMaterial(int nIndex, CMaterial *pMaterial)
 		if (m_ppMaterials[nIndex]) m_ppMaterials[nIndex]->AddRef(); 
 	}
 	else {
-		OutputDebugStringW(L"  --> SetMaterial FAILED: Invalid index or m_ppMaterials is null.\n");
+		//OutputDebugStringW(L"  --> SetMaterial FAILED: Invalid index or m_ppMaterials is null.\n");
 	}
 }
 
@@ -378,9 +392,9 @@ void CGameObject::SetOBB(float scalex, float scaley, float scalez, const XMFLOAT
 			(minPos.z + maxPos.z) * 0.5f+centerOffset.z
 		);
 		m_localOBB.Extents = XMFLOAT3(
-			(maxPos.x - minPos.x) * 0.5f* scalex,
-			(maxPos.y - minPos.y) * 0.5f*scaley,
-			(maxPos.z - minPos.z) * 0.5f*scalez
+			(maxPos.x - minPos.x) * 0.5f * scalex,
+			(maxPos.y - minPos.y) * 0.5f * scaley,
+			(maxPos.z - minPos.z) * 0.5f * scalez
 		);
 		m_localOBB.Orientation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);  
 	}
@@ -421,6 +435,15 @@ void CGameObject::SetOBB(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	if (m_pSibling) m_pSibling->SetOBB();
 	if (m_pChild) m_pChild->SetOBB();
 	*/
+}
+
+BoundingOrientedBox CGameObject::GetOBB()
+{
+	if (m_pMesh) {
+		return m_localOBB;
+	}
+	if (m_pSibling) return m_pSibling->GetOBB();
+	if (m_pChild) return m_pChild->GetOBB();
 }
 
 void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)
@@ -497,7 +520,7 @@ void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12Graphic
 		ID3D12Resource* pVertexUploadBuffer = nullptr;
 		m_pOBBVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, corners, sizeof(XMFLOAT3) * 8, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &pVertexUploadBuffer);
 		if (!m_pOBBVertexBuffer) {
-			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Vertex Buffer! !!!!!!!!\n");
+			//OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Vertex Buffer! !!!!!!!!\n");
 				
 		}
 		else {
@@ -514,7 +537,7 @@ void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12Graphic
 		ID3D12Resource* pIndexUploadBuffer = nullptr; 
 		m_pOBBIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, indices, sizeof(UINT) * 24, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &pIndexUploadBuffer);
 		if (!m_pOBBIndexBuffer) {
-			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Index Buffer! !!!!!!!!\n");
+			//OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Index Buffer! !!!!!!!!\n");
 		}
 		else {
 			m_OBBIndexBufferView.BufferLocation = m_pOBBIndexBuffer->GetGPUVirtualAddress();
@@ -526,14 +549,14 @@ void CGameObject::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12Graphic
 		UINT ncbElementBytes = (((sizeof(XMFLOAT4X4)) + 255) & ~255);
 		m_pd3dcbOBBTransform = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 		if (!m_pd3dcbOBBTransform) {
-			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Transform CBV! !!!!!!!!\n");
+			//OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Transform CBV! !!!!!!!!\n");
 			m_pcbMappedOBBTransform = nullptr; 
 		}
 		else {
 				
 			HRESULT hr = m_pd3dcbOBBTransform->Map(0, NULL, (void**)&m_pcbMappedOBBTransform);
 			if (FAILED(hr) || !m_pcbMappedOBBTransform) {
-				OutputDebugString(L"!!!!!!!! ERROR: Failed to map OBB Transform CBV! !!!!!!!!\n");
+				//OutputDebugString(L"!!!!!!!! ERROR: Failed to map OBB Transform CBV! !!!!!!!!\n");
 				m_pcbMappedOBBTransform = nullptr;
 					
 			}
@@ -571,17 +594,21 @@ CGameObject *CGameObject::FindFrame(char *pstrFrameName)
 void CGameObject::UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent)
 {
 	m_xmf4x4World = (pxmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4ToParent, *pxmf4x4Parent) : m_xmf4x4ToParent;
+
 	
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+
 	
 	XMVECTOR localCenter = XMLoadFloat3(&m_localOBB.Center);
 	XMVECTOR worldCenter = XMVector3TransformCoord(localCenter, worldMatrix);
 	XMStoreFloat3(&m_worldOBB.Center, worldCenter);
+
 	
 	XMMATRIX rotationMatrix = worldMatrix;
 	rotationMatrix.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);  
 	XMVECTOR orientation = XMQuaternionRotationMatrix(rotationMatrix);
 	XMStoreFloat4(&m_worldOBB.Orientation, orientation);
+
 	
 	XMFLOAT3 scale;
 	scale.x = XMVectorGetX(XMVector3Length(worldMatrix.r[0]));
@@ -648,11 +675,11 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		}
 
 		//if (shaderType == "Standard") {
-		//	// Standard ¼ÎÀÌ´õÀÇ °æ¿ì, 4¹ø ½½·Ô¿¡ ±×¸²ÀÚ ¸Ê ¹ÙÀÎµù
+		//	// Standard ì…°ì´ë”ì˜ ê²½ìš°, 4ë²ˆ ìŠ¬ë¡¯ì— ê·¸ë¦¼ìž ë§µ ë°”ì¸ë”©
 		//	pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
 		//}
 		//else if (shaderType == "Skinned") {
-		//	// Skinned ¼ÎÀÌ´õÀÇ °æ¿ì, 6¹ø ½½·Ô¿¡ ±×¸²ÀÚ ¸Ê ¹ÙÀÎµù
+		//	// Skinned ì…°ì´ë”ì˜ ê²½ìš°, 6ë²ˆ ìŠ¬ë¡¯ì— ê·¸ë¦¼ìž ë§µ ë°”ì¸ë”©
 		//	pd3dCommandList->SetGraphicsRootDescriptorTable(6, pScene->GetShadowMapSrv());
 		//}
 
@@ -721,10 +748,10 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 						}
 						else {
 							
-							OutputDebugStringW(L"!!! Render: Skinned - Failed to get valid Bone Transform buffer (b8) via m_pSharedAnimController!\n");
-							wchar_t dbgMsg[128];
-							swprintf_s(dbgMsg, L"    m_pSharedAnimController = %p\n", (void*)m_pSharedAnimController); 
-							OutputDebugStringW(dbgMsg);
+							//OutputDebugStringW(L"!!! Render: Skinned - Failed to get valid Bone Transform buffer (b8) via m_pSharedAnimController!\n");
+							//wchar_t dbgMsg[128];
+							//swprintf_s(dbgMsg, L"    m_pSharedAnimController = %p\n", (void*)m_pSharedAnimController); 
+							//OutputDebugStringW(dbgMsg);
 							
 						}
 					}
@@ -1019,9 +1046,9 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 
 	m_nMaterials = ReadIntegerFromFile(pInFile);
 
-	wchar_t buffer[128];
-	swprintf_s(buffer, L"LoadMaterialsFromFile: Expecting %d materials.\n", m_nMaterials);
-	OutputDebugStringW(buffer);
+	//wchar_t buffer[128];
+	//swprintf_s(buffer, L"LoadMaterialsFromFile: Expecting %d materials.\n", m_nMaterials);
+	//OutputDebugStringW(buffer);
 
 	if (m_nMaterials <= 0) return; 
 
@@ -1034,18 +1061,18 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 	for (; ; )
 	{
 		::ReadStringFromFile(pInFile, pstrToken);
-			OutputDebugStringA("LoadMaterialsFromFile: Read Token: ");
+		/*	OutputDebugStringA("LoadMaterialsFromFile: Read Token: ");
 		OutputDebugStringA(pstrToken);
-		OutputDebugStringA("\n");
+		OutputDebugStringA("\n");*/
 
 
 		if (!strcmp(pstrToken, "<Material>:"))
 		{
 			nMaterial = ReadIntegerFromFile(pInFile);
-			OutputDebugStringW((L"  Processing <Material> index: " + std::to_wstring(nMaterial) + L"\n").c_str());
+			//OutputDebugStringW((L"  Processing <Material> index: " + std::to_wstring(nMaterial) + L"\n").c_str());
 
 			pMaterial = new CMaterial(7, pGameFramework); // Assume 7 textures for now
-			OutputDebugStringW((L"    new CMaterial result: " + std::wstring(pMaterial ? L"Success" : L"FAILED!") + L"\n").c_str());
+			//OutputDebugStringW((L"    new CMaterial result: " + std::wstring(pMaterial ? L"Success" : L"FAILED!") + L"\n").c_str());
 
 			if (!pMaterial) continue; 
 
@@ -1072,7 +1099,7 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 				pMaterial->SetShader(pMatShader);
 			}
 			else {
-				OutputDebugStringA(("Error: Could not get shader '" + shaderName + "' from ShaderManager! Assigning default Standard shader.\n").c_str());
+				//OutputDebugStringA(("Error: Could not get shader '" + shaderName + "' from ShaderManager! Assigning default Standard shader.\n").c_str());
 				
 				pMatShader = pShaderManager->GetShader("Standard");
 				if (pMatShader) {
@@ -1082,7 +1109,7 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 			
 
 			SetMaterial(nMaterial, pMaterial); 
-			OutputDebugStringW((L"    SetMaterial called for index: " + std::to_wstring(nMaterial) + L"\n").c_str());
+			//OutputDebugStringW((L"    SetMaterial called for index: " + std::to_wstring(nMaterial) + L"\n").c_str());
 		}
 		else if (!strcmp(pstrToken, "<AlbedoColor>:"))
 		{
@@ -1146,16 +1173,16 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		}
 		else if (!strcmp(pstrToken, "</Materials>"))
 		{
-			OutputDebugStringW(L"LoadMaterialsFromFile: Found </Materials>, exiting loop.\n");
+			//OutputDebugStringW(L"LoadMaterialsFromFile: Found </Materials>, exiting loop.\n");
 			break;
 		}
 	}
 
 	
-	for (int i = 0; i < m_nMaterials; ++i) {
-		swprintf_s(buffer, L"LoadMaterialsFromFile: Final check - Material[%d] pointer: %p\n", i, (void*)m_ppMaterials[i]);
-		OutputDebugStringW(buffer);
-	}
+	//for (int i = 0; i < m_nMaterials; ++i) {
+	//	//swprintf_s(buffer, L"LoadMaterialsFromFile: Final check - Material[%d] pointer: %p\n", i, (void*)m_ppMaterials[i]);
+	//	//OutputDebugStringW(buffer);
+	//}
 }
 
 CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CGameObject *pParent, FILE *pInFile, int *pnSkinnedMeshes, CGameFramework* pGameFramework)
@@ -1198,7 +1225,7 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 		else if (!strcmp(pstrToken, "<TransformMatrix>:"))
 		{
 			nReads = (UINT)::fread(&pGameObject->m_xmf4x4ToParent, sizeof(float), 16, pInFile);
-			//XMFLOAT4X4 xmf4x4TempWorldMatrix; // ÀÓ½Ã º¯¼ö
+			//XMFLOAT4X4 xmf4x4TempWorldMatrix; // ìž„ì‹œ ë³€ìˆ˜
 			//nReads = (UINT)::fread(&xmf4x4TempWorldMatrix, sizeof(float), 16, pInFile);
 
 		}
@@ -1254,8 +1281,8 @@ void CGameObject::PrintFrameInfo(CGameObject *pGameObject, CGameObject *pParent)
 {
 	TCHAR pstrDebug[256] = { 0 };
 
-	_stprintf_s(pstrDebug, 256, _T("(Frame: %p) (Parent: %p)\n"), pGameObject, pParent);
-	OutputDebugString(pstrDebug);
+	//_stprintf_s(pstrDebug, 256, _T("(Frame: %p) (Parent: %p)\n"), pGameObject, pParent);
+	//OutputDebugString(pstrDebug);
 	
 	ofstream fout("Player.txt", ios::app);
 	
@@ -1372,7 +1399,7 @@ CLoadedModelInfo *CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device *pd
 				::ReadStringFromFile(pInFile, pstrToken); //"</Hierarchy>"
 
 
-				// ½ºÅ²µå ¸Þ½¬ Á¤º¸ ÁØºñ
+				// ìŠ¤í‚¨ë“œ ë©”ì‰¬ ì •ë³´ ì¤€ë¹„
 				if (pLoadedModel->m_pModelRootObject && pLoadedModel->m_nSkinnedMeshes > 0) {
 					pLoadedModel->FindAndCacheSkinnedMeshes();
 				}
@@ -1536,6 +1563,60 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
      if (m_pSibling) m_pSibling->PropagateAnimController(controller);    
  }
 
+ void CGameObject::CopyDataFrom(CGameObject* pSource)
+ {
+	 // ë©”ì‰¬ì™€ ë¨¸í‹°ë¦¬ì–¼ í¬ì¸í„° ê³µìœ 
+	 this->SetMesh(pSource->m_pMesh);
+
+	 if (this->m_ppMaterials) delete[] this->m_ppMaterials;
+	 this->m_nMaterials = pSource->m_nMaterials;
+	 this->m_ppMaterials = nullptr;
+	 if (this->m_nMaterials > 0) {
+		 this->m_ppMaterials = new CMaterial * [this->m_nMaterials];
+		 for (int i = 0; i < this->m_nMaterials; i++) this->m_ppMaterials[i] = nullptr;
+	 }
+
+	 for (int i = 0; i < pSource->m_nMaterials; i++) {
+		 this->SetMaterial(i, pSource->m_ppMaterials[i]);
+	 }
+
+	 strcpy_s(this->m_pstrFrameName, 64, pSource->m_pstrFrameName);
+	 this->m_objectType = pSource->m_objectType;
+	 this->m_pGameFramework = pSource->m_pGameFramework;
+	 this->m_localOBB = pSource->m_localOBB; 
+
+	 this->hp = pSource->hp;
+	 this->atk = pSource->atk;
+	 this->level = pSource->level;
+	 this->isRender = pSource->isRender;
+	 this->_invincible = pSource->_invincible;
+
+	 // ìžì‹ ê³„ì¸µ êµ¬ì¡° ë³µì œ
+	 if (pSource->m_pChild) {
+		 CGameObject* pClonedChild = pSource->m_pChild->Clone();
+		 this->SetChild(pClonedChild, true);
+
+		 CGameObject* pCurrentSourceSibling = pSource->m_pChild->m_pSibling;
+		 CGameObject* pLastClonedSibling = pClonedChild;
+		 while (pCurrentSourceSibling) {
+			 CGameObject* pClonedSibling = pCurrentSourceSibling->Clone();
+			 pClonedSibling->m_pParent = this;
+			 pLastClonedSibling->m_pSibling = pClonedSibling;
+
+			 pLastClonedSibling = pClonedSibling;
+			 pCurrentSourceSibling = pCurrentSourceSibling->m_pSibling;
+		 }
+	 }
+ }
+
+ CGameObject* CGameObject::Clone()
+ {
+	 CGameObject* pNewInstance = new CGameObject(this->m_pGameFramework);
+	 pNewInstance->CopyDataFrom(this);
+	 return pNewInstance;
+ }
+
+
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1581,7 +1662,7 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainMaterial->SetShader(pTerrainShader); 
 	}
 	else {
-		OutputDebugString(L"Error: Failed to get Terrain shader. Material will not have a shader.\n");
+		//OutputDebugString(L"Error: Failed to get Terrain shader. Material will not have a shader.\n");
 	}
 
 	SetMaterial(0, pTerrainMaterial);
@@ -1626,9 +1707,6 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 			
 			pd3dCommandList->SetGraphicsRootDescriptorTable(2, textureTableHandle);
 		}
-		else {
-			OutputDebugString(L"Warning: Terrain material has null texture handle for binding.\n");
-		}
 
 		
 		m_pMesh->Render(pd3dCommandList, 0);
@@ -1640,15 +1718,15 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 void CHeightMapTerrain::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// ¿ùµå Çà·ÄÀ» ´ÜÀ§ Çà·Ä·Î ¸¸µì´Ï´Ù.
+	// ì›”ë“œ í–‰ë ¬ì„ ë‹¨ìœ„ í–‰ë ¬ë¡œ ë§Œë“­ë‹ˆë‹¤.
 	XMMATRIX mtxIdentity = XMMatrixIdentity();
 
 	cbGameObjectInfo gameObjectInfo;
 	XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(mtxIdentity));
 
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo.gmtxGameObject, 0); // ¿ùµå Çà·Ä¸¸ Àü´Þ
+	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo.gmtxGameObject, 0); // ì›”ë“œ í–‰ë ¬ë§Œ ì „ë‹¬
 
-	// ¸Þ½Ã ÀüÃ¼¸¦ ±×¸³´Ï´Ù.
+	// ë©”ì‹œ ì „ì²´ë¥¼ ê·¸ë¦½ë‹ˆë‹¤.
 	if (m_pMesh && m_nMaterials > 0)
 	{
 		for (int i = 0; i < m_nMaterials; i++)
@@ -1657,7 +1735,6 @@ void CHeightMapTerrain::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 		}
 	}
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
@@ -1680,10 +1757,6 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	std::shared_ptr<CTexture> pSkyBoxTexture = pResourceManager->GetTexture(L"SkyBox/SkyBox_0.dds", pd3dCommandList);
 	if (pSkyBoxTexture) {
 		pSkyBoxMaterial->AssignTexture(0, pSkyBoxTexture, pd3dDevice); 
-	}
-	else {
-		
-		OutputDebugString(L"Error: Failed to load SkyBox texture using ResourceManager.\n");
 	}
 
 	
@@ -1727,13 +1800,45 @@ void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 			
 			pd3dCommandList->SetGraphicsRootDescriptorTable(1, textureTableHandle);
 		}
-		else {
-			OutputDebugString(L"Warning: Skybox material has null texture handle for binding.\n");
-		}
 
 		
 		m_pMesh->Render(pd3dCommandList, 0); 
 
+	}
+}
+
+void CSkyBox::SetSkyboxIndex(int index)
+{
+	if (index >= 0 && index < m_vSkyboxTextures.size())
+	{
+		m_nCurrentTextureIndex = index;
+
+		
+		CMaterial* pMaterial = GetMaterial(0);
+		if (pMaterial)
+		{
+			pMaterial->AssignTexture(0, m_vSkyboxTextures[index], m_pGameFramework->GetDevice());
+		}
+	}
+}
+
+void CSkyBox::LoadTextures(ID3D12GraphicsCommandList* cmdList, const std::vector<std::wstring>& texturePaths)
+{
+	ResourceManager* pRes = m_pGameFramework->GetResourceManager();
+	for (const auto& path : texturePaths)
+	{
+		auto tex = pRes->GetTexture(path.c_str(), cmdList);
+		if (tex) m_vSkyboxTextures.push_back(tex);
+	}
+
+
+	if (!m_vSkyboxTextures.empty())
+	{
+		CMaterial* pMaterial = GetMaterial(0);
+		if (pMaterial)
+		{
+			pMaterial->AssignTexture(0, m_vSkyboxTextures[0], m_pGameFramework->GetDevice());
+		}
 	}
 }
 
@@ -1917,6 +2022,20 @@ CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	if (pInFile) fclose(pInFile);
 }
 
+CPineObject::CPineObject(CGameFramework* pGameFramework)
+	: CTreeObject()
+{
+}
+
+CGameObject* CPineObject::Clone()
+{
+	CPineObject* pNewInstance = new CPineObject(m_pGameFramework);
+
+	pNewInstance->CopyDataFrom(this);
+
+	return pNewInstance;
+}
+
 CBirchObject::CBirchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
@@ -1952,9 +2071,6 @@ CBranchObject::CBranchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 		if (pBranchModel->m_pModelRootObject->m_nMaterials > 0 && pBranchModel->m_pModelRootObject->m_ppMaterials[0])
 			SetMaterial(0, pBranchModel->m_pModelRootObject->m_ppMaterials[0]); 
 		delete pBranchModel;
-	}
-	else {
-		OutputDebugStringA("Error: Failed to load Branch.bin model.\n");
 	}
 	SetScale(5.0f, 5.0f, 5.0f);
 }
@@ -2073,9 +2189,6 @@ CRockDropObject::CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		if (pBranchModel->m_pModelRootObject->m_nMaterials > 0 && pBranchModel->m_pModelRootObject->m_ppMaterials[0])
 			SetMaterial(0, pBranchModel->m_pModelRootObject->m_ppMaterials[0]);
 		delete pBranchModel;
-	}
-	else {
-		OutputDebugStringA("Error: Failed to load Branch.bin model.\n");
 	}
 	SetScale(50.0f, 50.0f, 50.0f);
 }
@@ -2255,4 +2368,85 @@ CConstructionObject::CConstructionObject(ID3D12Device* pd3dDevice, ID3D12Graphic
 
 	
 	if (pInFile) fclose(pInFile); 
+}
+
+CRockShardEffect::CRockShardEffect(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework)
+	: CGameObject(1, framework)
+{
+	m_pGameFramework = framework;
+
+	FILE* pInFile = nullptr;
+	::fopen_s(&pInFile, "Model/Branch_A.bin", "rb");
+	if (!pInFile) {
+		return;
+	}
+	::rewind(pInFile);
+
+	CGameObject* rockObj = CGameObject::LoadFrameHierarchyFromFile(
+		device, cmdList, NULL, pInFile, NULL, framework);
+
+	if (pInFile) fclose(pInFile);
+
+	if (rockObj && rockObj->m_pMesh)
+	{
+		SetMesh(rockObj->m_pMesh); // íŒŒíŽ¸ ë©”ì‹œì— ë³µì‚¬
+	}
+
+	m_ppMaterials = new CMaterial * [1];
+	m_ppMaterials[0] = new CMaterial(0, framework);
+	m_nMaterials = 1;
+
+	isRender = true;
+}
+
+void CRockShardEffect::Activate(const XMFLOAT3& position, const XMFLOAT3& velocity)
+{
+
+	char buf[256];
+	sprintf_s(buf, "âœ… Activate called! pos=(%.2f, %.2f, %.2f), vel=(%.2f, %.2f, %.2f)\n",
+		position.x, position.y, position.z,
+		velocity.x, velocity.y, velocity.z);
+	OutputDebugStringA(buf);
+
+
+	SetPosition(position);
+	SetScale(1.0f, 1.0f, 1.0f);
+	m_vVelocity = velocity;
+	m_fElapsedTime = 0.0f;
+	isRender = true;
+	m_bActive = true;
+}
+
+void CRockShardEffect::Update(float deltaTime)
+{
+	if (!m_bActive) {
+		//OutputDebugStringA("âŒ Update skipped (not active)\n");
+		return;
+	}
+
+	//char buf[128];
+	//sprintf_s(buf, "ðŸŒ€ Update: elapsed=%.2f / %.2f\n", m_fElapsedTime, m_fLifeTime);
+	//OutputDebugStringA(buf);
+
+	char buf[128];
+	sprintf_s(buf, "ðŸ§­ deltaTime = %.4f\n", deltaTime);
+	OutputDebugStringA(buf);
+	m_fElapsedTime += deltaTime;
+	/*
+	if (m_fElapsedTime > m_fLifeTime)
+	{
+		isRender = false;
+		m_bActive = false;
+		return;
+	}
+	
+	*/
+	m_vVelocity.y -= 9.8f * deltaTime;
+
+	XMFLOAT3 pos = GetPosition();
+	pos.x += m_vVelocity.x * deltaTime;
+	pos.y += m_vVelocity.y * deltaTime;
+	pos.z += m_vVelocity.z * deltaTime;
+	SetPosition(pos);
+
 }

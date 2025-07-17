@@ -14,6 +14,7 @@
 
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
+#include <DirectXCollision.h>
 #include <random>
 #include <algorithm>
 

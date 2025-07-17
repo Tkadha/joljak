@@ -8,8 +8,9 @@
 #include "OBBShader.h"
 #include "ShadowShader.h"
 #include "DebugShader.h"
-#include "WavesShader.h"
+#include "WavesShader.h"       
 
+// --- 생성자, 소멸자, 정리 함수 ---
 ShaderManager::ShaderManager(ID3D12Device* pd3dDevice) : m_pd3dDevice(pd3dDevice)
 {
     CreateRootSignatures();

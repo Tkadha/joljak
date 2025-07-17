@@ -184,68 +184,63 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 {
 	if (Vector3::Length(XMFLOAT3(xmf3Shift)) == 0.0f) return;
 
-	XMFLOAT3 originalPosition = m_xmf3Position;
+	//XMFLOAT3 originalPosition = m_xmf3Position;
 
-	// X축 이동 시도
-	// 
-	// 현재 플레이어의 회전값과 크기를 가져옵니다.
-	XMFLOAT4 currentRotation = m_worldOBB.Orientation;
-	XMFLOAT3 currentExtents = m_worldOBB.Extents;
+	//// X축 이동 시도
+	//XMFLOAT3 testPosX = originalPosition;
+	//testPosX.x += xmf3Shift.x;
+	//BoundingOrientedBox testOBBX;
+	//XMMATRIX matX = XMMatrixTranslation(testPosX.x, testPosX.y, testPosX.z);
+	//m_localOBB.Transform(testOBBX, matX);
+	//testOBBX.Orientation.w = 1.f;
+	//bool bCollidedX = false;
+	//if (m_pCollisionTargets)
+	//{
+	//	for (auto& obj : *m_pCollisionTargets)
+	//	{
+	//		if (!obj || obj == this) continue;
+	//		if (obj->m_id < 0) continue;
+	//		if (obj->getHp() <= 0) continue;
 
-	// X축 이동 테스트
-	XMFLOAT3 testPosX = m_xmf3Position;
-	testPosX.x += xmf3Shift.x;
+	//		if (testOBBX.Intersects(obj->m_worldOBB))
+	//		{
+	//			bCollidedX = true;
+	//			break;
+	//		}
+	//	}
+	//}
+	//if (!bCollidedX) m_xmf3Position.x = testPosX.x;
 
-	// testPosX 위치에 현재 플레이어와 동일한 크기/회전을 가진 OBB 생성
-	BoundingOrientedBox testOBBX(testPosX, currentExtents, currentRotation);
-	bool bCollidedX = false;
+	//// Z축 이동 시도
+	//XMFLOAT3 testPosZ = m_xmf3Position;
+	//testPosZ.z += xmf3Shift.z;
+	//BoundingOrientedBox testOBBZ;
+	//XMMATRIX matZ = XMMatrixTranslation(testPosZ.x, testPosZ.y, testPosZ.z);
+	//m_localOBB.Transform(testOBBZ, matZ);
+	//testOBBZ.Orientation.w = 1.f;
 
-	if (m_pCollisionTargets)
-	{
-		for (auto& obj : *m_pCollisionTargets)
-		{
-			if (!obj || obj == this) continue;
-			if (obj->m_id < 0) continue;
-			if (obj->getHp() <= 0) continue;
+	//bool bCollidedZ = false;
+	//if (m_pCollisionTargets)
+	//{
+	//	for (auto& obj : *m_pCollisionTargets)
+	//	{
+	//		if (!obj || obj == this) continue;
+	//		if (obj->m_id < 0) continue;
+	//		if (obj->getHp() <= 0) continue;
+	//		if (testOBBZ.Intersects(obj->m_worldOBB))
+	//		{
+	//			bCollidedZ = true;
+	//			break;
+	//		}
+	//	}
+	//}
+	//if (!bCollidedZ) m_xmf3Position.z = testPosZ.z;
 
-			if (testOBBX.Intersects(obj->m_worldOBB))
-			{
-				bCollidedX = true;
-				break;
-			}
-		}
-	}
-	if (!bCollidedX) m_xmf3Position.x = testPosX.x;
+	//
+	//
+	//m_xmf3Position.y += xmf3Shift.y;
 
-	// Z축 이동 시도
-	XMFLOAT3 testPosZ = m_xmf3Position; // X축 이동이 적용된 현재 위치에서 시작
-	testPosZ.z += xmf3Shift.z;
-
-	// testPosZ 위치에 현재 플레이어와 동일한 크기/회전을 가진 OBB 생성
-	BoundingOrientedBox testOBBZ(testPosZ, currentExtents, currentRotation);
-
-	bool bCollidedZ = false;
-	if (m_pCollisionTargets)
-	{
-		for (auto& obj : *m_pCollisionTargets)
-		{
-			if (!obj || obj == this) continue;
-			if (obj->m_id < 0) continue;
-			if (obj->getHp() <= 0) continue;
-			if (testOBBZ.Intersects(obj->m_worldOBB))
-			{
-				bCollidedZ = true;
-				break;
-			}
-		}
-	}
-	if (!bCollidedZ) m_xmf3Position.z = testPosZ.z;
-
-	
-	
-	m_xmf3Position.y += xmf3Shift.y;
-
-	
+	m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
 
 	m_pCamera->Move(xmf3Shift);
 	// 최종 적용
@@ -253,7 +248,7 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 	UpdateOBB(m_xmf3Position, playerSize, playerRotation);
 	//m_pCamera->SetPosition(m_xmf3Position);
 
-	if (!bUpdateVelocity && (bCollidedX || bCollidedZ)) {
+	/*if (!bUpdateVelocity && (bCollidedX || bCollidedZ)) {
 		auto& nwManager = NetworkManager::GetInstance();
 		auto pos = m_xmf3Position;
 		POSITION_PACKET p;
@@ -261,7 +256,7 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 		p.position.y = pos.y;
 		p.position.z = pos.z;
 		nwManager.PushSendQueue(p, p.size);
-	}
+	}*/
 	if (bUpdateVelocity)
 	{
 		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
@@ -386,8 +381,106 @@ void CPlayer::Update(float fTimeElapsed)
 	float fDeceleration = (m_fFriction * fTimeElapsed);
 	if (fDeceleration > fLength) fDeceleration = fLength;
 	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Velocity, -fDeceleration, true));
-	if (Playerstamina < Maxstamina) {
-		Playerstamina += 1;
+	//if (Playerstamina < Maxstamina) {
+	//	Playerstamina += 1;
+	//}
+}
+
+void CPlayer::UpdateTraits()
+{
+	auto& nwManager = NetworkManager::GetInstance();
+	switch (Maxhp) {
+	case 350: {
+		Maxhp += 30;
+		CHANGE_STAT_PACKET s_packet;
+		s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+		s_packet.size = sizeof(CHANGE_STAT_PACKET);
+		s_packet.stat = E_STAT::MAX_HP;
+		s_packet.value = Maxhp;
+		nwManager.PushSendQueue(s_packet, s_packet.size);
+	}
+		break;
+	case 400:
+
+		break;
+	case 450:
+
+		break;
+	case 500:
+
+		break;
+	case 550:
+
+		break;
+	}
+
+	switch (Maxstamina) {
+	case 200:
+		// Passive: Increased Work Speed
+		// TODO: Improve crafting/gathering speed
+		break;
+	case 250:
+		// Passive: Reduced stamina consumption
+		// TODO: Subtract stamina usage multiplier
+		break;
+	case 300:
+		// Passive: Faster stamina recovery
+		// TODO: Add regen speed multiplier
+		break;
+	case 350:
+		// Passive: Boost attack/speed at high stamina
+		// TODO: Conditional bonus if stamina > threshold
+		break;
+	case 400:
+		// Passive: Action at 0 stamina
+		// TODO: Allow limited action when stamina is 0
+		break;
+	}
+
+	switch (PlayerAttack) {
+	case 15:
+		// Passive: 3rd Hit Double Damage
+		// TODO: Count attacks and boost every 3rd
+		break;
+	case 20:
+		// Passive: Heal on Kill
+		// TODO: Restore HP on enemy death
+		break;
+	case 25:
+		// Passive: Bleed Effect
+		// TODO: Chance to apply bleeding
+		break;
+	case 30:
+		// Passive: Damage Multiplier
+		// TODO: Increase weapon/tool damage
+		break;
+	case 35:
+		// Passive: 3s Invincibility (180s cooldown)
+		// TODO: Use timer and flags
+		break;
+	}
+
+	switch ((int)PlayerSpeed) {
+	case 15:
+		// Passive: Extra Dash
+		// TODO: Add 1 more dash use
+		break;
+	case 20:
+		// Passive: Slow Resistance
+		// TODO: Reduce slow effect duration
+		break;
+	case 25:
+		// Passive: Speed Boost on Kill
+		// TODO: Temporarily increase speed on kill
+		break;
+	case 30:
+		// Passive: Dash Attack
+		// TODO: Deal damage when dashing
+		break;
+	case 35:
+		// Passive: Evade on Hit
+		// TODO: Add chance to avoid damage
+		break;
 	}
 }
 
@@ -462,9 +555,9 @@ bool CPlayer::CheckCollisionOBB(CGameObject* other)
 
 	if (result)
 	{
-		OutputDebugStringA("🔴 충돌 발생: Player vs ");
+		//OutputDebugStringA("🔴 충돌 발생: Player vs ");
 		  // 오브젝트 이름 표시
-		OutputDebugStringA("\n");
+		//OutputDebugStringA("\n");
 	}
 
 	return result;
@@ -732,7 +825,7 @@ void CPlayer::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		ID3D12Resource* pVertexUploadBuffer = nullptr; // 임시 업로드 버퍼 포인터
 		m_pOBBVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, corners, sizeof(XMFLOAT3) * 8, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &pVertexUploadBuffer);
 		if (!m_pOBBVertexBuffer) {
-			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Vertex Buffer! !!!!!!!!\n");
+			//OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Vertex Buffer! !!!!!!!!\n");
 			// 실패 시 이후 리소스 생성 중단 또는 다른 처리
 		}
 		else {
@@ -749,7 +842,7 @@ void CPlayer::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		ID3D12Resource* pIndexUploadBuffer = nullptr; // 임시 업로드 버퍼 포인터
 		m_pOBBIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, indices, sizeof(UINT) * 24, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &pIndexUploadBuffer);
 		if (!m_pOBBIndexBuffer) {
-			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Index Buffer! !!!!!!!!\n");
+			//OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Index Buffer! !!!!!!!!\n");
 		}
 		else {
 			m_OBBIndexBufferView.BufferLocation = m_pOBBIndexBuffer->GetGPUVirtualAddress();
@@ -761,14 +854,14 @@ void CPlayer::InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		UINT ncbElementBytes = (((sizeof(XMFLOAT4X4)) + 255) & ~255);
 		m_pd3dcbOBBTransform = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 		if (!m_pd3dcbOBBTransform) {
-			OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Transform CBV! !!!!!!!!\n");
+			//OutputDebugString(L"!!!!!!!! ERROR: Failed to create OBB Transform CBV! !!!!!!!!\n");
 			m_pcbMappedOBBTransform = nullptr; // 맵핑 포인터도 null 처리
 		}
 		else {
 			// 맵핑된 포인터 저장 (+ HRESULT 확인)
 			HRESULT hr = m_pd3dcbOBBTransform->Map(0, NULL, (void**)&m_pcbMappedOBBTransform);
 			if (FAILED(hr) || !m_pcbMappedOBBTransform) {
-				OutputDebugString(L"!!!!!!!! ERROR: Failed to map OBB Transform CBV! !!!!!!!!\n");
+				//OutputDebugString(L"!!!!!!!! ERROR: Failed to map OBB Transform CBV! !!!!!!!!\n");
 				m_pcbMappedOBBTransform = nullptr; // 실패 시 null 처리
 				// 필요시 m_pd3dcbOBBTransform Release 고려
 			}

@@ -37,15 +37,11 @@ void CGameFramework::NerworkThread()
 			ProcessPacket(packet.first.get());
 
 		}
-		SleepEx(10, TRUE);
+		SleepEx(1, TRUE);
 	}
 }
 void CGameFramework::ProcessPacket(char* packet)
 {
-	int loop_count{ 0 };
-retry:
-	loop_count++;
-	if (loop_count > 100) return;
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
@@ -94,17 +90,53 @@ retry:
 		m_logQueue.push(log_inout{ E_PACKET::E_P_LOGOUT ,recv_p->uid });
 	}
 	break;
+	case E_PACKET::E_P_CHANGE_STAT: {
+		CHANGE_STAT_PACKET* recv_p = reinterpret_cast<CHANGE_STAT_PACKET*>(packet);
+		switch (recv_p->stat)
+		{
+		case E_STAT::HP:
+			m_pPlayer->Playerhp = recv_p->value;
+			break;
+		case E_STAT::STAMINA:
+			m_pPlayer->Playerstamina = recv_p->value;
+			break;
+		case E_STAT::HUNGER:
+			m_pPlayer->PlayerHunger = recv_p->value;
+			break;
+		case E_STAT::THIRST:
+			m_pPlayer->PlayerThirst = recv_p->value;
+			break;
+		default:
+			break;
+		}
+	}
+	break;
 	case E_PACKET::E_O_ADD:
 	{
 		ADD_PACKET* recv_p = reinterpret_cast<ADD_PACKET*>(packet);
-		FLOAT3 right = recv_p->right;
-		FLOAT3 up = recv_p->up;
-		FLOAT3 look = recv_p->look;
-		FLOAT3 position = recv_p->position;
-		OBJECT_TYPE o_type = recv_p->o_type;
-		ANIMATION_TYPE a_type = recv_p->a_type;
-		int id = recv_p->id;
-		m_logQueue.push(log_inout{ E_PACKET::E_O_ADD,0,right,up,look,position,o_type,a_type,id });
+
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+		auto it = std::find_if(m_pScene->m_listGameObjects.begin(), m_pScene->m_listGameObjects.end(), [recv_p](CGameObject* obj) {
+			return obj->m_id == recv_p->id;
+			});
+		if (it != m_pScene->m_listGameObjects.end()) {
+			CGameObject* foundObj = *it;
+			foundObj->SetLook(XMFLOAT3(recv_p->look.x, recv_p->look.y, recv_p->look.z));
+			foundObj->SetUp(XMFLOAT3(recv_p->up.x, recv_p->up.y, recv_p->up.z));
+			foundObj->SetRight(XMFLOAT3(recv_p->right.x, recv_p->right.y, recv_p->right.z));
+			foundObj->SetPosition(recv_p->position.x, recv_p->position.y, recv_p->position.z);
+			m_pScene->m_vGameObjects.emplace_back(*it);
+		}
+		else {
+			FLOAT3 right = recv_p->right;
+			FLOAT3 up = recv_p->up;
+			FLOAT3 look = recv_p->look;
+			FLOAT3 position = recv_p->position;
+			OBJECT_TYPE o_type = recv_p->o_type;
+			ANIMATION_TYPE a_type = recv_p->a_type;
+			int id = recv_p->id;
+			m_logQueue.push(log_inout{ E_PACKET::E_O_ADD,0,right,up,look,position,o_type,a_type,id });
+		}
 	}
 	break;
 	case E_PACKET::E_O_REMOVE:
@@ -136,7 +168,6 @@ retry:
 			Found_obj->SetPosition(recv_p->position.x, recv_p->position.y, recv_p->position.z);
 			Found_obj->Check_attack();
 		}
-		else goto retry;
 	}
 	break;
 	case E_PACKET::E_O_CHANGEANIMATION:
@@ -149,9 +180,8 @@ retry:
 			});
 		if (it != m_pScene->m_vGameObjects.end()) {
 			CGameObject* Found_obj = *it;
-			Found_obj->ChangeAnimation(recv_p->a_type);
+			if (Found_obj->m_pSkinnedAnimationController) Found_obj->ChangeAnimation(recv_p->a_type);
 		}
-		else goto retry;
 	}
 		break;
 	break;
@@ -201,7 +231,6 @@ retry:
 				}
 			}
 		}
-		else goto retry;
 	}
 	break;
 	case E_PACKET::E_O_INVINCIBLE: {
@@ -215,7 +244,6 @@ retry:
 			CGameObject* Found_obj = *it;
 			Found_obj->SetInvincible(recv_p->invincible);
 		}
-		else goto retry;
 	}
 	break;
 	default:
@@ -432,7 +460,7 @@ void CGameFramework::CreateDirect3DDevice()
 	}
 	else {
 		// 디바이스 생성 실패 시 오류 처리
-		OutputDebugString(L"Error: Failed to create D3D12 Device. Cannot get descriptor sizes.\n");
+		//OutputDebugString(L"Error: Failed to create D3D12 Device. Cannot get descriptor sizes.\n");
 		// 필요하다면 프로그램 종료 또는 예외 처리
 	}
 	m_pShaderManager = std::make_unique<ShaderManager>(m_pd3dDevice);
@@ -474,11 +502,14 @@ void CGameFramework::CreateCommandQueueAndList()
 	d3dCommandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 	d3dCommandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 	hResult = m_pd3dDevice->CreateCommandQueue(&d3dCommandQueueDesc, _uuidof(ID3D12CommandQueue), (void **)&m_pd3dCommandQueue);
-
+	hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&m_pd3dUploadCommandAllocator);
 	hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void **)&m_pd3dCommandAllocator);
 
 	hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dCommandAllocator, NULL, __uuidof(ID3D12GraphicsCommandList), (void **)&m_pd3dCommandList);
 	hResult = m_pd3dCommandList->Close();
+
+	hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dUploadCommandAllocator, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&m_pd3dUploadCommandList);
+	hResult = m_pd3dUploadCommandList->Close();
 }
 
 void CGameFramework::CreateRtvAndDsvDescriptorHeaps()
@@ -615,6 +646,15 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					break;
 				case VK_F1:
 				case VK_F2:
+					if (m_pScene && m_pScene->GetSkyBox()) {
+						int textureCount = m_pScene->GetSkyBox()->GetTextureCount();
+						//OutputDebugString(std::format(L"[SkyBox] 텍스처 로드 개수: {}\n",textureCount).c_str());
+						if (textureCount > 0) {
+							m_nCurrentSkybox = (m_nCurrentSkybox + 1) % textureCount;
+							m_pScene->GetSkyBox()->SetSkyboxIndex(m_nCurrentSkybox);
+						}
+					}
+					break;
 				case VK_F3:
 				case VK_F4:
 					m_pCamera = m_pPlayer->ChangeCamera((DWORD)(wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
@@ -651,83 +691,12 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			case 'T':
 				m_pScene->obbRender = m_pScene->obbRender ? false : true;
 				break;
-
-			case 'G':
-			{
-				PlayerStateID currentState = m_pPlayer->m_pStateMachine->GetCurrentStateID();
-				if (currentState != PlayerStateID::HitReaction && currentState != PlayerStateID::Dead) {
-					m_pPlayer->m_pStateMachine->PerformStateChange(PlayerStateID::HitReaction, true);
-				}
-			}
-				break;
-
 			case 'L':
-				m_pPlayer->observe = m_pPlayer->observe ? false : true;
+				ShowTraitUI = !ShowTraitUI;
 				break;
-			
-			/*case '6':
-				m_pPlayer->offset.x += 0.01;
-				m_pPlayer->m_pSword->SetPosition(m_pPlayer->offset);
+			case 'Y':
+				//m_pScene->SpawnRockShardEffectAtPlayer();
 				break;
-			case '7':
-				m_pPlayer->offset.x -= 0.01;
-				m_pPlayer->m_pSword->SetPosition(m_pPlayer->offset);
-				break;
-			case '8':
-				m_pPlayer->offset.y += 0.01;
-				m_pPlayer->m_pSword->SetPosition(m_pPlayer->offset);
-				break;
-			case '9':
-				m_pPlayer->offset.y -= 0.01;
-				m_pPlayer->m_pSword->SetPosition(m_pPlayer->offset);
-				break;
-			case '0':
-				m_pPlayer->offset.z += 0.01;
-				m_pPlayer->m_pSword->SetPosition(m_pPlayer->offset);
-				break;
-			case 'P':
-				m_pPlayer->offset.z -= 0.01;
-				m_pPlayer->m_pSword->SetPosition(m_pPlayer->offset);
-				{
-					wchar_t dbgMsg[128];
-					swprintf_s(dbgMsg, L"offset = %f, %f, %f\n", m_pPlayer->offset.x, m_pPlayer->offset.y, m_pPlayer->offset.z);
-					OutputDebugStringW(dbgMsg);
-				}
-				break;
-			case 'Z':
-				m_pPlayer->m_pSword->SetScale(1 / m_pPlayer->scale.x, 1 / m_pPlayer->scale.y, 1 / m_pPlayer->scale.z);
-				m_pPlayer->scale.x += 0.01;
-				m_pPlayer->m_pSword->SetScale(m_pPlayer->scale.x, m_pPlayer->scale.y, m_pPlayer->scale.z);
-				break;
-			case 'X':
-				m_pPlayer->m_pSword->SetScale(1 / m_pPlayer->scale.x, 1 / m_pPlayer->scale.y, 1 / m_pPlayer->scale.z);
-				m_pPlayer->scale.x -= 0.01;
-				m_pPlayer->m_pSword->SetScale(m_pPlayer->scale.x, m_pPlayer->scale.y, m_pPlayer->scale.z);
-				break;
-			case 'C':
-				m_pPlayer->m_pSword->SetScale(1 / m_pPlayer->scale.x, 1 / m_pPlayer->scale.y, 1 / m_pPlayer->scale.z);
-				m_pPlayer->scale.y += 0.01;
-				m_pPlayer->m_pSword->SetScale(m_pPlayer->scale.x, m_pPlayer->scale.y, m_pPlayer->scale.z);
-				break;
-			case 'V':
-				m_pPlayer->m_pSword->SetScale(1 / m_pPlayer->scale.x, 1 / m_pPlayer->scale.y, 1 / m_pPlayer->scale.z);
-				m_pPlayer->scale.y -= 0.01;
-				m_pPlayer->m_pSword->SetScale(m_pPlayer->scale.x, m_pPlayer->scale.y, m_pPlayer->scale.z);
-				break;
-			case 'N':
-				m_pPlayer->m_pSword->SetScale(1 / m_pPlayer->scale.x, 1 / m_pPlayer->scale.y, 1 / m_pPlayer->scale.z);
-				m_pPlayer->scale.z += 0.01;
-				m_pPlayer->m_pSword->SetScale(m_pPlayer->scale.x, m_pPlayer->scale.y, m_pPlayer->scale.z);
-				break;
-			case 'M':
-				m_pPlayer->m_pSword->SetScale(1 / m_pPlayer->scale.x, 1 / m_pPlayer->scale.y, 1 / m_pPlayer->scale.z);
-				m_pPlayer->scale.z -= 0.01;
-				m_pPlayer->m_pSword->SetScale(m_pPlayer->scale.x, m_pPlayer->scale.y, m_pPlayer->scale.z);
-				wchar_t dbgMsg[128];
-				swprintf_s(dbgMsg, L"scale = %f, %f, %f\n", m_pPlayer->scale.x, m_pPlayer->scale.y, m_pPlayer->scale.z);
-				OutputDebugStringW(dbgMsg);
-				break;*/
-
 			}
 			break;
 		default:
@@ -819,7 +788,7 @@ void CGameFramework::AddItem(const std::string& name, int quantity)
 	}
 
 	// 3. 인벤토리가 가득 찼을 경우
-	OutputDebugStringA("인벤토리가 가득 찼습니다.\n");
+	//OutputDebugStringA("인벤토리가 가득 찼습니다.\n");
 }
 
 
@@ -1017,6 +986,25 @@ void CGameFramework::BuildObjects()
 	m_pPlayer->SetOBB(position, size, rotation);
 	m_pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 
+#ifdef ONLINE
+	NetworkManager& nw = NetworkManager::GetInstance();
+	OBJ_OBB_PACKET p;
+	auto& obb = m_pPlayer->m_localOBB;
+	p.Center.x = obb.Center.x;
+	p.Center.y = obb.Center.y;
+	p.Center.z = obb.Center.z;
+	p.Extents.x = obb.Extents.x;
+	p.Extents.y = obb.Extents.y;
+	p.Extents.z = obb.Extents.z;
+	p.Orientation.x = obb.Orientation.x;
+	p.Orientation.y = obb.Orientation.y;
+	p.Orientation.z = obb.Orientation.z;
+	p.Orientation.w = obb.Orientation.w;
+	p.oid = -1;
+	p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+	p.size = sizeof(OBJ_OBB_PACKET);
+	nw.PushSendQueue(p, p.size);
+#endif
 
 	struct DebugVertex
 	{
@@ -1062,14 +1050,12 @@ void CGameFramework::BuildObjects()
 		m_pPlayer->SetCollisionTargets(m_pScene->m_vGameObjects);
 	}
 
-
 	WaitForGpuComplete();
 
 	if (m_pScene) m_pScene->ReleaseUploadBuffers();
 	if (m_pPlayer) m_pPlayer->ReleaseUploadBuffers();
 
 	m_GameTimer.Reset();
-
 }
 
 void CGameFramework::ReleaseObjects()
@@ -1087,7 +1073,6 @@ void CGameFramework::ReleaseObjects()
 
 void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id)
 {
-
 	if (m_pScene)
 	{
 		switch (o_type)
@@ -1097,15 +1082,15 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			CGameObject* gameObj;
 			int tree_type = rand() % 2;
 			if (tree_type == 0) {
-				gameObj = new CBirchObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
+				gameObj = new CBirchObject(m_pd3dDevice, m_pd3dUploadCommandList, m_pScene->m_pGameFramework);
 				int materialIndexToChange = 1;
 				UINT albedoTextureSlot = 0;
 				const wchar_t* textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
 				ResourceManager* pResourceManager = GetResourceManager();
-				ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, m_pd3dCommandList, m_pd3dDevice);
+				ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, m_pd3dUploadCommandList, m_pd3dDevice);
 			}
 			else if (tree_type == 1)
-				gameObj = new CPineObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
+				gameObj = new CPineObject(m_pd3dDevice, m_pd3dUploadCommandList, m_pScene->m_pGameFramework);
 
 			
 			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
@@ -1115,23 +1100,46 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->m_id = id;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(0.2f, 1.f, 0.2f, XMFLOAT3{ 0.f,0.f,0.f });
-			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
 		}
 			break;
 		case OBJECT_TYPE::OB_STONE:
 		{
-			CGameObject* gameObj = new CRockClusterAObject(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pGameFramework);
+			CGameObject* gameObj = new CRockClusterAObject(m_pd3dDevice, m_pd3dUploadCommandList, m_pScene->m_pGameFramework);
 			int materialIndexToChange = 0;
 			UINT albedoTextureSlot = 0;
 			const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
 			ResourceManager* pResourceManager = GetResourceManager();
-			ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, m_pd3dCommandList, m_pd3dDevice);
+			ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, m_pd3dUploadCommandList, m_pd3dDevice);
 
 
 			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
@@ -1141,21 +1149,43 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->m_id = id;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
-			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
 		}
 			break;
 		case OBJECT_TYPE::OB_COW:
 		{
 			int animate_count = 13;
-			CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Cow.bin", this);
-			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pCowModel, animate_count, this);
+			CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Cow.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pCowModel, animate_count, this);
 			gameObj->m_objectType = GameObjectType::Cow;
 			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 			gameObj->m_anitype = 0;
@@ -1186,8 +1216,32 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
-			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
+
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pCowModel) delete(pCowModel);
 		}
@@ -1195,8 +1249,8 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		case OBJECT_TYPE::OB_PIG:
 		{
 			int animate_count = 13;
-			CLoadedModelInfo* pPigModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Pig.bin", this);
-			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pPigModel, animate_count, this);
+			CLoadedModelInfo* pPigModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Pig.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pPigModel, animate_count, this);
 			gameObj->m_objectType = GameObjectType::Pig;
 			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 			gameObj->m_anitype = 0;
@@ -1223,8 +1277,32 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 0.8f, 1.f, XMFLOAT3{ 0.f,1.f,-1.f });
-			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
+
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pPigModel) delete(pPigModel);
 		}
@@ -1232,8 +1310,8 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		case OBJECT_TYPE::OB_SPIDER:
 		{
 			int animate_count = 13;
-			CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Spider.bin", this);
-			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pSpiderModel, animate_count, this);
+			CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Spider.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pSpiderModel, animate_count, this);
 			gameObj->m_objectType = GameObjectType::Spider;
 			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 			gameObj->m_anitype = 0;
@@ -1264,8 +1342,32 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
-			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
+
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pSpiderModel) delete(pSpiderModel);
 		}
@@ -1273,8 +1375,8 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		case OBJECT_TYPE::OB_TOAD:
 		{
 			int animate_count = 13;
-			CLoadedModelInfo* pToadModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Toad.bin", this);
-			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pToadModel, animate_count, this);
+			CLoadedModelInfo* pToadModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Toad.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pToadModel, animate_count, this);
 			gameObj->m_objectType = GameObjectType::Toad;
 			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 			gameObj->m_anitype = 0;
@@ -1305,8 +1407,32 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
-			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
+
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pToadModel) delete(pToadModel);
 		}
@@ -1314,8 +1440,8 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		case OBJECT_TYPE::OB_WOLF:
 		{
 			int animate_count = 13;
-			CLoadedModelInfo* pWolfModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Wolf.bin", this);
-			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dCommandList, pWolfModel, animate_count, this);
+			CLoadedModelInfo* pWolfModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Wolf.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pWolfModel, animate_count, this);
 			gameObj->m_objectType = GameObjectType::Wolf;
 			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 			gameObj->m_anitype = 0;
@@ -1346,10 +1472,164 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
-			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
+
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
 			m_pScene->m_vGameObjects.emplace_back(gameObj);
 			if (pWolfModel) delete(pWolfModel);
+		}
+		break;
+		case OBJECT_TYPE::OB_BAT:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pBatModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Bat.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pBatModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Bat;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
+
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pBatModel) delete(pBatModel);
+		}
+		break;
+		case OBJECT_TYPE::OB_RAPTOR:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pRaptorModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Raptor.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pRaptorModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Raptor;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
+
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pRaptorModel) delete(pRaptorModel);
 		}
 		break;
 		default:
@@ -1387,7 +1667,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 	}
 	else
 	{
-		OutputDebugString(L"Error: Scene is not initialized.\n");
+		//OutputDebugString(L"Error: Scene is not initialized.\n");
 	}
 }
 
@@ -1639,7 +1919,9 @@ void CGameFramework::MoveToNextFrame()
 void CGameFramework::FrameAdvance()
 {    
 	if (m_logQueue.size() > 0) {
-		m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
+		m_pd3dUploadCommandAllocator->Reset();
+		m_pd3dUploadCommandList->Reset(m_pd3dUploadCommandAllocator, NULL);
+
 		while (m_logQueue.size() > 0) {
 			auto log = m_logQueue.front();
 			m_logQueue.pop();
@@ -1647,9 +1929,9 @@ void CGameFramework::FrameAdvance()
 			{
 			case E_PACKET::E_P_LOGIN:
 			{
-				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/Player.bin", this);
+				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/Player.bin", this);
 				int animate_count = 15;
-				m_pScene->PlayerList[log.ID] = std::make_unique<UserObject>(m_pd3dDevice, m_pd3dCommandList, pUserModel, animate_count, this);
+				m_pScene->PlayerList[log.ID] = std::make_unique<UserObject>(m_pd3dDevice, m_pd3dUploadCommandList, pUserModel, animate_count, this);
 				m_pScene->PlayerList[log.ID]->m_objectType = GameObjectType::Player;
 				m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 				for (int j = 1; j < animate_count; ++j) {
@@ -1675,15 +1957,21 @@ void CGameFramework::FrameAdvance()
 			case E_PACKET::E_O_ADD:
 			{
 				std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
-				AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id);
+				auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(),
+					[log](CGameObject* obj) { return obj && obj->m_id == log.id; });
+				auto it2 = std::find_if(m_pScene->m_listGameObjects.begin(), m_pScene->m_listGameObjects.end(),
+					[log](CGameObject* obj) { return obj && obj->m_id == log.id; });
+				if (it == m_pScene->m_vGameObjects.end() && it2 == m_pScene->m_listGameObjects.end()) {
+					AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id);
+				}
 			}
 				break;
 			default:
 				break;
 			}
 		}
-		m_pd3dCommandList->Close();
-		ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList };
+		m_pd3dUploadCommandList->Close();
+		ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dUploadCommandList };
 		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
 		WaitForGpuComplete();
@@ -1708,6 +1996,7 @@ void CGameFramework::FrameAdvance()
 		m_pConstructionSystem->UpdatePreviewPosition(m_pCamera);
 	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
+
 
 	HRESULT hResult = m_pd3dCommandAllocator->Reset();
 	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
@@ -1735,6 +2024,26 @@ void CGameFramework::FrameAdvance()
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
 	if (m_pScene) m_pScene->Render(m_pd3dCommandList, m_pCamera);
+
+	auto currentTimePoint = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> elapsed = currentTimePoint - startTime;
+	double currentTime = elapsed.count(); // 초 단위 경과 시간
+
+	if (currentTime - lastEventTime >= eventInterval)
+	{
+		if (m_pScene && m_pScene->GetSkyBox()) {
+			int textureCount = m_pScene->GetSkyBox()->GetTextureCount();
+			//OutputDebugString(std::format(L"[SkyBox] 텍스처 로드 개수: {}\n", textureCount).c_str());
+			if (textureCount > 0) {
+				m_nCurrentSkybox = (m_nCurrentSkybox + 1) % textureCount;
+				m_pScene->GetSkyBox()->SetSkyboxIndex(m_nCurrentSkybox);
+			}
+
+		}
+		lastEventTime = currentTime;
+	}
+
+	//std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
@@ -1854,7 +2163,7 @@ void CGameFramework::FrameAdvance()
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Hunger"); // 허기
 	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
-	ImGui::ProgressBar(m_pPlayer->PlayerHunger, ImVec2(barWidth, barHeight));
+	ImGui::ProgressBar(m_pPlayer->PlayerHunger / 100.f, ImVec2(barWidth, barHeight));
 	ImGui::PopStyleColor();
 	ImGui::EndGroup();
 
@@ -1864,7 +2173,7 @@ void CGameFramework::FrameAdvance()
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Thirst"); // 갈증
 	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 0.2f, 1.0f, 1.0f));
-	ImGui::ProgressBar(m_pPlayer->PlayerThirst, ImVec2(barWidth, barHeight));
+	ImGui::ProgressBar(m_pPlayer->PlayerThirst / 100.f, ImVec2(barWidth, barHeight));
 	ImGui::PopStyleColor();
 	ImGui::EndGroup();
 
@@ -1990,13 +2299,26 @@ void CGameFramework::FrameAdvance()
 
 		// 오른쪽: 플레이어 스탯
 		{
+			auto& nwManager = NetworkManager::GetInstance();
 			ImGui::Text("LV: %d", m_pPlayer->PlayerLevel);
 			ImGui::Text("STATUS:");
 
 			ImGui::BulletText("HP: %d / %d", m_pPlayer->Playerhp, m_pPlayer->Maxhp);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
-				if (ImGui::Button("+##hp")) { m_pPlayer->Maxhp += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerhp += 10; }
+				if (ImGui::Button("+##hp")) { 
+					m_pPlayer->Maxhp += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerhp += 10; 
+					CHANGE_STAT_PACKET s_packet;
+					s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+					s_packet.size = sizeof(CHANGE_STAT_PACKET);
+					s_packet.stat = E_STAT::MAX_HP;
+					s_packet.value = m_pPlayer->Maxhp;
+					nwManager.PushSendQueue(s_packet, s_packet.size);
+					s_packet.stat = E_STAT::HP;
+					s_packet.value = m_pPlayer->Playerhp;
+					nwManager.PushSendQueue(s_packet, s_packet.size);
+					m_pPlayer->UpdateTraits();
+				}
 			}
 			else {
 				ImGui::BeginDisabled(); ImGui::Button("+##hp"); ImGui::EndDisabled();
@@ -2005,7 +2327,19 @@ void CGameFramework::FrameAdvance()
 			ImGui::BulletText("STAMINA: %d / %d", m_pPlayer->Playerstamina, m_pPlayer->Maxstamina);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
-				if (ImGui::Button("+##stamina")) { m_pPlayer->Maxstamina += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerstamina += 10; }
+				if (ImGui::Button("+##stamina")) { 
+					m_pPlayer->Maxstamina += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerstamina += 10; 
+					CHANGE_STAT_PACKET s_packet;
+					s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+					s_packet.size = sizeof(CHANGE_STAT_PACKET);
+					s_packet.stat = E_STAT::MAX_STAMINA;
+					s_packet.value = m_pPlayer->Maxstamina;
+					nwManager.PushSendQueue(s_packet, s_packet.size);
+					s_packet.stat = E_STAT::STAMINA;
+					s_packet.value = m_pPlayer->Playerstamina;
+					nwManager.PushSendQueue(s_packet, s_packet.size);
+					m_pPlayer->UpdateTraits();
+				}
 			}
 			else {
 				ImGui::BeginDisabled(); ImGui::Button("+##stamina"); ImGui::EndDisabled();
@@ -2014,7 +2348,7 @@ void CGameFramework::FrameAdvance()
 			ImGui::BulletText("ATK: %d", m_pPlayer->PlayerAttack);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
-				if (ImGui::Button("+##atk")) { m_pPlayer->PlayerAttack += 1; m_pPlayer->StatPoint--; }
+				if (ImGui::Button("+##atk")) { m_pPlayer->PlayerAttack += 1; m_pPlayer->StatPoint--; m_pPlayer->UpdateTraits(); }
 			}
 			else {
 				ImGui::BeginDisabled(); ImGui::Button("+##atk"); ImGui::EndDisabled();
@@ -2023,7 +2357,16 @@ void CGameFramework::FrameAdvance()
 			ImGui::BulletText("SPEED: %.1f", m_pPlayer->PlayerSpeed);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
-				if (ImGui::Button("+##speed")) { m_pPlayer->PlayerSpeed += 0.2f; m_pPlayer->StatPoint--; }
+				if (ImGui::Button("+##speed")) { 
+					m_pPlayer->PlayerSpeed += 0.2f; m_pPlayer->StatPoint--; m_pPlayer->PlayerSpeedLevel++;
+					CHANGE_STAT_PACKET s_packet;
+					s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+					s_packet.size = sizeof(CHANGE_STAT_PACKET);
+					s_packet.stat = E_STAT::SPEED;
+					s_packet.value = m_pPlayer->PlayerSpeedLevel;
+					nwManager.PushSendQueue(s_packet, s_packet.size);
+					m_pPlayer->UpdateTraits();
+				}
 			}
 			else {
 				ImGui::BeginDisabled(); ImGui::Button("+##speed"); ImGui::EndDisabled();
@@ -2119,7 +2462,7 @@ void CGameFramework::FrameAdvance()
 
 		if (BuildMode && !bPrevBuildMode)
 		{
-			m_pConstructionSystem->EnterBuildMode(); // 상태 전환 시 한 번만 실행
+			m_pConstructionSystem->EnterBuildMode(m_pCamera); // 상태 전환 시 한 번만 실행
 		}
 		bPrevBuildMode = BuildMode;
 		/*
@@ -2247,7 +2590,123 @@ void CGameFramework::FrameAdvance()
 		ImGui::End();
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////// 특성 ui
+	if (ShowTraitUI)
+	{
+		ImVec2 windowSize = ImVec2(600, 700);
+		ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+		ImVec2 windowPos = ImVec2(
+			(displaySize.x - windowSize.x) * 0.5f,
+			(displaySize.y - windowSize.y) * 0.5f
+		);
+
+		ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
+		ImGui::SetNextWindowPos(windowPos, ImGuiCond_Always, ImVec2(0, 0));
+
+		ImGui::Begin("Passive Traits", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+
+		if (ImGui::BeginTabBar("StatsTabs"))
+		{
+			int hp = m_pPlayer->Maxhp;
+			int stamina = m_pPlayer->Maxstamina;
+			int atk = m_pPlayer->PlayerAttack;
+			float speed = m_pPlayer->PlayerSpeed;
+
+			if (ImGui::BeginTabItem("Health"))
+			{
+				std::vector<std::tuple<int, const char*, const char*>> hpTraits = {
+					{350, "Extra Health", "Increases base max HP"},
+					{400, "HP-based Damage", "Damage increases with HP"},
+					{450, "Regenerate When Starving", "Health regen continues even at 0 hunger"},
+					{500, "Enhanced HP Damage", "Stronger scaling with HP"},
+					{550, "Health Regen Skill", "Gain a passive healing effect"}
+				};
+
+				for (auto& [req, name, effect] : hpTraits)
+				{
+					bool active = hp >= req;
+					ImGui::TextColored(active ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+						"[%s] %s", active ? "ACTIVE" : "LOCKED", name);
+					ImGui::BulletText("Required HP: %d", req);
+					ImGui::BulletText("Effect: %s", effect);
+					ImGui::Separator();
+				}
+				ImGui::EndTabItem();
+			}
+
+			if (ImGui::BeginTabItem("Stamina"))
+			{
+				std::vector<std::tuple<int, const char*, const char*>> staminaTraits = {
+					{200, "Work Speed Boost", "Faster gathering/crafting"},
+					{250, "Lower Stamina Cost", "Reduced stamina usage"},
+					{300, "Faster Recovery", "Stamina regeneration rate up"},
+					{350, "Power Surge", "Boost speed/attack if stamina is high"},
+					{400, "Exhausted Action", "Can still act briefly at 0 stamina"}
+				};
+
+				for (auto& [req, name, effect] : staminaTraits)
+				{
+					bool active = stamina >= req;
+					ImGui::TextColored(active ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+						"[%s] %s", active ? "ACTIVE" : "LOCKED", name);
+					ImGui::BulletText("Required Stamina: %d", req);
+					ImGui::BulletText("Effect: %s", effect);
+					ImGui::Separator();
+				}
+				ImGui::EndTabItem();
+			}
+
+			if (ImGui::BeginTabItem("Attack"))
+			{
+				std::vector<std::tuple<int, const char*, const char*>> atkTraits = {
+					{15, "Triple Hit Bonus", "Every 3rd attack deals 2x damage"},
+					{20, "Kill Heal", "Heal some HP when killing enemies"},
+					{25, "Bleed Effect", "Applies bleed status"},
+					{30, "Damage Multiplier", "Boost weapon/tool damage"},
+					{35, "3s Invincibility", "Become invincible for 3s (180s cooldown)"}
+				};
+
+				for (auto& [req, name, effect] : atkTraits)
+				{
+					bool active = atk >= req;
+					ImGui::TextColored(active ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+						"[%s] %s", active ? "ACTIVE" : "LOCKED", name);
+					ImGui::BulletText("Required ATK: %d", req);
+					ImGui::BulletText("Effect: %s", effect);
+					ImGui::Separator();
+				}
+				ImGui::EndTabItem();
+			}
+
+			if (ImGui::BeginTabItem("Speed"))
+			{
+				std::vector<std::tuple<int, const char*, const char*>> speedTraits = {
+					{15, "Extra Dash", "Gain an extra dash"},
+					{20, "Slow Resist", "Reduces duration of slowing effects"},
+					{25, "Speed on Kill", "Gain movement speed after killing"},
+					{30, "Dash Attack", "Dash deals damage"},
+					{35, "Evade Hit", "Chance to dodge when hit"}
+				};
+
+				for (auto& [req, name, effect] : speedTraits)
+				{
+					bool active = speed >= req;
+					ImGui::TextColored(active ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+						"[%s] %s", active ? "ACTIVE" : "LOCKED", name);
+					ImGui::BulletText("Required Speed: %d", req);
+					ImGui::BulletText("Effect: %s", effect);
+					ImGui::Separator();
+				}
+				ImGui::EndTabItem();
+			}
+
+			ImGui::EndTabBar();
+		}
+
+		ImGui::End();
+	}
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////
 	ImGui::Render();
 	ID3D12DescriptorHeap* ppHeaps[] = { m_pd3dSrvDescriptorHeapForImGui };
 	m_pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
@@ -2291,7 +2750,6 @@ void CGameFramework::FrameAdvance()
 	_stprintf_s(m_pszFrameRate + nLength, 70 - nLength, _T("(%4f, %4f, %4f)"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
 	::SetWindowText(m_hWnd, m_pszFrameRate);
 }
-
 void CGameFramework::CreateCbvSrvDescriptorHeap()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
@@ -2303,7 +2761,6 @@ void CGameFramework::CreateCbvSrvDescriptorHeap()
 	if (FAILED(hr))
 		::MessageBox(NULL, _T("Failed to create SRV Descriptor Heap for ImGui"), _T("Error"), MB_OK);
 }
-
 void CGameFramework::InitializeCraftItems()
 {
 	m_vecCraftableItems.clear();
@@ -2615,7 +3072,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE CGameFramework::CreateConstantBufferViews(int nConst
 	{
 		// 힙 공간 부족 등의 이유로 할당 실패
 		// 오류 처리 (로그 남기기, 예외 발생 등)
-		OutputDebugString(L"Failed to allocate CBV descriptors.\n");
+		//OutputDebugString(L"Failed to allocate CBV descriptors.\n");
 		return { 0 }; // 실패 시 유효하지 않은 핸들 반환
 	}
 
@@ -2696,7 +3153,7 @@ void CGameFramework::WaitForGpu()
 {
 	// 필수 객체들 유효성 검사
 	if (!m_pd3dCommandQueue || !m_pd3dFence || m_hFenceEvent == INVALID_HANDLE_VALUE) {
-		OutputDebugString(L"Warning: Cannot wait for GPU, essential objects are missing.\n");
+		//OutputDebugString(L"Warning: Cannot wait for GPU, essential objects are missing.\n");
 		return;
 	}
 
@@ -2706,7 +3163,7 @@ void CGameFramework::WaitForGpu()
 
 	HRESULT hr = m_pd3dCommandQueue->Signal(m_pd3dFence, fenceValueToSignal);
 	if (FAILED(hr)) {
-		OutputDebugString(L"!!!!!!!! ERROR: CommandQueue->Signal failed! !!!!!!!!\n");
+		//OutputDebugString(L"!!!!!!!! ERROR: CommandQueue->Signal failed! !!!!!!!!\n");
 		return; // Signal 실패 시 대기 불가
 	}
 
@@ -2716,18 +3173,18 @@ void CGameFramework::WaitForGpu()
 		// 3. 아직 도달하지 못했다면, 이벤트 핸들을 사용하여 대기
 		hr = m_pd3dFence->SetEventOnCompletion(fenceValueToSignal, m_hFenceEvent);
 		if (FAILED(hr)) {
-			OutputDebugString(L"!!!!!!!! ERROR: Fence->SetEventOnCompletion failed! !!!!!!!!\n");
+			//OutputDebugString(L"!!!!!!!! ERROR: Fence->SetEventOnCompletion failed! !!!!!!!!\n");
 			return; // 이벤트 설정 실패 시 대기 불가
 		}
 
 		// 4. 이벤트가 Signal 상태가 될 때까지 무한 대기
-		OutputDebugString(L"Waiting for GPU to finish...\n");
+		//OutputDebugString(L"Waiting for GPU to finish...\n");
 		WaitForSingleObjectEx(m_hFenceEvent, INFINITE, FALSE);
-		OutputDebugString(L"GPU finished.\n");
+		//OutputDebugString(L"GPU finished.\n");
 	}
 	else {
 		// 이미 GPU가 해당 값 이상으로 진행함 (바로 종료 가능)
-		OutputDebugString(L"GPU already finished (Fence value check).\n");
+		//OutputDebugString(L"GPU already finished (Fence value check).\n");
 	}
 }
 

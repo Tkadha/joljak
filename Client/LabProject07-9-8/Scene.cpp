@@ -126,7 +126,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	BuildDefaultLightsAndMaterials();
 
 	if (!pResourceManager) {
-		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
+		//OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
 		return;
 	}
 
@@ -147,6 +147,23 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(gpuSrvHandle),
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuDsvHandle)
 	);
+
+	// 1. Waves 객체를 생성합니다.
+	m_pWavesObject = new CWavesObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	// 물결이 보일 위치를 설정합니다. (맵의 중앙 근처, 수면 높이)
+	m_pWavesObject->SetPosition(5000.0f, 2600.0f, 5000.0f);
+
+	// 2. Waves를 위한 재질(Material)을 생성합니다.
+	CMaterial* pWavesMaterial = new CMaterial(1, m_pGameFramework);
+
+	// 3. ShaderManager에서 "Waves" 셰이더를 가져와 재질에 설정합니다.
+	pWavesMaterial->SetShader(m_pGameFramework->GetShaderManager()->GetShader("Waves"));
+
+	// (선택) 물 텍스처가 있다면 여기서 로드하여 재질에 할당할 수 있습니다.
+	// pWavesMaterial->AssignTexture(...);
+
+	// 4. 생성한 재질을 Waves 객체에 설정합니다.
+	m_pWavesObject->SetMaterial(0, pWavesMaterial);
 
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pGameFramework);
 	srand((unsigned int)time(NULL));
@@ -190,11 +207,19 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 	if (!pResourceManager) {
 		
-		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
+		//OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
 		return;
 	}
 
+	std::vector<std::wstring> skyboxTextures = {
+	   L"Skybox/SkyBox_0.dds",
+	   L"Skybox/SkyBox_1.dds",
+	   L"Skybox/day123.dds"
+	};
+
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	m_pSkyBox->LoadTextures(pd3dCommandList, skyboxTextures);
+	
 	srand((unsigned int)time(NULL));
 
 	XMFLOAT3 xmf3Scale(5.f, 0.2f, 5.f);
@@ -249,11 +274,17 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 
 	float spawnMin = 500, spawnMax = 9500;
-	float objectMinSize = 15, objectMaxSize = 20;
+	float objectMinSize = 5, objectMaxSize = 30;
 
 	int nTreeObjects = 100;
+
+	auto pPinePrefab = std::make_shared<CPineObject>(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	pResourceManager->RegisterPrefab("PineTree", pPinePrefab);
+
+	std::shared_ptr<CGameObject> pinePrefab = pResourceManager->GetPrefab("PineTree");
+
 	for (int i = 0; i < nTreeObjects; ++i) {
-		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		CGameObject* gameObj = pinePrefab->Clone();
 		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
@@ -264,8 +295,14 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
 	}
+
+
+	auto pBirchPrefab = std::make_shared<CBirchObject>(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	pResourceManager->RegisterPrefab("BirchTree", pBirchPrefab);
+
+	std::shared_ptr<CGameObject> BirchPrefab = pResourceManager->GetPrefab("BirchTree");
 	for (int i = 0; i < nTreeObjects; ++i) {
-		CGameObject* gameObj = new CBirchObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		CGameObject* gameObj = BirchPrefab->Clone();
 		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
@@ -276,13 +313,13 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		UINT albedoTextureSlot = 0;
 		const wchar_t* textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
 
-		ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+		//ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
 
 		m_vGameObjects.emplace_back(gameObj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
 	}
-	for (int i = 0; i < nTreeObjects; ++i) {
+	/*for (int i = 0; i < nTreeObjects; ++i) {
 		CGameObject* gameObj = new CWillowObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
 		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
@@ -290,18 +327,10 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		gameObj->SetScale(w, h, w);
 		gameObj->m_treecount = tree_obj_count;
 
-		////XMFLOAT3 position = gameObj->GetPosition();
-		//XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		////position.y += 50.0f;
-		//XMFLOAT3 size = XMFLOAT3(1.0f, 10.0f, 1.0f);
-		//XMFLOAT4 rotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-		//gameObj->SetOBB(position, size, rotation);
-		//gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
-
 		m_vGameObjects.emplace_back(gameObj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
-	}
+	}*/
 
 
 	int nRockObjects = 100;	objectMinSize = 10, objectMaxSize = 15;
@@ -671,7 +700,13 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		if (pWolfModel) delete pWolfModel;
 	}
 
-	// 플레이어 커스터마이징(임시)
+	const int rockShardPoolSize = 20;
+	for (int i = 0; i < rockShardPoolSize; ++i)
+	{
+		auto* shard = new CRockShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		m_vRockShards.push_back(shard);
+		m_vGameObjects.emplace_back(shard);
+	}
 
 	//int materialIndexToChange = 0;
 	//UINT albedoTextureSlot = 0;
@@ -780,7 +815,7 @@ void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 	if (m_pcbMappedLights && m_pLights) {
 		assert(m_nLights >= 0 && m_nLights <= MAX_LIGHTS && "Invalid number of lights!");
 		if (m_nLights < 0 || m_nLights > MAX_LIGHTS) {
-			OutputDebugStringA("!!!!!!!! ERROR: Invalid m_nLights value detected! Clamping to 0. !!!!!!!!\n");
+			//OutputDebugStringA("!!!!!!!! ERROR: Invalid m_nLights value detected! Clamping to 0. !!!!!!!!\n");
 			m_nLights = 0; 
 		}
 		::memcpy(m_pcbMappedLights->m_pLights, m_pLights, sizeof(LIGHT) * m_nLights);
@@ -888,6 +923,11 @@ void CScene::AnimateObjects(float fTimeElapsed)
 	}
 
 	if (m_pWavesObject) m_pWavesObject->Animate(fTimeElapsed);
+
+	for (auto& shard : m_vRockShards)
+	{
+		shard->Update(fTimeElapsed);
+	}
 }
 
 
@@ -966,11 +1006,12 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	m_pCurrentShader = nullptr;
 
 
+	
 
-
-	if (m_pSkyBox) {
+	if (m_pSkyBox)
 		m_pSkyBox->Render(pd3dCommandList, pCamera);
-	}
+
+	
 
 
 	if (m_pTerrain) {
@@ -1102,88 +1143,6 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 }
 
-void CScene::TestRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
-{
-	// ------------------------------------------------------------------
-	// 기존의 모든 CScene::Render 내용을 이 코드로 완전히 교체합니다.
-	// ------------------------------------------------------------------
-
-	OutputDebugString(L"--- CScene::Render START ---\n");
-
-	// 1. 필요한 포인터 가져오기
-	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
-
-	// 2. 렌더 타겟, 뷰포트, 디스크립터 힙을 명시적으로 다시 설정합니다.
-	//    (이전 상태에 관계없이 우리가 원하는 상태로 강제합니다)
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pGameFramework->GetCurrentRtvCPUDescriptorHandle();
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pGameFramework->GetDsvCPUDescriptorHandle();
-	pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
-
-	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
-
-//	ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() };
-	ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->m_pd3dSrvDescriptorHeapForImGui };
-
-	pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-
-	// 3. 디버그 셰이더와 PSO, 루트 서명 설정
-	CShader* pDebugShader = pShaderManager->GetShader("Debug");
-	if (!pDebugShader || !pDebugShader->GetPipelineState())
-	{
-		OutputDebugString(L"Error: Debug shader or PSO is null.\n");
-		return;
-	}
-
-	pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
-	pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
-
-	D3D12_GPU_DESCRIPTOR_HANDLE shadowMapSrv = m_pShadowMap->Srv();
-	if (shadowMapSrv.ptr != 0) {
-		pd3dCommandList->SetGraphicsRootDescriptorTable(0, shadowMapSrv);
-	}
-
-
-	// 4. 디버그 사각형 그리기
-	D3D12_VERTEX_BUFFER_VIEW vbView = m_pGameFramework->GetDebugQuadVBView();
-	D3D12_INDEX_BUFFER_VIEW ibView = m_pGameFramework->GetDebugQuadIBView();
-
-	pd3dCommandList->IASetVertexBuffers(0, 1, &vbView);
-	pd3dCommandList->IASetIndexBuffer(&ibView);
-	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	OutputDebugString(L"Attempting to draw the debug quad...\n");
-	pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
-
-	OutputDebugString(L"--- CScene::Render END ---\n");
-}
-
-
-void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader)
-{
-	if (!pShader || !pd3dCommandList) return;
-
-
-	//if (pShader != m_pCurrentShader)
-	//{
-	m_pCurrentShader = pShader;
-
-
-	ID3D12RootSignature* pRootSig = pShader->GetRootSignature();
-	pd3dCommandList->SetGraphicsRootSignature(pRootSig);
-	if (pRootSig && pRootSig != m_pCurrentRootSignature) {
-		m_pCurrentRootSignature = pRootSig;
-
-	}
-
-
-	ID3D12PipelineState* pPSO = pShader->GetPipelineState();
-	pd3dCommandList->SetPipelineState(pPSO);
-	if (pPSO && pPSO != m_pCurrentPSO) {
-		m_pCurrentPSO = pPSO;
-	}
-	//}
-
-}
 
 ShaderManager* CScene::GetShaderManager() const {
 	return m_pGameFramework ? m_pGameFramework->GetShaderManager() : nullptr;
@@ -1519,4 +1478,31 @@ void CScene::UpdateLights(float fTimeElapsed)
 
 	// 4. 계산된 새로운 방향을 실제 조명 데이터에 업데이트합니다.
 	XMStoreFloat3(&pMainLight->m_xmf3Direction, xmvCurrentLightDirection);
+}
+
+void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader)
+{
+	if (!pShader || !pd3dCommandList) return;
+
+
+	//if (pShader != m_pCurrentShader)
+	//{
+	m_pCurrentShader = pShader;
+
+
+	ID3D12RootSignature* pRootSig = pShader->GetRootSignature();
+	pd3dCommandList->SetGraphicsRootSignature(pRootSig);
+	if (pRootSig && pRootSig != m_pCurrentRootSignature) {
+		m_pCurrentRootSignature = pRootSig;
+
+	}
+
+
+	ID3D12PipelineState* pPSO = pShader->GetPipelineState();
+	pd3dCommandList->SetPipelineState(pPSO);
+	if (pPSO && pPSO != m_pCurrentPSO) {
+		m_pCurrentPSO = pPSO;
+	}
+	//}
+
 }

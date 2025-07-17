@@ -73,8 +73,9 @@ unsigned long CGameTimer::GetFrameRate(LPTSTR lpszString, int nCharacters)
 {
     if (lpszString)
     {
-        _itow_s(m_nCurrentFrameRate, lpszString, nCharacters, 10);
-        wcscat_s(lpszString, nCharacters, _T(" FPS)"));
+        //_itow_s(m_nCurrentFrameRate, lpszString, nCharacters, 10);
+        //wcscat_s(lpszString, nCharacters, _T(" FPS)"));
+		_stprintf_s(lpszString, nCharacters, _T("%lu FPS)"), m_nCurrentFrameRate);
     } 
 
     return(m_nCurrentFrameRate);

@@ -2,6 +2,8 @@
 #include "Player.h"
 #include "Terrain.h"
 #include "GameObject.h"
+#include "Octree.h"
+#include "Event.h"
 #include <iostream>
 
 #define DIR_FORWARD					0x01
@@ -41,6 +43,42 @@ void PlayerClient::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 	{
 		m_Position = Vector3::Add(m_Position, xmf3Shift);
 	}
+}
+
+void PlayerClient::UpdateTransform()
+{
+    XMVECTOR vRight = XMLoadFloat3(&m_Right);
+    XMVECTOR vUp = XMLoadFloat3(&m_Up);
+    XMVECTOR vLook = XMLoadFloat3(&m_Look);
+    XMVECTOR vPosition = XMLoadFloat3(&m_Position);
+    XMFLOAT4X4 xmf4x4 = Matrix4x4::Identity();
+    XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&xmf4x4._11), vRight);
+    XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&xmf4x4._21), vUp);
+    XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&xmf4x4._31), vLook);
+    XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&xmf4x4._41), vPosition);
+
+    XMMATRIX worldMatrix = XMLoadFloat4x4(&xmf4x4);
+
+
+
+    XMVECTOR localCenter = XMLoadFloat3(&local_obb.Center);
+    XMVECTOR worldCenter = XMVector3TransformCoord(localCenter, worldMatrix);
+    XMStoreFloat3(&world_obb.Center, worldCenter);
+
+
+    XMMATRIX rotationMatrix = worldMatrix;
+    rotationMatrix.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+    XMVECTOR orientation = XMQuaternionRotationMatrix(rotationMatrix);
+    XMStoreFloat4(&world_obb.Orientation, orientation);
+
+
+    XMFLOAT3 scale;
+    scale.x = XMVectorGetX(XMVector3Length(worldMatrix.r[0]));
+    scale.y = XMVectorGetX(XMVector3Length(worldMatrix.r[1]));
+    scale.z = XMVectorGetX(XMVector3Length(worldMatrix.r[2]));
+    world_obb.Extents.x = local_obb.Extents.x * scale.x;
+    world_obb.Extents.y = local_obb.Extents.y * scale.y;
+    world_obb.Extents.z = local_obb.Extents.z * scale.z;
 }
 
 void PlayerClient::Update(float fTimeElapsed)
@@ -85,6 +123,60 @@ void PlayerClient::Update(float fTimeElapsed)
 	m_Velocity = Vector3::Add(m_Velocity, Vector3::ScalarProduct(m_Velocity, -fDeceleration, true));
 }
 
+void PlayerClient::Change_Stat(E_STAT stat, float value)
+{
+    if (this->state != PC_INGAME) return;
+	switch (stat)
+	{
+	case E_STAT::STAMINA:
+        Playerstamina.store(value);
+		break;
+    case E_STAT::HUNGER: {
+        float expectedHunger = PlayerHunger.load();
+        while (true) {
+            float desiredHunger = expectedHunger + value;
+
+            if (desiredHunger > 100.f) {
+                desiredHunger = 100.f;
+            }
+            if (PlayerHunger.compare_exchange_weak(expectedHunger, desiredHunger)) {
+                break;
+            }
+        }
+    }
+		break;
+    case E_STAT::THIRST: {
+        float expectedThirst = PlayerThirst.load();
+        while (true) {
+            float desiredThirst = expectedThirst + value;
+
+            if (desiredThirst > 100.f) {
+                desiredThirst = 100.f;
+            }
+            if (PlayerThirst.compare_exchange_weak(expectedThirst, desiredThirst)) {
+                break;
+            }
+        }
+    }
+		break;
+	case E_STAT::MAX_STAMINA:
+        Maxstamina.store(value);
+		break;
+	case E_STAT::HP:
+        Playerhp.store(value);
+		break;
+	case E_STAT::MAX_HP:
+        Maxhp.store(value);
+		break;
+	case E_STAT::SPEED:
+        Speed_stat = value; // 이동 속도
+		break;
+	default:
+		break;
+	}
+
+}
+
 void PlayerClient::processInput(PlayerInput input)
 {
 	m_lastReceivedInput = input;
@@ -113,7 +205,7 @@ void PlayerClient::Update_test(float deltaTime)
         }
         else if (currentInput.Jump && isGrounded) {
             m_currentState = ServerPlayerState::Jumping;
-            m_Velocity.y = 300.0f; // 점프 초기 속도
+            m_Velocity.y = 150.0f; // 점프 초기 속도
         }
         else if (isGrounded && m_currentState == ServerPlayerState::Falling) { // 착지
             m_currentState = ServerPlayerState::Idle; // 착지하면 Idle
@@ -196,18 +288,100 @@ void PlayerClient::Update_test(float deltaTime)
 
     // 이동 및 충돌 처리
     //XMFLOAT3 deltaPos = Vector3::ScalarProduct(m_Velocity, deltaTime);
-    XMFLOAT3 deltaPos = Vector3::ScalarProduct(m_Velocity, 0.75f);
-    /* 충돌 처리*/
+    XMFLOAT3 deltaVel = Vector3::ScalarProduct(m_Velocity, 0.75f);
+    // 런닝 판정
     if (m_currentState == ServerPlayerState::Running)
     {
-        deltaPos.x *= 1.5f;
-        deltaPos.y *= 1.5f;
-        deltaPos.z *= 1.5f;
+        deltaVel.x *= 1.5f;
+        deltaVel.z *= 1.5f;
     }
-    XMFLOAT3 finalDeltaPos = deltaPos; // 충돌 처리 적용
-    // 위치 업데이트
-    m_Position = Vector3::Add(m_Position, finalDeltaPos);
+    // 슬로우 효과 확인
+    if (b_slow)
+    {
+        deltaVel.x /= 1.5f;
+        deltaVel.z /= 1.5f;
+    }
 
+
+    /* 충돌 처리*/
+    // 이동 충돌처리 적용
+    // X축 이동 시도
+    XMFLOAT3 moving_pos = m_Position;
+    moving_pos.x += deltaVel.x;
+    BoundingOrientedBox testOBBX;
+    XMMATRIX matX = XMMatrixTranslation(moving_pos.x, moving_pos.y, moving_pos.z);
+    local_obb.Transform(testOBBX, matX);
+    testOBBX.Orientation.w = 1.f;
+
+    // octree 적용해서 범위 줄이기
+    std::vector<tree_obj*> presults;
+    std::vector<tree_obj*> oresults;
+    {
+        tree_obj n_obj{ -1 ,moving_pos };
+        Octree::PlayerOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, presults);
+        Octree::GameObjectOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, oresults);
+        for (auto& p_obj : presults) {
+            for (auto& cl : PlayerClient::PlayerClients) {
+                if (cl.second->state != PC_INGAME)continue;
+                if (cl.second->m_id != p_obj->u_id) continue;
+                if (testOBBX.Intersects(cl.second->world_obb))
+                {
+                    moving_pos.x = m_Position.x;
+                    break;
+                }
+            }
+        }
+        for (auto& o_obj : oresults) {
+            if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
+            if (GameObject::gameObjects[o_obj->u_id]->_hp <= 0) continue;
+            if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
+            if (testOBBX.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
+            {
+                moving_pos.x = m_Position.x;
+                break;
+            }
+        }
+    }
+
+    // Z축 이동 시도
+    moving_pos.z += deltaVel.z;
+    BoundingOrientedBox testOBBZ;
+    XMMATRIX matZ = XMMatrixTranslation(moving_pos.x, moving_pos.y, moving_pos.z);
+    local_obb.Transform(testOBBZ, matZ);
+    testOBBZ.Orientation.w = 1.f;
+
+    presults.clear();
+    oresults.clear();
+    {
+        tree_obj n_obj{ -1 ,moving_pos };
+        Octree::PlayerOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, presults);
+        Octree::GameObjectOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, oresults);
+        for (auto& p_obj : presults) {
+            for (auto& cl : PlayerClient::PlayerClients) {
+                if (cl.second->state != PC_INGAME)continue;
+                if (cl.second->m_id != p_obj->u_id) continue;
+                if (testOBBZ.Intersects(cl.second->world_obb))
+                {
+                    moving_pos.z = m_Position.z;
+                    break;
+                }
+            }
+        }
+        for (auto& o_obj : oresults) {
+            if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
+            if (GameObject::gameObjects[o_obj->u_id]->_hp <= 0) continue;
+            if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
+            if (testOBBZ.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
+            {
+                moving_pos.z = m_Position.z;
+                break;
+            }
+        }
+    }
+
+    moving_pos.y += deltaVel.y;
+
+    SetPosition(moving_pos);
     // 땅 짚기
     SnapToGround();
 }
@@ -246,6 +420,22 @@ void PlayerClient::SnapToGround()
     if (m_currentState != ServerPlayerState::Jumping) {
         xmf3PlayerPosition.y = fHeight;
         SetPosition(xmf3PlayerPosition);
+    }
+}
+
+void PlayerClient::SetEffect(OBJECT_TYPE obj_type)
+{
+    switch (obj_type)
+    {
+    case OBJECT_TYPE::OB_TOAD:
+    {
+        SetSlow(true);
+        EVENT ev{ EVENT_TYPE::E_P_SLOW_END, m_id, -1 };
+        EVENT::add_timer(ev, 5000); // 5초 후에 슬로우 효과 제거
+    }
+        break;
+    default:
+        break;
     }
 }
 
