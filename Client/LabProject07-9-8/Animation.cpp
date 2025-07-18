@@ -558,7 +558,7 @@ CAnimationController::CAnimationController(const CAnimationController& other, ID
 	// 메쉬 정보 공유
 	m_nSkinnedMeshes = other.m_nSkinnedMeshes;
 	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
-	for (int i = 0; i < m_nSkinnedMeshes; i++) m_ppSkinnedMeshes[i] = other.m_ppSkinnedMeshes[i];
+	for (int i = 0; i < m_nSkinnedMeshes; i++) m_ppSkinnedMeshes[i] = nullptr;
 
 	// 루트 오브젝트 정보 복사
 	m_pModelRootObject = other.m_pModelRootObject;

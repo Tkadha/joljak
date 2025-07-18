@@ -300,60 +300,82 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 	int animate_count = 13;
 	// Cow 배치
-	std::shared_ptr<CGameObject> cowPrefab = pResourceManager->GetPrefab("Cow");
-	if (cowPrefab) {
-		for (int i = 0; i < 10; ++i) {
-			CMonsterObject* newCow = dynamic_cast<CMonsterObject*>(cowPrefab->Clone());
-			newCow->m_objectType = GameObjectType::Cow;
+	//std::shared_ptr<CGameObject> cowPrefab = pResourceManager->GetPrefab("Cow");
+	//if (cowPrefab) {
+	//	CGameObject* prefabInstance = cowPrefab.get();
+	//	prefabInstance->SetPosition(5000, 2700, 5000); // 눈에 잘 띄는 곳에 배치
+	//	m_vGameObjects.emplace_back(prefabInstance);
 
-			newCow->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-			for (int j = 1; j < animate_count; ++j) {
-				newCow->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
-				newCow->m_pSkinnedAnimationController->SetTrackEnable(j, false);
-			}
-
-			newCow->SetOwningScene(this);
-			newCow->FSM_manager = std::make_shared<FSMManager<CGameObject>>(newCow);
-			newCow->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
-			newCow->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
-			
-			auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
-			newCow->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-			newCow->SetScale(12.0f, 12.0f, 12.0f);
-			m_vGameObjects.emplace_back(newCow);
-
-			auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, newCow->m_worldOBB.Center);
-			octree.insert(std::move(t_obj));
-		}
-	}
-
-	//int nCowObjects = 10;
-	//for (int i = 0; i < nCowObjects; ++i)
-	//{
-	//	CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Cow.bin", m_pGameFramework);
-	//	CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, animate_count, m_pGameFramework);
-	//	gameobj->m_objectType = GameObjectType::Cow;
-	//	gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	//	prefabInstance->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	//	for (int j = 1; j < animate_count; ++j) {
-	//		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
-	//		gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+	//		prefabInstance->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+	//		prefabInstance->m_pSkinnedAnimationController->SetTrackEnable(j, false);
 	//	}
-	//	gameobj->SetOwningScene(this);
-	//	gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
-	//	gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 
-	//	gameobj->Rotate(0.f, 180.f, 0.f);
-	//	auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
-	//	gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-	//	gameobj->SetScale(12.0f, 12.0f, 12.0f);
-	//	gameobj->SetTerraindata(m_pTerrain);
-	//	gameobj->m_treecount = tree_obj_count;
-	//	m_vGameObjects.emplace_back(gameobj);
-	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
+	//	prefabInstance->SetOwningScene(this);
+	//	prefabInstance->FSM_manager = std::make_shared<FSMManager<CGameObject>>(prefabInstance);
+	//	prefabInstance->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+	//	prefabInstance->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+
+	//	prefabInstance->SetScale(12.0f, 12.0f, 12.0f);
+
+	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, prefabInstance->m_worldOBB.Center);
 	//	octree.insert(std::move(t_obj));
-	//	if (pCowModel) delete pCowModel;
+
+	//	for (int i = 0; i < 10; ++i) {
+	//		CMonsterObject* newCow = dynamic_cast<CMonsterObject*>(cowPrefab->Clone());
+	//		newCow->m_objectType = GameObjectType::Cow;
+
+	//		newCow->PostCloneAnimationSetup();	// 뼈대 재연결
+
+	//		newCow->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	//		for (int j = 1; j < animate_count; ++j) {
+	//			newCow->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+	//			newCow->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+	//		}
+
+	//		newCow->SetOwningScene(this);
+	//		newCow->FSM_manager = std::make_shared<FSMManager<CGameObject>>(newCow);
+	//		newCow->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+	//		newCow->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+	//		
+	//		auto [x, z] = genRandom::generateRandomXZ(gen, 5000, 5500, 5000, 5500);
+	//		newCow->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+	//		newCow->SetScale(12.0f, 12.0f, 12.0f);
+	//		m_vGameObjects.emplace_back(newCow);
+
+	//		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, newCow->m_worldOBB.Center);
+	//		octree.insert(std::move(t_obj));
+	//	}
 	//}
-	int nPigObjects = 10;
+
+	/*int nCowObjects = 10;
+	for (int i = 0; i < nCowObjects; ++i)
+	{
+		CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Cow.bin", m_pGameFramework);
+		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, animate_count, m_pGameFramework);
+		gameobj->m_objectType = GameObjectType::Cow;
+		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+		for (int j = 1; j < animate_count; ++j) {
+			gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+		}
+		gameobj->SetOwningScene(this);
+		gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+		gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+
+		gameobj->Rotate(0.f, 180.f, 0.f);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
+		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		gameobj->SetScale(12.0f, 12.0f, 12.0f);
+		gameobj->SetTerraindata(m_pTerrain);
+		gameobj->m_treecount = tree_obj_count;
+		m_vGameObjects.emplace_back(gameobj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+		if (pCowModel) delete pCowModel;
+	}*/
+	/*int nPigObjects = 10;
 	for (int i = 0; i < nPigObjects; ++i)
 	{
 		CLoadedModelInfo* pPigModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Pig.bin", m_pGameFramework);
@@ -368,7 +390,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
 		gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 		gameobj->Rotate(0.f, 180.f, 0.f);
-		auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 5000, 5500, 5000, 5500);
 		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		gameobj->SetScale(10.0f, 10.0f, 10.0f);
 		gameobj->SetTerraindata(m_pTerrain);
@@ -457,7 +479,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
 		if (pWolfModel) delete pWolfModel;
-	}
+	}*/
 
 	const int rockShardPoolSize = 20;
 	for (int i = 0; i < rockShardPoolSize; ++i)
@@ -537,10 +559,16 @@ void CScene::ReleaseObjects()
 	if (m_pWavesObject) delete m_pWavesObject;
 
 	ReleaseShaderVariables();
-	//for(auto& obj : m_vGameObjects) {
-	//	if (obj) delete obj;
-	//}
+	for (auto& pObject : m_vGameObjects)
+	{
+		// 복제된 인스턴스만 delete
+		if (pObject && !pObject->m_bIsPrefab)
+		{
+			delete pObject;
+		}
+	}
 	m_vGameObjects.clear();
+
 	m_listBranchObjects.clear();
 
 	if (m_pLights) delete[] m_pLights;
@@ -1299,7 +1327,11 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	CLoadedModelInfo* pLoadedModel = nullptr;
 
 	pLoadedModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Cow.bin", m_pGameFramework);
-	pResourceManager->RegisterPrefab("Cow", std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, pLoadedModel, 13, m_pGameFramework));
+	auto pCowPrefab = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, pLoadedModel, 13, m_pGameFramework);
+
+	pCowPrefab->m_bIsPrefab = true;
+
+	pResourceManager->RegisterPrefab("Cow", pCowPrefab);
 	if (pLoadedModel) delete pLoadedModel;
 
 	pLoadedModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Pig.bin", m_pGameFramework);

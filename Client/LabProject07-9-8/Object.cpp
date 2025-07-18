@@ -741,18 +741,19 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
                             pd3dCommandList->SetGraphicsRootConstantBufferView(5, pOffsetBuffer->GetGPUVirtualAddress());
                         }
 						
-						if (m_pSharedAnimController && 
-							m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms &&
-							m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]) {
-							pd3dCommandList->SetGraphicsRootConstantBufferView(6, m_pSharedAnimController->m_ppd3dcbSkinningBoneTransforms[0]->GetGPUVirtualAddress());
+
+						CAnimationController* pControllerToUse = nullptr;
+						if (this->m_pSkinnedAnimationController) {
+							// 오브젝트가 직접 컨트롤러를 소유한 경우
+							pControllerToUse = this->m_pSkinnedAnimationController;
 						}
-						else {
-							
-							//OutputDebugStringW(L"!!! Render: Skinned - Failed to get valid Bone Transform buffer (b8) via m_pSharedAnimController!\n");
-							//wchar_t dbgMsg[128];
-							//swprintf_s(dbgMsg, L"    m_pSharedAnimController = %p\n", (void*)m_pSharedAnimController); 
-							//OutputDebugStringW(dbgMsg);
-							
+						else if (this->m_pSharedAnimController) {
+							// 오브젝트가 부모로부터 컨트롤러를 공유받은 경우 (무기, 장비)
+							pControllerToUse = this->m_pSharedAnimController;
+						}
+						if (pControllerToUse && pControllerToUse->m_ppd3dcbSkinningBoneTransforms[0])
+						{
+							pd3dCommandList->SetGraphicsRootConstantBufferView(6, pControllerToUse->m_ppd3dcbSkinningBoneTransforms[0]->GetGPUVirtualAddress());
 						}
 					}
 				}
@@ -1566,18 +1567,19 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
  void CGameObject::CopyDataFrom(CGameObject* pSource)
  {
 	 // 메쉬와 머티리얼 포인터 공유
-	 this->SetMesh(pSource->m_pMesh);
-
-	 if (this->m_ppMaterials) delete[] this->m_ppMaterials;
-	 this->m_nMaterials = pSource->m_nMaterials;
-	 this->m_ppMaterials = nullptr;
-	 if (this->m_nMaterials > 0) {
-		 this->m_ppMaterials = new CMaterial * [this->m_nMaterials];
-		 for (int i = 0; i < this->m_nMaterials; i++) this->m_ppMaterials[i] = nullptr;
+	 if (pSource->m_pMesh) {
+		 this->SetMesh(pSource->m_pMesh);
 	 }
 
-	 for (int i = 0; i < pSource->m_nMaterials; i++) {
-		 this->SetMaterial(i, pSource->m_ppMaterials[i]);
+	 if (pSource->m_ppMaterials && pSource->m_nMaterials > 0) {
+		 this->m_nMaterials = pSource->m_nMaterials;
+		 this->m_ppMaterials = new CMaterial * [this->m_nMaterials];
+		 for (int i = 0; i < this->m_nMaterials; i++) {
+			 this->m_ppMaterials[i] = nullptr;
+			 if (pSource->m_ppMaterials[i]) {
+				 this->SetMaterial(i, pSource->m_ppMaterials[i]);
+			 }
+		 }
 	 }
 
 	 strcpy_s(this->m_pstrFrameName, 64, pSource->m_pstrFrameName);
@@ -1590,6 +1592,15 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
 	 this->level = pSource->level;
 	 this->isRender = pSource->isRender;
 	 this->_invincible = pSource->_invincible;
+
+
+	 if (pSource->m_pSkinnedAnimationController) {
+		 if (this->m_pSkinnedAnimationController) delete this->m_pSkinnedAnimationController;
+		 this->m_pSkinnedAnimationController = pSource->m_pSkinnedAnimationController->Clone(m_pGameFramework->GetDevice(), m_pGameFramework->GetCommandList());
+	 }
+	 else {
+		 this->m_pSkinnedAnimationController = nullptr;
+	 }
 
 	 // 자식 계층 구조 복제
 	 if (pSource->m_pChild) {
@@ -1865,6 +1876,28 @@ CMonsterObject::~CMonsterObject()
 {
 }
 
+void CMonsterObject::PostCloneAnimationSetup()
+{
+	if (!m_pSkinnedAnimationController) return;
+
+	// 1. 컨트롤러가 제어할 메쉬들을 '새로운' 계층 구조 안에서 다시 찾아서 연결합니다.
+	int nFoundMeshes = 0;
+	// 'this'는 새로 복제된 몬스터 객체이므로, 이 객체의 자식들을 탐색하여
+	// 컨트롤러의 m_ppSkinnedMeshes 배열을 올바른 메쉬 포인터로 채웁니다.
+	this->FindAndSetSkinnedMesh(m_pSkinnedAnimationController->m_ppSkinnedMeshes, &nFoundMeshes);
+	m_pSkinnedAnimationController->m_nSkinnedMeshes = nFoundMeshes;
+
+	// 2. 새로 찾은 메쉬들의 뼈대를 '새로운' 계층 구조에 맞게 재연결합니다.
+	for (int i = 0; i < nFoundMeshes; ++i)
+	{
+		CSkinnedMesh* pMesh = m_pSkinnedAnimationController->m_ppSkinnedMeshes[i];
+		if (pMesh)
+		{
+			// pMesh의 뼈대 정보를 'this'(복제된 몬스터) 기준으로 다시 설정합니다.
+			pMesh->PrepareSkinning(this);
+		}
+	}
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -2443,9 +2476,8 @@ void CRockShardEffect::Update(float deltaTime)
 
 
 
-CPineObject::CPineObject(CGameFramework* pGameFramework) : CTreeObject()
+CPineObject::CPineObject(CGameFramework* pGameFramework) : CTreeObject(m_pGameFramework)
 {
-	m_pGameFramework = pGameFramework;
 }
 
 CGameObject* CPineObject::Clone()
@@ -2455,9 +2487,8 @@ CGameObject* CPineObject::Clone()
 	return pNewInstance;
 }
 
-CBirchObject::CBirchObject(CGameFramework* pGameFramework) : CTreeObject()
+CBirchObject::CBirchObject(CGameFramework* pGameFramework) : CTreeObject(m_pGameFramework)
 {
-	m_pGameFramework = pGameFramework;
 }
 
 CGameObject* CBirchObject::Clone()
@@ -2467,7 +2498,7 @@ CGameObject* CBirchObject::Clone()
 	return pNewInstance;
 }
 
-CRockClusterAObject::CRockClusterAObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
+CRockClusterAObject::CRockClusterAObject(CGameFramework* pGameFramework) : CRockObject(pGameFramework)
 {
 	m_pGameFramework = pGameFramework;
 }
@@ -2479,9 +2510,8 @@ CGameObject* CRockClusterAObject::Clone()
 	return pNewInstance;
 }
 
-CRockClusterBObject::CRockClusterBObject(CGameFramework* pGameFramework) : CRockObject()
+CRockClusterBObject::CRockClusterBObject(CGameFramework* pGameFramework) : CRockObject(pGameFramework)
 {
-	m_pGameFramework = pGameFramework;
 }
 
 CGameObject* CRockClusterBObject::Clone()
@@ -2491,9 +2521,8 @@ CGameObject* CRockClusterBObject::Clone()
 	return pNewInstance;
 }
 
-CRockClusterCObject::CRockClusterCObject(CGameFramework* pGameFramework) : CRockObject()
+CRockClusterCObject::CRockClusterCObject(CGameFramework* pGameFramework) : CRockObject(pGameFramework)
 {
-	m_pGameFramework = pGameFramework;
 }
 
 CGameObject* CRockClusterCObject::Clone()
@@ -2503,7 +2532,7 @@ CGameObject* CRockClusterCObject::Clone()
 	return pNewInstance;
 }
 
-CCliffFObject::CCliffFObject(CGameFramework* pGameFramework) : CGameObject(pGameFramework)
+CCliffFObject::CCliffFObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	m_objectType = GameObjectType::Cliff;
 }
@@ -2515,9 +2544,8 @@ CGameObject* CCliffFObject::Clone()
 	return pNewInstance;
 }
 
-CRockDropObject::CRockDropObject(CGameFramework* pGameFramework) : CItemObject()
+CRockDropObject::CRockDropObject(CGameFramework* pGameFramework) : CItemObject(pGameFramework)
 {
-	m_pGameFramework = pGameFramework;
 }
 
 CGameObject* CRockDropObject::Clone()
@@ -2527,7 +2555,7 @@ CGameObject* CRockDropObject::Clone()
 	return pNewInstance;
 }
 
-CBushAObject::CBushAObject(CGameFramework* pGameFramework) : VegetationObject()
+CBushAObject::CBushAObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	m_pGameFramework = pGameFramework;
 	m_objectType = GameObjectType::Vegetation;
@@ -2541,9 +2569,8 @@ CGameObject* CBushAObject::Clone()
 }
 
 
-CStaticObject::CStaticObject(CGameFramework* pGameFramework)
+CStaticObject::CStaticObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
-	m_pGameFramework = pGameFramework;
 }
 
 CGameObject* CStaticObject::Clone()
@@ -2554,9 +2581,8 @@ CGameObject* CStaticObject::Clone()
 }
 
 
-CRockShardEffect::CRockShardEffect(CGameFramework* pGameFramework)
+CRockShardEffect::CRockShardEffect(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
-	m_pGameFramework = pGameFramework;
 }
 
 CGameObject* CRockShardEffect::Clone()

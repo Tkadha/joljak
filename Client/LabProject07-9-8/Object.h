@@ -90,6 +90,8 @@ public:
 	int								m_anitype;
 	bool							_invincible = false;
 
+	bool							m_bIsPrefab = false; // 프리팹 원본인지 확인
+
 	XMFLOAT4 m_xmf4DebugColor = XMFLOAT4(1, 1, 1, 1);
 	// OBB
 	XMFLOAT3 m_xmf3Position;
@@ -332,6 +334,7 @@ public:
 
 	virtual CGameObject* Clone() override;
 
+	void PostCloneAnimationSetup();
 };
 
 class PlayerInput;
@@ -410,6 +413,7 @@ public:
 	CHeightMapTerrain* m_pTerrainRef = nullptr; 
 
 	CItemObject() { m_objectType = GameObjectType::Item; };
+	CItemObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) { m_objectType = GameObjectType::Item; };
 	virtual ~CItemObject() {};
 
 	virtual void Animate(float fTimeElapsed) override; 
@@ -420,10 +424,8 @@ public:
 class CTreeObject : virtual public CGameObject
 {
 public:
-
-
-
 	CTreeObject() { m_objectType = GameObjectType::Tree; };
+	CTreeObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) { m_objectType = GameObjectType::Tree; };
 	CTreeObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) {};
 	virtual ~CTreeObject() {};
 
@@ -495,6 +497,7 @@ class CRockObject : virtual public CGameObject
 {
 public:
 	CRockObject() { m_objectType = GameObjectType::Rock; };
+	CRockObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) { m_objectType = GameObjectType::Rock; };
 	CRockObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) {};
 	virtual ~CRockObject() {};
 
