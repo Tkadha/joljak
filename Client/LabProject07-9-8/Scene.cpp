@@ -349,7 +349,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	//	}
 	//}
 
-	/*int nCowObjects = 10;
+	int nCowObjects = 10;
 	for (int i = 0; i < nCowObjects; ++i)
 	{
 		CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Cow.bin", m_pGameFramework);
@@ -374,8 +374,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
 		if (pCowModel) delete pCowModel;
-	}*/
-	/*int nPigObjects = 10;
+	}
+	int nPigObjects = 10;
 	for (int i = 0; i < nPigObjects; ++i)
 	{
 		CLoadedModelInfo* pPigModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Pig.bin", m_pGameFramework);
@@ -479,7 +479,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
 		if (pWolfModel) delete pWolfModel;
-	}*/
+	}
 
 	const int rockShardPoolSize = 20;
 	for (int i = 0; i < rockShardPoolSize; ++i)
