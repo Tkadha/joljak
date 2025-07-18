@@ -66,23 +66,23 @@ bool ChangeAlbedoTexture(
 class CScene
 {
 public:
-    CScene(CGameFramework*);
-    ~CScene();
+	CScene(CGameFramework*);
+	~CScene();
 
 	bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
-	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
-	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void ReleaseShaderVariables();
 
 	void BuildDefaultLightsAndMaterials();
 	void ServerBuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseObjects();
 
-	bool ProcessInput(UCHAR *pKeysBuffer);
-    void AnimateObjects(float fTimeElapsed);
+	bool ProcessInput(UCHAR* pKeysBuffer);
+	void AnimateObjects(float fTimeElapsed);
 	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 	//void Render(ID3D12GraphicsCommandList *pd3dCommandList,bool obbRender, CCamera *pCamera=NULL);
 
@@ -100,7 +100,7 @@ public:
 	CGameFramework* GetGameFramework() const { return m_pGameFramework; }
 	bool CollisionCheck(CGameObject* a, CGameObject* b);
 	void CollectHierarchyObjects(CGameObject* node, std::vector<BoundingOrientedBox>& obbList);
-	
+
 	// 플레이어의 'F' 키 상호작용 요청을 처리하는 함수
 	void CheckPlayerInteraction(CPlayer* pPlayer);
 
@@ -108,8 +108,8 @@ public:
 	CSkyBox* GetSkyBox() const { return m_pSkyBox; }
 
 	CPlayer* GetPlayerInfo() { return m_pPlayer; };
-	CPlayer								*m_pPlayer = NULL;
-	
+	CPlayer* m_pPlayer = NULL;
+
 public:
 	float								m_fElapsedTime = 0.0f;
 
@@ -128,20 +128,20 @@ public:
 
 	XMFLOAT3							m_xmf3RotatePosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
-	CSkyBox								*m_pSkyBox = NULL;
+	CSkyBox* m_pSkyBox = NULL;
 
 	ID3D12Resource* m_pd3dcbLightCamera = nullptr;
 	VS_CB_CAMERA_INFO* m_pcbMappedLightCamera = nullptr;
 
-	CHeightMapTerrain					*m_pTerrain = NULL;
+	CHeightMapTerrain* m_pTerrain = NULL;
 
-	LIGHT								*m_pLights = NULL;
+	LIGHT* m_pLights = NULL;
 	int									m_nLights = 0;
 
 	XMFLOAT4							m_xmf4GlobalAmbient;
 
-	ID3D12Resource						*m_pd3dcbLights = NULL;
-	LIGHTS								*m_pcbMappedLights = NULL;
+	ID3D12Resource* m_pd3dcbLights = NULL;
+	LIGHTS* m_pcbMappedLights = NULL;
 
 	// 인스턴싱
 	ID3D12Resource* m_pd3dcbGameObjects = NULL;
@@ -174,35 +174,41 @@ public:
 	//void SpawnRockShardEffect(const XMFLOAT3& origin);
 	//void SpawnRockShardEffectAtPlayer();
 
-public:
-		std::unique_ptr<ShadowMap> m_pShadowMap;
+public:	// 그림자
+	std::unique_ptr<ShadowMap> m_pShadowMap;
 
-		DirectX::BoundingSphere mSceneBounds;
+	DirectX::BoundingSphere mSceneBounds;
 
-		float mLightNearZ = 0.0f;
-		float mLightFarZ = 0.0f;
-		XMFLOAT3 mLightPosW;
-		DirectX::XMFLOAT4X4 mLightView = MathHelper::Identity4x4();
-		DirectX::XMFLOAT4X4 mLightProj = MathHelper::Identity4x4();
-		DirectX::XMFLOAT4X4 mShadowTransform = MathHelper::Identity4x4();
+	float mLightNearZ = 0.0f;
+	float mLightFarZ = 0.0f;
+	XMFLOAT3 mLightPosW;
+	DirectX::XMFLOAT4X4 mLightView = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 mLightProj = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 mShadowTransform = MathHelper::Identity4x4();
 
-		float mLightRotationAngle = 0.0f;
-		XMFLOAT3 mBaseLightDirections[3] = {
-			XMFLOAT3(0.57735f, -0.57735f, 0.57735f),
-			XMFLOAT3(-0.57735f, -0.57735f, 0.57735f),
-			XMFLOAT3(0.0f, -0.707f, -0.707f)
-		};
-		XMFLOAT3 mRotatedLightDirections[3];
+	float mLightRotationAngle = 0.0f;
+	XMFLOAT3 mBaseLightDirections[3] = {
+		XMFLOAT3(0.57735f, -0.57735f, 0.57735f),
+		XMFLOAT3(-0.57735f, -0.57735f, 0.57735f),
+		XMFLOAT3(0.0f, -0.707f, -0.707f)
+	};
+	XMFLOAT3 mRotatedLightDirections[3];
 
-		POINT mLastMousePos;
+	POINT mLastMousePos;
 
-		void UpdateShadowTransform(const XMFLOAT3& focusPoint);
-		void UpdateShadowTransform();
+	void UpdateShadowTransform(const XMFLOAT3& focusPoint);
+	void UpdateShadowTransform();
 
 
-		D3D12_GPU_DESCRIPTOR_HANDLE GetShadowMapSrv() { return m_pShadowMap->Srv(); }
+	D3D12_GPU_DESCRIPTOR_HANDLE GetShadowMapSrv() { return m_pShadowMap->Srv(); }
 
-		float m_fLightRotationAngle = 0.0f;
+	float m_fLightRotationAngle = 0.0f;
 
-		void UpdateLights(float fTimeElapsed);
+	void UpdateLights(float fTimeElapsed);
+
+public:	// prefab
+	void LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void SpawnStaticObjects(const std::string& prefabName, int count, float spawnMin, float spawnMax, float scaleMin, float scaleMax, 
+		std::mt19937& gen, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, 
+		int matIdx = -1, const wchar_t* texFile = nullptr);
 };
