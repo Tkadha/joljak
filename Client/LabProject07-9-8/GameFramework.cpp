@@ -1079,19 +1079,16 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		{
 		case OBJECT_TYPE::OB_TREE:
 		{
-			CGameObject* gameObj;
+			std::shared_ptr<CGameObject> prefab;
 			int tree_type = rand() % 2;
 			if (tree_type == 0) {
-				gameObj = new CBirchObject(m_pd3dDevice, m_pd3dUploadCommandList, m_pScene->m_pGameFramework);
-				int materialIndexToChange = 1;
-				UINT albedoTextureSlot = 0;
-				const wchar_t* textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
-				ResourceManager* pResourceManager = GetResourceManager();
-				ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, m_pd3dUploadCommandList, m_pd3dDevice);
+				prefab = m_pResourceManager->GetPrefab("PineTree");
+			}	
+			else if (tree_type == 1) {
+				prefab = m_pResourceManager->GetPrefab("BirchTree");
 			}
-			else if (tree_type == 1)
-				gameObj = new CPineObject(m_pd3dDevice, m_pd3dUploadCommandList, m_pScene->m_pGameFramework);
 
+			CGameObject* gameObj = prefab->Clone();
 			
 			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
 			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
@@ -1134,7 +1131,8 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			break;
 		case OBJECT_TYPE::OB_STONE:
 		{
-			CGameObject* gameObj = new CRockClusterAObject(m_pd3dDevice, m_pd3dUploadCommandList, m_pScene->m_pGameFramework);
+			std::shared_ptr<CGameObject> prefab = m_pResourceManager->GetPrefab("RockClusterA");
+			CGameObject* gameObj = prefab->Clone();
 			int materialIndexToChange = 0;
 			UINT albedoTextureSlot = 0;
 			const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";

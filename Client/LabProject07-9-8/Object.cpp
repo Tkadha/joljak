@@ -1581,8 +1581,8 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
 			 }
 		 }
 	 }
-
-	 strcpy_s(this->m_pstrFrameName, 64, pSource->m_pstrFrameName);
+	 if (pSource->m_pstrFrameName)
+		 strcpy_s(this->m_pstrFrameName, 64, pSource->m_pstrFrameName);
 	 this->m_objectType = pSource->m_objectType;
 	 this->m_pGameFramework = pSource->m_pGameFramework;
 	 this->m_localOBB = pSource->m_localOBB; 
@@ -1867,7 +1867,7 @@ CMonsterObject::CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 #ifdef ONLINE
 	FSM_manager = nullptr;
 #else
-	FSM_manager = std::make_shared<FSMManager<CGameObject>>(this);
+	//FSM_manager = std::make_shared<FSMManager<CGameObject>>(this);
 #endif
 
 }
