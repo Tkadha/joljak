@@ -305,6 +305,15 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		if(r_packet->hit_obj_id < 0) return; // 잘못된 id
 		auto o_type = GameObject::gameObjects[r_packet->hit_obj_id]->GetType();
 		client->Playerhp -= GameObject::gameObjects[r_packet->hit_obj_id]->_atk;
+		if (client->Playerhp.load() < 0) client->Playerhp.store(0);
+
+		CHANGE_STAT_PACKET s_packet;
+		s_packet.size = sizeof(CHANGE_STAT_PACKET);
+		s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+		s_packet.stat = E_STAT::HP;
+		s_packet.value = client->Playerhp.load();
+		client->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+
 		client->SetEffect(o_type);
 	}
 	break;
@@ -374,7 +383,7 @@ void event_thread()
 							int stamina = it.second->Playerstamina.load();
 
 							while (stamina < it.second->Maxstamina.load()) {
-								int desiredstamina = stamina + 5;
+								int desiredstamina = stamina + 2;
 								if (desiredstamina > it.second->Maxstamina.load()) {
 									desiredstamina = it.second->Maxstamina.load();
 								}
@@ -390,7 +399,7 @@ void event_thread()
 									break;
 								}
 							}
-							EVENT::add_timer(ev, 1000); // 1초 후 다시 stamina 회복
+							EVENT::add_timer(ev, 750); // 0.75초 후 다시 stamina 회복
 							break;
 						}
 					}
@@ -450,6 +459,66 @@ void event_thread()
 								}
 							}
 							EVENT::add_timer(ev, 2500); // 2.5초마다 갈증 소모
+							break;
+						}
+					}
+						break;
+					case EVENT_TYPE::E_P_BLEEDING: {
+						if (ev.end_time < std::chrono::system_clock::now()) break;
+						auto uid = ev.player_id;
+						for (auto it : PlayerClient::PlayerClients) {
+							if (it.second->m_id != uid) continue;
+							int hp = it.second->Playerhp.load();
+
+							while (hp > 0) {
+								int desiredHp = hp - 2;
+								if (desiredHp < 0) {
+									desiredHp = 0;
+								}
+
+								if (it.second->Playerhp.compare_exchange_weak(hp, desiredHp)) {
+									// 패킷전송
+									CHANGE_STAT_PACKET s_packet;
+									s_packet.size = sizeof(CHANGE_STAT_PACKET);
+									s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+									s_packet.stat = E_STAT::HP;
+									s_packet.value = it.second->Playerhp.load();
+									it.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+									break;
+								}
+							}
+
+							EVENT::add_timer(ev, 1000); // 1.0초 후 다시 출혈
+							break;
+						}
+					}
+						break;
+					case EVENT_TYPE::E_P_POISON: {
+						if (ev.end_time < std::chrono::system_clock::now()) break;
+						auto uid = ev.player_id;
+						for (auto it : PlayerClient::PlayerClients) {
+							if (it.second->m_id != uid) continue;
+							int stamina = it.second->Playerstamina.load();
+
+							while (stamina > 0) {
+								int desiredstamina = stamina - 1;
+								if (desiredstamina < 0) {
+									desiredstamina = 0;
+								}
+
+								if (it.second->Playerstamina.compare_exchange_weak(stamina, desiredstamina)) {
+									// 패킷전송
+									CHANGE_STAT_PACKET s_packet;
+									s_packet.size = sizeof(CHANGE_STAT_PACKET);
+									s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+									s_packet.stat = E_STAT::STAMINA;
+									s_packet.value = it.second->Playerstamina.load();
+									it.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+									break;
+								}
+							}
+
+							EVENT::add_timer(ev, 500); // 1.0초 후 다시 출혈
 							break;
 						}
 					}
@@ -530,9 +599,9 @@ int main(int argc, char* argv[])
 					cl.second->BroadCastPosPacket();
 					int stamina = cl.second->Playerstamina.load();
 
-					if (stamina > 0) {
+					if (stamina > 0 && cl.second->GetCurrentState() == ServerPlayerState::Running) {
 						cl.second->stamina_counter++;
-						if (cl.second->stamina_counter > 10) {
+						if (cl.second->stamina_counter > 15) {
 							int desiredstamina = stamina - 1;
 							if (desiredstamina < 0) {
 								desiredstamina = 0;
@@ -869,7 +938,7 @@ void BuildObject()
 	int BatCount = 50;
 	for (int i = 0; i < BatCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
-		obj->fly_height = 15.f;
+		obj->fly_height = 13.f;
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second) + obj->fly_height, randompos.second);
 		obj->SetScale(9.f, 9.f, 9.f);
@@ -893,7 +962,8 @@ void BuildObject()
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second) + 30, randompos.second);
 		obj->SetScale(9.f, 9.f, 9.f);
 		obj->SetID(obj_id++);
-
+		obj->_hp = 40;
+		obj->_atk = 7;
 		obj->SetType(OBJECT_TYPE::OB_RAPTOR);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
 

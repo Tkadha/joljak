@@ -2310,7 +2310,7 @@ void CGameObject::SetColor(const XMFLOAT4& color)
 CConstructionObject::CConstructionObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/buildobject/pannel.bin", "rb");
+	::fopen_s(&pInFile, "Model/RockCluster_A_LOD0.bin", "rb");
 	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); 
 	SetChild(pGameObject);
 

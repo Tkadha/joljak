@@ -180,7 +180,7 @@ void AtkNPCMoveState::Exit(std::shared_ptr<GameObject> npc)
 
 void AtkNPCChaseState::Enter(std::shared_ptr<GameObject> npc)
 {
-	if (npc->GetType() == OBJECT_TYPE::OB_BAT)	npc->fly_height = 15.f;
+	if (npc->GetType() == OBJECT_TYPE::OB_BAT)	npc->fly_height = 13.f;
 	npc->SetAnimationType(ANIMATION_TYPE::WALK);
 	std::vector<tree_obj*> results;
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
@@ -397,7 +397,7 @@ void AtkNPCRespawnState::Execute(std::shared_ptr<GameObject> npc)
 		float y{};
 		if (y < fHeight) y = fHeight;
 		if (npc->GetType() == OBJECT_TYPE::OB_BAT)
-			npc->fly_height = 15.f;
+			npc->fly_height = 13.f;
 		npc->SetPosition(randompos.first, y, randompos.second);
 
 		Octree::GameObjectOctree.update(npc->GetID(), npc->GetPosition());
@@ -464,7 +464,7 @@ void AtkNPCAttackState::Execute(std::shared_ptr<GameObject> npc)
 
 	}
 	else {
-		if (npc->GetType() == OBJECT_TYPE::OB_BAT && npc->fly_height < 15.f) {
+		if (npc->GetType() == OBJECT_TYPE::OB_BAT && npc->fly_height < 13.f) {
 			npc->fly_height += 0.5f;
 			npc->MoveForward(0.f);
 		}

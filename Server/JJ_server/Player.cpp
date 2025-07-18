@@ -433,7 +433,22 @@ void PlayerClient::SetEffect(OBJECT_TYPE obj_type)
         EVENT ev{ EVENT_TYPE::E_P_SLOW_END, m_id, -1 };
         EVENT::add_timer(ev, 5000); // 5초 후에 슬로우 효과 제거
     }
-        break;
+    break;
+    case OBJECT_TYPE::OB_SPIDER:
+    {
+        EVENT ev{ EVENT_TYPE::E_P_POISON, m_id, -1 };
+        ev.end_time = std::chrono::system_clock::now() + std::chrono::milliseconds(1000) * 10;
+        EVENT::add_timer(ev, 500);
+    }
+    break;
+    case OBJECT_TYPE::OB_RAPTOR:
+    case OBJECT_TYPE::OB_WOLF:
+    {
+        EVENT ev{ EVENT_TYPE::E_P_BLEEDING, m_id, -1 };
+        ev.end_time = std::chrono::system_clock::now() + std::chrono::milliseconds(1000) * 10;
+        EVENT::add_timer(ev, 1000);
+    }
+    break;
     default:
         break;
     }

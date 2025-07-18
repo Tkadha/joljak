@@ -8,6 +8,8 @@ enum class EVENT_TYPE
 	E_P_REGENERATE_STAMINA,
 	E_P_CONSUME_HUNGER,
 	E_P_CONSUME_THIRST,
+	E_P_POISON,
+	E_P_BLEEDING,
 };
 
 class EVENT
@@ -17,7 +19,8 @@ public:
 	EVENT_TYPE e_type;
 	unsigned long long player_id;
 	int obj_id;
-
+public:
+	std::chrono::system_clock::time_point end_time;
 public:
 	EVENT() = default;
 	~EVENT() = default;
