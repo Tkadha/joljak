@@ -129,13 +129,14 @@ private:
 	int                         m_SelectedHotbarIndex = 0;
 	bool						ShowInventory = false;
 	bool						ShowCraftingUI = false; 
-	bool						BuildMode = false;
 	bool						ShowFurnaceUI = false;
 	bool						ShowTraitUI = false;
-	bool					bPrevBuildMode = false;
-	int							selectedCraftItemIndex = -1;
-	CPineObject*				m_pPreviewObject = nullptr;
+	
 	FurnaceSlot					furnaceSlot;
+
+	bool						m_bBuildMode = false; // 건축 모드 활성화 여부
+	bool						m_bIsPreviewVisible = false; // 프리뷰 오브젝트가 보이는지 여부
+	int							m_nSelectedBuildingIndex = -1; // UI에서 선택한 건축물 인덱스
         
 	IDXGIFactory4				*m_pdxgiFactory = NULL;
 	IDXGISwapChain3				*m_pdxgiSwapChain = NULL;

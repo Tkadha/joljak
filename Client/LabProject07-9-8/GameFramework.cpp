@@ -2449,52 +2449,65 @@ void CGameFramework::FrameAdvance()
 		ImGui::End();
 	}
 	////////////////////////////////////////////////////////////////////////////////////////////////////// 건축 UI
-	if (BuildMode)
+	if (m_bBuildMode)
 	{
-		ImGui::SetNextWindowPos(ImVec2(100, 100));
-		ImGui::SetNextWindowSize(ImVec2(200, 200));
-		ImGui::Begin("Build Mode", nullptr,
-			ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
+		// --- 창 위치 및 크기 설정 ---
+		ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver); // 처음 열릴 때만 위치 지정
+		ImGui::SetNextWindowSize(ImVec2(220, 300), ImGuiCond_FirstUseEver); // 처음 열릴 때만 크기 지정
+		ImGui::Begin("Build Mode", &m_bBuildMode, ImGuiWindowFlags_NoCollapse);
 
-		static int selected = -1;
-		const char* buildings[] = { "나무 벽", "나무 문", "나무 바닥", "계단" };
-		//static bool bPrevBuildMode = false;
+		ImGui::Text("Buildable Items");
+		ImGui::Separator();
 
-		if (BuildMode && !bPrevBuildMode)
+		// --- UI에 표시할 건축물 목록 ---
+		// 이 목록은 나중에 Scene::LoadPrefabs에서 등록한 이름과 정확히 일치해야 합니다.
+		struct BuildableItem {
+			const char* displayName; // UI에 보일 이름
+			const char* prefabKey;   // ResourceManager에 등록된 이름
+		};
+		static std::vector<BuildableItem> buildableItems = {
+			{ "나무 벽", "wood_wall" },
+			// { "나무 바닥", "wood_floor" },
+			// { "나무 문", "wood_door" }
+		};
+
+		// --- 목록을 기반으로 UI 선택지 생성 ---
+		for (int i = 0; i < buildableItems.size(); i++)
 		{
-			m_pConstructionSystem->EnterBuildMode(m_pCamera); // 상태 전환 시 한 번만 실행
-		}
-		bPrevBuildMode = BuildMode;
-		/*
-		for (int i = 0; i < IM_ARRAYSIZE(buildings); i++)
-		{
-			if (ImGui::Selectable(buildings[i], selected == i))
+			// Selectable을 클릭하면
+			if (ImGui::Selectable(buildableItems[i].displayName, m_nSelectedBuildingIndex == i))
 			{
-				selected = i;
-
-				// 1. 문자열 매핑
-				std::string buildingKey;
-				if (selected == 0) buildingKey = "pine";
-				else if (selected == 1) buildingKey = "door";
-				else if (selected == 2) buildingKey = "floor";
-				else if (selected == 3) buildingKey = "stair";
-
-
-				// 3. 미리보기 재생성
+				// 이전에 선택한 것과 다른 것을 선택했다면
+				if (m_nSelectedBuildingIndex != i) {
+					m_nSelectedBuildingIndex = i;
+					m_bIsPreviewVisible = true; // 프리뷰를 보이게 설정
+					// ConstructionSystem에 선택된 프리팹 이름으로 건설 모드 진입을 알림
+					m_pConstructionSystem->EnterBuildMode(buildableItems[i].prefabKey, m_pCamera);
+				}
+				else { // 이미 선택된 것을 다시 클릭하면 선택 해제
+					m_nSelectedBuildingIndex = -1;
+					m_bIsPreviewVisible = false; // 프리뷰를 숨김
+					m_pConstructionSystem->ExitBuildMode();
+				}
 			}
 		}
-		*/
 
-		if (m_pConstructionSystem->IsBuildMode())
+		ImGui::Separator();
+
+		// --- 설치(R) 및 취소(B) 버튼 ---
+		// 프리뷰가 보일 때만 설치 버튼 활성화
+		if (!m_bIsPreviewVisible) ImGui::BeginDisabled();
+		if (ImGui::Button("Install (R)"))
 		{
-			XMFLOAT3 previewPos = m_pConstructionSystem->GetPreviewPosition(); // ★ getter 함수 필요
-			ImGui::Text("PreviewPos: %.2f, % .2f, % .2f", previewPos.x, previewPos.y, previewPos.z);
+			m_pConstructionSystem->ConfirmPlacement();
 		}
-		if (ImGui::Button("Build End"))
+		if (!m_bIsPreviewVisible) ImGui::EndDisabled();
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Exit (B)"))
 		{
-			BuildMode = false;
-			bPrevBuildMode = BuildMode;
-			m_pConstructionSystem->ExitBuildMode();
+			m_bBuildMode = false; // UI 창을 닫음
 		}
 
 		ImGui::End();
