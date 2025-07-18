@@ -460,7 +460,7 @@ void CGameFramework::CreateDirect3DDevice()
 	}
 	else {
 		// 디바이스 생성 실패 시 오류 처리
-		OutputDebugString(L"Error: Failed to create D3D12 Device. Cannot get descriptor sizes.\n");
+		//OutputDebugString(L"Error: Failed to create D3D12 Device. Cannot get descriptor sizes.\n");
 		// 필요하다면 프로그램 종료 또는 예외 처리
 	}
 	m_pShaderManager = std::make_unique<ShaderManager>(m_pd3dDevice);
@@ -648,7 +648,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				case VK_F2:
 					if (m_pScene && m_pScene->GetSkyBox()) {
 						int textureCount = m_pScene->GetSkyBox()->GetTextureCount();
-						OutputDebugString(std::format(L"[SkyBox] 텍스처 로드 개수: {}\n",textureCount).c_str());
+						//OutputDebugString(std::format(L"[SkyBox] 텍스처 로드 개수: {}\n",textureCount).c_str());
 						if (textureCount > 0) {
 							m_nCurrentSkybox = (m_nCurrentSkybox + 1) % textureCount;
 							m_pScene->GetSkyBox()->SetSkyboxIndex(m_nCurrentSkybox);
@@ -788,7 +788,7 @@ void CGameFramework::AddItem(const std::string& name, int quantity)
 	}
 
 	// 3. 인벤토리가 가득 찼을 경우
-	OutputDebugStringA("인벤토리가 가득 찼습니다.\n");
+	//OutputDebugStringA("인벤토리가 가득 찼습니다.\n");
 }
 
 
@@ -1667,7 +1667,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 	}
 	else
 	{
-		OutputDebugString(L"Error: Scene is not initialized.\n");
+		//OutputDebugString(L"Error: Scene is not initialized.\n");
 	}
 }
 
@@ -2038,7 +2038,7 @@ void CGameFramework::FrameAdvance()
 	{
 		if (m_pScene && m_pScene->GetSkyBox()) {
 			int textureCount = m_pScene->GetSkyBox()->GetTextureCount();
-			OutputDebugString(std::format(L"[SkyBox] 텍스처 로드 개수: {}\n", textureCount).c_str());
+			//OutputDebugString(std::format(L"[SkyBox] 텍스처 로드 개수: {}\n", textureCount).c_str());
 			if (textureCount > 0) {
 				m_nCurrentSkybox = (m_nCurrentSkybox + 1) % textureCount;
 				m_pScene->GetSkyBox()->SetSkyboxIndex(m_nCurrentSkybox);
@@ -3092,7 +3092,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE CGameFramework::CreateConstantBufferViews(int nConst
 	{
 		// 힙 공간 부족 등의 이유로 할당 실패
 		// 오류 처리 (로그 남기기, 예외 발생 등)
-		OutputDebugString(L"Failed to allocate CBV descriptors.\n");
+		//OutputDebugString(L"Failed to allocate CBV descriptors.\n");
 		return { 0 }; // 실패 시 유효하지 않은 핸들 반환
 	}
 
@@ -3173,7 +3173,7 @@ void CGameFramework::WaitForGpu()
 {
 	// 필수 객체들 유효성 검사
 	if (!m_pd3dCommandQueue || !m_pd3dFence || m_hFenceEvent == INVALID_HANDLE_VALUE) {
-		OutputDebugString(L"Warning: Cannot wait for GPU, essential objects are missing.\n");
+		//OutputDebugString(L"Warning: Cannot wait for GPU, essential objects are missing.\n");
 		return;
 	}
 
@@ -3183,7 +3183,7 @@ void CGameFramework::WaitForGpu()
 
 	HRESULT hr = m_pd3dCommandQueue->Signal(m_pd3dFence, fenceValueToSignal);
 	if (FAILED(hr)) {
-		OutputDebugString(L"!!!!!!!! ERROR: CommandQueue->Signal failed! !!!!!!!!\n");
+		//OutputDebugString(L"!!!!!!!! ERROR: CommandQueue->Signal failed! !!!!!!!!\n");
 		return; // Signal 실패 시 대기 불가
 	}
 
@@ -3193,18 +3193,18 @@ void CGameFramework::WaitForGpu()
 		// 3. 아직 도달하지 못했다면, 이벤트 핸들을 사용하여 대기
 		hr = m_pd3dFence->SetEventOnCompletion(fenceValueToSignal, m_hFenceEvent);
 		if (FAILED(hr)) {
-			OutputDebugString(L"!!!!!!!! ERROR: Fence->SetEventOnCompletion failed! !!!!!!!!\n");
+			//OutputDebugString(L"!!!!!!!! ERROR: Fence->SetEventOnCompletion failed! !!!!!!!!\n");
 			return; // 이벤트 설정 실패 시 대기 불가
 		}
 
 		// 4. 이벤트가 Signal 상태가 될 때까지 무한 대기
-		OutputDebugString(L"Waiting for GPU to finish...\n");
+		//OutputDebugString(L"Waiting for GPU to finish...\n");
 		WaitForSingleObjectEx(m_hFenceEvent, INFINITE, FALSE);
-		OutputDebugString(L"GPU finished.\n");
+		//OutputDebugString(L"GPU finished.\n");
 	}
 	else {
 		// 이미 GPU가 해당 값 이상으로 진행함 (바로 종료 가능)
-		OutputDebugString(L"GPU already finished (Fence value check).\n");
+		//OutputDebugString(L"GPU already finished (Fence value check).\n");
 	}
 }
 

@@ -90,6 +90,8 @@ public:
 	int								m_anitype;
 	bool							_invincible = false;
 
+	bool							m_bIsPrefab = false; // 프리팹 원본인지 확인
+
 	XMFLOAT4 m_xmf4DebugColor = XMFLOAT4(1, 1, 1, 1);
 	// OBB
 	XMFLOAT3 m_xmf3Position;
@@ -255,6 +257,11 @@ public:
 	int GetAtk() { return atk; }
 
 	void Check_attack();
+
+
+	// Prefab
+	void CopyDataFrom(CGameObject* pSource);
+	virtual CGameObject* Clone();
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -323,6 +330,11 @@ public:
 		FSM_manager->ChangeState(newstate);
 	}
 
+	CMonsterObject(CGameFramework* pGameFramework);
+
+	virtual CGameObject* Clone() override;
+
+	void PostCloneAnimationSetup();
 };
 
 class PlayerInput;
@@ -339,6 +351,8 @@ public:
 	void AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate, XMFLOAT3 scale);
 	CGameObject* FindFrame(char* framename);
 
+	//UserObject(CGameFramework* pGameFramework);
+	//virtual CGameObject* Clone();
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -399,6 +413,7 @@ public:
 	CHeightMapTerrain* m_pTerrainRef = nullptr; 
 
 	CItemObject() { m_objectType = GameObjectType::Item; };
+	CItemObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) { m_objectType = GameObjectType::Item; };
 	virtual ~CItemObject() {};
 
 	virtual void Animate(float fTimeElapsed) override; 
@@ -409,10 +424,8 @@ public:
 class CTreeObject : virtual public CGameObject
 {
 public:
-
-
-
 	CTreeObject() { m_objectType = GameObjectType::Tree; };
+	CTreeObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) { m_objectType = GameObjectType::Tree; };
 	CTreeObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) {};
 	virtual ~CTreeObject() {};
 
@@ -434,6 +447,8 @@ public:
 	XMFLOAT4X4 m_xmf4x4InitialToParent;
 
 	XMFLOAT3 m_xmf3RotationPivot = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+
 };
 
 
@@ -442,6 +457,9 @@ class CBirchObject : public CTreeObject
 public:
 	CBirchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CBirchObject() {}
+
+	CBirchObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
 class CWillowObject : public CTreeObject
@@ -449,6 +467,9 @@ class CWillowObject : public CTreeObject
 public:
 	CWillowObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CWillowObject() {}
+
+	//CWillowObject(CGameFramework* pGameFramework);
+	//virtual CGameObject* Clone();
 };
 
 class CPineObject : public CTreeObject
@@ -456,12 +477,18 @@ class CPineObject : public CTreeObject
 public:
 	CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CPineObject() {}
+
+	CPineObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
 class CBranchObject : public CItemObject {
 public:
 	CBranchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain);
 	virtual ~CBranchObject() {};
+
+	//CBranchObject(CGameFramework* pGameFramework);
+	//virtual CGameObject* Clone();
 };
 
 
@@ -470,6 +497,7 @@ class CRockObject : virtual public CGameObject
 {
 public:
 	CRockObject() { m_objectType = GameObjectType::Rock; };
+	CRockObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) { m_objectType = GameObjectType::Rock; };
 	CRockObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) {};
 	virtual ~CRockObject() {};
 
@@ -481,6 +509,9 @@ class CRockClusterAObject : public CRockObject
 public:
 	CRockClusterAObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CRockClusterAObject() {}
+
+	CRockClusterAObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
 class CRockClusterBObject : public CRockObject
@@ -488,6 +519,9 @@ class CRockClusterBObject : public CRockObject
 public:
 	CRockClusterBObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CRockClusterBObject() {}
+
+	CRockClusterBObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
 class CRockClusterCObject : public CRockObject
@@ -495,6 +529,9 @@ class CRockClusterCObject : public CRockObject
 public:
 	CRockClusterCObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CRockClusterCObject() {}
+
+	CRockClusterCObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
 class CCliffFObject : public CGameObject
@@ -502,12 +539,18 @@ class CCliffFObject : public CGameObject
 public:
 	CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CCliffFObject() {}
+
+	CCliffFObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
 class CRockDropObject : public CItemObject {
 public:
 	CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain);
 	virtual ~CRockDropObject() {};
+
+	CRockDropObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 
 };
 
@@ -526,6 +569,9 @@ class CBushAObject : public VegetationObject
 public:
 	CBushAObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CBushAObject() {}
+
+	CBushAObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
 
@@ -539,8 +585,11 @@ public:
 class CStaticObject : public CGameObject
 {
 public:
-	CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* modelname, CGameFramework* pGameFramework);
+	CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const char* modelname, CGameFramework* pGameFramework);
 	virtual ~CStaticObject() {}
+
+	CStaticObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
 class CConstructionObject : public CGameObject
@@ -559,6 +608,8 @@ public:
 	void Update(float deltaTime);
 	bool IsActive() const { return m_bActive; }
 
+	CRockShardEffect(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 private:
 	bool m_bActive = false;
 	float m_fElapsedTime = 0.0f;

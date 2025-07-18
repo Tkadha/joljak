@@ -539,3 +539,43 @@ void CAnimationController::UpdateBoneLocalTransformCBV()
 		}
 	}
 }
+
+
+
+CAnimationController::CAnimationController(const CAnimationController& other, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	// 애니메이션 트랙 복사
+	m_nAnimationTracks = other.m_nAnimationTracks;
+	m_pAnimationTracks = new CAnimationTrack[m_nAnimationTracks];
+	for (int i = 0; i < m_nAnimationTracks; ++i) {
+		m_pAnimationTracks[i] = other.m_pAnimationTracks[i];
+	}
+
+	// 애니메이션 데이터 공유
+	m_pAnimationSets = other.m_pAnimationSets;
+	if (m_pAnimationSets) m_pAnimationSets->AddRef();
+
+	// 메쉬 정보 공유
+	m_nSkinnedMeshes = other.m_nSkinnedMeshes;
+	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
+	for (int i = 0; i < m_nSkinnedMeshes; i++) m_ppSkinnedMeshes[i] = nullptr;
+
+	// 루트 오브젝트 정보 복사
+	m_pModelRootObject = other.m_pModelRootObject;
+
+	// 뼈 변환을 위한 상수 버퍼(CBV)는 새로 생성
+	m_ppd3dcbSkinningBoneTransforms = new ID3D12Resource * [m_nSkinnedMeshes];
+	m_ppcbxmf4x4MappedSkinningBoneTransforms = new XMFLOAT4X4 * [m_nSkinnedMeshes];
+	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255);
+	for (int i = 0; i < m_nSkinnedMeshes; i++)
+	{
+		m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
+		m_ppd3dcbSkinningBoneTransforms[i]->Map(0, NULL, (void**)&m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
+	}
+}
+
+
+CAnimationController* CAnimationController::Clone(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	return new CAnimationController(*this, pd3dDevice, pd3dCommandList);
+}

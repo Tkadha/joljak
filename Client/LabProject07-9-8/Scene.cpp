@@ -116,17 +116,17 @@ void CScene::BuildDefaultLightsAndMaterials()
 	}
 }
 
-void CScene::ServerBuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed!");
 	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
 	assert(pShaderManager != nullptr && "ShaderManager is not available!");
-	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); 
+
 	BuildDefaultLightsAndMaterials();
 
 	if (!pResourceManager) {
-
-		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
+		//OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
 		return;
 	}
 
@@ -697,7 +697,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 	if (!pResourceManager) {
 		
-		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
+		//OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
 		return;
 	}
 
@@ -759,302 +759,87 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuDsvHandle) 
 	);
 
+	LoadPrefabs(pd3dDevice, pd3dCommandList);
+
 	std::random_device rd;
 	std::mt19937 gen(rd());
 
+	// 2. 헬퍼 함수를 사용하여 정적 오브젝트들을 배치합니다.
+	const wchar_t* barkTexture = L"Model/Textures/Tree_Bark_Diffuse.dds";
+	const wchar_t* rockTexture = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
 
-	float spawnMin = 500, spawnMax = 9500;
-	float objectMinSize = 15, objectMaxSize = 20;
+	// 인자 : 객체이름, 갯수, 스폰위치 min, max, 크기 min, max, ~ , 텍스쳐인덱스, 텍스쳐 
+	SpawnStaticObjects("PineTree", 100, 500, 9500, 15, 20, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("BirchTree", 100, 500, 9500, 15, 20, gen, pd3dDevice, pd3dCommandList, 1, barkTexture);
 
-	//int nTreeObjects = 100;
-	//for (int i = 0; i < nTreeObjects; ++i) {
-	//	CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-	//	auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-	//	gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-	//	auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-	//	gameObj->SetScale(w, h, w);
+	SpawnStaticObjects("RockClusterA", 100, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList, 0, rockTexture);
+	SpawnStaticObjects("RockClusterB", 100, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList, 0, rockTexture);
+	SpawnStaticObjects("RockClusterC", 100, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList, 0, rockTexture);
 
-	//	gameObj->m_treecount = tree_obj_count;
-	//	m_vGameObjects.emplace_back(gameObj);
-	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+	SpawnStaticObjects("Cliff", 30, 1700, 9000, 30, 50, gen, pd3dDevice, pd3dCommandList, 0, rockTexture);
+
+	SpawnStaticObjects("BushA", 100, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Chervil", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("RedPoppy", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("ElephantEar", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("GrassPatch", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Clovers", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Daisies", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Leaves", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("GroundPoppies", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+
+	int animate_count = 13;
+	// Cow 배치
+	//std::shared_ptr<CGameObject> cowPrefab = pResourceManager->GetPrefab("Cow");
+	//if (cowPrefab) {
+	//	CGameObject* prefabInstance = cowPrefab.get();
+	//	prefabInstance->SetPosition(5000, 2700, 5000); // 눈에 잘 띄는 곳에 배치
+	//	m_vGameObjects.emplace_back(prefabInstance);
+
+	//	prefabInstance->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	//	for (int j = 1; j < animate_count; ++j) {
+	//		prefabInstance->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+	//		prefabInstance->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+	//	}
+
+	//	prefabInstance->SetOwningScene(this);
+	//	prefabInstance->FSM_manager = std::make_shared<FSMManager<CGameObject>>(prefabInstance);
+	//	prefabInstance->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+	//	prefabInstance->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+
+	//	prefabInstance->SetScale(12.0f, 12.0f, 12.0f);
+
+	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, prefabInstance->m_worldOBB.Center);
 	//	octree.insert(std::move(t_obj));
+
+	//	for (int i = 0; i < 10; ++i) {
+	//		CMonsterObject* newCow = dynamic_cast<CMonsterObject*>(cowPrefab->Clone());
+	//		newCow->m_objectType = GameObjectType::Cow;
+
+	//		newCow->PostCloneAnimationSetup();	// 뼈대 재연결
+
+	//		newCow->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	//		for (int j = 1; j < animate_count; ++j) {
+	//			newCow->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+	//			newCow->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+	//		}
+
+	//		newCow->SetOwningScene(this);
+	//		newCow->FSM_manager = std::make_shared<FSMManager<CGameObject>>(newCow);
+	//		newCow->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+	//		newCow->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+	//		
+	//		auto [x, z] = genRandom::generateRandomXZ(gen, 5000, 5500, 5000, 5500);
+	//		newCow->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+	//		newCow->SetScale(12.0f, 12.0f, 12.0f);
+	//		m_vGameObjects.emplace_back(newCow);
+
+	//		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, newCow->m_worldOBB.Center);
+	//		octree.insert(std::move(t_obj));
+	//	}
 	//}
-	//for (int i = 0; i < nTreeObjects; ++i) {
-	//	CGameObject* gameObj = new CBirchObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-	//	auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-	//	gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-	//	auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-	//	gameObj->SetScale(w, h, w);
-	//	gameObj->m_treecount = tree_obj_count;
-
-	//	int materialIndexToChange = 1;
-	//	UINT albedoTextureSlot = 0;
-	//	const wchar_t* textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
-
-	//	ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
-
-	//	m_vGameObjects.emplace_back(gameObj);
-	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-	//	octree.insert(std::move(t_obj));
-	//}
-	//for (int i = 0; i < nTreeObjects; ++i) {
-	//	CGameObject* gameObj = new CWillowObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-	//	auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-	//	gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-	//	auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-	//	gameObj->SetScale(w, h, w);
-	//	gameObj->m_treecount = tree_obj_count;
-
-	//	////XMFLOAT3 position = gameObj->GetPosition();
-	//	//XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	//	////position.y += 50.0f;
-	//	//XMFLOAT3 size = XMFLOAT3(1.0f, 10.0f, 1.0f);
-	//	//XMFLOAT4 rotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	//	//gameObj->SetOBB(position, size, rotation);
-	//	//gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
-
-	//	m_vGameObjects.emplace_back(gameObj);
-	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-	//	octree.insert(std::move(t_obj));
-	//}
-
-
-	//int nRockObjects = 100;	objectMinSize = 10, objectMaxSize = 15;
-	//for (int i = 0; i < nRockObjects; ++i) {
-	//	CGameObject* gameObj = new CRockClusterAObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-	//	auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-	//	gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-	//	auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-	//	gameObj->SetScale(w, h, w);
-	//	gameObj->m_treecount = tree_obj_count;
-
-	//	int materialIndexToChange = 0;
-	//	UINT albedoTextureSlot = 0;
-	//	const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
-
-	//	ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
-
-	//	m_vGameObjects.emplace_back(gameObj);
-	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-	//	octree.insert(std::move(t_obj));
-	//}
-	//for (int i = 0; i < nRockObjects; ++i) {
-	//	CGameObject* gameObj = new CRockClusterBObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-	//	auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-	//	gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-	//	auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-	//	gameObj->SetScale(w, h, w);
-	//	gameObj->m_treecount = tree_obj_count;
-
-	//	int materialIndexToChange = 0;
-	//	UINT albedoTextureSlot = 0;
-	//	const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
-
-	//	ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
-
-	//	m_vGameObjects.emplace_back(gameObj);
-	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-	//	octree.insert(std::move(t_obj));
-	//}
-	//for (int i = 0; i < nRockObjects; ++i) {
-	//	CGameObject* gameObj = new CRockClusterCObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-	//	auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-	//	gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-	//	auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-	//	gameObj->SetScale(w, h, w);
-	//	gameObj->m_treecount = tree_obj_count;
-
-	//	int materialIndexToChange = 0;
-	//	UINT albedoTextureSlot = 0;
-	//	const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
-
-	//	ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
-
-	//	m_vGameObjects.emplace_back(gameObj);
-	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-	//	octree.insert(std::move(t_obj));
-	//}
-
-
-	int nRockObjects = 30;	objectMinSize = 30, objectMaxSize = 50;
-	spawnMin = 1700, spawnMax = 9000;
-	for (int i = 0; i < nRockObjects; ++i) {
-		CGameObject* gameObj = new CCliffFObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		int materialIndexToChange = 0;
-		UINT albedoTextureSlot = 0;
-		const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
-
-		ChangeAlbedoTexture( gameObj,materialIndexToChange,albedoTextureSlot,textureFile,pResourceManager,pd3dCommandList, pd3dDevice);
-
-		m_vGameObjects.emplace_back(gameObj);
-
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-
-
-	m_pPreviewPine = new CConstructionObject(
-		pd3dDevice, pd3dCommandList, m_pGameFramework);
-	m_pPreviewPine->SetPosition(XMFLOAT3(0, 0, 0));
-
-	//auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-	m_pPreviewPine->SetScale(10, 10, 10);
-
-	m_pPreviewPine->isRender = false;
-
-	m_pPreviewPine->m_treecount = tree_obj_count;
-	m_vGameObjects.emplace_back(m_pPreviewPine);
-	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, m_pPreviewPine->m_worldOBB.Center);
-	octree.insert(std::move(t_obj));
-
-	//int nCliffFObjectCObjects = 5;
-	//for (int i = 0; i < nCliffFObjectCObjects; ++i) {
-	//	CGameObject* gameObj = new CCliffFObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-	//	auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-	//	gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-	//	auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-	//	gameObj->SetScale(w, h, w);
-	//	m_vGameObjects.emplace_back(gameObj);
-	//}
-
-
-
-	int nBushObject = 100;
-	objectMinSize = 10, objectMaxSize = 15;
-	for (int i = 0; i < nBushObject; ++i) {
-		CGameObject* gameObj = new CBushAObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	int nVegetationObject = 20;
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/ChervilCluster.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/RedPoppyCluster.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Speedwell.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/ElephantEar_A.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/GrassPatch_LOD0.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Clovers.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Daisies.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Leaves.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Poppies.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-
-
-
 
 	int nCowObjects = 10;
-	int animate_count = 13;
 	for (int i = 0; i < nCowObjects; ++i)
 	{
 		CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Cow.bin", m_pGameFramework);
@@ -1095,7 +880,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		//gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
 		//gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 		gameobj->Rotate(0.f, 180.f, 0.f);
-		auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 5000, 5500, 5000, 5500);
 		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		gameobj->SetScale(10.0f, 10.0f, 10.0f);
 		gameobj->SetTerraindata(m_pTerrain);
@@ -1264,10 +1049,16 @@ void CScene::ReleaseObjects()
 	if (m_pWavesObject) delete m_pWavesObject;
 
 	ReleaseShaderVariables();
-	//for(auto& obj : m_vGameObjects) {
-	//	if (obj) delete obj;
-	//}
+	for (auto& pObject : m_vGameObjects)
+	{
+		// 복제된 인스턴스만 delete
+		if (pObject && !pObject->m_bIsPrefab)
+		{
+			delete pObject;
+		}
+	}
 	m_vGameObjects.clear();
+
 	m_listBranchObjects.clear();
 
 	if (m_pLights) delete[] m_pLights;
@@ -1301,7 +1092,7 @@ void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 	if (m_pcbMappedLights && m_pLights) {
 		assert(m_nLights >= 0 && m_nLights <= MAX_LIGHTS && "Invalid number of lights!");
 		if (m_nLights < 0 || m_nLights > MAX_LIGHTS) {
-			OutputDebugStringA("!!!!!!!! ERROR: Invalid m_nLights value detected! Clamping to 0. !!!!!!!!\n");
+			//OutputDebugStringA("!!!!!!!! ERROR: Invalid m_nLights value detected! Clamping to 0. !!!!!!!!\n");
 			m_nLights = 0; 
 		}
 		::memcpy(m_pcbMappedLights->m_pLights, m_pLights, sizeof(LIGHT) * m_nLights);
@@ -1547,7 +1338,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 	//if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
 
-	if (m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
+	//if (m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
 
 
 	if (m_pPlayer) {
@@ -1991,4 +1782,88 @@ void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShade
 	}
 	//}
 
+}
+
+
+void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
+
+	// 나무
+	pResourceManager->RegisterPrefab("PineTree", std::make_shared<CPineObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+	pResourceManager->RegisterPrefab("BirchTree", std::make_shared<CBirchObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+
+	// 바위
+	pResourceManager->RegisterPrefab("RockClusterA", std::make_shared<CRockClusterAObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+	pResourceManager->RegisterPrefab("RockClusterB", std::make_shared<CRockClusterBObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+	pResourceManager->RegisterPrefab("RockClusterC", std::make_shared<CRockClusterCObject>(pd3dDevice, pd3dCommandList, m_pGameFramework)); // "RockClusterB" -> "RockClusterC"
+
+	// 절벽
+	pResourceManager->RegisterPrefab("Cliff", std::make_shared<CCliffFObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+
+	// 수풀 및 식물
+	pResourceManager->RegisterPrefab("BushA", std::make_shared<CBushAObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+	pResourceManager->RegisterPrefab("Chervil", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/ChervilCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("RedPoppy", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/RedPoppyCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Speedwell", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Speedwell.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("ElephantEar", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/ElephantEar_A.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("GrassPatch", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/GrassPatch_LOD0.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Clovers", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Clovers.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Daisies", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Daisies.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Leaves", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Leaves.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("GroundPoppies", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Poppies.bin", m_pGameFramework));
+
+	// 몬스터
+	CLoadedModelInfo* pLoadedModel = nullptr;
+
+	pLoadedModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Cow.bin", m_pGameFramework);
+	auto pCowPrefab = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, pLoadedModel, 13, m_pGameFramework);
+
+	pCowPrefab->m_bIsPrefab = true;
+
+	pResourceManager->RegisterPrefab("Cow", pCowPrefab);
+	if (pLoadedModel) delete pLoadedModel;
+
+	pLoadedModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Pig.bin", m_pGameFramework);
+	pResourceManager->RegisterPrefab("Pig", std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, pLoadedModel, 13, m_pGameFramework));
+	if (pLoadedModel) delete pLoadedModel;
+
+	pLoadedModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Spider.bin", m_pGameFramework);
+	pResourceManager->RegisterPrefab("Spider", std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, pLoadedModel, 13, m_pGameFramework));
+	if (pLoadedModel) delete pLoadedModel;
+
+	pLoadedModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Toad.bin", m_pGameFramework);
+	pResourceManager->RegisterPrefab("Toad", std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, pLoadedModel, 13, m_pGameFramework));
+	if (pLoadedModel) delete pLoadedModel;
+
+	pLoadedModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Wolf.bin", m_pGameFramework);
+	pResourceManager->RegisterPrefab("Wolf", std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, pLoadedModel, 13, m_pGameFramework));
+	if (pLoadedModel) delete pLoadedModel;
+}
+
+
+void CScene::SpawnStaticObjects(const std::string& prefabName, int count, float spawnMin, float spawnMax, float scaleMin, float scaleMax, std::mt19937& gen, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int matIdx, const wchar_t* texFile)
+{
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
+	std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab(prefabName);
+	if (!prefab) return;
+
+	for (int i = 0; i < count; ++i)
+	{
+		CGameObject* gameObj = prefab->Clone();
+		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+
+		auto [w, h] = genRandom::generateRandomXZ(gen, scaleMin, scaleMax, scaleMin, scaleMax);
+		gameObj->SetScale(w, h, w);
+
+		if (matIdx != -1 && texFile != nullptr) {
+			ChangeAlbedoTexture(gameObj, matIdx, 0, texFile, pResourceManager, pd3dCommandList, pd3dDevice);
+		}
+
+		gameObj->m_treecount = tree_obj_count;
+		m_vGameObjects.emplace_back(gameObj);
+		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
+		octree.insert(std::move(t_obj));
+	}
 }
