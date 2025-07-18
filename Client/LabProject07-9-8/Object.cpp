@@ -2022,20 +2022,6 @@ CPineObject::CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	if (pInFile) fclose(pInFile);
 }
 
-CPineObject::CPineObject(CGameFramework* pGameFramework)
-	: CTreeObject()
-{
-}
-
-CGameObject* CPineObject::Clone()
-{
-	CPineObject* pNewInstance = new CPineObject(m_pGameFramework);
-
-	pNewInstance->CopyDataFrom(this);
-
-	return pNewInstance;
-}
-
 CBirchObject::CBirchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
@@ -2255,7 +2241,7 @@ CSwordObject::CSwordObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 	if (pInFile) fclose(pInFile); 
 }
 
-CStaticObject::CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* modelname, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
+CStaticObject::CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const char* modelname, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, modelname, "rb");
@@ -2449,4 +2435,148 @@ void CRockShardEffect::Update(float deltaTime)
 	pos.z += m_vVelocity.z * deltaTime;
 	SetPosition(pos);
 
+}
+
+
+
+
+
+
+
+CPineObject::CPineObject(CGameFramework* pGameFramework) : CTreeObject()
+{
+	m_pGameFramework = pGameFramework;
+}
+
+CGameObject* CPineObject::Clone()
+{
+	CPineObject* pNewInstance = new CPineObject(m_pGameFramework);
+	pNewInstance->CopyDataFrom(this);
+	return pNewInstance;
+}
+
+CBirchObject::CBirchObject(CGameFramework* pGameFramework) : CTreeObject()
+{
+	m_pGameFramework = pGameFramework;
+}
+
+CGameObject* CBirchObject::Clone()
+{
+	CBirchObject* pNewInstance = new CBirchObject(m_pGameFramework);
+	pNewInstance->CopyDataFrom(this);
+	return pNewInstance;
+}
+
+CRockClusterAObject::CRockClusterAObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
+{
+	m_pGameFramework = pGameFramework;
+}
+
+CGameObject* CRockClusterAObject::Clone()
+{
+	CRockClusterAObject* pNewInstance = new CRockClusterAObject(m_pGameFramework);
+	pNewInstance->CopyDataFrom(this);
+	return pNewInstance;
+}
+
+CRockClusterBObject::CRockClusterBObject(CGameFramework* pGameFramework) : CRockObject()
+{
+	m_pGameFramework = pGameFramework;
+}
+
+CGameObject* CRockClusterBObject::Clone()
+{
+	CRockClusterBObject* pNewInstance = new CRockClusterBObject(m_pGameFramework);
+	pNewInstance->CopyDataFrom(this);
+	return pNewInstance;
+}
+
+CRockClusterCObject::CRockClusterCObject(CGameFramework* pGameFramework) : CRockObject()
+{
+	m_pGameFramework = pGameFramework;
+}
+
+CGameObject* CRockClusterCObject::Clone()
+{
+	CRockClusterCObject* pNewInstance = new CRockClusterCObject(m_pGameFramework);
+	pNewInstance->CopyDataFrom(this);
+	return pNewInstance;
+}
+
+CCliffFObject::CCliffFObject(CGameFramework* pGameFramework) : CGameObject(pGameFramework)
+{
+	m_objectType = GameObjectType::Cliff;
+}
+
+CGameObject* CCliffFObject::Clone()
+{
+	CCliffFObject* pNewInstance = new CCliffFObject(m_pGameFramework);
+	pNewInstance->CopyDataFrom(this);
+	return pNewInstance;
+}
+
+CRockDropObject::CRockDropObject(CGameFramework* pGameFramework) : CItemObject()
+{
+	m_pGameFramework = pGameFramework;
+}
+
+CGameObject* CRockDropObject::Clone()
+{
+	CRockDropObject* pNewInstance = new CRockDropObject(m_pGameFramework);
+	pNewInstance->CopyDataFrom(this);
+	return pNewInstance;
+}
+
+CBushAObject::CBushAObject(CGameFramework* pGameFramework) : VegetationObject()
+{
+	m_pGameFramework = pGameFramework;
+	m_objectType = GameObjectType::Vegetation;
+}
+
+CGameObject* CBushAObject::Clone()
+{
+	CBushAObject* pNewInstance = new CBushAObject(m_pGameFramework);
+	pNewInstance->CopyDataFrom(this);
+	return pNewInstance;
+}
+
+
+CStaticObject::CStaticObject(CGameFramework* pGameFramework)
+{
+	m_pGameFramework = pGameFramework;
+}
+
+CGameObject* CStaticObject::Clone()
+{
+	CStaticObject* pNewInstance = new CStaticObject(m_pGameFramework);
+	pNewInstance->CopyDataFrom(this);
+	return pNewInstance;
+}
+
+
+CRockShardEffect::CRockShardEffect(CGameFramework* pGameFramework)
+{
+	m_pGameFramework = pGameFramework;
+}
+
+CGameObject* CRockShardEffect::Clone()
+{
+	CRockShardEffect* pNewInstance = new CRockShardEffect(m_pGameFramework);
+	pNewInstance->CopyDataFrom(this);
+	return pNewInstance;
+}
+
+
+
+
+
+CMonsterObject::CMonsterObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
+{
+}
+
+CGameObject* CMonsterObject::Clone()
+{
+	CMonsterObject* pNewInstance = new CMonsterObject(m_pGameFramework);
+	pNewInstance->CopyDataFrom(this);
+	return pNewInstance;
 }
