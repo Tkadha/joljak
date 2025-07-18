@@ -440,10 +440,10 @@ void event_thread()
 							float expectedThirst = it.second->PlayerThirst.load();
 							while (expectedThirst > 0.0f) {
 								float desiredThirst;
-								if (it.second->GetCurrentState() != ServerPlayerState::Idle)
-									desiredThirst = expectedThirst - 2.0f;
-								else
+								if (it.second->GetCurrentState() == ServerPlayerState::Idle || it.second->GetCurrentState() == ServerPlayerState::Walking)
 									desiredThirst = expectedThirst - 1.0f;
+								else
+									desiredThirst = expectedThirst - 2.0f;
 								if (desiredThirst < 0.0f) {
 									desiredThirst = 0.0f;
 								}
@@ -590,42 +590,43 @@ int main(int argc, char* argv[])
 
 			for (auto& cl : PlayerClient::PlayerClients) {
 				if (cl.second->state != PC_INGAME) continue;
-				auto& beforepos = cl.second->GetPosition();
-				if (cl.second->Playerstamina.load() > 0)
-					cl.second->Update_test(deltaTime);
-				auto& pos = cl.second->GetPosition();
+				std::shared_ptr<PlayerClient> player = cl.second;
+				auto& beforepos = player->GetPosition();
+				if (player->Playerstamina.load() > 0)
+					player->Update_test(deltaTime);
+				auto& pos = player->GetPosition();
 				if (beforepos.x != pos.x || beforepos.y != pos.y || beforepos.z != pos.z)
 				{
-					cl.second->BroadCastPosPacket();
-					int stamina = cl.second->Playerstamina.load();
+					player->BroadCastPosPacket();
+					int stamina = player->Playerstamina.load();
 
-					if (stamina > 0 && cl.second->GetCurrentState() == ServerPlayerState::Running) {
-						cl.second->stamina_counter++;
-						if (cl.second->stamina_counter > 15) {
+					if (stamina > 0 && player->GetCurrentState() == ServerPlayerState::Running) {
+						player->stamina_counter++;
+						if (player->stamina_counter > 15) {
 							int desiredstamina = stamina - 1;
 							if (desiredstamina < 0) {
 								desiredstamina = 0;
 							}
 
-							if (cl.second->Playerstamina.compare_exchange_weak(stamina, desiredstamina)) {
+							if (player->Playerstamina.compare_exchange_weak(stamina, desiredstamina)) {
 								// 패킷전송
 								CHANGE_STAT_PACKET s_packet;
 								s_packet.size = sizeof(CHANGE_STAT_PACKET);
 								s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
 								s_packet.stat = E_STAT::STAMINA;
-								s_packet.value = cl.second->Playerstamina.load();
-								cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+								s_packet.value = player->Playerstamina.load();
+								player->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 							}
-							cl.second->stamina_counter = 0;
+							player->stamina_counter = 0;
 						}
 					}
 				}
-				Octree::PlayerOctree.update(cl.second->m_id, cl.second->GetPosition());
+				Octree::PlayerOctree.update(player->m_id, player->GetPosition());
 
 
-				cl.second->vl_mu.lock();
-				std::unordered_set<int> before_vl = cl.second->viewlist;
-				cl.second->vl_mu.unlock();
+				player->vl_mu.lock();
+				std::unordered_set<int> before_vl = player->viewlist;
+				player->vl_mu.unlock();
 
 				std::unordered_set<int> new_vl;
 				std::vector<tree_obj*> results; // find obj
@@ -635,14 +636,14 @@ int main(int argc, char* argv[])
 
 				for (auto o_id : before_vl) {
 					if (0 == new_vl.count(o_id)) {	// before에만 있다면 제거 패킷
-						cl.second->SendRemovePacket(GameObject::gameObjects[o_id]);
+						player->SendRemovePacket(GameObject::gameObjects[o_id]);
 					}
 				}
 				for (auto o_id : new_vl) {
 					if (0 == before_vl.count(o_id)) { //new에만 있다면 추가 패킷
 						if (GameObject::gameObjects[o_id]->is_alive == false) continue;
 						if (GameObject::gameObjects[o_id]->Gethp() <= 0) continue;
-						cl.second->SendAddPacket(GameObject::gameObjects[o_id]);
+						player->SendAddPacket(GameObject::gameObjects[o_id]);
 					}
 				}
 			}
