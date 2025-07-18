@@ -173,6 +173,10 @@ public:
 
 	void AdvanceTime(float fElapsedTime, CGameObject* pRootGameObject);
 
+	CAnimationController* Clone(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+private:
+	CAnimationController(const CAnimationController& other, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
 public:
 	bool							m_bRootMotion = false;
 	CGameObject* m_pModelRootObject = NULL;
