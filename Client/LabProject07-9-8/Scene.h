@@ -176,6 +176,8 @@ public:
 	//void SpawnRockShardEffectAtPlayer();
 
 public:	// 그림자
+	bool IsDaytime() const { return m_bIsDaydaytime; }
+
 	std::unique_ptr<ShadowMap> m_pShadowMap;
 
 	DirectX::BoundingSphere mSceneBounds;
@@ -205,11 +207,20 @@ public:	// 그림자
 
 	float m_fLightRotationAngle = 0.0f;
 
+	XMFLOAT4 m_xmf4DaylightAmbient;
+	XMFLOAT4 m_xmf4MoonlightAmbient;
+
+	XMFLOAT4 m_xmf4DaylightDiffuse;
+	XMFLOAT4 m_xmf4DaylightSpecular;
+
 	void UpdateLights(float fTimeElapsed);
+
+private:
+	bool m_bIsDaytime = true;
 
 public:	// prefab
 	void LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void SpawnStaticObjects(const std::string& prefabName, int count, float spawnMin, float spawnMax, float scaleMin, float scaleMax, 
-		std::mt19937& gen, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, 
+	void SpawnStaticObjects(const std::string& prefabName, int count, float spawnMin, float spawnMax, float scaleMin, float scaleMax,
+		std::mt19937& gen, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList,
 		int matIdx = -1, const wchar_t* texFile = nullptr);
-};
+}	;

@@ -14,7 +14,6 @@ cbuffer cbGameObjectInfo : register(b2) // 지형의 월드 변환 등에 사용
 // --- 텍스처 ---
 Texture2D gtxtTerrainBaseTexture : register(t1); // 지형 기본 텍스처
 Texture2D gtxtTerrainDetailTexture : register(t2); // 지형 상세 텍스처
-
 Texture2D gShadowMap : register(t3);    // 그림자
 
 // --- VS 입출력 구조체 ---
@@ -110,40 +109,7 @@ float CalcShadowFactor(float4 shadowPosH)
 
 // --- Pixel Shader ---
 float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
-{ 
-    //------------디버깅------------
-    
-    // 정점 셰이더에서 넘어온 월드 좌표(input.ShadowPosH)를
-    // 맵의 최대 크기(예: 5000.0)로 나누어 [0,1] 범위의 색상으로 만듭니다.
-    // 이 값을 조절하며 테스트해보세요.
-    //float3 worldPosColor = input.ShadowPosH.xyz / 10000.0f;
-
-    //// x, y, z 좌표를 각각 R, G, B 색상에 매핑하여 출력합니다.
-    //return float4(worldPosColor.r, worldPosColor.g, worldPosColor.b, 1.0f);
-    
-    //return float4(input.uv0.x, input.uv0.y, input.uv1.x, 1.0f);
-    //------------디버깅------------
-    
-    // --- 최종 디버깅: 깊이 값 비교 시각화 ---
-
-    // 1. 비교에 사용할 두 개의 깊이 값을 계산합니다.
-    //float4 shadowPosH = input.ShadowPosH;
-    //shadowPosH.xyz /= shadowPosH.w;
-    //float2 shadowUV = float2(0.5f * shadowPosH.x + 0.5f, -0.5f * shadowPosH.y + 0.5f);
-
-    //// [A] 현재 픽셀의 깊이 값 (빛의 시점)
-    //float myDepth = shadowPosH.z;
-
-    //// [B] 그림자 맵에 저장된, 가장 가까운 물체의 깊이 값
-    //float shadowMapDepth = gShadowMap.SampleLevel(gssWrap, shadowUV, 0).r;
-
-    //// 2. 이 두 값을 직접 화면에 색상으로 출력하여 비교합니다.
-    //// R 채널: [A] 현재 픽셀의 깊이
-    //// G 채널: [B] 그림자 맵에 저장된 깊이
-    //// B 채널: 두 값의 차이 (차이가 클수록 파란색이 강해짐)
-    //return float4(myDepth, shadowMapDepth, abs(myDepth - shadowMapDepth) * 10.0, 1.0);
-
-    
+{     
     // 텍스처 샘플링
     float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
     float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);
@@ -158,7 +124,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     float shadowFactor = CalcShadowFactor(input.ShadowPosH);
     
 // 최종 조명 계산 (input.color는 미리 계산된 빛, 여기에 그림자를 적용)
-    float3 totalLight = float3(0.3f, 0.3f, 0.3f) + (shadowFactor * input.color.rgb);
+    float3 totalLight = gcGlobalAmbientLight.rgb + (shadowFactor * input.color.rgb);
 
     // 최종 색상 결정
     float3 finalColor = cTextureColor.rgb * totalLight;

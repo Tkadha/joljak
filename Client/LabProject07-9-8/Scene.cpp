@@ -43,6 +43,14 @@ CScene::CScene(CGameFramework* pFramework) : m_pGameFramework(pFramework)
 	UINT ncbElementBytes = ((sizeof(VS_CB_CAMERA_INFO) + 255) & ~255); // 256의 배수
 	m_pd3dcbLightCamera = ::CreateBufferResource(pFramework->GetDevice(), nullptr, nullptr, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr);
 	m_pd3dcbLightCamera->Map(0, nullptr, (void**)&m_pcbMappedLightCamera);
+
+	// 낮: 밝은 백색광과 밝은 주변광
+	m_xmf4DaylightAmbient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
+	m_xmf4DaylightDiffuse = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
+	m_xmf4DaylightSpecular = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+
+	// 밤: 아주 어두운 푸른빛의 주변광 (달빛)
+	m_xmf4MoonlightAmbient = XMFLOAT4(0.05f, 0.05f, 0.15f, 1.0f);
 }
 
 CScene::~CScene()
@@ -55,7 +63,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights = new LIGHT[m_nLights];
 	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
 
-	m_xmf4GlobalAmbient = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);
+	m_xmf4GlobalAmbient = XMFLOAT4(0.05f, 0.05f, 0.05f, 1.0f);
 
 	m_pLights[0].m_bEnable = false;
 	m_pLights[0].m_nType = POINT_LIGHT;
@@ -971,6 +979,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// =================================================================
 	// Pass 1: 그림자 맵 생성
 	// =================================================================
+	if(m_bIsDaytime)
 	{
 		// 렌더 타겟을 그림자 맵으로 설정
 		m_pShadowMap->SetRenderTarget(pd3dCommandList);
@@ -1006,9 +1015,10 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		}
 
 		if (m_pTerrain) m_pTerrain->RenderShadow(pd3dCommandList);
+
+		// 1. 그림자 맵 리소스를 픽셀 셰이더에서 읽을 수 있는 상태로 변경
+		m_pShadowMap->TransitionToReadable(pd3dCommandList);
 	}
-	// 1. 그림자 맵 리소스를 픽셀 셰이더에서 읽을 수 있는 상태로 변경
-	m_pShadowMap->TransitionToReadable(pd3dCommandList);
 
 	// 2. 렌더 타겟을 다시 화면(메인 백버퍼)과 메인 깊이 버퍼로 설정
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pGameFramework->GetCurrentRtvCPUDescriptorHandle();
@@ -1487,12 +1497,12 @@ void CScene::UpdateShadowTransform()
 
 void CScene::UpdateLights(float fTimeElapsed)
 {
-	// 1. 빛의 회전 각도를 시간의 흐름에 따라 업데이트합니다.
-	float rotationSpeed = 5.0f; // 15도를 1초에 회전
+	// 1. 빛의 회전 각도를 업데이트합니다.
+	float rotationSpeed = 5.0f; // 속도를 약간 조절
 	m_fLightRotationAngle += fTimeElapsed * rotationSpeed;
 	if (m_fLightRotationAngle > 360.0f) m_fLightRotationAngle -= 360.0f;
 
-	// 주 방향광
+	// 주 방향광을 찾습니다.
 	LIGHT* pMainLight = nullptr;
 	for (int i = 0; i < m_nLights; ++i) {
 		if (m_pLights[i].m_nType == DIRECTIONAL_LIGHT) {
@@ -1502,17 +1512,31 @@ void CScene::UpdateLights(float fTimeElapsed)
 	}
 	if (!pMainLight) return;
 
-	// 1. 기본 빛의 방향을 설정합니다.
-	XMVECTOR xmvBaseLightDirection = XMVectorSet(0.0f, -0.707f, -0.707f, 0.0f);
-
-	// 2. 월드의 Z축이 아닌, Y축(수직축)을 기준으로 회전하는 행렬을 만듭니다.
-	XMMATRIX xmmtxLightRotate = XMMatrixRotationY(XMConvertToRadians(m_fLightRotationAngle));
-
-	// 3. 기본 빛의 방향을 회전시켜 현재 프레임의 빛 방향을 계산합니다.
+	//빛의 현재 방향을 계산합니다. (동쪽에서 떠서 서쪽으로 지는 Z축 회전)
+	XMVECTOR xmvBaseLightDirection = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
+	XMMATRIX xmmtxLightRotate = XMMatrixRotationZ(XMConvertToRadians(m_fLightRotationAngle));
 	XMVECTOR xmvCurrentLightDirection = XMVector3TransformNormal(xmvBaseLightDirection, xmmtxLightRotate);
 
-	// 4. 계산된 새로운 방향을 실제 조명 데이터에 업데이트합니다.
+	// 계산된 새로운 방향을 실제 조명 데이터에 업데이트합니다.
 	XMStoreFloat3(&pMainLight->m_xmf3Direction, xmvCurrentLightDirection);
+
+	// 빛의 Y 방향을 기준으로 낮과 밤을 판단
+	if (XMVectorGetY(xmvCurrentLightDirection) < 0.0f) // 빛이 아래를 향하면 낮
+	{
+		// 직사광을 켜고, 주변광을 밝게
+		m_bIsDaytime = true;
+		m_xmf4GlobalAmbient = m_xmf4DaylightAmbient;
+		pMainLight->m_xmf4Diffuse = m_xmf4DaylightDiffuse;
+		pMainLight->m_xmf4Specular = m_xmf4DaylightSpecular;
+	}
+	else // 빛이 위를 향하면 밤
+	{
+		//직사광을 끄고, 주변광을 어두운 달빛으로 교체
+		m_bIsDaytime = false;
+		m_xmf4GlobalAmbient = m_xmf4MoonlightAmbient;
+		pMainLight->m_xmf4Diffuse = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // 빛 색상을 검은색
+		pMainLight->m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	}
 }
 
 void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader)
