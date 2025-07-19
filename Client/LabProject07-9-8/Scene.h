@@ -117,7 +117,7 @@ public:
 	vector<CGameObject*>				m_vGameObjects{};
 	std::list<CGameObject*> 			m_listGameObjects;
 	std::unordered_map<std::string, CGameObject*> m_mapBuildPrefabs;
-	CGameObject* m_pPreviewPine = nullptr;
+	
 
 	// 파도 오브젝트
 	CWavesObject* m_pWavesObject = nullptr;

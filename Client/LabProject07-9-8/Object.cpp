@@ -2378,16 +2378,7 @@ void CGameObject::SetColor(const XMFLOAT4& color)
 	m_xmf4DebugColor = color;
 }
 
-CConstructionObject::CConstructionObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
-{
-	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, "Model/buildobject/pannel.bin", "rb");
-	CGameObject* pGameObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, NULL, pInFile, NULL, pGameFramework); 
-	SetChild(pGameObject);
 
-	
-	if (pInFile) fclose(pInFile); 
-}
 
 CRockShardEffect::CRockShardEffect(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework)
 	: CGameObject(1, framework)

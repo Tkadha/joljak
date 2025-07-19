@@ -131,7 +131,7 @@ private:
 	bool						ShowCraftingUI = false; 
 	bool						ShowFurnaceUI = false;
 	bool						ShowTraitUI = false;
-	
+	int							selectedCraftItemIndex = -1;
 	FurnaceSlot					furnaceSlot;
 
 	bool						m_bBuildMode = false; // 건축 모드 활성화 여부

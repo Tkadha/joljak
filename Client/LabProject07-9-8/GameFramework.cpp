@@ -678,15 +678,20 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				ShowCraftingUI = !ShowCraftingUI;
 				break;
 			case 'B':
-				BuildMode = !BuildMode;
+				m_bBuildMode = !m_bBuildMode;
+				
+				if (!m_bBuildMode) {
+					m_bIsPreviewVisible = false;
+					m_nSelectedBuildingIndex = -1;
+					m_pConstructionSystem->ExitBuildMode();
+				}
 				break;
+				
 			case 'K':
 				ShowFurnaceUI = !ShowFurnaceUI;
 				break;
 			case 'R':
-				BuildMode = false;
-				bPrevBuildMode = BuildMode;
-				m_pConstructionSystem->ConfirmPlacement();
+				
 				break;
 			case 'T':
 				m_pScene->obbRender = m_pScene->obbRender ? false : true;
@@ -2466,7 +2471,7 @@ void CGameFramework::FrameAdvance()
 			const char* prefabKey;   // ResourceManager에 등록된 이름
 		};
 		static std::vector<BuildableItem> buildableItems = {
-			{ "나무 벽", "wood_wall" },
+			{ "wood wall", "wood_wall" },
 			// { "나무 바닥", "wood_floor" },
 			// { "나무 문", "wood_door" }
 		};

@@ -175,18 +175,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	m_pTerrain->m_xmf4x4ToParent = Matrix4x4::Identity();
 
 
-	m_pPreviewPine = new CConstructionObject(
-		pd3dDevice, pd3dCommandList, m_pGameFramework);
-	m_pPreviewPine->SetPosition(XMFLOAT3(0, 0, 0));
 	
-	m_pPreviewPine->SetScale(10, 10, 10);
-	
-	m_pPreviewPine->isRender = false;
-	m_pPreviewPine->m_id = -1;
-	m_pPreviewPine->m_treecount = tree_obj_count;
-	m_vGameObjects.emplace_back(m_pPreviewPine);
-	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, m_pPreviewPine->m_worldOBB.Center);
-	octree.insert(std::move(t_obj));
 
 	for (auto obj : m_vGameObjects) {
 		obj->SetOBB(1.f,1.f,1.f,XMFLOAT3{0.f,0.f,0.f});
@@ -297,6 +286,24 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	SpawnStaticObjects("Daisies", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
 	SpawnStaticObjects("Leaves", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
 	SpawnStaticObjects("GroundPoppies", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+
+	
+
+	// 생성할 건축물 목록 (프리팹 이름과 동일해야 함)
+	std::vector<std::string> buildableItems = { "wood_wall" /*, "wood_floor", ... */ };
+
+	for (const auto& itemName : buildableItems) {
+		std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab(itemName);
+		if (prefab) {
+			CGameObject* previewObject = prefab->Clone();
+			previewObject->isRender = false; // 처음에는 보이지 않도록 설정
+			previewObject->SetPosition(5000.0f,2600.0f, 5000.0f);
+			previewObject->SetScale(1000.0f, 50.0f, 500.0f);
+
+			m_mapBuildPrefabs[itemName] = previewObject; // 맵에 이름으로 저장
+			m_vGameObjects.emplace_back(previewObject);     // 씬의 메인 목록에도 추가
+		}
+	}
 
 	int animate_count = 13;
 	// Cow 배치
@@ -821,14 +828,18 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	//	}
 	//}
 
+	
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
 		for (auto& obj : m_vGameObjects) {
+			if (strcmp(obj->m_pstrFrameName, "pannel") == 0) {
+				OutputDebugStringA("Preview Object is in Render Loop!\n");
+			}
 			if (obj) obj->Animate(m_fElapsedTime);
 			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
 		}
 	}
-
+	
 
 	if (m_pWavesObject) m_pWavesObject->Render(pd3dCommandList, pCamera);
 
@@ -848,7 +859,11 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 	//if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
 
-	//if (m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
+	//if (m_pPreviewPine && m_pPreviewPine->isRender) {
+	//	m_pPreviewPine->Animate(m_fElapsedTime);
+	//	m_pPreviewPine->Render(pd3dCommandList, pCamera);
+	//}
+
 
 
 	if (m_pPlayer) {
@@ -890,9 +905,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 				}
 			}
 
-			if (m_pPreviewPine && m_pPreviewPine->ShouldRenderOBB()) {
-				m_pPreviewPine->RenderOBB(pd3dCommandList, pCamera);
-			}
+			
 
 
 
@@ -1352,6 +1365,8 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	//건축
 	pResourceManager->RegisterPrefab("wood_wall", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/buildobject/pannel.bin", m_pGameFramework));
+
+
 }
 
 

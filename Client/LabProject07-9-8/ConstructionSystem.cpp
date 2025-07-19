@@ -13,31 +13,22 @@ void CConstructionSystem::Init(ID3D12Device* device, ID3D12GraphicsCommandList* 
 void CConstructionSystem::EnterBuildMode(const std::string& prefabName, const CCamera* pCamera)
 {
     
-    if (m_pPreviewObject) ExitBuildMode();
+    if (m_pPreviewObject) {
+        m_pPreviewObject->isRender = false;
+    }
 
     m_bBuildMode = true;
 
-   
-    ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
-    std::shared_ptr<CGameObject> pPrefab = pResourceManager->GetPrefab(prefabName);
-
-    if (!pPrefab) {
-        OutputDebugStringA(("[Build] ❌ Prefab not found in ResourceManager: " + prefabName + "\n").c_str());
+    // Scene에 미리 생성된 프리뷰 오브젝트를 이름으로 찾아온다.
+    if (m_pScene && m_pScene->m_mapBuildPrefabs.count(prefabName)) {
+        m_pPreviewObject = m_pScene->m_mapBuildPrefabs[prefabName];
+        m_pPreviewObject->isRender = true; // 찾아온 오브젝트를 보이게 만든다.
+    }
+    else {
+        m_pPreviewObject = nullptr; // 못 찾았으면 null 처리
         m_bBuildMode = false;
         return;
     }
-
-   
-    m_pPreviewObject = pPrefab->Clone();
-    if (!m_pPreviewObject) {
-        m_bBuildMode = false;
-        return;
-    }
-
-   
-    m_pPreviewObject->UpdateTransform(NULL);
-    m_pPreviewObject->isRender = true;
-    m_pScene->m_pPreviewPine = m_pPreviewObject; 
 
     if (pCamera) UpdatePreviewPosition(pCamera);
 }
@@ -45,14 +36,12 @@ void CConstructionSystem::EnterBuildMode(const std::string& prefabName, const CC
 
 void CConstructionSystem::ExitBuildMode()
 {
-    if (m_pPreviewObject) {
-        delete m_pPreviewObject; 
-        m_pPreviewObject = nullptr;
-    }
-    if (m_pScene) {
-        m_pScene->m_pPreviewPine = nullptr; 
-    }
     m_bBuildMode = false;
+    // 활성화된 프리뷰 오브젝트가 있다면 다시 숨긴다.
+    if (m_pPreviewObject) {
+        m_pPreviewObject->isRender = false;
+        m_pPreviewObject = nullptr; // 현재 활성화된 프리뷰가 없음을 표시
+    }
 }
 
 void CConstructionSystem::UpdatePreviewPosition(const CCamera* pCamera)

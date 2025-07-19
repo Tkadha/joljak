@@ -592,12 +592,7 @@ public:
 	virtual CGameObject* Clone();
 };
 
-class CConstructionObject : public CGameObject
-{
-public:
-	CConstructionObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
-	virtual ~CConstructionObject() {}
-};
+
 
 class CRockShardEffect : public CGameObject
 {
