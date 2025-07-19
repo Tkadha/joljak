@@ -2294,9 +2294,13 @@ void CGameFramework::FrameAdvance()
 								{
 									// 능력치 증가
 									m_pPlayer->Playerhp += 10;
+									if(m_pPlayer->Playerhp > m_pPlayer->Maxhp) m_pPlayer->Playerhp = m_pPlayer->Maxhp;
 									m_pPlayer->Playerstamina += 5;
+									if(m_pPlayer->Playerstamina > m_pPlayer->Maxstamina) m_pPlayer->Playerstamina = m_pPlayer->Maxstamina;
 									m_pPlayer->PlayerHunger += 10;
+									if (m_pPlayer->PlayerHunger > 100) m_pPlayer->PlayerHunger = 100;
 									m_pPlayer->PlayerThirst += 5;
+									if (m_pPlayer->PlayerThirst > 100) m_pPlayer->PlayerThirst = 100;
 
 									auto& nwManager = NetworkManager::GetInstance();
 									CHANGE_STAT_PACKET s_packet;
@@ -2322,9 +2326,13 @@ void CGameFramework::FrameAdvance()
 								{
 									// 능력치 증가
 									m_pPlayer->Playerhp += 25;
+									if (m_pPlayer->Playerhp > m_pPlayer->Maxhp) m_pPlayer->Playerhp = m_pPlayer->Maxhp;
 									m_pPlayer->Playerstamina += 20;
+									if (m_pPlayer->Playerstamina > m_pPlayer->Maxstamina) m_pPlayer->Playerstamina = m_pPlayer->Maxstamina;
 									m_pPlayer->PlayerHunger += 20;
+									if (m_pPlayer->PlayerHunger > 100) m_pPlayer->PlayerHunger = 100;
 									m_pPlayer->PlayerThirst += 10;
+									if (m_pPlayer->PlayerThirst > 100) m_pPlayer->PlayerThirst = 100;
 
 									auto& nwManager = NetworkManager::GetInstance();
 									CHANGE_STAT_PACKET s_packet;
