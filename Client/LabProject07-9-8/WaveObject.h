@@ -4,6 +4,7 @@
 class CWavesObject : public CGameObject
 {
 public:
+    CWavesObject(int nMaterials, CGameFramework* pGameFramework);
     CWavesObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
     virtual ~CWavesObject();
 
@@ -11,6 +12,8 @@ public:
     virtual void Animate(float fTimeElapsed) override;
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL) override;
     virtual void ReleaseUploadBuffers() override;
+
+    void SetDisplacementMap(D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle) { m_d3dDisplacementMapGpuHandle = gpuHandle; }
 
 private:
     // Waves 시뮬레이션을 위한 객체
@@ -26,4 +29,6 @@ private:
 
     // 인덱스 데이터를 저장할 벡터
     std::vector<UINT> m_vIndices;
+
+    D3D12_GPU_DESCRIPTOR_HANDLE m_d3dDisplacementMapGpuHandle = { 0 };
 };

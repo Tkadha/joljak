@@ -188,6 +188,7 @@
     <ClCompile Include="TerrainShader.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="Timer.cpp" />
+    <ClCompile Include="WavesCS.cpp" />
     <ClCompile Include="WaveObject.cpp" />
     <ClCompile Include="Waves.cpp" />
     <ClCompile Include="WavesShader.cpp" />
@@ -243,6 +244,7 @@
     <ClInclude Include="Texture.h" />
     <ClInclude Include="Timer.h" />
     <ClInclude Include="UploadBuffer.h" />
+    <ClInclude Include="WavesCS.h" />
     <ClInclude Include="WaveObject.h" />
     <ClInclude Include="Waves.h" />
     <ClInclude Include="WavesShader.h" />

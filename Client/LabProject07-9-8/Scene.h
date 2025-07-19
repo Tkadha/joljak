@@ -11,6 +11,7 @@
 #include "ResourceManager.h"
 #include "ShaderManager.h"
 #include "ShadowMap.h"
+#include "WavesCS.h"
 #include <unordered_map>
 #include <mutex>
 
@@ -123,6 +124,10 @@ public:
 	// 파도 오브젝트
 	CWavesObject* m_pWavesObject = nullptr;
 
+	std::unique_ptr<WavesCS> m_pWavesCS;
+	CMesh* CreateWavesGridMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+
 
 	//int									m_nHierarchicalGameObjects = 0;
 	//CGameObject							**m_ppHierarchicalGameObjects = NULL;
@@ -204,6 +209,13 @@ public:	// 그림자
 	D3D12_GPU_DESCRIPTOR_HANDLE GetShadowMapSrv() { return m_pShadowMap->Srv(); }
 
 	float m_fLightRotationAngle = 0.0f;
+
+	// 낮/밤 조명 색깔
+	XMFLOAT4 m_xmf4DaylightAmbient;
+	XMFLOAT4 m_xmf4MoonlightAmbient;
+
+	XMFLOAT4 m_xmf4DaylightDiffuse;
+	XMFLOAT4 m_xmf4DaylightSpecular;
 
 	void UpdateLights(float fTimeElapsed);
 

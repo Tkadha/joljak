@@ -48,3 +48,38 @@ D3D12_SHADER_BYTECODE CWavesShader::CreatePixelShader()
 	// Shaders.hlsl 파일에서 PSWaves 함수를 픽셀 셰이더로 컴파일합니다.
 	return(CShader::CompileShaderFromFile(L"WavesShader.hlsl", "PS", "ps_5_1", &m_pd3dPixelShaderBlob));
 }
+
+
+ID3D12RootSignature* CWavesShader::CreateRootSignature(ID3D12Device* pd3dDevice)
+{
+    CD3DX12_DESCRIPTOR_RANGE pd3dDescriptorRanges[3];
+    pd3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 7, 6, 0);  // t6-t12: 기본 텍스처
+    pd3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3, 0);  // t3: 그림자 맵
+    // 변위 맵을 위한 새로운 범위를 정의합니다. (레지스터 t13 사용)
+    pd3dDescriptorRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 13, 0);
+
+    CD3DX12_ROOT_PARAMETER pd3dRootParameters[6];
+    pd3dRootParameters[0].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL); // b1: Camera
+    pd3dRootParameters[1].InitAsConstants(41, 2, 0, D3D12_SHADER_VISIBILITY_ALL);      // b2: GameObject
+    pd3dRootParameters[2].InitAsConstantBufferView(4, 0, D3D12_SHADER_VISIBILITY_ALL); // b4: Lights
+    pd3dRootParameters[3].InitAsDescriptorTable(1, &pd3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+    pd3dRootParameters[4].InitAsDescriptorTable(1, &pd3dDescriptorRanges[1], D3D12_SHADER_VISIBILITY_PIXEL);
+    // 변위 맵 테이블을 루트 파라미터 5번에 추가합니다. (버텍스 셰이더에서 사용)
+    pd3dRootParameters[5].InitAsDescriptorTable(1, &pd3dDescriptorRanges[2], D3D12_SHADER_VISIBILITY_VERTEX);
+
+    auto d3dStaticSamplers = CShader::GetStaticSamplers();
+    CD3DX12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc;
+    d3dRootSignatureDesc.Init(_countof(pd3dRootParameters), pd3dRootParameters, (UINT)d3dStaticSamplers.size(), d3dStaticSamplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+    ID3D12RootSignature* pd3dRootSignature = nullptr;
+    ID3DBlob* pd3dSignatureBlob = nullptr;
+    ID3DBlob* pd3dErrorBlob = nullptr;
+
+    D3D12SerializeRootSignature(&d3dRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &pd3dSignatureBlob, &pd3dErrorBlob);
+    pd3dDevice->CreateRootSignature(0, pd3dSignatureBlob->GetBufferPointer(), pd3dSignatureBlob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&pd3dRootSignature);
+
+    if (pd3dSignatureBlob) pd3dSignatureBlob->Release();
+    if (pd3dErrorBlob) pd3dErrorBlob->Release();
+
+    return pd3dRootSignature;
+}

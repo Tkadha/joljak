@@ -90,6 +90,12 @@
     <Filter Include="소스 파일\Shader\DebugShader">
       <UniqueIdentifier>{99db3735-a5c3-47db-8397-e14ba7e7fb84}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Shader\WaveShader">
+      <UniqueIdentifier>{a9aa0852-0bd6-4db5-a8ec-a9685f60fa74}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Object\Wave">
+      <UniqueIdentifier>{a8d11db1-9ac7-4f70-a697-6d08ce7ae1b3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConstructionSystem.cpp" />
@@ -215,15 +221,6 @@
     <ClCompile Include="MathHelper.cpp">
       <Filter>Utility</Filter>
     </ClCompile>
-    <ClCompile Include="WaveObject.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Waves.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="WavesShader.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="ShadowMap.cpp">
       <Filter>소스 파일\shadow</Filter>
     </ClCompile>
@@ -232,6 +229,18 @@
     </ClCompile>
     <ClCompile Include="DebugShader.cpp">
       <Filter>소스 파일\Shader\DebugShader</Filter>
+    </ClCompile>
+    <ClCompile Include="WavesShader.cpp">
+      <Filter>소스 파일\Shader\WaveShader</Filter>
+    </ClCompile>
+    <ClCompile Include="Waves.cpp">
+      <Filter>소스 파일\Object\Wave</Filter>
+    </ClCompile>
+    <ClCompile Include="WaveObject.cpp">
+      <Filter>소스 파일\Object\Wave</Filter>
+    </ClCompile>
+    <ClCompile Include="WavesCS.cpp">
+      <Filter>소스 파일\Object\Wave</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -368,9 +377,6 @@
     <ClInclude Include="Scene.h">
       <Filter>소스 파일\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="WaveObject.h" />
-    <ClInclude Include="Waves.h" />
-    <ClInclude Include="WavesShader.h" />
     <ClInclude Include="ShadowMap.h">
       <Filter>소스 파일\shadow</Filter>
     </ClInclude>
@@ -379,6 +385,18 @@
     </ClInclude>
     <ClInclude Include="DebugShader.h">
       <Filter>소스 파일\Shader\DebugShader</Filter>
+    </ClInclude>
+    <ClInclude Include="WavesShader.h">
+      <Filter>소스 파일\Shader\WaveShader</Filter>
+    </ClInclude>
+    <ClInclude Include="Waves.h">
+      <Filter>소스 파일\Object\Wave</Filter>
+    </ClInclude>
+    <ClInclude Include="WaveObject.h">
+      <Filter>소스 파일\Object\Wave</Filter>
+    </ClInclude>
+    <ClInclude Include="WavesCS.h">
+      <Filter>소스 파일\Object\Wave</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -402,8 +420,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Common.hlsl" />
-    <FxCompile Include="InstancingShaders.hlsl" />
     <FxCompile Include="Shaders.hlsl">
       <Filter>소스 파일\Shader</Filter>
     </FxCompile>
@@ -422,12 +438,20 @@
     <FxCompile Include="OBBShader.hlsl">
       <Filter>소스 파일\Shader\OBBShader</Filter>
     </FxCompile>
-    <FxCompile Include="WavesShader.hlsl" />
     <FxCompile Include="Shadow.hlsl">
       <Filter>소스 파일\Shader\ShadowShader</Filter>
     </FxCompile>
     <FxCompile Include="Debug.hlsl">
       <Filter>소스 파일\Shader\DebugShader</Filter>
+    </FxCompile>
+    <FxCompile Include="WavesShader.hlsl">
+      <Filter>소스 파일\Shader\WaveShader</Filter>
+    </FxCompile>
+    <FxCompile Include="InstancingShaders.hlsl">
+      <Filter>소스 파일\Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Common.hlsl">
+      <Filter>소스 파일\Shader</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

@@ -67,9 +67,9 @@ D3D12_SHADER_BYTECODE CShader::CompileShaderFromFile(WCHAR* pszFileName, LPCSTR 
 
 		if (pd3dErrorBlob)
 		{
-			//OutputDebugStringA("Compile Error:\n");
+			OutputDebugStringA("Compile Error:\n");
 			// 오류 메시지를 디버그 출력 창에 표시
-			//OutputDebugStringA((char*)pd3dErrorBlob->GetBufferPointer());
+			OutputDebugStringA((char*)pd3dErrorBlob->GetBufferPointer());
 			pd3dErrorBlob->Release(); // 오류 블롭 해제
 		}
 		else

@@ -673,16 +673,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 			pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
 		}
-
-		//if (shaderType == "Standard") {
-		//	// Standard 셰이더의 경우, 4번 슬롯에 그림자 맵 바인딩
-		//	pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
-		//}
-		//else if (shaderType == "Skinned") {
-		//	// Skinned 셰이더의 경우, 6번 슬롯에 그림자 맵 바인딩
-		//	pd3dCommandList->SetGraphicsRootDescriptorTable(6, pScene->GetShadowMapSrv());
-		//}
-
 		
 		for (int i = 0; i < m_nMaterials; i++)
 		{

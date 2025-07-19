@@ -43,6 +43,15 @@ CScene::CScene(CGameFramework* pFramework) : m_pGameFramework(pFramework)
 	UINT ncbElementBytes = ((sizeof(VS_CB_CAMERA_INFO) + 255) & ~255); // 256의 배수
 	m_pd3dcbLightCamera = ::CreateBufferResource(pFramework->GetDevice(), nullptr, nullptr, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr);
 	m_pd3dcbLightCamera->Map(0, nullptr, (void**)&m_pcbMappedLightCamera);
+
+
+	// 낮: 밝은 백색광과 밝은 주변광
+	m_xmf4DaylightAmbient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
+	m_xmf4DaylightDiffuse = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
+	m_xmf4DaylightSpecular = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+
+	// 밤: 아주 어두운 푸른빛의 주변광 (달빛)
+	m_xmf4MoonlightAmbient = XMFLOAT4(0.05f, 0.05f, 0.15f, 1.0f);
 }
 
 CScene::~CScene()
@@ -149,24 +158,35 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 
 
 
-	// 1. Waves 객체를 생성합니다.
-	m_pWavesObject = new CWavesObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-	// 물결이 보일 위치를 설정합니다. (맵의 중앙 근처, 수면 높이)
-	m_pWavesObject->SetPosition(5000.0f, 2170.0f, 5000.0f);
-	m_pWavesObject->SetScale(10.f, 1.f, 10.f);
-	// 2. Waves를 위한 재질(Material)을 생성합니다.
+	//// 1. Waves 객체를 생성합니다.
+	//m_pWavesObject = new CWavesObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	//// 물결이 보일 위치를 설정합니다. (맵의 중앙 근처, 수면 높이)
+	//m_pWavesObject->SetPosition(5000.0f, 2170.0f, 5000.0f);
+	//m_pWavesObject->SetScale(10.f, 1.f, 10.f);
+	//// 2. Waves를 위한 재질(Material)을 생성합니다.
+	//CMaterial* pWavesMaterial = new CMaterial(1, m_pGameFramework);
+	//
+	//// 3. ShaderManager에서 "Waves" 셰이더를 가져와 재질에 설정합니다.
+	//pWavesMaterial->SetShader(m_pGameFramework->GetShaderManager()->GetShader("Waves"));
+	//
+	//// (선택) 물 텍스처가 있다면 여기서 로드하여 재질에 할당할 수 있습니다.
+	//// pWavesMaterial->AssignTexture(...);
+	//
+	//// 4. 생성한 재질을 Waves 객체에 설정합니다.
+	//m_pWavesObject->SetMaterial(0, pWavesMaterial);
+
+	m_pWavesCS = std::make_unique<WavesCS>(pd3dDevice, pd3dCommandList, m_pGameFramework, 1000, 1000, 2.8f, 0.03f, 3.25f, 0.4f);
+
+	auto pWavesObject = new CGameObject(1, m_pGameFramework);
+	pWavesObject->SetMesh(CreateWavesGridMesh(pd3dDevice, pd3dCommandList));
+	pWavesObject->SetPosition(5000.0f, 3000.0f, 5000.0f);
+
 	CMaterial* pWavesMaterial = new CMaterial(1, m_pGameFramework);
-
-	// 3. ShaderManager에서 "Waves" 셰이더를 가져와 재질에 설정합니다.
 	pWavesMaterial->SetShader(m_pGameFramework->GetShaderManager()->GetShader("Waves"));
+	pWavesObject->SetMaterial(0, pWavesMaterial);
 
-	// (선택) 물 텍스처가 있다면 여기서 로드하여 재질에 할당할 수 있습니다.
-	// pWavesMaterial->AssignTexture(...);
-
-	// 4. 생성한 재질을 Waves 객체에 설정합니다.
-	m_pWavesObject->SetMaterial(0, pWavesMaterial);
-
-
+	// m_vGameObjects 벡터에 일반 게임 객체처럼 추가합니다.
+	m_vGameObjects.push_back(pWavesObject);
 
 
 
@@ -468,23 +488,32 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 
 
-	// 1. Waves 객체를 생성합니다.
-	m_pWavesObject = new CWavesObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-	// 물결이 보일 위치를 설정합니다. (맵의 중앙 근처, 수면 높이)
+	//// 1. Waves 객체를 생성합니다.
+	//m_pWavesObject = new CWavesObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	//// 물결이 보일 위치를 설정합니다. (맵의 중앙 근처, 수면 높이)
+	//m_pWavesObject->SetPosition(5000.0f, 2600.0f, 5000.0f);
+	//
+	//// 2. Waves를 위한 재질(Material)을 생성합니다.
+	//CMaterial* pWavesMaterial = new CMaterial(1, m_pGameFramework);
+	//
+	//// 3. ShaderManager에서 "Waves" 셰이더를 가져와 재질에 설정합니다.
+	//pWavesMaterial->SetShader(m_pGameFramework->GetShaderManager()->GetShader("Waves"));
+	//
+	//// (선택) 물 텍스처가 있다면 여기서 로드하여 재질에 할당할 수 있습니다.
+	//// pWavesMaterial->AssignTexture(...);
+	//
+	//// 4. 생성한 재질을 Waves 객체에 설정합니다.
+	//m_pWavesObject->SetMaterial(0, pWavesMaterial);
+	
+	m_pWavesCS = std::make_unique<WavesCS>(pd3dDevice, pd3dCommandList, m_pGameFramework, 200, 200, 0.8f, 0.03f, 3.25f, 0.4f);
+
+	m_pWavesObject = new CWavesObject(1, m_pGameFramework);
+	m_pWavesObject->SetMesh(CreateWavesGridMesh(pd3dDevice, pd3dCommandList));
 	m_pWavesObject->SetPosition(5000.0f, 2600.0f, 5000.0f);
 
-	// 2. Waves를 위한 재질(Material)을 생성합니다.
 	CMaterial* pWavesMaterial = new CMaterial(1, m_pGameFramework);
-
-	// 3. ShaderManager에서 "Waves" 셰이더를 가져와 재질에 설정합니다.
 	pWavesMaterial->SetShader(m_pGameFramework->GetShaderManager()->GetShader("Waves"));
-	
-	// (선택) 물 텍스처가 있다면 여기서 로드하여 재질에 할당할 수 있습니다.
-	// pWavesMaterial->AssignTexture(...);
-
-	// 4. 생성한 재질을 Waves 객체에 설정합니다.
 	m_pWavesObject->SetMaterial(0, pWavesMaterial);
-	
 
 
 
@@ -865,7 +894,7 @@ void CScene::ReleaseUploadBuffers()
 {
 	if (m_pSkyBox) m_pSkyBox->ReleaseUploadBuffers();
 	if (m_pTerrain) m_pTerrain->ReleaseUploadBuffers();
-	if (m_pWavesObject) m_pWavesObject->ReleaseUploadBuffers();
+	//if (m_pWavesObject) m_pWavesObject->ReleaseUploadBuffers();
 	for(auto& obj : m_vGameObjects) {
 		if (obj) obj->ReleaseUploadBuffers();
 	}
@@ -947,7 +976,8 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
 
-	if (m_pWavesObject) m_pWavesObject->Animate(fTimeElapsed);
+//	if (m_pWavesObject) m_pWavesObject->Animate(fTimeElapsed);
+	if (m_pWavesCS) m_pWavesCS->Update(m_pGameFramework->GetCommandList(), fTimeElapsed, m_pGameFramework);
 
 	for (auto& shard : m_vRockShards)
 	{
@@ -1067,9 +1097,6 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		}
 	}
 
-
-	if (m_pWavesObject) m_pWavesObject->Render(pd3dCommandList, pCamera);
-
 	for (auto branch : m_listBranchObjects) {
 		if (branch->isRender) {
 			branch->Animate(m_fElapsedTime);
@@ -1151,6 +1178,15 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		}
 	}
 
+	// 파도 렌더링은 마지막에
+	if (m_pWavesObject && m_pWavesCS)
+	{
+		D3D12_GPU_DESCRIPTOR_HANDLE displacementMapHandle = m_pWavesCS->GetDisplacementMap();
+
+		m_pWavesObject->SetDisplacementMap(displacementMapHandle);
+
+		m_pWavesObject->Render(pd3dCommandList, pCamera);
+	}
 
 	// --- 그림자 맵 디버그 출력 ---
 	CShader* pDebugShader = pShaderManager->GetShader("Debug");
@@ -1477,12 +1513,12 @@ void CScene::UpdateShadowTransform()
 
 void CScene::UpdateLights(float fTimeElapsed)
 {
-	// 1. 빛의 회전 각도를 시간의 흐름에 따라 업데이트합니다.
-	float rotationSpeed = 5.0f; // 15도를 1초에 회전
+	// 1. 빛의 회전 각도를 업데이트합니다.
+	float rotationSpeed = 10.0f; // 속도를 약간 조절
 	m_fLightRotationAngle += fTimeElapsed * rotationSpeed;
 	if (m_fLightRotationAngle > 360.0f) m_fLightRotationAngle -= 360.0f;
 
-	// 주 방향광
+	// 주 방향광을 찾습니다.
 	LIGHT* pMainLight = nullptr;
 	for (int i = 0; i < m_nLights; ++i) {
 		if (m_pLights[i].m_nType == DIRECTIONAL_LIGHT) {
@@ -1492,17 +1528,29 @@ void CScene::UpdateLights(float fTimeElapsed)
 	}
 	if (!pMainLight) return;
 
-	// 1. 기본 빛의 방향을 설정합니다.
-	XMVECTOR xmvBaseLightDirection = XMVectorSet(0.0f, -0.707f, -0.707f, 0.0f);
-
-	// 2. 월드의 Z축이 아닌, Y축(수직축)을 기준으로 회전하는 행렬을 만듭니다.
-	XMMATRIX xmmtxLightRotate = XMMatrixRotationY(XMConvertToRadians(m_fLightRotationAngle));
-
-	// 3. 기본 빛의 방향을 회전시켜 현재 프레임의 빛 방향을 계산합니다.
+	// 2. 빛의 현재 방향을 계산합니다. (동쪽에서 떠서 서쪽으로 지는 Z축 회전)
+	XMVECTOR xmvBaseLightDirection = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f); // 정오에 머리 위
+	XMMATRIX xmmtxLightRotate = XMMatrixRotationZ(XMConvertToRadians(m_fLightRotationAngle));
 	XMVECTOR xmvCurrentLightDirection = XMVector3TransformNormal(xmvBaseLightDirection, xmmtxLightRotate);
 
-	// 4. 계산된 새로운 방향을 실제 조명 데이터에 업데이트합니다.
+	// 계산된 새로운 방향을 실제 조명 데이터에 업데이트합니다.
 	XMStoreFloat3(&pMainLight->m_xmf3Direction, xmvCurrentLightDirection);
+
+	// 3. 빛의 Y 방향을 기준으로 낮과 밤을 판단합니다.
+	if (XMVectorGetY(xmvCurrentLightDirection) < 0.0f) // 빛이 아래를 향하면 (Y < 0) -> 낮
+	{
+		// 3-1. 낮일 경우: 태양 빛을 켜고, 주변광을 밝게 합니다.
+		m_xmf4GlobalAmbient = m_xmf4DaylightAmbient;
+		pMainLight->m_xmf4Diffuse = m_xmf4DaylightDiffuse;
+		pMainLight->m_xmf4Specular = m_xmf4DaylightSpecular;
+	}
+	else // 빛이 위를 향하면 (Y >= 0) -> 밤
+	{
+		// 3-2. 밤일 경우: 태양 빛(직사광)을 끄고, 주변광을 어두운 달빛으로 바꿉니다.
+		m_xmf4GlobalAmbient = m_xmf4MoonlightAmbient;
+		pMainLight->m_xmf4Diffuse = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // 빛 색상을 검은색으로
+		pMainLight->m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	}
 }
 
 void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader)
@@ -1612,4 +1660,47 @@ void CScene::SpawnStaticObjects(const std::string& prefabName, int count, float 
 		gameObj->m_treecount = tree_obj_count;
 		m_vGameObjects.emplace_back(gameObj);
 	}
+}
+
+
+
+CMesh* CScene::CreateWavesGridMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	int m = 200; // WavesCS 생성 시 사용한 m과 동일한 값
+	int n = 200; // WavesCS 생성 시 사용한 n과 동일한 값
+
+	std::vector<Vertex> vertices(m * n);
+	float halfWidth = (n - 1) * 0.8f * 0.5f;
+	float halfDepth = (m - 1) * 0.8f * 0.5f;
+
+	for (int i = 0; i < m; ++i)
+	{
+		float z = halfDepth - i * 0.8f;
+		for (int j = 0; j < n; ++j)
+		{
+			float x = -halfWidth + j * 0.8f;
+			vertices[i * n + j].pos = XMFLOAT3(x, 0.0f, z);
+			vertices[i * n + j].normal = XMFLOAT3(0.0f, 1.0f, 0.0f);
+			vertices[i * n + j].texc = XMFLOAT2((float)j / (n - 1), (float)i / (m - 1));
+		}
+	}
+
+	std::vector<UINT> indices((m - 1) * (n - 1) * 6);
+	int k = 0;
+	for (int i = 0; i < m - 1; ++i)
+	{
+		for (int j = 0; j < n - 1; ++j)
+		{
+			indices[k] = i * n + j;
+			indices[k + 1] = i * n + j + 1;
+			indices[k + 2] = (i + 1) * n + j;
+			indices[k + 3] = (i + 1) * n + j;
+			indices[k + 4] = i * n + j + 1;
+			indices[k + 5] = (i + 1) * n + j + 1;
+			k += 6;
+		}
+	}
+
+	// CStandardMesh를 사용하여 정적 그리드 메시를 생성합니다.
+	return new CStandardMesh(pd3dDevice, pd3dCommandList, vertices, indices);
 }

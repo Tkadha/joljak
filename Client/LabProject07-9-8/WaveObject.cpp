@@ -21,6 +21,11 @@ struct cbGameObjectInfo {
 
 };
 
+// 생성자는 부모 클래스의 생성자를 호출하는 것 외에 특별한 작업을 하지 않습니다.
+CWavesObject::CWavesObject(int nMaterials, CGameFramework* pGameFramework)
+    : CGameObject(nMaterials, pGameFramework)
+{
+}
 
 // Object.cpp 파일 최하단에 추가
 CWavesObject::CWavesObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework)
@@ -134,52 +139,76 @@ void CWavesObject::Animate(float fTimeElapsed)
     m_pd3dVertexBuffer->Unmap(0, nullptr);
 }
 
+//void CWavesObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+//{
+//    // CGameObject::Render를 기반으로 하되, 메시를 직접 그리는 방식으로 수정합니다.
+//    CScene* pScene = m_pGameFramework ? m_pGameFramework->GetScene() : nullptr;
+//    if (!pScene) return;
+//
+//    if (!pCamera) return;
+//
+//    //CGameObject::Render(pd3dCommandList, pCamera);
+//
+//
+//    CMaterial* pMaterial = GetMaterial(0);
+//    if (pMaterial && pMaterial->m_pShader)
+//    {
+//
+//        // 파이프라인 상태 설정(셰이더, 루트 시그니처 등)
+//        m_pGameFramework->GetScene()->SetGraphicsState(pd3dCommandList, pMaterial->m_pShader);
+//
+//        cbGameObjectInfo gameObjectInfo;
+//
+//        XMFLOAT4X4 xmf4x4World;
+//        XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+//        pd3dCommandList->SetGraphicsRoot32BitConstants(1, 16, &xmf4x4World, 0); 
+//
+//
+//
+//        // 2. 메인 카메라의 상수 버퍼를 루트 파라미터 0번 슬롯에 명시적으로 바인딩합니다.
+//        //    (그림자 패스에서 설정된 빛의 카메라 상태를 덮어씁니다.)
+//        pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress());
+//
+//        // 3. 조명 정보를 루트 파라미터 2번 슬롯에 바인딩합니다.
+//        ID3D12Resource* pLightBuffer = pScene->GetLightsConstantBuffer();
+//        if (pLightBuffer) {
+//            pd3dCommandList->SetGraphicsRootConstantBufferView(2, pLightBuffer->GetGPUVirtualAddress());
+//        }
+//
+//        // 4. 그림자 맵을 루트 파라미터 4번 슬롯에 바인딩합니다.
+//        pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
+//
+//
+//        if (m_d3dDisplacementMapGpuHandle.ptr)
+//        {
+//            pd3dCommandList->SetGraphicsRootDescriptorTable(5, m_d3dDisplacementMapGpuHandle);
+//        }
+//
+//        // 변환 행렬 및 재질 업데이트
+//        UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+//        pMaterial->m_pShader->UpdateShaderVariables(pd3dCommandList);
+//
+//        // 정점 버퍼와 인덱스 버퍼를 파이프라인에 바인딩합니다.
+//        pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+//        pd3dCommandList->IASetVertexBuffers(0, 1, &m_d3dVertexBufferView);
+//        pd3dCommandList->IASetIndexBuffer(&m_d3dIndexBufferView);
+//
+//        // 인덱스 버퍼의 데이터 수만큼 드로우 콜을 호출합니다.
+//        pd3dCommandList->DrawIndexedInstanced(m_vIndices.size(), 1, 0, 0, 0);
+//    }
+//}
+
 void CWavesObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-    // CGameObject::Render를 기반으로 하되, 메시를 직접 그리는 방식으로 수정합니다.
-    CScene* pScene = m_pGameFramework ? m_pGameFramework->GetScene() : nullptr;
-    if (!pScene) return;
+    // 1. 먼저, CGameObject의 기본 Render 함수를 호출하여
+    //    셰이더, PSO, 카메라, 조명, 월드 행렬 등 공통적인 리소스를 모두 바인딩합니다.
+    CGameObject::Render(pd3dCommandList, pCamera);
 
-    if (!pCamera) return;
-
-    CMaterial* pMaterial = GetMaterial(0);
-    if (pMaterial && pMaterial->m_pShader)
+    // 2. ★★★ CWavesObject만의 추가 작업 ★★★
+    //    이 객체에 설정된 변위 맵 핸들이 유효하다면,
+    //    이를 루트 파라미터 5번 슬롯에 바인딩하여 버텍스 셰이더가 사용할 수 있도록 합니다.
+    if (m_d3dDisplacementMapGpuHandle.ptr)
     {
-
-        // 파이프라인 상태 설정(셰이더, 루트 시그니처 등)
-        m_pGameFramework->GetScene()->SetGraphicsState(pd3dCommandList, pMaterial->m_pShader);
-
-        cbGameObjectInfo gameObjectInfo;
-
-        XMFLOAT4X4 xmf4x4World;
-        XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
-        pd3dCommandList->SetGraphicsRoot32BitConstants(1, 16, &xmf4x4World, 0); 
-
-
-
-        // 2. 메인 카메라의 상수 버퍼를 루트 파라미터 0번 슬롯에 명시적으로 바인딩합니다.
-        //    (그림자 패스에서 설정된 빛의 카메라 상태를 덮어씁니다.)
-        pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress());
-
-        // 3. 조명 정보를 루트 파라미터 2번 슬롯에 바인딩합니다.
-        ID3D12Resource* pLightBuffer = pScene->GetLightsConstantBuffer();
-        if (pLightBuffer) {
-            pd3dCommandList->SetGraphicsRootConstantBufferView(2, pLightBuffer->GetGPUVirtualAddress());
-        }
-
-        // 4. 그림자 맵을 루트 파라미터 4번 슬롯에 바인딩합니다.
-        pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
-
-        // 변환 행렬 및 재질 업데이트
-        UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-        pMaterial->m_pShader->UpdateShaderVariables(pd3dCommandList);
-
-        // 정점 버퍼와 인덱스 버퍼를 파이프라인에 바인딩합니다.
-        pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        pd3dCommandList->IASetVertexBuffers(0, 1, &m_d3dVertexBufferView);
-        pd3dCommandList->IASetIndexBuffer(&m_d3dIndexBufferView);
-
-        // 인덱스 버퍼의 데이터 수만큼 드로우 콜을 호출합니다.
-        pd3dCommandList->DrawIndexedInstanced(m_vIndices.size(), 1, 0, 0, 0);
+        pd3dCommandList->SetGraphicsRootDescriptorTable(5, m_d3dDisplacementMapGpuHandle);
     }
 }

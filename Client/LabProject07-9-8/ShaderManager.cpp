@@ -38,7 +38,7 @@ void ShaderManager::CreateRootSignatures()
     m_mapRootSignatures["Shadow"] = CShadowShader::CreateRootSignature(m_pd3dDevice);
     m_mapRootSignatures["Debug"] = CDebugShader::CreateRootSignature(m_pd3dDevice);
     // Waves는 Standard와 동일한 파라미터
-    m_mapRootSignatures["Waves"] = CStandardShader::CreateRootSignature(m_pd3dDevice);
+    m_mapRootSignatures["Waves"] = CWavesShader::CreateRootSignature(m_pd3dDevice);
 }
 
 void ShaderManager::CreateShaders()

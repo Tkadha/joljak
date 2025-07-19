@@ -169,6 +169,7 @@ class CStandardMesh : public CMesh
 {
 public:
 	CStandardMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	CStandardMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const std::vector<Vertex>& vertices, const std::vector<UINT>& indices);
 	virtual ~CStandardMesh();
 
 protected:
