@@ -2283,6 +2283,69 @@ void CGameFramework::FrameAdvance()
 						if (selectedSlotIndex == -1) {
 							selectedSlotIndex = i;
 						}
+						else if (selectedSlotIndex == i) {
+							Item* item = m_inventorySlots[i].item.get();
+							if (!item) return;
+
+							std::string name = item->GetName();
+							if (name == "pork") {
+								m_inventorySlots[i].quantity--;
+								if (m_inventorySlots[i].quantity <= 0) m_inventorySlots[i].item = nullptr;
+								{
+									// 능력치 증가
+									m_pPlayer->Playerhp += 10;
+									m_pPlayer->Playerstamina += 5;
+									m_pPlayer->PlayerHunger += 10;
+									m_pPlayer->PlayerThirst += 5;
+
+									auto& nwManager = NetworkManager::GetInstance();
+									CHANGE_STAT_PACKET s_packet;
+									s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+									s_packet.size = sizeof(CHANGE_STAT_PACKET);
+									s_packet.stat = E_STAT::HP;
+									s_packet.value = m_pPlayer->Playerhp;
+									nwManager.PushSendQueue(s_packet, s_packet.size);
+									s_packet.stat = E_STAT::STAMINA;
+									s_packet.value = m_pPlayer->Playerstamina;
+									nwManager.PushSendQueue(s_packet, s_packet.size);
+									s_packet.stat = E_STAT::HUNGER;
+									s_packet.value = m_pPlayer->PlayerHunger;
+									nwManager.PushSendQueue(s_packet, s_packet.size);
+									s_packet.stat = E_STAT::THIRST;
+									s_packet.value = m_pPlayer->PlayerThirst;
+									nwManager.PushSendQueue(s_packet, s_packet.size);
+								}
+							}
+							else if (name == "grill_pork") {
+								m_inventorySlots[i].quantity--;
+								if (m_inventorySlots[i].quantity <= 0) m_inventorySlots[i].item = nullptr;
+								{
+									// 능력치 증가
+									m_pPlayer->Playerhp += 25;
+									m_pPlayer->Playerstamina += 20;
+									m_pPlayer->PlayerHunger += 20;
+									m_pPlayer->PlayerThirst += 10;
+
+									auto& nwManager = NetworkManager::GetInstance();
+									CHANGE_STAT_PACKET s_packet;
+									s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+									s_packet.size = sizeof(CHANGE_STAT_PACKET);
+									s_packet.stat = E_STAT::HP;
+									s_packet.value = m_pPlayer->Playerhp;
+									nwManager.PushSendQueue(s_packet, s_packet.size);
+									s_packet.stat = E_STAT::STAMINA;
+									s_packet.value = m_pPlayer->Playerstamina;
+									nwManager.PushSendQueue(s_packet, s_packet.size);
+									s_packet.stat = E_STAT::HUNGER;
+									s_packet.value = m_pPlayer->PlayerHunger;
+									nwManager.PushSendQueue(s_packet, s_packet.size);
+									s_packet.stat = E_STAT::THIRST;
+									s_packet.value = m_pPlayer->PlayerThirst;
+									nwManager.PushSendQueue(s_packet, s_packet.size);
+								}
+							}
+							selectedSlotIndex = -1;
+						}
 						else {
 							std::swap(m_inventorySlots[selectedSlotIndex], m_inventorySlots[i]);
 							selectedSlotIndex = -1;

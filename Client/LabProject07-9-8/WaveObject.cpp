@@ -28,7 +28,7 @@ CWavesObject::CWavesObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 {
     // 1. Waves 시뮬레이션 객체를 생성합니다.
     // 인자: (행, 열, 그리드 간격, 시간 간격, 속도, 감쇠)
-    m_pWaves = std::make_unique<Waves>(600, 600, 20.0f, 0.03f, 5.0f, 0.2f);
+    m_pWaves = std::make_unique<Waves>(200, 200, 10.0f, 0.03f, 5.0f, 0.1f);
 
     // 2. 물결 메시를 그릴 인덱스 데이터를 생성합니다.
     // 이 데이터는 한번 생성되면 변하지 않습니다.
@@ -94,12 +94,12 @@ void CWavesObject::Animate(float fTimeElapsed)
         // 0.25초마다 무작위 위치에 물결을 생성합니다.
         static float t_base = 0.0f;
         //CGameFramework* m_pGameFramework =  m_pScene->GetGameFramework();
-        if ((m_pGameFramework->m_GameTimer.GetTotalTime() - t_base) >= 0.25f)
+        if ((m_pGameFramework->m_GameTimer.GetTotalTime() - t_base) >= 0.05f)
         {
-            t_base += 0.25f;
+            t_base += 0.05f;
             int i = 5 + rand() % (m_pWaves->RowCount() - 10);
             int j = 5 + rand() % (m_pWaves->ColumnCount() - 10);
-            float r = MathHelper::RandF(0.5f, 1.0f);
+            float r = MathHelper::RandF(0.2f, 0.25f);
             m_pWaves->Disturb(i, j, r);
         }
         m_pWaves->Update(fTimeElapsed);

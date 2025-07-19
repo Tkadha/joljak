@@ -134,7 +134,7 @@ void PlayerClient::Change_Stat(E_STAT stat, float value)
     case E_STAT::HUNGER: {
         float expectedHunger = PlayerHunger.load();
         while (true) {
-            float desiredHunger = expectedHunger + value;
+            float desiredHunger = value;
 
             if (desiredHunger > 100.f) {
                 desiredHunger = 100.f;
@@ -148,7 +148,7 @@ void PlayerClient::Change_Stat(E_STAT stat, float value)
     case E_STAT::THIRST: {
         float expectedThirst = PlayerThirst.load();
         while (true) {
-            float desiredThirst = expectedThirst + value;
+            float desiredThirst = value;
 
             if (desiredThirst > 100.f) {
                 desiredThirst = 100.f;
@@ -289,6 +289,12 @@ void PlayerClient::Update_test(float deltaTime)
     // 이동 및 충돌 처리
     //XMFLOAT3 deltaPos = Vector3::ScalarProduct(m_Velocity, deltaTime);
     XMFLOAT3 deltaVel = Vector3::ScalarProduct(m_Velocity, 0.75f);
+
+    if (Speed_stat > 0) {
+        deltaVel.x *= (1.f + 0.1f * Speed_stat);
+        deltaVel.z *= (1.f + 0.1f * Speed_stat);
+    }
+
     // 런닝 판정
     if (m_currentState == ServerPlayerState::Running)
     {
@@ -298,8 +304,8 @@ void PlayerClient::Update_test(float deltaTime)
     // 슬로우 효과 확인
     if (b_slow)
     {
-        deltaVel.x /= 1.5f;
-        deltaVel.z /= 1.5f;
+        deltaVel.x /= 1.75f;
+        deltaVel.z /= 1.75f;
     }
 
 
@@ -379,7 +385,17 @@ void PlayerClient::Update_test(float deltaTime)
         }
     }
 
-    moving_pos.y += deltaVel.y;
+
+    XMFLOAT3 xmf3Scale = Terrain::terrain->GetScale();
+    XMFLOAT3 xmf3PlayerPosition = moving_pos;
+    int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
+    bool bReverseQuad = ((z % 2) != 0);
+    FLOAT move_pos_y = Terrain::terrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
+    if (move_pos_y < 2149.f) {
+        moving_pos = m_Position;
+    }
+    else
+        moving_pos.y += deltaVel.y;
 
     SetPosition(moving_pos);
     // 땅 짚기

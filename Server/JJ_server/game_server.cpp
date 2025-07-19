@@ -246,6 +246,7 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		client->processInput(r_packet->inputData);
 		if (r_packet->inputData.Attack) {
 			client->Playerstamina -= 5;
+			if (client->Playerstamina.load() < 0) client->Playerstamina.store(0);
 			CHANGE_STAT_PACKET s_packet;
 			s_packet.size = sizeof(CHANGE_STAT_PACKET);
 			s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
@@ -380,6 +381,7 @@ void event_thread()
 					case EVENT_TYPE::E_P_REGENERATE_STAMINA: {
 						auto uid = ev.player_id;
 						for (auto it : PlayerClient::PlayerClients) {
+							if (it.second->m_id != uid) continue;
 							int stamina = it.second->Playerstamina.load();
 
 							while (stamina < it.second->Maxstamina.load()) {
