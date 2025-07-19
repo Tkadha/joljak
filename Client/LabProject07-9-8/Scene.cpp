@@ -230,146 +230,146 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	octree.insert(std::move(t_obj));
 
 
-	int nCowObjects = 1;
-	int animate_count = 13;
-	for (int i = 0; i < nCowObjects; ++i)
-	{
-		CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Cow.bin", m_pGameFramework);
-		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, animate_count, m_pGameFramework);
-		gameobj->m_objectType = GameObjectType::Cow;
-		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-		for (int j = 1; j < animate_count; ++j) {
-			gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
-			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
-		}
-		gameobj->SetOwningScene(this);
-		//gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
-		//gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+	//int nCowObjects = 1;
+	//int animate_count = 13;
+	//for (int i = 0; i < nCowObjects; ++i)
+	//{
+	//	CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Cow.bin", m_pGameFramework);
+	//	CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, animate_count, m_pGameFramework);
+	//	gameobj->m_objectType = GameObjectType::Cow;
+	//	gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	//	for (int j = 1; j < animate_count; ++j) {
+	//		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+	//		gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+	//	}
+	//	gameobj->SetOwningScene(this);
+	//	//gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+	//	//gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 
-		gameobj->Rotate(0.f, 180.f, 0.f);
-		auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
-		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		gameobj->SetScale(12.0f, 12.0f, 12.0f);
-		gameobj->SetTerraindata(m_pTerrain);
-		gameobj->m_treecount = tree_obj_count;
-		m_vGameObjects.emplace_back(gameobj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-		if (pCowModel) delete pCowModel;
-	}
-	int nPigObjects = 1;
-	for (int i = 0; i < nPigObjects; ++i)
-	{
-		CLoadedModelInfo* pPigModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Pig.bin", m_pGameFramework);
-		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pPigModel, animate_count, m_pGameFramework);
-		gameobj->m_objectType = GameObjectType::Pig;
-		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-		for (int j = 1; j < animate_count; ++j) {
-			gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
-			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
-		}
-		gameobj->SetOwningScene(this);
-		//gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
-		//gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
-		gameobj->Rotate(0.f, 180.f, 0.f);
-		auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
-		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		gameobj->SetScale(10.0f, 10.0f, 10.0f);
-		gameobj->SetTerraindata(m_pTerrain);
-		gameobj->m_treecount = tree_obj_count;
+	//	gameobj->Rotate(0.f, 180.f, 0.f);
+	//	auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
+	//	gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+	//	gameobj->SetScale(12.0f, 12.0f, 12.0f);
+	//	gameobj->SetTerraindata(m_pTerrain);
+	//	gameobj->m_treecount = tree_obj_count;
+	//	m_vGameObjects.emplace_back(gameobj);
+	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
+	//	octree.insert(std::move(t_obj));
+	//	if (pCowModel) delete pCowModel;
+	//}
+	//int nPigObjects = 1;
+	//for (int i = 0; i < nPigObjects; ++i)
+	//{
+	//	CLoadedModelInfo* pPigModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Pig.bin", m_pGameFramework);
+	//	CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pPigModel, animate_count, m_pGameFramework);
+	//	gameobj->m_objectType = GameObjectType::Pig;
+	//	gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	//	for (int j = 1; j < animate_count; ++j) {
+	//		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+	//		gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+	//	}
+	//	gameobj->SetOwningScene(this);
+	//	//gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+	//	//gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+	//	gameobj->Rotate(0.f, 180.f, 0.f);
+	//	auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
+	//	gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+	//	gameobj->SetScale(10.0f, 10.0f, 10.0f);
+	//	gameobj->SetTerraindata(m_pTerrain);
+	//	gameobj->m_treecount = tree_obj_count;
 
-		m_vGameObjects.emplace_back(gameobj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-		if (pPigModel) delete pPigModel;
-	}
+	//	m_vGameObjects.emplace_back(gameobj);
+	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
+	//	octree.insert(std::move(t_obj));
+	//	if (pPigModel) delete pPigModel;
+	//}
 
-	int nSpiderObjects = 1;
-	for (int i = 0; i < nSpiderObjects; ++i)
-	{
-		CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Spider.bin", m_pGameFramework);
-		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pSpiderModel, animate_count, m_pGameFramework);
-		gameobj->m_objectType = GameObjectType::Spider;
-		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-		for (int j = 1; j < animate_count; ++j) {
-			gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
-			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
-		}
-		gameobj->SetOwningScene(this);
-		//gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
-		//gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
+	//int nSpiderObjects = 1;
+	//for (int i = 0; i < nSpiderObjects; ++i)
+	//{
+	//	CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Spider.bin", m_pGameFramework);
+	//	CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pSpiderModel, animate_count, m_pGameFramework);
+	//	gameobj->m_objectType = GameObjectType::Spider;
+	//	gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	//	for (int j = 1; j < animate_count; ++j) {
+	//		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+	//		gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+	//	}
+	//	gameobj->SetOwningScene(this);
+	//	//gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+	//	//gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
-		gameobj->Rotate(0.f, 180.f, 0.f);
-		auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
-		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		gameobj->SetScale(8.f, 8.f, 8.f);
-		gameobj->SetTerraindata(m_pTerrain);
-		gameobj->m_treecount = tree_obj_count;
-		m_vGameObjects.emplace_back(gameobj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-		if (pSpiderModel) delete pSpiderModel;
-	}
-	int nToadObjects = 1;
-	for (int i = 0; i < nToadObjects; ++i)
-	{
-		CLoadedModelInfo* pToadModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Toad.bin", m_pGameFramework);
-		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pToadModel, animate_count, m_pGameFramework);
-		gameobj->m_objectType = GameObjectType::Toad;
-		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-		for (int j = 1; j < animate_count; ++j) {
-			gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
-			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
-		}
-		gameobj->SetOwningScene(this);
-		//gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
-		//gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
+	//	gameobj->Rotate(0.f, 180.f, 0.f);
+	//	auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
+	//	gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+	//	gameobj->SetScale(8.f, 8.f, 8.f);
+	//	gameobj->SetTerraindata(m_pTerrain);
+	//	gameobj->m_treecount = tree_obj_count;
+	//	m_vGameObjects.emplace_back(gameobj);
+	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
+	//	octree.insert(std::move(t_obj));
+	//	if (pSpiderModel) delete pSpiderModel;
+	//}
+	//int nToadObjects = 1;
+	//for (int i = 0; i < nToadObjects; ++i)
+	//{
+	//	CLoadedModelInfo* pToadModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Toad.bin", m_pGameFramework);
+	//	CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pToadModel, animate_count, m_pGameFramework);
+	//	gameobj->m_objectType = GameObjectType::Toad;
+	//	gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	//	for (int j = 1; j < animate_count; ++j) {
+	//		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+	//		gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+	//	}
+	//	gameobj->SetOwningScene(this);
+	//	//gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+	//	//gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
-		gameobj->Rotate(0.f, 180.f, 0.f);
-		auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
-		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		gameobj->SetScale(8.f, 8.f, 8.f);
-		gameobj->SetTerraindata(m_pTerrain);
-		gameobj->m_treecount = tree_obj_count;
-		m_vGameObjects.emplace_back(gameobj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-		if (pToadModel) delete pToadModel;
-	}
-	int nWolfObjects = 1;
-	for (int i = 0; i < nWolfObjects; ++i)
-	{
-		CLoadedModelInfo* pWolfModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Wolf.bin", m_pGameFramework);
-		CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pWolfModel, animate_count, m_pGameFramework);
-		gameobj->m_objectType = GameObjectType::Wolf;
-		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-		for (int j = 1; j < animate_count; ++j) {
-			gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
-			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
-		}
-		gameobj->SetOwningScene(this);
-		//gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
-		//gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
+	//	gameobj->Rotate(0.f, 180.f, 0.f);
+	//	auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
+	//	gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+	//	gameobj->SetScale(8.f, 8.f, 8.f);
+	//	gameobj->SetTerraindata(m_pTerrain);
+	//	gameobj->m_treecount = tree_obj_count;
+	//	m_vGameObjects.emplace_back(gameobj);
+	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
+	//	octree.insert(std::move(t_obj));
+	//	if (pToadModel) delete pToadModel;
+	//}
+	//int nWolfObjects = 1;
+	//for (int i = 0; i < nWolfObjects; ++i)
+	//{
+	//	CLoadedModelInfo* pWolfModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Wolf.bin", m_pGameFramework);
+	//	CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pWolfModel, animate_count, m_pGameFramework);
+	//	gameobj->m_objectType = GameObjectType::Wolf;
+	//	gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	//	for (int j = 1; j < animate_count; ++j) {
+	//		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+	//		gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+	//	}
+	//	gameobj->SetOwningScene(this);
+	//	//gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+	//	//gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
-		gameobj->Rotate(0.f, 180.f, 0.f);
-		auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
-		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		gameobj->SetScale(10.f, 10.f, 10.f);
-		gameobj->SetTerraindata(m_pTerrain);
-		gameobj->m_treecount = tree_obj_count;
-		m_vGameObjects.emplace_back(gameobj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-		if (pWolfModel) delete pWolfModel;
-	}
+	//	gameobj->Rotate(0.f, 180.f, 0.f);
+	//	auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
+	//	gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+	//	gameobj->SetScale(10.f, 10.f, 10.f);
+	//	gameobj->SetTerraindata(m_pTerrain);
+	//	gameobj->m_treecount = tree_obj_count;
+	//	m_vGameObjects.emplace_back(gameobj);
+	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
+	//	octree.insert(std::move(t_obj));
+	//	if (pWolfModel) delete pWolfModel;
+	//}
 
-	const int rockShardPoolSize = 1;
-	for (int i = 0; i < rockShardPoolSize; ++i)
-	{
-		auto* shard = new CRockShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		m_vRockShards.push_back(shard);
-		m_vGameObjects.emplace_back(shard);
-	}
+	//const int rockShardPoolSize = 1;
+	//for (int i = 0; i < rockShardPoolSize; ++i)
+	//{
+	//	auto* shard = new CRockShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	//	m_vRockShards.push_back(shard);
+	//	m_vGameObjects.emplace_back(shard);
+	//}
 
 	//int materialIndexToChange = 0;
 	//UINT albedoTextureSlot = 0;
@@ -431,7 +431,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 
 		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	}
-
+	
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -995,8 +995,15 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		for (auto& obj : m_vGameObjects) {
 			if (obj) obj->RenderShadow(pd3dCommandList);
 		}
+		for (auto& obj : m_lEnvironmentObjects) {
+			if (obj) obj->RenderShadow(pd3dCommandList);
+		}
 
 		if (m_pPlayer) m_pPlayer->RenderShadow(pd3dCommandList);
+
+		for (auto& p : PlayerList) {
+			if (p.second->isRender) p.second->RenderShadow(pd3dCommandList);
+		}
 
 		if (m_pTerrain) m_pTerrain->RenderShadow(pd3dCommandList);
 	}
@@ -1063,6 +1070,9 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		std::lock_guard<std::mutex> lock(m_Mutex);
 		for (auto& obj : m_vGameObjects) {
 			if (obj) obj->Animate(m_fElapsedTime);
+			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
+		}
+		for (auto& obj : m_lEnvironmentObjects) {
 			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
 		}
 	}
@@ -1608,8 +1618,8 @@ void CScene::SpawnStaticObjects(const std::string& prefabName, int count, float 
 		if (matIdx != -1 && texFile != nullptr) {
 			ChangeAlbedoTexture(gameObj, matIdx, 0, texFile, pResourceManager, pd3dCommandList, pd3dDevice);
 		}
-
+		gameObj->m_id = -1;
 		gameObj->m_treecount = tree_obj_count;
-		m_vGameObjects.emplace_back(gameObj);
+		m_lEnvironmentObjects.emplace_back(gameObj);
 	}
 }
