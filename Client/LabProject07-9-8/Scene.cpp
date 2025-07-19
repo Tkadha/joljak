@@ -140,8 +140,8 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 
 	std::vector<std::wstring> skyboxTextures = {
 	   L"Skybox/mor.dds",
-	   L"Skybox/nig.dds"
-	   L"Skybox/evening.dds",
+	   L"Skybox/nig.dds",
+	   L"Skybox/evening.dds"
 	};
 
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pGameFramework);
