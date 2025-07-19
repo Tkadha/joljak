@@ -121,7 +121,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     float4 cTextureColor = lerp(cBaseTexColor, cDetailTexColor, 0.5);
 
      // 1. 그림자 계수 계산
-    float shadowFactor = 0.05; // 기본값은 그림자 없음
+    float shadowFactor = 0.15; // 기본값은 그림자 없음
     if (gIsDaytime) 
     {
         shadowFactor = CalcShadowFactor(input.ShadowPosH);
