@@ -131,9 +131,9 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	}
 
 	std::vector<std::wstring> skyboxTextures = {
-	   L"Skybox/SkyBox_0.dds",
-	   L"Skybox/SkyBox_1.dds",
-	   L"Skybox/day123.dds"
+	   L"Skybox/mor.dds",
+	   L"Skybox/evening.dds",
+	   L"Skybox/night.dds"
 	};
 
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pGameFramework);
@@ -450,9 +450,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	}
 
 	std::vector<std::wstring> skyboxTextures = {
-	   L"Skybox/SkyBox_0.dds",
-	   L"Skybox/SkyBox_1.dds",
-	   L"Skybox/day123.dds"
+	   L"Skybox/mor.dds",
+	   L"Skybox/nig.dds"
 	};
 
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pGameFramework);
@@ -1161,7 +1160,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		}
 	}
 
-
+	/*
 	// --- 그림자 맵 디버그 출력 ---
 	CShader* pDebugShader = pShaderManager->GetShader("Debug");
 	pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
@@ -1176,6 +1175,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
 	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+	*/
 }
 
 
