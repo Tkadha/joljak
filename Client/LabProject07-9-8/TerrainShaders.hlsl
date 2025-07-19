@@ -121,7 +121,11 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     float4 cTextureColor = lerp(cBaseTexColor, cDetailTexColor, 0.5);
 
      // 1. 그림자 계수 계산
-    float shadowFactor = CalcShadowFactor(input.ShadowPosH);
+    float shadowFactor = 0.05; // 기본값은 그림자 없음
+    if (gIsDaytime) 
+    {
+        shadowFactor = CalcShadowFactor(input.ShadowPosH);
+    }
     
 // 최종 조명 계산 (input.color는 미리 계산된 빛, 여기에 그림자를 적용)
     float3 totalLight = gcGlobalAmbientLight.rgb + (shadowFactor * input.color.rgb);

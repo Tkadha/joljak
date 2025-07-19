@@ -39,6 +39,7 @@ cbuffer cbLights : register(b4)
 	LIGHT					gLights[MAX_LIGHTS];
 	float4					gcGlobalAmbientLight;
 	int						gnLights;
+    bool                    gIsDaytime;
 };
 
 

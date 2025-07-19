@@ -50,7 +50,7 @@ CScene::CScene(CGameFramework* pFramework) : m_pGameFramework(pFramework)
 	m_xmf4DaylightSpecular = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
 
 	// 밤: 아주 어두운 푸른빛의 주변광 (달빛)
-	m_xmf4MoonlightAmbient = XMFLOAT4(0.05f, 0.05f, 0.15f, 1.0f);
+	m_xmf4MoonlightAmbient = XMFLOAT4(0.02f, 0.02f, 0.05f, 1.0f);
 }
 
 CScene::~CScene()
@@ -854,6 +854,7 @@ void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 		::memcpy(m_pcbMappedLights->m_pLights, m_pLights, sizeof(LIGHT) * m_nLights);
 		::memcpy(&m_pcbMappedLights->m_xmf4GlobalAmbient, &m_xmf4GlobalAmbient, sizeof(XMFLOAT4));
 		::memcpy(&m_pcbMappedLights->m_nLights, &m_nLights, sizeof(int));
+		::memcpy(&m_pcbMappedLights->gIsDaytime, &m_bIsDaytime, sizeof(bool));
 	}
 }
 
@@ -979,7 +980,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// =================================================================
 	// Pass 1: 그림자 맵 생성
 	// =================================================================
-	if(m_bIsDaytime)
+	if(IsDaytime())
 	{
 		// 렌더 타겟을 그림자 맵으로 설정
 		m_pShadowMap->SetRenderTarget(pd3dCommandList);
@@ -1061,20 +1062,6 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 
 
-	//std::vector<tree_obj*> results;
-	//tree_obj player_obj{ -1, m_pPlayer->GetPosition() };
-	//octree.query(player_obj, XMFLOAT3{ 2500,1000,2500 }, results);
-	//{
-	//	std::lock_guard<std::mutex> lock(m_Mutex);
-	//	for (auto& obj : results) {
-	//		if (m_vGameObjects[obj->u_id]) {
-	//			if (m_vGameObjects[obj->u_id]->FSM_manager) m_vGameObjects[obj->u_id]->FSMUpdate();
-	//			//if (m_vGameObjects[obj->u_id]->m_pSkinnedAnimationController) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
-	//			if (m_vGameObjects[obj->u_id]) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
-	//			if (m_vGameObjects[obj->u_id]->isRender) m_vGameObjects[obj->u_id]->Render(pd3dCommandList, pCamera);
-	//		}
-	//	}
-	//}
 
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
@@ -1172,20 +1159,20 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 
 
-	// --- 그림자 맵 디버그 출력 ---
-	CShader* pDebugShader = pShaderManager->GetShader("Debug");
-	pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
-	pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
+	//// --- 그림자 맵 디버그 출력 ---
+	//CShader* pDebugShader = pShaderManager->GetShader("Debug");
+	//pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
+	//pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
 
-	// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
-	pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
+	//// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
+	//pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
 
-	
-	// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
-	pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
-	pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
-	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+	//
+	//// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
+	//pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
+	//pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
+	//pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 }
 
 

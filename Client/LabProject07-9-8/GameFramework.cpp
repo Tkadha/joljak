@@ -644,17 +644,17 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					break;
 				case VK_RETURN:
 					break;
-				case VK_F1:
-				case VK_F2:
-					if (m_pScene && m_pScene->GetSkyBox()) {
-						int textureCount = m_pScene->GetSkyBox()->GetTextureCount();
-						//OutputDebugString(std::format(L"[SkyBox] 텍스처 로드 개수: {}\n",textureCount).c_str());
-						if (textureCount > 0) {
-							m_nCurrentSkybox = (m_nCurrentSkybox + 1) % textureCount;
-							m_pScene->GetSkyBox()->SetSkyboxIndex(m_nCurrentSkybox);
-						}
-					}
-					break;
+				//case VK_F1:
+				//case VK_F2:
+				//	//if (m_pScene && m_pScene->GetSkyBox()) {
+				//	//	int textureCount = m_pScene->GetSkyBox()->GetTextureCount();
+				//	//	//OutputDebugString(std::format(L"[SkyBox] 텍스처 로드 개수: {}\n",textureCount).c_str());
+				//	//	if (textureCount > 0) {
+				//	//		m_nCurrentSkybox = (m_nCurrentSkybox + 1) % textureCount;
+				//	//		m_pScene->GetSkyBox()->SetSkyboxIndex(m_nCurrentSkybox);
+				//	//	}
+				//	//}
+				//	break;
 				case VK_F3:
 				case VK_F4:
 					m_pCamera = m_pPlayer->ChangeCamera((DWORD)(wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());

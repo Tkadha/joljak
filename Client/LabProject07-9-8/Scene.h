@@ -46,6 +46,7 @@ struct LIGHTS
 	LIGHT								m_pLights[MAX_LIGHTS];
 	XMFLOAT4							m_xmf4GlobalAmbient;
 	int									m_nLights;
+	bool     gIsDaytime;
 };
 
 struct VS_VB_INSTANCE
@@ -175,8 +176,11 @@ public:
 	//void SpawnRockShardEffect(const XMFLOAT3& origin);
 	//void SpawnRockShardEffectAtPlayer();
 
+private:
+	bool m_bIsDaytime = true;
+
 public:	// 그림자
-	bool IsDaytime() const { return m_bIsDaydaytime; }
+	bool IsDaytime() const { return m_bIsDaytime; }
 
 	std::unique_ptr<ShadowMap> m_pShadowMap;
 
@@ -215,8 +219,6 @@ public:	// 그림자
 
 	void UpdateLights(float fTimeElapsed);
 
-private:
-	bool m_bIsDaytime = true;
 
 public:	// prefab
 	void LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);

@@ -198,7 +198,13 @@ float4 PSStandard3(VS_STANDARD_OUTPUT input) : SV_TARGET
     }
     float4 cIlluminationColor = Lighting(gMaterialInfo, input.positionW, normalW);
     
-    float shadowFactor = CalcShadowFactor(input.ShadowPosH);
+
+     // 1. 그림자 계수 계산
+    float shadowFactor = 0.5; // 기본값은 그림자 없음
+    if (gIsDaytime)
+    {
+        shadowFactor = CalcShadowFactor(input.ShadowPosH);
+    }
     
     // 1. 최종 조명 색상을 먼저 계산합니다.
     //    (주변광 + 그림자가 적용된 직사광)
