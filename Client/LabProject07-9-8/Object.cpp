@@ -1702,7 +1702,7 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress());
 		}
 
-		pd3dCommandList->SetGraphicsRootDescriptorTable(3, pScene->GetShadowMapSrv());
+		pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
 
 		UpdateTransform(NULL); 
 
@@ -1716,9 +1716,13 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 		D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle();
 		if (textureTableHandle.ptr != 0) {
 			
-			pd3dCommandList->SetGraphicsRootDescriptorTable(2, textureTableHandle);
+			pd3dCommandList->SetGraphicsRootDescriptorTable(3, textureTableHandle);
 		}
 
+		ID3D12Resource* pLightBuffer = pScene->GetLightsConstantBuffer();
+		if (pLightBuffer) {
+			pd3dCommandList->SetGraphicsRootConstantBufferView(2, pLightBuffer->GetGPUVirtualAddress());
+		}
 		
 		m_pMesh->Render(pd3dCommandList, 0);
 

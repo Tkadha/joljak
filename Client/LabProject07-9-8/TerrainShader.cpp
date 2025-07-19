@@ -42,11 +42,12 @@ ID3D12RootSignature* CTerrainShader::CreateRootSignature(ID3D12Device* pd3dDevic
     pd3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1, 0); // t1, t2
     pd3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3, 0); // t3: Shadow Map
 
-    CD3DX12_ROOT_PARAMETER pd3dRootParameters[4]; // CBV(b1 Camera), Constants(b2 Object), Table(t1, t2 Textures)
+    CD3DX12_ROOT_PARAMETER pd3dRootParameters[5]; // CBV(b1 Camera), Constants(b2 Object), Table(t1, t2 Textures)
     pd3dRootParameters[0].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL); // 둘 다 사용
     pd3dRootParameters[1].InitAsConstants(16, 2, 0, D3D12_SHADER_VISIBILITY_VERTEX);     // VS에서만 필요
-    pd3dRootParameters[2].InitAsDescriptorTable(1, &pd3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_PIXEL); // PS에서만 필요
-    pd3dRootParameters[3].InitAsDescriptorTable(1, &pd3dDescriptorRanges[1], D3D12_SHADER_VISIBILITY_PIXEL); // PS에서만 필요
+    pd3dRootParameters[2].InitAsConstantBufferView(4, 0, D3D12_SHADER_VISIBILITY_PIXEL);  // b4: Lights
+    pd3dRootParameters[3].InitAsDescriptorTable(1, &pd3dDescriptorRanges[0], D3D12_SHADER_VISIBILITY_PIXEL); // PS에서만 필요
+    pd3dRootParameters[4].InitAsDescriptorTable(1, &pd3dDescriptorRanges[1], D3D12_SHADER_VISIBILITY_PIXEL); // PS에서만 필요
 
 
     auto d3dStaticSamplers = CShader::GetStaticSamplers();
