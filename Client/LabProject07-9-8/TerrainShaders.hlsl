@@ -138,10 +138,13 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     //float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);    
     //float normalizedDistance = saturate(distToEye / (gFogStart + gFogRange));
     
-    float distToEye = distance(input.positionW, gvCameraPosition.xyz);
-    float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);
-    finalColor = lerp(gFogColor.rgb, finalColor, fogFactor);
-
+    
+    if (gIsDaytime)
+    {
+        float distToEye = distance(input.positionW, gvCameraPosition.xyz);
+        float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);
+        finalColor = lerp(gFogColor.rgb, finalColor, fogFactor);
+    }
     
     return float4(finalColor, cTextureColor.a);
 }

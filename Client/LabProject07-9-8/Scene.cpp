@@ -1515,6 +1515,8 @@ void CScene::UpdateLights(float fTimeElapsed)
 		m_xmf4GlobalAmbient = m_xmf4DaylightAmbient;
 		pMainLight->m_xmf4Diffuse = m_xmf4DaylightDiffuse;
 		pMainLight->m_xmf4Specular = m_xmf4DaylightSpecular;
+
+		GetSkyBox()->SetSkyboxIndex(0);
 	}
 	else // ºûÀÌ À§¸¦ ÇâÇÏ¸é ¹ã
 	{
@@ -1523,6 +1525,8 @@ void CScene::UpdateLights(float fTimeElapsed)
 		m_xmf4GlobalAmbient = m_xmf4MoonlightAmbient;
 		pMainLight->m_xmf4Diffuse = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // ºû »ö»óÀ» °ËÀº»ö
 		pMainLight->m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+
+		GetSkyBox()->SetSkyboxIndex(1);
 	}
 }
 

@@ -216,9 +216,13 @@ float4 PSStandard3(VS_STANDARD_OUTPUT input) : SV_TARGET
     //finalColor += shadowFactor * (cIlluminationColor.rgb); // 직사광 (그림자 적용)
     
     // 4. 안개 적용
-    float distToEye = distance(input.positionW, gvCameraPosition.xyz);
-    float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);
-    finalColor = lerp(gFogColor.rgb, finalColor, fogFactor);
+    
+    if (gIsDaytime)
+    {
+        float distToEye = distance(input.positionW, gvCameraPosition.xyz);
+        float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);
+        finalColor = lerp(gFogColor.rgb, finalColor, fogFactor);
+    }
 
     return float4(finalColor, cAlbedoColor.a);    
     

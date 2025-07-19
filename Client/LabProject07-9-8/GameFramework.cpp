@@ -2028,23 +2028,23 @@ void CGameFramework::FrameAdvance()
 
 	if (m_pScene) m_pScene->Render(m_pd3dCommandList, m_pCamera);
 
-	auto currentTimePoint = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> elapsed = currentTimePoint - startTime;
-	double currentTime = elapsed.count(); // 초 단위 경과 시간
+	//auto currentTimePoint = std::chrono::high_resolution_clock::now();
+	//std::chrono::duration<double> elapsed = currentTimePoint - startTime;
+	//double currentTime = elapsed.count(); // 초 단위 경과 시간
 
-	if (currentTime - lastEventTime >= eventInterval)
-	{
-		if (m_pScene && m_pScene->GetSkyBox()) {
-			int textureCount = m_pScene->GetSkyBox()->GetTextureCount();
-			//OutputDebugString(std::format(L"[SkyBox] 텍스처 로드 개수: {}\n", textureCount).c_str());
-			if (textureCount > 0) {
-				m_nCurrentSkybox = (m_nCurrentSkybox + 1) % textureCount;
-				m_pScene->GetSkyBox()->SetSkyboxIndex(m_nCurrentSkybox);
-			}
+	//if (currentTime - lastEventTime >= eventInterval)
+	//{
+	//	if (m_pScene && m_pScene->GetSkyBox()) {
+	//		int textureCount = m_pScene->GetSkyBox()->GetTextureCount();
+	//		//OutputDebugString(std::format(L"[SkyBox] 텍스처 로드 개수: {}\n", textureCount).c_str());
+	//		if (textureCount > 0) {
+	//			m_nCurrentSkybox = (m_nCurrentSkybox + 1) % textureCount;
+	//			m_pScene->GetSkyBox()->SetSkyboxIndex(m_nCurrentSkybox);
+	//		}
 
-		}
-		lastEventTime = currentTime;
-	}
+	//	}
+	//	lastEventTime = currentTime;
+	//}
 
 	//std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
