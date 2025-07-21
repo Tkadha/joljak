@@ -674,15 +674,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
 		}
 
-		//if (shaderType == "Standard") {
-		//	// Standard 셰이더의 경우, 4번 슬롯에 그림자 맵 바인딩
-		//	pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
-		//}
-		//else if (shaderType == "Skinned") {
-		//	// Skinned 셰이더의 경우, 6번 슬롯에 그림자 맵 바인딩
-		//	pd3dCommandList->SetGraphicsRootDescriptorTable(6, pScene->GetShadowMapSrv());
-		//}
-
 		
 		for (int i = 0; i < m_nMaterials; i++)
 		{
@@ -751,9 +742,20 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 							// 오브젝트가 부모로부터 컨트롤러를 공유받은 경우 (무기, 장비)
 							pControllerToUse = this->m_pSharedAnimController;
 						}
-						if (pControllerToUse && pControllerToUse->m_ppd3dcbSkinningBoneTransforms[0])
+						if (pControllerToUse)
 						{
-							pd3dCommandList->SetGraphicsRootConstantBufferView(6, pControllerToUse->m_ppd3dcbSkinningBoneTransforms[0]->GetGPUVirtualAddress());
+							// 현재 메쉬가 컨트롤러의 몇 번째 메쉬인지 인덱스를 찾음
+							int nSkinnedMeshIndex = -1;
+							for (int i = 0; i < pControllerToUse->m_nSkinnedMeshes; ++i) {
+								if (pControllerToUse->m_ppSkinnedMeshes[i] == pSkinnedMesh) {
+									nSkinnedMeshIndex = i;
+									break;
+								}
+							}
+
+							if (nSkinnedMeshIndex != -1 && pControllerToUse->m_ppd3dcbSkinningBoneTransforms[nSkinnedMeshIndex]) {
+								pd3dCommandList->SetGraphicsRootConstantBufferView(6, pControllerToUse->m_ppd3dcbSkinningBoneTransforms[nSkinnedMeshIndex]->GetGPUVirtualAddress());
+							}
 						}
 					}
 				}
