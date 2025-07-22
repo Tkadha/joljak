@@ -64,18 +64,25 @@ void CConstructionSystem::UpdatePreviewPosition(const CCamera* pCamera)
     m_pPreviewObject->SetPosition(previewPos);
 }
 
-void CConstructionSystem::ConfirmPlacement()
+void CConstructionSystem::RotatePreviewObject(float fYaw)
 {
-    if (!m_bBuildMode || !m_pPreviewObject || !m_pScene) return;
+    if (!m_bBuildMode || !m_pPreviewObject) return;
 
-   
-    CGameObject* pInstalledObject = m_pPreviewObject->Clone();
-    if (!pInstalledObject) return;
+    // Y축(Up Vector)을 기준으로 회전
+    m_pPreviewObject->Rotate(0.0f, fYaw, 0.0f);
+}
 
-   
-    pInstalledObject->UpdateTransform(NULL);
-    m_pScene->m_vGameObjects.push_back(pInstalledObject);
+CGameObject* CConstructionSystem::ConfirmPlacement()
+{
+    if (!m_bBuildMode || !m_pPreviewObject) return nullptr;
 
-    // (선택) 설치 후 바로 건설 모드를 종료하려면 아래 주석 해제
-    // ExitBuildMode();
+    // 1. 복제의 원본이 될 현재 프리뷰 오브젝트를 기억합니다.
+    CGameObject* pObjectToClone = m_pPreviewObject;
+
+    // 2. 이제 프리뷰는 역할을 다했으므로 화면에서 숨기고 비활성화합니다.
+    m_pPreviewObject->isRender = false;
+    m_pPreviewObject = nullptr;
+
+    // 3. GameFramework가 복제할 수 있도록 원본 오브젝트를 반환합니다.
+    return pObjectToClone;
 }

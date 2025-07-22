@@ -691,7 +691,9 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				ShowFurnaceUI = !ShowFurnaceUI;
 				break;
 			case 'R':
-				
+				if (m_bBuildMode && m_pConstructionSystem) {
+					m_pConstructionSystem->RotatePreviewObject(-45.0f);
+				}
 				break;
 			case 'T':
 				m_pScene->obbRender = m_pScene->obbRender ? false : true;
@@ -2456,19 +2458,18 @@ void CGameFramework::FrameAdvance()
 	////////////////////////////////////////////////////////////////////////////////////////////////////// 건축 UI
 	if (m_bBuildMode)
 	{
-		// --- 창 위치 및 크기 설정 ---
-		ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver); // 처음 열릴 때만 위치 지정
-		ImGui::SetNextWindowSize(ImVec2(220, 300), ImGuiCond_FirstUseEver); // 처음 열릴 때만 크기 지정
+		
+		ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver); 
+		ImGui::SetNextWindowSize(ImVec2(220, 300), ImGuiCond_FirstUseEver); 
 		ImGui::Begin("Build Mode", &m_bBuildMode, ImGuiWindowFlags_NoCollapse);
 
 		ImGui::Text("Buildable Items");
 		ImGui::Separator();
 
-		// --- UI에 표시할 건축물 목록 ---
-		// 이 목록은 나중에 Scene::LoadPrefabs에서 등록한 이름과 정확히 일치해야 합니다.
+		
 		struct BuildableItem {
-			const char* displayName; // UI에 보일 이름
-			const char* prefabKey;   // ResourceManager에 등록된 이름
+			const char* displayName;
+			const char* prefabKey;   
 		};
 		static std::vector<BuildableItem> buildableItems = {
 			{ "wood wall", "wood_wall" },
@@ -2476,10 +2477,10 @@ void CGameFramework::FrameAdvance()
 			// { "나무 문", "wood_door" }
 		};
 
-		// --- 목록을 기반으로 UI 선택지 생성 ---
+		
 		for (int i = 0; i < buildableItems.size(); i++)
 		{
-			// Selectable을 클릭하면
+			
 			if (ImGui::Selectable(buildableItems[i].displayName, m_nSelectedBuildingIndex == i))
 			{
 				// 이전에 선택한 것과 다른 것을 선택했다면
@@ -2504,7 +2505,50 @@ void CGameFramework::FrameAdvance()
 		if (!m_bIsPreviewVisible) ImGui::BeginDisabled();
 		if (ImGui::Button("Install (R)"))
 		{
-			m_pConstructionSystem->ConfirmPlacement();
+			// 1. ConstructionSystem에 설치를 요청하고 복제할 원본 오브젝트를 받아옵니다.
+			CGameObject* pObjectToClone = m_pConstructionSystem->ConfirmPlacement();
+			XMFLOAT3 previewPos = pObjectToClone->GetPosition();
+
+
+			// 2. 받아온 오브젝트가 유효하면 설치 절차를 진행합니다.
+			if (pObjectToClone)
+			{
+				XMFLOAT4X4 previewWorldMatrix = pObjectToClone->m_xmf4x4World;
+				// --- GPU 리소스를 안전하게 생성하는 로직 시작 ---
+				ID3D12CommandAllocator* pUploadAllocator = m_pd3dUploadCommandAllocator;
+				ID3D12GraphicsCommandList* pUploadCmdList = m_pd3dUploadCommandList;
+
+				pUploadAllocator->Reset();
+				pUploadCmdList->Reset(pUploadAllocator, NULL);
+
+				CGameObject* pInstalledObject = pObjectToClone->Clone();
+
+				pInstalledObject->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
+				pInstalledObject->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+				pUploadCmdList->Close();
+				ID3D12CommandList* ppd3dCommandLists[] = { pUploadCmdList };
+				m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+				WaitForGpuComplete();
+
+				if (pInstalledObject) pInstalledObject->ReleaseUploadBuffers();
+				// --- GPU 리소스 생성 로직 끝 ---
+
+				// 3. 성공적으로 생성된 오브젝트를 Scene에 최종 추가합니다.
+				if (pInstalledObject && m_pScene)
+				{
+					pInstalledObject->m_xmf4x4ToParent = previewWorldMatrix;
+					pInstalledObject->m_xmf4x4World = previewWorldMatrix;
+
+					pInstalledObject->SetPosition(previewPos);
+					pInstalledObject->isRender = true;
+					//m_pScene->m_vGameObjects.emplace_back(pInstalledObject);
+					m_pScene->m_vConstructionObjects.emplace_back(pInstalledObject);
+
+					
+					
+				}
+			}
 		}
 		if (!m_bIsPreviewVisible) ImGui::EndDisabled();
 
@@ -2512,7 +2556,10 @@ void CGameFramework::FrameAdvance()
 
 		if (ImGui::Button("Exit (B)"))
 		{
+			if (m_pConstructionSystem) m_pConstructionSystem->ExitBuildMode();
 			m_bBuildMode = false; // UI 창을 닫음
+			m_nSelectedBuildingIndex = -1;
+			m_bIsPreviewVisible = false; // 프리뷰를 숨김
 		}
 
 		ImGui::End();

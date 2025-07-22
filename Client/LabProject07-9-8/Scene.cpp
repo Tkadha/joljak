@@ -298,7 +298,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 			CGameObject* previewObject = prefab->Clone();
 			previewObject->isRender = false; // 처음에는 보이지 않도록 설정
 			previewObject->SetPosition(5000.0f,2600.0f, 5000.0f);
-			previewObject->SetScale(1000.0f, 50.0f, 500.0f);
+			previewObject->SetScale(10.0f, 10.0f, 10.0f);
 
 			m_mapBuildPrefabs[itemName] = previewObject; // 맵에 이름으로 저장
 			m_vGameObjects.emplace_back(previewObject);     // 씬의 메인 목록에도 추가
@@ -840,8 +840,12 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		}
 	}
 	
+	for (auto& constructionObj : m_vConstructionObjects) {
+		if (constructionObj) constructionObj->Animate(m_fElapsedTime);
+		if (constructionObj && constructionObj->isRender) constructionObj->Render(pd3dCommandList, pCamera);
+	}
 
-	if (m_pWavesObject) m_pWavesObject->Render(pd3dCommandList, pCamera);
+	//if (m_pWavesObject) m_pWavesObject->Render(pd3dCommandList, pCamera);
 
 	for (auto branch : m_listBranchObjects) {
 		if (branch->isRender) {
@@ -1364,7 +1368,7 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	if (pLoadedModel) delete pLoadedModel;
 
 	//건축
-	pResourceManager->RegisterPrefab("wood_wall", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/buildobject/pannel.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("wood_wall", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/buildobject/Fence_WoodC_A.bin", m_pGameFramework));
 
 
 }

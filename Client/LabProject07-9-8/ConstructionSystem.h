@@ -14,7 +14,8 @@ public:
     void EnterBuildMode(const std::string& prefabName, const CCamera* pCamera);
     void ExitBuildMode();
     void UpdatePreviewPosition(const CCamera* pCamera);
-    void ConfirmPlacement();
+    void RotatePreviewObject(float fYaw);
+    CGameObject* ConfirmPlacement();
 
     bool IsBuildMode() const { return m_bBuildMode; }
 
