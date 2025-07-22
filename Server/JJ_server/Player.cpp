@@ -398,7 +398,7 @@ void PlayerClient::Update_test(float deltaTime)
     int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
     bool bReverseQuad = ((z % 2) != 0);
     FLOAT move_pos_y = Terrain::terrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
-    if (move_pos_y < 2149.f) {
+    if (move_pos_y < 1.f) {
         moving_pos = m_Position;
     }
     else

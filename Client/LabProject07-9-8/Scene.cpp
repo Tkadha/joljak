@@ -149,7 +149,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 
 	srand((unsigned int)time(NULL));
 
-	XMFLOAT3 xmf3Scale(5.f, 0.2f, 5.f);
+	XMFLOAT3 xmf3Scale(5.f, 0.1f, 5.f);
 	XMFLOAT4 xmf4Color(0.0f, 0.0f, 0.0f, 0.0f);
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color, m_pGameFramework);
 	m_pTerrain->m_xmf4x4World = Matrix4x4::Identity();
@@ -160,7 +160,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	// 1. Waves 객체를 생성합니다.
 	m_pWavesObject = new CWavesObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 	// 물결이 보일 위치를 설정합니다. (맵의 중앙 근처, 수면 높이)
-	m_pWavesObject->SetPosition(5000.0f, 2160.0f, 5000.0f);
+	m_pWavesObject->SetPosition(5000.0f, 1000.0f, 5000.0f);
 	m_pWavesObject->SetScale(10.f, 1.f, 10.f);
 	// 2. Waves를 위한 재질(Material)을 생성합니다.
 	CMaterial* pWavesMaterial = new CMaterial(1, m_pGameFramework);
@@ -207,15 +207,15 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 
 	// 인자 : 객체이름, 갯수, 스폰위치 min, max, 크기 min, max, ~ , 텍스쳐인덱스, 텍스쳐 
 
-	SpawnStaticObjects("BushA", 100, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("Chervil", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("RedPoppy", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("ElephantEar", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("GrassPatch", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("Clovers", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("Daisies", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("Leaves", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("GroundPoppies", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("BushA", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Chervil", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("RedPoppy", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("ElephantEar", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("GrassPatch", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Clovers", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Daisies", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Leaves", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("GroundPoppies", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
 
 	float spawnMin = 500, spawnMax = 9500;
 	float objectMinSize = 15, objectMaxSize = 20;

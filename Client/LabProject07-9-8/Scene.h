@@ -115,7 +115,7 @@ public:
 	float								m_fElapsedTime = 0.0f;
 
 	std::mutex							m_Mutex; // 멀티스레드 안전성을 위한 뮤텍스
-	vector<CGameObject*>				m_vGameObjects{};
+	std::list<CGameObject*>				m_vGameObjects{};
 	vector<CGameObject*> m_vConstructionObjects{};
 	std::list<CGameObject*> 			m_listGameObjects;
 	std::list<CGameObject*>				m_lEnvironmentObjects;
