@@ -173,7 +173,7 @@ void CMaterial::LoadTextureFromFile(
             // 루트에서 텍스처 찾기
             pTexture = pRootGameObject->FindReplicatedTexture(pwstrTextureName); // shared_ptr 반환 받음
             if (pTexture) {
-                OutputDebugStringW(L"    Found replicated texture (manual AddRef).\n");
+                //OutputDebugStringW(L"    Found replicated texture (manual AddRef).\n");
                 }
             else {
                 OutputDebugStringW(L"    !!!!!!!! FAILED to find replicated texture !!!!!!!!\n");
@@ -229,7 +229,7 @@ bool CMaterial::AssignTexture(UINT nTextureIndex, std::shared_ptr<CTexture> pTex
 
         if (pShaderResource) {
             pd3dDevice->CreateShaderResourceView(pShaderResource, &srvDesc, cpuHandle);
-            OutputDebugStringW(L"    SRV Created in CMaterial::AssignTexture.\n");
+            //OutputDebugStringW(L"    SRV Created in CMaterial::AssignTexture.\n");
             return true;
         }
         else {

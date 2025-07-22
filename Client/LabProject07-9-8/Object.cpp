@@ -537,8 +537,8 @@ BoundingOrientedBox CGameObject::GetBossOBB()
 	if (m_pMesh && strcmp(m_pMesh->m_pstrMeshName, "Body")) {
 		return m_localOBB;
 	}
-	if (m_pChild) return m_pChild->GetBossOBB();
 	if (m_pSibling) return m_pSibling->GetBossOBB();
+	if (m_pChild) return m_pChild->GetBossOBB();
 	return BoundingOrientedBox();
 }
 
