@@ -16,6 +16,8 @@
 #include "AtkState.h"
 // 서버 연결 여부
 
+#include <sstream> // Test
+
 void CGameFramework::NerworkThread()
 {
 	auto& nwManager = NetworkManager::GetInstance();
@@ -1245,6 +1247,16 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
 				p.size = sizeof(OBJ_OBB_PACKET);
 				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Cow ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
@@ -1280,10 +1292,12 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 0.8f, 1.f, XMFLOAT3{ 0.f,1.f,-1.f });
+			gameObj->m_localOBB.Center.y += 30.0f;
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
@@ -1306,6 +1320,17 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
 				p.size = sizeof(OBJ_OBB_PACKET);
 				nw.PushSendQueue(p, p.size);
+
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Pig ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
@@ -1371,6 +1396,16 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
 				p.size = sizeof(OBJ_OBB_PACKET);
 				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Spider ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
@@ -1436,6 +1471,16 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
 				p.size = sizeof(OBJ_OBB_PACKET);
 				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Toad ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
@@ -1501,6 +1546,16 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
 				p.size = sizeof(OBJ_OBB_PACKET);
 				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Wolf ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
@@ -1566,6 +1621,16 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
 				p.size = sizeof(OBJ_OBB_PACKET);
 				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Bat ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
@@ -1631,6 +1696,16 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
 				p.size = sizeof(OBJ_OBB_PACKET);
 				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Raptor ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
@@ -1683,7 +1758,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				gameobj_list.push_back(gameObj->m_objectType);
 				NetworkManager& nw = NetworkManager::GetInstance();
 				OBJ_OBB_PACKET p;
-				auto& obb = gameObj->GetOBB();
+				auto& obb = gameObj->GetBossOBB();
 				p.Center.x = obb.Center.x;
 				p.Center.y = obb.Center.y;
 				p.Center.z = obb.Center.z;
@@ -1698,6 +1773,16 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
 				p.size = sizeof(OBJ_OBB_PACKET);
 				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Golem ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
@@ -1709,35 +1794,6 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		default:
 			break;
 		}
-
-		/*{
-		case GameObjectType::Wasp:
-		case GameObjectType::Snail:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[5].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[6].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		case GameObjectType::Snake:
-		case GameObjectType::Spider:
-		case GameObjectType::Bat:
-		case GameObjectType::Turtle:
-		case GameObjectType::Pig:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		case GameObjectType::Wolf:
-		case GameObjectType::Cow:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		case GameObjectType::Toad:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		}*/
 	}
 	else
 	{

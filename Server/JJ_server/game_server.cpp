@@ -892,13 +892,13 @@ void BuildObject()
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
 
-	/*int SpiderCount = 50;
+	int SpiderCount = 50;
 	for (int i = 0; i < SpiderCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
-			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		}
+		//while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
+		//	randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		//}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(8.f, 8.f, 8.f);
 		obj->SetID(obj_id++);
@@ -918,9 +918,9 @@ void BuildObject()
 	for (int i = 0; i < WolfCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
-			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		}
+		//while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
+		//	randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		//}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(10.f, 10.f, 10.f);
 		obj->SetID(obj_id++);
@@ -940,9 +940,9 @@ void BuildObject()
 	for (int i = 0; i < ToadCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
-			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		}
+		//while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
+		//	randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		//}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(8.f, 8.f, 8.f);
 		obj->SetID(obj_id++);
@@ -963,9 +963,9 @@ void BuildObject()
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		obj->fly_height = 13.f;
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
-			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		}
+		//while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
+		//	randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		//}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second) + obj->fly_height, randompos.second);
 		obj->SetScale(9.f, 9.f, 9.f);
 		obj->SetID(obj_id++);
@@ -985,9 +985,9 @@ void BuildObject()
 	for (int i = 0; i < RaptorCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
-			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		}
+		//while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
+		//	randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		//}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second) + 30, randompos.second);
 		obj->SetScale(9.f, 9.f, 9.f);
 		obj->SetID(obj_id++);
@@ -1003,7 +1003,7 @@ void BuildObject()
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
-	}*/
+	}
 
 	{
 		shared_ptr<GameObject> obj = make_shared<GameObject>();

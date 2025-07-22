@@ -145,9 +145,9 @@ void CMaterial::LoadTextureFromFile(
 
     // 5. 변환된 Wide Char 파일 이름 저장
     if (m_ppstrTextureNames) lstrcpy(m_ppstrTextureNames[nTextureIndex], pwstrTextureName);
-    OutputDebugStringW(L"CMaterial::LoadTextureFromFile - Loading Texture: ");
-    OutputDebugStringW(pwstrTextureName);
-    OutputDebugStringW(L"\n");
+    //OutputDebugStringW(L"CMaterial::LoadTextureFromFile - Loading Texture: ");
+    //OutputDebugStringW(pwstrTextureName);
+    //OutputDebugStringW(L"\n");
 
     // 6. 재질 타입 마스크 설정
     SetMaterialType(nTextureType);

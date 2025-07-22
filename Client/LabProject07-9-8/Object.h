@@ -204,6 +204,7 @@ public:
 	void SetOBB(float scalex, float scaley, float scalez, const XMFLOAT3& centerOffset);
 	void SetOBB(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CShader* shader);
 	BoundingOrientedBox GetOBB();
+	BoundingOrientedBox GetBossOBB();
 	void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList);
 	void InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void SetColor(const XMFLOAT4& color);
@@ -309,6 +310,7 @@ public:
 	void SetSkyboxIndex(int index);
 	void LoadTextures(ID3D12GraphicsCommandList* cmdList, const std::vector<std::wstring>& texturePaths);
 	int  GetTextureCount() const { return static_cast<int>(m_vSkyboxTextures.size()); }
+	int GetCurrentTextureIndex() const { return m_nCurrentTextureIndex; }
 private:
 	std::vector<std::shared_ptr<CTexture>> m_vSkyboxTextures;
 	int m_nCurrentTextureIndex = 0;

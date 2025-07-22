@@ -528,8 +528,18 @@ BoundingOrientedBox CGameObject::GetOBB()
 	if (m_pMesh) {
 		return m_localOBB;
 	}
-	if (m_pChild) return m_pChild->GetOBB();
 	if (m_pSibling) return m_pSibling->GetOBB();
+	if (m_pChild) return m_pChild->GetOBB();
+	return BoundingOrientedBox();
+}
+BoundingOrientedBox CGameObject::GetBossOBB()
+{
+	if (m_pMesh && strcmp(m_pMesh->m_pstrMeshName, "Body")) {
+		return m_localOBB;
+	}
+	if (m_pChild) return m_pChild->GetBossOBB();
+	if (m_pSibling) return m_pSibling->GetBossOBB();
+	return BoundingOrientedBox();
 }
 
 void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList)

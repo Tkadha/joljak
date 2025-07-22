@@ -1130,9 +1130,12 @@ CGameObject* CTerrainPlayer::FindObjectHitByAttack() {
 		if (obj->m_id == -1) continue;
 		if (obj->isRender == false) continue;
 		std::vector<DirectX::BoundingOrientedBox> obbList;
+		if(obj->m_objectType == GameObjectType::Golem)
+			obj->m_objectType = GameObjectType::Golem;
 		pScene->CollectHierarchyObjects(obj, obbList);
 		for (const auto& obb : obbList) {
-			if (weapon.Intersects(obb)) return obj;
+			if (weapon.Intersects(obb)) 
+				return obj;
 		}		
 	}
 
