@@ -1695,19 +1695,23 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	
-	CMaterial* pTerrainMaterial = new CMaterial(2, pGameFramework);
+	CMaterial* pTerrainMaterial = new CMaterial(4, pGameFramework);
 
 	
 	std::shared_ptr<CTexture> pTerrainBaseTexture = pResourceManager->GetTexture(L"Terrain/DemoTerrain3.dds", pd3dCommandList);
-	std::shared_ptr<CTexture> pTerrainDetailTexture = pResourceManager->GetTexture(L"Terrain/TerrainGrass_basecolor.dds", pd3dCommandList);
 	
-	
-	if (pTerrainBaseTexture) {
-		pTerrainMaterial->AssignTexture(0, pTerrainBaseTexture, pd3dDevice); 
-	}
-	if (pTerrainDetailTexture) {
-		pTerrainMaterial->AssignTexture(1, pTerrainDetailTexture, pd3dDevice); 
-	}
+	// 풀 디테일 텍스쳐
+	std::shared_ptr<CTexture> pTerrainGrassTexture = pResourceManager->GetTexture(L"Terrain/TerrainGrass_basecolor.dds", pd3dCommandList);
+	// 흙 디테일 텍스쳐 
+	std::shared_ptr<CTexture> pTerrainDirtTexture = pResourceManager->GetTexture(L"Terrain/Detail_Texture_7.dds", pd3dCommandList);
+	// 돌 디테일 텍스쳐
+	std::shared_ptr<CTexture> pTerrainRockTexture = pResourceManager->GetTexture(L"Terrain/Detail_Texture_8.dds", pd3dCommandList);
+
+	if (pTerrainBaseTexture) pTerrainMaterial->AssignTexture(0, pTerrainBaseTexture, pd3dDevice);
+	if (pTerrainGrassTexture) pTerrainMaterial->AssignTexture(1, pTerrainGrassTexture, pd3dDevice);
+	if (pTerrainDirtTexture) pTerrainMaterial->AssignTexture(2, pTerrainDirtTexture, pd3dDevice);
+	if (pTerrainRockTexture) pTerrainMaterial->AssignTexture(3, pTerrainRockTexture, pd3dDevice);
+
 
 	
 	CShader* pTerrainShader = pShaderManager->GetShader("Terrain"); 

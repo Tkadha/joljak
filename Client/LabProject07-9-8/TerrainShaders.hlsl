@@ -13,8 +13,10 @@ cbuffer cbGameObjectInfo : register(b2) // 지형의 월드 변환 등에 사용
 
 // --- 텍스처 ---
 Texture2D gtxtTerrainBaseTexture : register(t1); // 지형 기본 텍스처
-Texture2D gtxtTerrainDetailTexture : register(t2); // 지형 상세 텍스처
-Texture2D gShadowMap : register(t3);    // 그림자
+Texture2D gtxtTerrainGrassTexture : register(t2); // DetailTexture -> GrassTexture
+Texture2D gtxtTerrainDirtTexture : register(t3); // 새로 추가
+Texture2D gtxtTerrainRockTexture : register(t4); // 새로 추가
+Texture2D gShadowMap : register(t5);    // 그림자
 
 // --- VS 입출력 구조체 ---
 struct VS_TERRAIN_INPUT
@@ -110,15 +112,32 @@ float CalcShadowFactor(float4 shadowPosH)
 // --- Pixel Shader ---
 float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
 {     
-    // 텍스처 샘플링
-    float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
-    float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);
+    // 1. 각 디테일 텍스처를 타일링된 UV 좌표(uv1)로 샘플링합니다.
+    //    타일링 횟수를 늘려 해상도를 높이고 싶다면 input.uv1에 상수를 곱합니다.
+    float2 tiled_uv = input.uv1 * 100.0f; // ★ 텍스처를 100번 반복하여 선명하게 만듭니다.
+    float4 cGrassColor = gtxtTerrainGrassTexture.Sample(gssWrap, tiled_uv);
+    float4 cDirtColor = gtxtTerrainDirtTexture.Sample(gssWrap, tiled_uv);
+    float4 cRockColor = gtxtTerrainRockTexture.Sample(gssWrap, tiled_uv);
 
-    // 색상 조합 (예: 블렌딩)
-    // float4 cColor = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f)); // 단순 평균
-    //float4 cColor = input.color * lerp(cBaseTexColor, cDetailTexColor, 0.5); // 예: 정점 색상과 블렌딩
+    // 2. 지형의 높이(월드 좌표 Y)를 기준으로 텍스처 혼합 비율(Weight)을 계산합니다.
+    float height = input.positionW.y;
     
-    float4 cTextureColor = lerp(cBaseTexColor, cDetailTexColor, 0.5);
+    // 낮은 지역(풀) -> 중간 지역(흙)으로 넘어가는 구간을 부드럽게 만듭니다.
+    float dirtWeight = saturate((height - 200.0f) / 100.0f); // 200~300 사이에서 흙이 100%가 됨
+    
+    // 중간 지역(흙) -> 높은 지역(돌)으로 넘어가는 구간을 부드럽게 만듭니다.
+    float rockWeight = saturate((height - 400.0f) / 150.0f); // 400~550 사이에서 돌이 100%가 됨
+
+    // 3. 계산된 혼합 비율에 따라 텍스처 색상을 선형 보간(lerp)합니다.
+    float4 cDetailColor = lerp(cGrassColor, cDirtColor, dirtWeight);
+    cDetailColor = lerp(cDetailColor, cRockColor, rockWeight);
+    
+    // 4. 멀리 있는 지형은 저해상도 베이스 텍스처와 자연스럽게 섞어줍니다.
+    float distanceToEye = distance(input.positionW, gvCameraPosition.xyz);
+    float baseTexWeight = saturate((distanceToEye - 4000.0f) / 1000.0f); // 4000~5000 거리에서 베이스 텍스처와 섞임
+    float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
+
+    float4 cTextureColor = lerp(cDetailColor, cBaseTexColor, baseTexWeight);
 
      // 1. 그림자 계수 계산
     float shadowFactor = 0.15; // 기본값은 그림자 없음

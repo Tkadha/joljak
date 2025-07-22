@@ -229,7 +229,7 @@ bool CMaterial::AssignTexture(UINT nTextureIndex, std::shared_ptr<CTexture> pTex
 
         if (pShaderResource) {
             pd3dDevice->CreateShaderResourceView(pShaderResource, &srvDesc, cpuHandle);
-            OutputDebugStringW(L"    SRV Created in CMaterial::AssignTexture.\n");
+            //OutputDebugStringW(L"    SRV Created in CMaterial::AssignTexture.\n");
             return true;
         }
         else {
