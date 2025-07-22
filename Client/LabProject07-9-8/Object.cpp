@@ -139,6 +139,9 @@ void CGameObject::Check_attack()
 	case GameObjectType::Toad:
 		if (m_anitype != 9) return;
 		break;
+	case GameObjectType::Golem:
+		if (m_anitype != 11) return;
+		break;
 	default:
 		break;
 	}
@@ -304,6 +307,29 @@ void CGameObject::ChangeAnimation(ANIMATION_TYPE type)
 			break;
 		case ANIMATION_TYPE::ATTACK:
 			m_anitype = 9;
+			break;
+		}
+		break;
+	case GameObjectType::Golem:
+		switch (type)
+		{
+		case ANIMATION_TYPE::IDLE:
+			m_anitype = 0;
+			break;
+		case ANIMATION_TYPE::WALK:
+			m_anitype = 2;
+			break;
+		case ANIMATION_TYPE::RUN:
+			m_anitype = 6;
+			break;
+		case ANIMATION_TYPE::DIE:
+			m_anitype = 9;
+			break;
+		case ANIMATION_TYPE::HIT:
+			m_anitype = 10;
+			break;
+		case ANIMATION_TYPE::ATTACK:
+			m_anitype = 11;
 			break;
 		}
 		break;
@@ -1583,8 +1609,8 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
 			 }
 		 }
 	 }
-	 if (pSource->m_pstrFrameName)
-		 strcpy_s(this->m_pstrFrameName, 64, pSource->m_pstrFrameName);
+	//if (pSource->m_pstrFrameName)
+	//	 strcpy_s(this->m_pstrFrameName, 64, pSource->m_pstrFrameName);
 	 this->m_objectType = pSource->m_objectType;
 	 this->m_pGameFramework = pSource->m_pGameFramework;
 	 this->m_localOBB = pSource->m_localOBB; 

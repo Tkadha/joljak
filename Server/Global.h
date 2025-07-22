@@ -47,7 +47,8 @@ enum class OBJECT_TYPE
 	OB_TURTLE = 11,
 	OB_SNAIL = 12,
 	OB_SPIDER = 13,
-	OB_RAPTOR = 14
+	OB_RAPTOR = 14,
+	OB_GOLEM = 15
 };
 
 enum class ANIMATION_TYPE

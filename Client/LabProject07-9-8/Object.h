@@ -53,7 +53,8 @@ enum class GameObjectType : int {
 	Turtle,
 	Snail,
 	Spider,
-	Raptor
+	Raptor,
+	Golem
 
 };
 

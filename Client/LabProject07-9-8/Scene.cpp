@@ -1484,7 +1484,7 @@ void CScene::UpdateShadowTransform()
 void CScene::UpdateLights(float fTimeElapsed)
 {
 	// 1. 빛의 회전 각도를 업데이트합니다.
-	float rotationSpeed = 5.0f; // 속도를 약간 조절
+	float rotationSpeed = 1.0f; // 속도를 약간 조절
 	m_fLightRotationAngle += fTimeElapsed * rotationSpeed;
 	if (m_fLightRotationAngle > 360.0f) m_fLightRotationAngle -= 360.0f;
 

@@ -1630,6 +1630,73 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			if (pRaptorModel) delete(pRaptorModel);
 		}
 		break;
+		case OBJECT_TYPE::OB_GOLEM:
+		{
+			int animate_count = 15;
+			CLoadedModelInfo* pGolemModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/ForestGolem_Rd.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pGolemModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Golem;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[12].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[13].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
+
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pGolemModel) delete(pGolemModel);
+		}
+		break;
 		default:
 			break;
 		}

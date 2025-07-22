@@ -315,7 +315,11 @@ void PlayerClient::Update_test(float deltaTime)
     XMFLOAT3 moving_pos = m_Position;
     moving_pos.x += deltaVel.x;
     BoundingOrientedBox testOBBX;
-    XMMATRIX matX = XMMatrixTranslation(moving_pos.x, moving_pos.y, moving_pos.z);
+    XMMATRIX matX;
+    if (m_Velocity.y == 0)
+        matX = XMMatrixTranslation(moving_pos.x, Terrain::terrain->GetHeight(moving_pos.x, moving_pos.z), moving_pos.z);
+    else
+        matX = XMMatrixTranslation(moving_pos.x, moving_pos.y, moving_pos.z);
     local_obb.Transform(testOBBX, matX);
     testOBBX.Orientation.w = 1.f;
 
@@ -352,8 +356,11 @@ void PlayerClient::Update_test(float deltaTime)
     // Z축 이동 시도
     moving_pos.z += deltaVel.z;
     BoundingOrientedBox testOBBZ;
-    XMMATRIX matZ = XMMatrixTranslation(moving_pos.x, moving_pos.y, moving_pos.z);
-    local_obb.Transform(testOBBZ, matZ);
+    XMMATRIX matZ;
+    if (m_Velocity.y == 0)
+        matZ = XMMatrixTranslation(moving_pos.x, Terrain::terrain->GetHeight(moving_pos.x, moving_pos.z), moving_pos.z);
+    else
+        matZ = XMMatrixTranslation(moving_pos.x, moving_pos.y, moving_pos.z); local_obb.Transform(testOBBZ, matZ);
     testOBBZ.Orientation.w = 1.f;
 
     presults.clear();

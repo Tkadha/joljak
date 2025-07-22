@@ -15,7 +15,7 @@
 #include "Event.h"
 #include <vector>
 
-
+#include "BossState.h"
 #include "NonAtkState.h"
 #include "AtkState.h"
 
@@ -591,61 +591,63 @@ int main(int argc, char* argv[])
 			}
 
 			for (auto& cl : PlayerClient::PlayerClients) {
-				if (cl.second->state != PC_INGAME) continue;
-				std::shared_ptr<PlayerClient> player = cl.second;
-				auto& beforepos = player->GetPosition();
-				if (player->Playerstamina.load() > 0)
-					player->Update_test(deltaTime);
-				auto& pos = player->GetPosition();
-				if (beforepos.x != pos.x || beforepos.y != pos.y || beforepos.z != pos.z)
-				{
-					player->BroadCastPosPacket();
-					int stamina = player->Playerstamina.load();
+				if (cl.second) {
+					std::shared_ptr<PlayerClient> player = cl.second;
+					if (player->state != PC_INGAME) continue;
+					auto& beforepos = player->GetPosition();
+					if (player->Playerstamina.load() > 0)
+						player->Update_test(deltaTime);
+					auto& pos = player->GetPosition();
+					if (beforepos.x != pos.x || beforepos.y != pos.y || beforepos.z != pos.z)
+					{
+						player->BroadCastPosPacket();
+						int stamina = player->Playerstamina.load();
 
-					if (stamina > 0 && player->GetCurrentState() == ServerPlayerState::Running) {
-						player->stamina_counter++;
-						if (player->stamina_counter > 15) {
-							int desiredstamina = stamina - 1;
-							if (desiredstamina < 0) {
-								desiredstamina = 0;
-							}
+						if (stamina > 0 && player->GetCurrentState() == ServerPlayerState::Running) {
+							player->stamina_counter++;
+							if (player->stamina_counter > 15) {
+								int desiredstamina = stamina - 1;
+								if (desiredstamina < 0) {
+									desiredstamina = 0;
+								}
 
-							if (player->Playerstamina.compare_exchange_weak(stamina, desiredstamina)) {
-								// 패킷전송
-								CHANGE_STAT_PACKET s_packet;
-								s_packet.size = sizeof(CHANGE_STAT_PACKET);
-								s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
-								s_packet.stat = E_STAT::STAMINA;
-								s_packet.value = player->Playerstamina.load();
-								player->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+								if (player->Playerstamina.compare_exchange_weak(stamina, desiredstamina)) {
+									// 패킷전송
+									CHANGE_STAT_PACKET s_packet;
+									s_packet.size = sizeof(CHANGE_STAT_PACKET);
+									s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+									s_packet.stat = E_STAT::STAMINA;
+									s_packet.value = player->Playerstamina.load();
+									player->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+								}
+								player->stamina_counter = 0;
 							}
-							player->stamina_counter = 0;
 						}
 					}
-				}
-				Octree::PlayerOctree.update(player->m_id, player->GetPosition());
+					Octree::PlayerOctree.update(player->m_id, player->GetPosition());
 
 
-				player->vl_mu.lock();
-				std::unordered_set<int> before_vl = player->viewlist;
-				player->vl_mu.unlock();
+					player->vl_mu.lock();
+					std::unordered_set<int> before_vl = player->viewlist;
+					player->vl_mu.unlock();
 
-				std::unordered_set<int> new_vl;
-				std::vector<tree_obj*> results; // find obj
-				tree_obj p_obj{ -1,pos };
-				Octree::GameObjectOctree.query(p_obj, oct_distance, results);
-				for (auto& obj : results) new_vl.insert(obj->u_id);
+					std::unordered_set<int> new_vl;
+					std::vector<tree_obj*> results; // find obj
+					tree_obj p_obj{ -1,pos };
+					Octree::GameObjectOctree.query(p_obj, oct_distance, results);
+					for (auto& obj : results) new_vl.insert(obj->u_id);
 
-				for (auto o_id : before_vl) {
-					if (0 == new_vl.count(o_id)) {	// before에만 있다면 제거 패킷
-						player->SendRemovePacket(GameObject::gameObjects[o_id]);
+					for (auto o_id : before_vl) {
+						if (0 == new_vl.count(o_id)) {	// before에만 있다면 제거 패킷
+							player->SendRemovePacket(GameObject::gameObjects[o_id]);
+						}
 					}
-				}
-				for (auto o_id : new_vl) {
-					if (0 == before_vl.count(o_id)) { //new에만 있다면 추가 패킷
-						if (GameObject::gameObjects[o_id]->is_alive == false) continue;
-						if (GameObject::gameObjects[o_id]->Gethp() <= 0) continue;
-						player->SendAddPacket(GameObject::gameObjects[o_id]);
+					for (auto o_id : new_vl) {
+						if (0 == before_vl.count(o_id)) { //new에만 있다면 추가 패킷
+							if (GameObject::gameObjects[o_id]->is_alive == false) continue;
+							if (GameObject::gameObjects[o_id]->Gethp() <= 0) continue;
+							player->SendAddPacket(GameObject::gameObjects[o_id]);
+						}
 					}
 				}
 			}
@@ -1004,6 +1006,30 @@ void BuildObject()
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
+	}
+
+	{
+		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		//std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		//while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
+		//	randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		//}
+		obj->SetPosition(7500, Terrain::terrain->GetHeight(7500, 8300), 8300);
+		obj->SetScale(40.f, 40.f, 40.f);
+		obj->SetID(obj_id++);
+		obj->_hp = 400;
+		obj->_atk = 50;
+		obj->SetType(OBJECT_TYPE::OB_GOLEM);
+		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
+
+		obj->FSM_manager->SetCurrentState(std::make_shared<BossStandingState>());
+		obj->FSM_manager->SetGlobalState(std::make_shared<BossGlobalState>());
+
+		GameObject::gameObjects.push_back(obj);
+
+		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
+		Octree::GameObjectOctree.insert(std::move(t_obj));
+
 	}
 }
 void CloseServer()
