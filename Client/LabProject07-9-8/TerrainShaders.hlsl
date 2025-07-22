@@ -112,9 +112,7 @@ float CalcShadowFactor(float4 shadowPosH)
 // --- Pixel Shader ---
 float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
 {     
-    // 1. 각 디테일 텍스처를 타일링된 UV 좌표(uv1)로 샘플링합니다.
-    //    타일링 횟수를 늘려 해상도를 높이고 싶다면 input.uv1에 상수를 곱합니다.
-    float2 tiled_uv = input.uv1 * 100.0f; // ★ 텍스처를 100번 반복하여 선명하게 만듭니다.
+    float2 tiled_uv = input.uv1 * 1.0f; // 텍스처를 100번 반복하여 샘플링
     float4 cGrassColor = gtxtTerrainGrassTexture.Sample(gssWrap, tiled_uv);
     float4 cDirtColor = gtxtTerrainDirtTexture.Sample(gssWrap, tiled_uv);
     float4 cRockColor = gtxtTerrainRockTexture.Sample(gssWrap, tiled_uv);
@@ -123,10 +121,10 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     float height = input.positionW.y;
     
     // 낮은 지역(풀) -> 중간 지역(흙)으로 넘어가는 구간을 부드럽게 만듭니다.
-    float dirtWeight = saturate((height - 200.0f) / 100.0f); // 200~300 사이에서 흙이 100%가 됨
+    float dirtWeight = saturate((height - 2200.0f) / 100.0f); // 200~300 사이에서 흙이 100%가 됨
     
     // 중간 지역(흙) -> 높은 지역(돌)으로 넘어가는 구간을 부드럽게 만듭니다.
-    float rockWeight = saturate((height - 400.0f) / 150.0f); // 400~550 사이에서 돌이 100%가 됨
+    float rockWeight = saturate((height - 2300.0f) / 150.0f); // 400~550 사이에서 돌이 100%가 됨
 
     // 3. 계산된 혼합 비율에 따라 텍스처 색상을 선형 보간(lerp)합니다.
     float4 cDetailColor = lerp(cGrassColor, cDirtColor, dirtWeight);
