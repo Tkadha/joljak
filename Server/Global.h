@@ -60,6 +60,7 @@ enum class ANIMATION_TYPE
 	DIE,
 	ATTACK,
 	HIT,
+	SPECIAL_ATTACK,
 };
 
 enum class E_STAT

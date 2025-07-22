@@ -49,7 +49,9 @@ void CGameFramework::ProcessPacket(char* packet)
 	{
 		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
 		if (recv_p->uid == _MyID) {
+			m_pPlayer->pos_mu.lock();
 			m_pPlayer->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z});
+			m_pPlayer->pos_mu.unlock();
 		}
 		else if (m_pScene->PlayerList.find(recv_p->uid) != m_pScene->PlayerList.end()) {
 			m_pScene->PlayerList[recv_p->uid]->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z });
@@ -2057,7 +2059,7 @@ void CGameFramework::FrameAdvance()
 		}
 	}
 
-	m_GameTimer.Tick(300.0f);
+	m_GameTimer.Tick(120.0f);
 
 	ProcessInput();
 	UpdateFurnace(m_GameTimer.GetTimeElapsed());

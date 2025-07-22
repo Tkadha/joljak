@@ -257,7 +257,7 @@ void BossChaseState::Execute(std::shared_ptr<GameObject> npc)
 
 
 
-		float attackRange = 50.0f;
+		float attackRange = 100.0f;
 		float distanceToPlayer = sqrt(pow(playerPos.x - npcPos.x, 2) + pow(playerPos.y - npcPos.y, 2) + pow(playerPos.z - npcPos.z, 2));
 
 		if (distanceToPlayer < attackRange)
@@ -295,7 +295,7 @@ void BossChaseState::Execute(std::shared_ptr<GameObject> npc)
 			}
 		}
 		// 추격 중 멈춤 조건 (예: 플레이어가 너무 멀리 벗어남)
-		float loseRange = 600.f;
+		float loseRange = 400.f;
 		if (distanceToPlayer > loseRange)
 		{
 			npc->FSM_manager->ChangeState(std::make_shared<BossStandingState>());
@@ -417,12 +417,21 @@ void BossRespawnState::Exit(std::shared_ptr<GameObject> npc)
 
 //=====================================Attack=================================================
 
-
+int BossAttackState::Sp_atk_counter = 0;
 void BossAttackState::Enter(std::shared_ptr<GameObject> npc)
 {
 	starttime = std::chrono::system_clock::now();
 	duration_time = 1.f * 1000; // 1초간
-	npc->SetAnimationType(ANIMATION_TYPE::ATTACK);
+	Sp_atk_counter++;
+	if (Sp_atk_counter > 5) {
+		Sp_atk_counter = 0;
+		npc->SetAnimationType(ANIMATION_TYPE::SPECIAL_ATTACK);
+		duration_time = 2.f * 1000; // 스페셜 공격은 2초간
+	}
+	else {
+		npc->SetAnimationType(ANIMATION_TYPE::ATTACK);
+	}
+
 	std::vector<tree_obj*> results;
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
@@ -445,8 +454,11 @@ void BossAttackState::Execute(std::shared_ptr<GameObject> npc)
 		return;
 	}
 	if (exec_ms < 0.25 * 1000.f) {
-		auto n_type = npc->GetType();
-		npc->MoveForward(0.5f);
+		auto n_type = npc->GetAnimationType();
+		if(n_type == ANIMATION_TYPE::SPECIAL_ATTACK)
+			npc->MoveForward(0.1f);
+		else
+			npc->MoveForward(0.5f);
 	}
 	Octree::GameObjectOctree.update(npc->GetID(), npc->GetPosition());
 

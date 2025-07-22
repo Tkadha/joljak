@@ -106,24 +106,22 @@ void worker_thread()
 					return;
 				}
 
-				if (COMP_TYPE::OP_SEND == p_read_over->comp_type) {
+				if (readEvent.lpCompletionKey == (ULONG_PTR)g_l_socket.get()) // 리슨소켓이면
+				{
+					ProcessAccept();				
+				}
+				else if (COMP_TYPE::OP_SEND == p_read_over->comp_type) {
 
 					p_read_over->m_isReadOverlapped = false;
 					delete p_read_over; // 보냈다면 delete해주기
-					continue;
 				}
-				if (COMP_TYPE::OP_FSM_UPDATE == p_read_over->comp_type) // FSM 업데이트 요청이면
+				else if (COMP_TYPE::OP_FSM_UPDATE == p_read_over->comp_type) // FSM 업데이트 요청이면
 				{
 					auto obj = GameObject::gameObjects[p_read_over->obj_id];
 					if (obj) {
 						obj->FSMUpdate();
 					}
 					delete p_read_over;
-					continue;
-				}
-				if (readEvent.lpCompletionKey == (ULONG_PTR)g_l_socket.get()) // 리슨소켓이면
-				{
-					ProcessAccept();				
 				}
 				else  // TCP 연결 소켓이면
 				{					
@@ -591,9 +589,9 @@ int main(int argc, char* argv[])
 			}
 
 			for (auto& cl : PlayerClient::PlayerClients) {
+				if (cl.second->state != PC_INGAME) continue;
 				if (cl.second) {
 					std::shared_ptr<PlayerClient> player = cl.second;
-					if (player->state != PC_INGAME) continue;
 					auto& beforepos = player->GetPosition();
 					if (player->Playerstamina.load() > 0)
 						player->Update_test(deltaTime);
@@ -602,7 +600,6 @@ int main(int argc, char* argv[])
 					{
 						player->BroadCastPosPacket();
 						int stamina = player->Playerstamina.load();
-
 						if (stamina > 0 && player->GetCurrentState() == ServerPlayerState::Running) {
 							player->stamina_counter++;
 							if (player->stamina_counter > 15) {
@@ -1014,7 +1011,7 @@ void BuildObject()
 		//while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
 		//	randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		//}
-		obj->SetPosition(7500, Terrain::terrain->GetHeight(7500, 8300), 8300);
+		obj->SetPosition(9000, Terrain::terrain->GetHeight(9000, 6000), 6000);
 		obj->SetScale(40.f, 40.f, 40.f);
 		obj->SetID(obj_id++);
 		obj->_hp = 400;
