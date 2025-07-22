@@ -117,28 +117,26 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     float4 cDirtColor = gtxtTerrainDirtTexture.Sample(gssWrap, tiled_uv);
     float4 cRockColor = gtxtTerrainRockTexture.Sample(gssWrap, tiled_uv);
 
-    // 2. 지형의 높이(월드 좌표 Y)를 기준으로 텍스처 혼합 비율(Weight)을 계산합니다.
+    // 지형의 높이(Y)를 기준
     float height = input.positionW.y;
     
-    // 낮은 지역(풀) -> 중간 지역(흙)으로 넘어가는 구간을 부드럽게 만듭니다.
-    float dirtWeight = saturate((height - 2200.0f) / 100.0f); // 200~300 사이에서 흙이 100%가 됨
+    // 낮은 지역(풀) -> 중간 지역(흙)
+    float dirtWeight = saturate((height - 2200.0f) / 100.0f); // 2200~2300 
     
-    // 중간 지역(흙) -> 높은 지역(돌)으로 넘어가는 구간을 부드럽게 만듭니다.
-    float rockWeight = saturate((height - 2300.0f) / 150.0f); // 400~550 사이에서 돌이 100%가 됨
-
-    // 3. 계산된 혼합 비율에 따라 텍스처 색상을 선형 보간(lerp)합니다.
+    // 중간 지역(흙) -> 높은 지역(돌)
+    float rockWeight = saturate((height - 2300.0f) / 150.0f); // 2300~2450 
+    
     float4 cDetailColor = lerp(cGrassColor, cDirtColor, dirtWeight);
     cDetailColor = lerp(cDetailColor, cRockColor, rockWeight);
     
-    // 4. 멀리 있는 지형은 저해상도 베이스 텍스처와 자연스럽게 섞어줍니다.
+    // 멀리 있는 지형은 저해상도 베이스 텍스처와 섞기
     float distanceToEye = distance(input.positionW, gvCameraPosition.xyz);
     float baseTexWeight = saturate((distanceToEye - 4000.0f) / 1000.0f); // 4000~5000 거리에서 베이스 텍스처와 섞임
     float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
 
     float4 cTextureColor = lerp(cDetailColor, cBaseTexColor, baseTexWeight);
-
-     // 1. 그림자 계수 계산
-    float shadowFactor = 0.15; // 기본값은 그림자 없음
+    
+    float shadowFactor = 0.15; 
     if (gIsDaytime) 
     {
         shadowFactor = CalcShadowFactor(input.ShadowPosH);
