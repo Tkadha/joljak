@@ -82,7 +82,7 @@ ID3D12RootSignature* CShadowShader::CreateRootSignature(ID3D12Device* pd3dDevice
     // Shadow 셰이더는 카메라 정보(b0)와 월드 행렬 정보(b2)만 필요합니다.
     CD3DX12_ROOT_PARAMETER pd3dRootParameters[2];
     pd3dRootParameters[0].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_VERTEX); // b0: Camera
-    pd3dRootParameters[1].InitAsConstants(41, 2, 0, D3D12_SHADER_VISIBILITY_VERTEX);    // b2: GameObject 
+    pd3dRootParameters[1].InitAsConstants(16, 2, 0, D3D12_SHADER_VISIBILITY_VERTEX);    // b2: GameObject 
 
     CD3DX12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc;
     d3dRootSignatureDesc.Init(_countof(pd3dRootParameters), pd3dRootParameters, 0, NULL, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);

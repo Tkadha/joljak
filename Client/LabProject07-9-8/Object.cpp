@@ -806,13 +806,52 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	cbGameObjectInfo gameObjectInfo;
-	XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+    CScene* pScene = m_pGameFramework->GetScene();
+    ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
+    if (!pScene || !pShaderManager) return;
 
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo, 0);
+    // 렌더링할 재질과 메시가 있는지 먼저 확인합니다.
+    CMaterial* pPrimaryMaterial = GetMaterial(0);
 
-	if (m_pMesh)
+	std::string shaderType;
+	if(pPrimaryMaterial && pPrimaryMaterial->m_pShader)
+		shaderType = pPrimaryMaterial->m_pShader->GetShaderType();
+
+    if (m_pMesh)
 	{
+
+		if (shaderType == "Skinned")
+		{
+			CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Skinned_Shadow");
+			pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
+			pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
+
+			cbGameObjectInfo gameObjectInfo;
+			XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+			pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo, 0);
+
+			CSkinnedMesh* pSkinnedMesh = dynamic_cast<CSkinnedMesh*>(m_pMesh);
+			if (pSkinnedMesh) {
+				pd3dCommandList->SetGraphicsRootConstantBufferView(5, pSkinnedMesh->m_pd3dcbBindPoseBoneOffsets->GetGPUVirtualAddress());
+				CAnimationController* pController = m_pSkinnedAnimationController ? m_pSkinnedAnimationController : m_pSharedAnimController;
+				if (pController && pController->m_ppd3dcbSkinningBoneTransforms[0]) {
+					pd3dCommandList->SetGraphicsRootConstantBufferView(6, pController->m_ppd3dcbSkinningBoneTransforms[0]->GetGPUVirtualAddress());
+				}
+			}
+		}
+		else 
+		{
+			CShader* pShadowShader = pShaderManager->GetShader("Shadow");
+			pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
+			pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
+
+			XMFLOAT4X4 gmtxGameObject;
+			XMStoreFloat4x4(&gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+			pd3dCommandList->SetGraphicsRoot32BitConstants(1, 16, &gmtxGameObject, 0);
+		}
+
+
+
 		if (m_pMesh->m_nSubMeshes > 0)
 		{
 			for (int i = 0; i < m_pMesh->m_nSubMeshes; i++)
@@ -824,10 +863,11 @@ void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 		{
 			m_pMesh->Render(pd3dCommandList, 0);
 		}
+
 	}
 
-	if (m_pSibling) m_pSibling->RenderShadow(pd3dCommandList);
-	if (m_pChild) m_pChild->RenderShadow(pd3dCommandList);
+    if (m_pSibling) m_pSibling->RenderShadow(pd3dCommandList);
+    if (m_pChild) m_pChild->RenderShadow(pd3dCommandList);
 }
 
 
@@ -1609,8 +1649,8 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
 			 }
 		 }
 	 }
-	//if (pSource->m_pstrFrameName)
-	//	 strcpy_s(this->m_pstrFrameName, 64, pSource->m_pstrFrameName);
+	/* if (pSource->m_pstrFrameName)
+		 strcpy_s(this->m_pstrFrameName, 64, pSource->m_pstrFrameName);*/
 	 this->m_objectType = pSource->m_objectType;
 	 this->m_pGameFramework = pSource->m_pGameFramework;
 	 this->m_localOBB = pSource->m_localOBB; 
@@ -1761,21 +1801,29 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 void CHeightMapTerrain::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// 월드 행렬을 단위 행렬로 만듭니다.
+	CScene* pScene = m_pGameFramework->GetScene();
+	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
+	if (!pScene || !pShaderManager || !m_pMesh) return;
+
+	CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Shadow");
+	pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
+	pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
+
 	XMMATRIX mtxIdentity = XMMatrixIdentity();
+	XMFLOAT4X4 gmtxGameObject;
+	XMStoreFloat4x4(&gmtxGameObject, XMMatrixTranspose(mtxIdentity));
+	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 16, &gmtxGameObject, 0);
 
-	cbGameObjectInfo gameObjectInfo;
-	XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(mtxIdentity));
-
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo.gmtxGameObject, 0); // 월드 행렬만 전달
-
-	// 메시 전체를 그립니다.
-	if (m_pMesh && m_nMaterials > 0)
+	if (m_pMesh->m_nSubMeshes > 0)
 	{
-		for (int i = 0; i < m_nMaterials; i++)
+		for (int i = 0; i < m_pMesh->m_nSubMeshes; i++)
 		{
 			m_pMesh->Render(pd3dCommandList, i);
 		}
+	}
+	else
+	{
+		m_pMesh->Render(pd3dCommandList, 0);
 	}
 }
 

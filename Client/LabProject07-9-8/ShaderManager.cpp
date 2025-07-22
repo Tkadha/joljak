@@ -4,11 +4,12 @@
 #include "StandardShader.h"
 #include "TerrainShader.h"
 #include "SkyboxShader.h"
-#include "SkinnedShader.h"
+//#include "SkinnedShader.h"
 #include "OBBShader.h"
 #include "ShadowShader.h"
 #include "DebugShader.h"
-#include "WavesShader.h"       
+#include "WavesShader.h" 
+#include "SkinnedShadowShader.h"
 
 // --- 생성자, 소멸자, 정리 함수 ---
 ShaderManager::ShaderManager(ID3D12Device* pd3dDevice) : m_pd3dDevice(pd3dDevice)
@@ -37,8 +38,8 @@ void ShaderManager::CreateRootSignatures()
     m_mapRootSignatures["OBB"] = COBBShader::CreateRootSignature(m_pd3dDevice);
     m_mapRootSignatures["Shadow"] = CShadowShader::CreateRootSignature(m_pd3dDevice);
     m_mapRootSignatures["Debug"] = CDebugShader::CreateRootSignature(m_pd3dDevice);
-    // Waves는 Standard와 동일한 파라미터
     m_mapRootSignatures["Waves"] = CStandardShader::CreateRootSignature(m_pd3dDevice);
+    m_mapRootSignatures["Skinned_Shadow"] = CSkinnedAnimationStandardShader::CreateRootSignature(m_pd3dDevice);
 }
 
 void ShaderManager::CreateShaders()
@@ -51,6 +52,7 @@ void ShaderManager::CreateShaders()
     m_mapShaders["Shadow"] = std::make_unique<CShadowShader>();
     m_mapShaders["Debug"] = std::make_unique<CDebugShader>();
     m_mapShaders["Waves"] = std::make_unique<CWavesShader>();
+    m_mapShaders["Skinned_Shadow"] = std::make_unique<CSkinnedShadowShader>();
 }
 
 ID3D12RootSignature* ShaderManager::GetRootSignature(const std::string& name)

@@ -90,6 +90,9 @@
     <Filter Include="소스 파일\Shader\DebugShader">
       <UniqueIdentifier>{99db3735-a5c3-47db-8397-e14ba7e7fb84}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Shader\SkinnedShadowShader">
+      <UniqueIdentifier>{4be8ab15-1733-4b15-a029-0fe7ab4678a2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConstructionSystem.cpp" />
@@ -232,6 +235,9 @@
     </ClCompile>
     <ClCompile Include="DebugShader.cpp">
       <Filter>소스 파일\Shader\DebugShader</Filter>
+    </ClCompile>
+    <ClCompile Include="SkinnedShadowShader.cpp">
+      <Filter>소스 파일\Shader\SkinnedShadowShader</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -379,6 +385,9 @@
     </ClInclude>
     <ClInclude Include="DebugShader.h">
       <Filter>소스 파일\Shader\DebugShader</Filter>
+    </ClInclude>
+    <ClInclude Include="SkinnedShadowShader.h">
+      <Filter>소스 파일\Shader\SkinnedShadowShader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

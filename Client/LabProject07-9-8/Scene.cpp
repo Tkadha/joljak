@@ -1002,6 +1002,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 		// 기존 Render 함수를 호출하되, Shadow 셰이더는 재질/조명 정보를 무시할 것임
 		for (auto& obj : m_vGameObjects) {
+			if (obj) obj->Animate(m_fElapsedTime);
 			if (obj) obj->RenderShadow(pd3dCommandList);
 		}
 		for (auto& obj : m_lEnvironmentObjects) {
@@ -1065,7 +1066,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
 		for (auto& obj : m_vGameObjects) {
-			if (obj) obj->Animate(m_fElapsedTime);
+			//if (obj) obj->Animate(m_fElapsedTime);
 			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
 		}
 		for (auto& obj : m_lEnvironmentObjects) {
@@ -1158,20 +1159,22 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 
 
-	//// --- 그림자 맵 디버그 출력 ---
-	//CShader* pDebugShader = pShaderManager->GetShader("Debug");
-	//pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
-	//pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
+	{
+		// --- 그림자 맵 디버그 출력 ---
+		CShader* pDebugShader = pShaderManager->GetShader("Debug");
+		pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
+		pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
 
-	//// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
-	//pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
+		// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
+		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
 
-	//
-	//// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
-	//pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
-	//pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
-	//pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	//pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+
+		// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
+		pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
+		pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
+		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+	}
 }
 
 
@@ -1484,7 +1487,7 @@ void CScene::UpdateShadowTransform()
 void CScene::UpdateLights(float fTimeElapsed)
 {
 	// 1. 빛의 회전 각도를 업데이트합니다.
-	float rotationSpeed = 1.0f; // 속도를 약간 조절
+	float rotationSpeed = 0.01f; // 속도를 약간 조절
 	m_fLightRotationAngle += fTimeElapsed * rotationSpeed;
 	if (m_fLightRotationAngle > 360.0f) m_fLightRotationAngle -= 360.0f;
 
