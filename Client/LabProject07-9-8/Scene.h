@@ -115,11 +115,12 @@ public:
 	float								m_fElapsedTime = 0.0f;
 
 	std::mutex							m_Mutex; // 멀티스레드 안전성을 위한 뮤텍스
-	std::list<CGameObject*>				m_vGameObjects{};
+	vector<CGameObject*>				m_vGameObjects{};
+	vector<CGameObject*> m_vConstructionObjects{};
 	std::list<CGameObject*> 			m_listGameObjects;
 	std::list<CGameObject*>				m_lEnvironmentObjects;
 	std::unordered_map<std::string, CGameObject*> m_mapBuildPrefabs;
-	CGameObject* m_pPreviewPine = nullptr;
+	
 
 	// 파도 오브젝트
 	CWavesObject* m_pWavesObject = nullptr;
