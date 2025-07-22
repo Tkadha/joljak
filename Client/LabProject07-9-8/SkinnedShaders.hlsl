@@ -92,6 +92,31 @@ VS_STANDARD_OUTPUT VSSkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
     return output;
 }
 
+struct VS_SHADOW_OUTPUT
+{
+    float4 PosH : SV_POSITION;
+};
+
+VS_SHADOW_OUTPUT VSSkinnedAnimationShadow(VS_SKINNED_STANDARD_INPUT input)
+{
+    VS_SHADOW_OUTPUT output = (VS_SHADOW_OUTPUT) 0;
+    
+    matrix skinTransform = (matrix) 0.0f;
+    for (int i = 0; i < MAX_VERTEX_INFLUENCES; ++i)
+    {
+        matrix boneMatrix = mul(gpmtxBoneOffsets[input.indices[i]], gpmtxBoneTransforms[input.indices[i]]);
+        skinTransform += input.weights[i] * boneMatrix;
+    }
+    
+    float4 skinnedPosW = mul(float4(input.position, 1.0f), skinTransform);
+   
+    float4x4 gLightViewProj = mul(gmtxView, gmtxProjection);
+    
+    output.PosH = mul(skinnedPosW, gLightViewProj);
+
+    return output;
+}
+
 // --- Pixel Shader ---
 // Standard 셰이더의 PSStandard 함수를 사용한다고 가정 (별도 정의 없음)
 // 만약 스키닝 전용 PS가 필요하다면 여기에 정의

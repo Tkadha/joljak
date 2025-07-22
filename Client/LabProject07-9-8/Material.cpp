@@ -110,9 +110,9 @@ void CMaterial::LoadTextureFromFile(
     }
     pstrTextureName[nStrLength] = '\0'; // Null 辆窜 贸府
 
-    OutputDebugStringA("CMaterial::LoadTextureFromFile - Read FileName (char*): ");
-    OutputDebugStringA(pstrTextureName);
-    OutputDebugStringA("\n");
+    //OutputDebugStringA("CMaterial::LoadTextureFromFile - Read FileName (char*): ");
+    //OutputDebugStringA(pstrTextureName);
+    //OutputDebugStringA("\n");
 
 
     // 3. "null" 咆胶贸 贸府
@@ -158,7 +158,6 @@ void CMaterial::LoadTextureFromFile(
     {
         pTexture = pResourceManager->GetTexture(pwstrTextureName, pd3dCommandList);
         if (pTexture) {
-            OutputDebugStringW(L"    Loaded via ResourceManager.\n");
         }
         else {
             OutputDebugStringW(L"    !!!!!!!! FAILED to load via ResourceManager !!!!!!!!\n");
@@ -199,7 +198,7 @@ void CMaterial::LoadTextureFromFile(
         // SRV 积己
         if (pShaderResource) {
             pd3dDevice->CreateShaderResourceView(pShaderResource, &srvDesc, cpuHandle);
-            OutputDebugStringW(L"    SRV Created in CMaterial.\n");
+            //OutputDebugStringW(L"    SRV Created in CMaterial.\n");
         }
 
     }

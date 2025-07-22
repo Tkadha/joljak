@@ -57,19 +57,19 @@ D3D12_SHADER_BYTECODE CShader::CompileShaderFromFile(WCHAR* pszFileName, LPCSTR 
 	// --- 중요: HRESULT 확인 및 오류 메시지 출력 ---
 	if (FAILED(hResult))
 	{
-		//OutputDebugStringA("Shader Compile Failed: ");
-		//OutputDebugStringW(pszFileName); // 파일 이름
-		//OutputDebugStringA(" Entry: ");
-		//OutputDebugStringA(pszShaderName); // 진입점 이름
-		//OutputDebugStringA(" Profile: ");
-		//OutputDebugStringA(pszShaderProfile); // 프로파일 이름
-		//OutputDebugStringA("\n");
+		OutputDebugStringA("Shader Compile Failed: ");
+		OutputDebugStringW(pszFileName); // 파일 이름
+		OutputDebugStringA(" Entry: ");
+		OutputDebugStringA(pszShaderName); // 진입점 이름
+		OutputDebugStringA(" Profile: ");
+		OutputDebugStringA(pszShaderProfile); // 프로파일 이름
+		OutputDebugStringA("\n");
 
 		if (pd3dErrorBlob)
 		{
-			//OutputDebugStringA("Compile Error:\n");
+			OutputDebugStringA("Compile Error:\n");
 			// 오류 메시지를 디버그 출력 창에 표시
-			//OutputDebugStringA((char*)pd3dErrorBlob->GetBufferPointer());
+			OutputDebugStringA((char*)pd3dErrorBlob->GetBufferPointer());
 			pd3dErrorBlob->Release(); // 오류 블롭 해제
 		}
 		else
