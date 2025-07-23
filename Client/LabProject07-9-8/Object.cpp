@@ -1700,7 +1700,7 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	
 	std::shared_ptr<CTexture> pTerrainBaseTexture = pResourceManager->GetTexture(L"Terrain/DemoTerrain3.dds", pd3dCommandList);
 
-	std::shared_ptr<CTexture> pTerrainSplatMapTexture = pResourceManager->GetTexture(L"Terrain/Test.dds", pd3dCommandList);
+	std::shared_ptr<CTexture> pTerrainSplatMapTexture = pResourceManager->GetTexture(L"Terrain/Test2.dds", pd3dCommandList);
 
 
 	// 풀 디테일 텍스쳐
