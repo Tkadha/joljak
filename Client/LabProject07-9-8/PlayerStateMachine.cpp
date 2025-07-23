@@ -522,8 +522,9 @@ public:
 
     void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
         m_bAttackFinished = false;
-        m_nAnimTrack = BlendConfig::PRIMARY_TRACK; // 즉시 전환 시 주 트랙 사용
-        player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); // 공격 중 이동 정지
+        m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
+        player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); 
+        PlayWavSound(_T("Sound/axe.wav"));
     }
 
     PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
@@ -555,8 +556,9 @@ public:
 
     void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
         m_bAttackFinished = false;
-        m_nAnimTrack = BlendConfig::PRIMARY_TRACK; // 즉시 전환 시 주 트랙 사용
-        player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); // 공격 중 이동 정지
+        m_nAnimTrack = BlendConfig::PRIMARY_TRACK; 
+        player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); 
+        PlayWavSound(_T("Sound/pickaxe.wav"));
     }
 
     PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
