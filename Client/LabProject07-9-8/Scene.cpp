@@ -488,13 +488,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		if (pWolfModel) delete pWolfModel;
 	}*/
 
-	const int rockShardPoolSize = 20;
-	for (int i = 0; i < rockShardPoolSize; ++i)
-	{
-		auto* shard = new CRockShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		m_vRockShards.push_back(shard);
-		m_vGameObjects.emplace_back(shard);
-	}
+	
 
 	//int materialIndexToChange = 0;
 	//UINT albedoTextureSlot = 0;
@@ -718,10 +712,7 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 	if (m_pWavesObject) m_pWavesObject->Animate(fTimeElapsed);
 
-	for (auto& shard : m_vRockShards)
-	{
-		shard->Update(fTimeElapsed);
-	}
+	
 }
 
 

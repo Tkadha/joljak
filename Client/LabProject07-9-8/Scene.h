@@ -115,7 +115,7 @@ public:
 
 	std::mutex							m_Mutex; // 멀티스레드 안전성을 위한 뮤텍스
 	vector<CGameObject*>				m_vGameObjects{};
-	vector<CGameObject*> m_vConstructionObjects{};
+	vector<CGameObject*>                m_vConstructionObjects{};
 	std::list<CGameObject*> 			m_listGameObjects;
 	std::unordered_map<std::string, CGameObject*> m_mapBuildPrefabs;
 	
@@ -168,8 +168,7 @@ public:
 
 	vector<CGameObject*> m_listBranchObjects; // 생성된 나뭇가지 저장 리스트
 	vector<CGameObject*> m_listRockObjects; // 생성된 나뭇가지 저장 리스트
-	std::vector<CRockShardEffect*> m_vRockShards; //돌파편
-
+	
 	void SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 	void SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 	//void SpawnRockShardEffect(const XMFLOAT3& origin);

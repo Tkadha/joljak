@@ -594,20 +594,17 @@ public:
 
 
 
-class CRockShardEffect : public CGameObject
+class CAttackEffectObject : public CGameObject
 {
 public:
-	CRockShardEffect(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework);
+	CAttackEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework);
+	virtual ~CAttackEffectObject() {}
 
-	void Activate(const XMFLOAT3& position, const XMFLOAT3& velocity);
-	void Update(float deltaTime);
-	bool IsActive() const { return m_bActive; }
+	void Activate(const XMFLOAT3& position, float lifeTime = 0.5f);
+	virtual void Animate(float fTimeElapsed) override;
 
-	CRockShardEffect(CGameFramework* pGameFramework);
-	virtual CGameObject* Clone();
 private:
-	bool m_bActive = false;
+	bool  m_bIsActive = false;
+	float m_fLifeTime = 0.5f;
 	float m_fElapsedTime = 0.0f;
-	float m_fLifeTime = 2.0f;
-	XMFLOAT3 m_vVelocity = { 0, 0, 0 };
 };

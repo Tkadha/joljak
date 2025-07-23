@@ -2380,86 +2380,7 @@ void CGameObject::SetColor(const XMFLOAT4& color)
 
 
 
-CRockShardEffect::CRockShardEffect(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework)
-	: CGameObject(1, framework)
-{
-	m_pGameFramework = framework;
 
-	FILE* pInFile = nullptr;
-	::fopen_s(&pInFile, "Model/Branch_A.bin", "rb");
-	if (!pInFile) {
-		return;
-	}
-	::rewind(pInFile);
-
-	CGameObject* rockObj = CGameObject::LoadFrameHierarchyFromFile(
-		device, cmdList, NULL, pInFile, NULL, framework);
-
-	if (pInFile) fclose(pInFile);
-
-	if (rockObj && rockObj->m_pMesh)
-	{
-		SetMesh(rockObj->m_pMesh); // 파편 메시에 복사
-	}
-
-	m_ppMaterials = new CMaterial * [1];
-	m_ppMaterials[0] = new CMaterial(0, framework);
-	m_nMaterials = 1;
-
-	isRender = true;
-}
-
-void CRockShardEffect::Activate(const XMFLOAT3& position, const XMFLOAT3& velocity)
-{
-
-	char buf[256];
-	sprintf_s(buf, "✅ Activate called! pos=(%.2f, %.2f, %.2f), vel=(%.2f, %.2f, %.2f)\n",
-		position.x, position.y, position.z,
-		velocity.x, velocity.y, velocity.z);
-	OutputDebugStringA(buf);
-
-
-	SetPosition(position);
-	SetScale(1.0f, 1.0f, 1.0f);
-	m_vVelocity = velocity;
-	m_fElapsedTime = 0.0f;
-	isRender = true;
-	m_bActive = true;
-}
-
-void CRockShardEffect::Update(float deltaTime)
-{
-	if (!m_bActive) {
-		//OutputDebugStringA("❌ Update skipped (not active)\n");
-		return;
-	}
-
-	//char buf[128];
-	//sprintf_s(buf, "🌀 Update: elapsed=%.2f / %.2f\n", m_fElapsedTime, m_fLifeTime);
-	//OutputDebugStringA(buf);
-
-	char buf[128];
-	sprintf_s(buf, "🧭 deltaTime = %.4f\n", deltaTime);
-	OutputDebugStringA(buf);
-	m_fElapsedTime += deltaTime;
-	/*
-	if (m_fElapsedTime > m_fLifeTime)
-	{
-		isRender = false;
-		m_bActive = false;
-		return;
-	}
-	
-	*/
-	m_vVelocity.y -= 9.8f * deltaTime;
-
-	XMFLOAT3 pos = GetPosition();
-	pos.x += m_vVelocity.x * deltaTime;
-	pos.y += m_vVelocity.y * deltaTime;
-	pos.z += m_vVelocity.z * deltaTime;
-	SetPosition(pos);
-
-}
 
 
 
@@ -2572,20 +2493,6 @@ CGameObject* CStaticObject::Clone()
 }
 
 
-CRockShardEffect::CRockShardEffect(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
-{
-}
-
-CGameObject* CRockShardEffect::Clone()
-{
-	CRockShardEffect* pNewInstance = new CRockShardEffect(m_pGameFramework);
-	pNewInstance->CopyDataFrom(this);
-	return pNewInstance;
-}
-
-
-
-
 
 CMonsterObject::CMonsterObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
@@ -2596,4 +2503,45 @@ CGameObject* CMonsterObject::Clone()
 	CMonsterObject* pNewInstance = new CMonsterObject(m_pGameFramework);
 	pNewInstance->CopyDataFrom(this);
 	return pNewInstance;
+}
+
+CAttackEffectObject::CAttackEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework) : CGameObject(1, framework)
+{
+	// 이펙트로 사용할 모델을 로드합니다. (예: 간단한 구체 또는 칼날 이펙트 모델)
+   // 여기서는 임시로 'Branch_A.bin'을 사용하지만, 나중에 전용 모델로 교체하세요.
+	CLoadedModelInfo* pEffectModel = CGameObject::LoadGeometryAndAnimationFromFile(device, cmdList, "Model/Branch_A.bin", framework);
+	if (pEffectModel && pEffectModel->m_pModelRootObject) {
+		if (pEffectModel->m_pModelRootObject->m_pMesh)
+			SetMesh(pEffectModel->m_pModelRootObject->m_pMesh);
+		if (pEffectModel->m_pModelRootObject->m_nMaterials > 0 && pEffectModel->m_pModelRootObject->m_ppMaterials[0])
+			SetMaterial(0, pEffectModel->m_pModelRootObject->m_ppMaterials[0]);
+		delete pEffectModel;
+	}
+
+	// 처음에는 보이지 않도록 설정
+	isRender = false;
+}
+void CAttackEffectObject::Activate(const XMFLOAT3& position, float lifeTime)
+{
+	SetPosition(position);
+	SetScale(10.0f, 10.0f, 10.0f); // 이펙트 크기 설정
+
+	m_fLifeTime = lifeTime;
+	m_fElapsedTime = 0.0f;
+	m_bIsActive = true;
+	isRender = true; // 화면에 보이도록 설정
+}
+
+void CAttackEffectObject::Animate(float fTimeElapsed)
+{
+	if (!m_bIsActive) return;
+
+	m_fElapsedTime += fTimeElapsed;
+	if (m_fElapsedTime > m_fLifeTime)
+	{
+		m_bIsActive = false;
+		isRender = false; 
+	}
+	
+	CGameObject::Animate(fTimeElapsed);
 }
