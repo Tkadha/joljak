@@ -13,6 +13,13 @@
 #define WalkSpeed 50
 #define RunSpeed 80
 
+void PlayWavSound(const _TCHAR* soundPath)
+{
+    PlaySound(soundPath, NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
+}
+
+
+
 class IdleState : public IPlayerState {
 public:
     PlayerStateID GetID() const override { return PlayerStateID::Idle; }
@@ -464,6 +471,7 @@ public:
 class AttackMeleeState : public IPlayerState {
 private:
     bool m_bAttackFinished = false;
+    bool m_bSound = true;
     int m_nAnimTrack = BlendConfig::PRIMARY_TRACK; // 공격 애니메이션을 재생할 트랙
 
 public:
@@ -473,6 +481,7 @@ public:
         m_bAttackFinished = false;
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f });
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
+        PlayWavSound(_T("Sound/sword.wav"));
     }
 
     PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
@@ -482,6 +491,10 @@ public:
         if (!m_bAttackFinished && currentPosition >= animLength * 0.66f) {
             CGameObject* hitObject = player->FindObjectHitByAttack();
             CollisionUpdate(player, hitObject);
+            if(m_bSound){
+                //PlayWavSound(_T("Sound/sword.wav"));
+                m_bSound = false;
+            }
         }
 
         if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) { 
