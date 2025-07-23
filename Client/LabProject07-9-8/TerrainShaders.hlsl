@@ -12,11 +12,12 @@ cbuffer cbGameObjectInfo : register(b2) // 지형의 월드 변환 등에 사용
 };
 
 // --- 텍스처 ---
-Texture2D gtxtTerrainBaseTexture : register(t1); // 지형 기본 텍스처
-Texture2D gtxtTerrainGrassTexture : register(t2); // DetailTexture -> GrassTexture
-Texture2D gtxtTerrainDirtTexture : register(t3); // 새로 추가
-Texture2D gtxtTerrainRockTexture : register(t4); // 새로 추가
-Texture2D gShadowMap : register(t5);    // 그림자
+Texture2D gtxtTerrainBaseTexture    : register(t1); // 지형 기본 텍스처
+Texture2D gtxtTerrainSplatMap       : register(t2);
+Texture2D gtxtTerrainGrassTexture   : register(t3);   // R
+Texture2D gtxtTerrainDirtTexture    : register(t4);    // G
+Texture2D gtxtTerrainRockTexture    : register(t5);    // B
+Texture2D gShadowMap                : register(t6);    // 그림자
 
 // --- VS 입출력 구조체 ---
 struct VS_TERRAIN_INPUT
@@ -112,22 +113,23 @@ float CalcShadowFactor(float4 shadowPosH)
 // --- Pixel Shader ---
 float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
 {     
-    float2 tiled_uv = input.uv1 * 1.0f; // 텍스처를 100번 반복하여 샘플링
-    float4 cGrassColor = gtxtTerrainGrassTexture.Sample(gssWrap, tiled_uv);
+    float4 splatWeights = gtxtTerrainSplatMap.Sample(gssWrap, input.uv0);
+
+    // 2. 각 디테일 텍스처를 타일링된 UV 좌표(uv1)로 샘플링합니다.
+    float2 tiled_uv = input.uv1 * 1.0f;
     float4 cDirtColor = gtxtTerrainDirtTexture.Sample(gssWrap, tiled_uv);
+    float4 cGrassColor = gtxtTerrainGrassTexture.Sample(gssWrap, tiled_uv);
     float4 cRockColor = gtxtTerrainRockTexture.Sample(gssWrap, tiled_uv);
 
-    // 지형의 높이(Y)를 기준
-    float height = input.positionW.y;
+    // 3. 스플랫 맵의 RGBA 채널 값을 가중치로 사용하여 디테일 텍스처들을 혼합합니다.
+    float4 cDetailColor = splatWeights.r * cDirtColor;
+    cDetailColor += splatWeights.g * cGrassColor;
+    cDetailColor += splatWeights.b * cRockColor;
     
-    // 낮은 지역(풀) -> 중간 지역(흙)
-    float dirtWeight = saturate((height - 2200.0f) / 100.0f); // 2200~2300 
-    
-    // 중간 지역(흙) -> 높은 지역(돌)
-    float rockWeight = saturate((height - 2300.0f) / 150.0f); // 2300~2450 
-    
-    float4 cDetailColor = lerp(cGrassColor, cDirtColor, dirtWeight);
-    cDetailColor = lerp(cDetailColor, cRockColor, rockWeight);
+    // 4. (선택) 남은 가중치를 계산하여 기본 텍스처를 섞어줄 수 있습니다.
+    // 이렇게 하면 R,G,B가 모두 0인 검은색 영역에 기본 텍스처가 나타납니다.
+    float baseWeight = 1.0f - saturate(splatWeights.r + splatWeights.g + splatWeights.b);
+    cDetailColor += baseWeight * cGrassColor; // 예시로 풀을 기본 텍스처로 사용
     
     // 멀리 있는 지형은 저해상도 베이스 텍스처와 섞기
     float distanceToEye = distance(input.positionW, gvCameraPosition.xyz);
