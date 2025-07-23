@@ -351,6 +351,13 @@ void PlayerClient::Update_test(float deltaTime)
                 break;
             }
         }
+        for (auto& c_obj : GameObject::ConstructObjects) {
+            if (testOBBX.Intersects(c_obj->world_obb))
+            {
+                moving_pos.x = m_Position.x;
+                break;
+            }
+        }
     }
 
     // Z축 이동 시도
@@ -385,6 +392,13 @@ void PlayerClient::Update_test(float deltaTime)
             if (GameObject::gameObjects[o_obj->u_id]->_hp <= 0) continue;
             if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
             if (testOBBZ.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
+            {
+                moving_pos.z = m_Position.z;
+                break;
+            }
+        }
+        for (auto& c_obj : GameObject::ConstructObjects) {
+            if (testOBBZ.Intersects(c_obj->world_obb))
             {
                 moving_pos.z = m_Position.z;
                 break;
@@ -612,5 +626,26 @@ void PlayerClient::SendAnimationPacket(shared_ptr<GameObject> obj)
     s_packet.type = static_cast<char>(E_PACKET::E_O_CHANGEANIMATION);
     s_packet.oid = obj->GetID();
     s_packet.a_type = obj->GetAnimationType();
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
+void PlayerClient::SendStructPacket(shared_ptr<GameObject> obj)
+{
+    STRUCT_OBJ_PACKET s_packet;
+    s_packet.size = sizeof(STRUCT_OBJ_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_STRUCT_OBJ);
+    s_packet.o_type = obj->GetType();
+    s_packet.position.x = obj->GetPosition().x;
+    s_packet.position.y = obj->GetPosition().y;
+    s_packet.position.z = obj->GetPosition().z;
+    s_packet.right.x = obj->GetNonNormalizeRight().x;
+    s_packet.right.y = obj->GetNonNormalizeRight().y;
+    s_packet.right.z = obj->GetNonNormalizeRight().z;
+    s_packet.up.x = obj->GetNonNormalizeUp().x;
+    s_packet.up.y = obj->GetNonNormalizeUp().y;
+    s_packet.up.z = obj->GetNonNormalizeUp().z;
+    s_packet.look.x = obj->GetNonNormalizeLook().x;
+    s_packet.look.y = obj->GetNonNormalizeLook().y;
+    s_packet.look.z = obj->GetNonNormalizeLook().z;
     tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 }

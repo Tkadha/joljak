@@ -25,6 +25,7 @@ enum class E_PACKET
 	E_P_SETHP = 17,
 	E_P_CHANGE_STAT = 18,
 
+	E_STRUCT_OBJ = 19, // 구조물 객체 추가
 
 	E_DB_REGISTER = 100,
 	E_DB_LOGIN = 101,
@@ -48,7 +49,8 @@ enum class OBJECT_TYPE
 	OB_SNAIL = 12,
 	OB_SPIDER = 13,
 	OB_RAPTOR = 14,
-	OB_GOLEM = 15
+	OB_GOLEM = 15,
+	ST_WOODWALL = 16
 };
 
 enum class ANIMATION_TYPE
@@ -62,6 +64,7 @@ enum class ANIMATION_TYPE
 	HIT,
 	SPECIAL_ATTACK,
 };
+
 
 enum class E_STAT
 {
@@ -330,7 +333,23 @@ public:
 };
 
 
-
+class STRUCT_OBJ_PACKET : public PACKET
+{
+public:
+	OBJECT_TYPE o_type;
+	FLOAT3 Center{};
+	FLOAT3 Extents{};
+	FLOAT4 Orientation{};
+	FLOAT3 right{};
+	FLOAT3 up{};
+	FLOAT3 look{};
+	FLOAT3 position{};
+	STRUCT_OBJ_PACKET() {
+		o_type = OBJECT_TYPE::OB_UNKNOWN;
+		size = sizeof(STRUCT_OBJ_PACKET);
+		type = static_cast<char>(E_PACKET::E_STRUCT_OBJ);
+	}
+};
 
 
 

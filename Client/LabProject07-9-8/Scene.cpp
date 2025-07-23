@@ -221,7 +221,21 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	float objectMinSize = 15, objectMaxSize = 20;
 	
 	
+	// 생성할 건축물 목록 (프리팹 이름과 동일해야 함)
+	std::vector<std::string> buildableItems = { "wood_wall" /*, "wood_floor", ... */ };
 
+	for (const auto& itemName : buildableItems) {
+		std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab(itemName);
+		if (prefab) {
+			CGameObject* previewObject = prefab->Clone();
+			previewObject->isRender = false; // 처음에는 보이지 않도록 설정
+			previewObject->SetPosition(5000.0f, 2600.0f, 5000.0f);
+			previewObject->SetScale(10.0f, 10.0f, 10.0f);
+			previewObject->m_id = -1;
+			m_mapBuildPrefabs[itemName] = previewObject; // 맵에 이름으로 저장
+			m_vGameObjects.emplace_back(previewObject);     // 씬의 메인 목록에도 추가
+		}
+	}
 
 	
 
@@ -232,49 +246,13 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 		else if (obj->m_objectType == GameObjectType::Pig) {
 			obj->SetOBB(1.0f, 0.8f, 1.0f, XMFLOAT3(0.0f, 1.0f, -1.0f));
 		}
+		else if (obj->m_id = -1) {
+			obj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
+		}
 		else {
 			obj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
 		}
-
-		if (obj->m_pSkinnedAnimationController) obj->PropagateAnimController(obj->m_pSkinnedAnimationController);
-
-		switch (obj->m_objectType)
-		{
-		case GameObjectType::Wasp:
-		case GameObjectType::Snail:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[5].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[6].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		case GameObjectType::Snake:
-		case GameObjectType::Spider:
-		case GameObjectType::Bat:
-		case GameObjectType::Turtle:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		case GameObjectType::Wolf:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		case GameObjectType::Toad:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		case GameObjectType::Cow:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		case GameObjectType::Pig:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_localOBB.Center.y += 30.0f;
-			break;
-		default:
-			break;
-		}
-
+		
 		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	}
 	
@@ -859,7 +837,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		// 기존 Render 함수를 호출하되, Shadow 셰이더는 재질/조명 정보를 무시할 것임
 		for (auto& obj : m_vGameObjects) {
 			if (obj) obj->Animate(m_fElapsedTime);
-			if (obj) obj->RenderShadow(pd3dCommandList);
+			if (obj->isRender) obj->RenderShadow(pd3dCommandList);
 		}
 		for (auto& obj : m_lEnvironmentObjects) {
 			if (obj) obj->RenderShadow(pd3dCommandList);
@@ -1003,7 +981,10 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			}
 
 			
-
+			for (auto& constructionObj : m_vConstructionObjects) {
+				if (constructionObj->ShouldRenderOBB()) 
+					constructionObj->RenderOBB(pd3dCommandList, pCamera);
+			}
 
 
 			if (m_pPlayer && m_pPlayer->ShouldRenderOBB()) {

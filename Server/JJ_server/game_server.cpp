@@ -322,6 +322,31 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		client->Change_Stat(r_packet->stat, r_packet->value);
 	}
 	break;
+	case E_PACKET::E_STRUCT_OBJ:
+	{
+		STRUCT_OBJ_PACKET* r_packet = reinterpret_cast<STRUCT_OBJ_PACKET*>(packet);
+		std::shared_ptr<GameObject> obj = std::make_shared<GameObject>(false);
+		BoundingOrientedBox bb;
+		bb.Center = XMFLOAT3{ r_packet->Center.x, r_packet->Center.y, r_packet->Center.z };
+		bb.Extents = XMFLOAT3{ r_packet->Extents.x, r_packet->Extents.y, r_packet->Extents.z };
+		bb.Orientation = XMFLOAT4{ r_packet->Orientation.x, r_packet->Orientation.y, r_packet->Orientation.z, r_packet->Orientation.w };
+		obj->local_obb = bb;
+		obj->SetRight(XMFLOAT3{ r_packet->right.x, r_packet->right.y, r_packet->right.z });
+		obj->SetUp(XMFLOAT3{ r_packet->up.x, r_packet->up.y, r_packet->up.z });
+		obj->SetLook(XMFLOAT3{ r_packet->look.x, r_packet->look.y, r_packet->look.z });
+		obj->SetPosition(XMFLOAT3{ r_packet->position.x, r_packet->position.y, r_packet->position.z });
+		obj->SetType(r_packet->o_type);
+		GameObject::ConstructObjects.push_back(obj);
+		std::cout<< "Constructed object: " << "wood wall " << " at position: "
+			<< r_packet->position.x << ", " << r_packet->position.y << ", " << r_packet->position.z << std::endl;
+		// 다른 클라에게도 전송하기
+		for (auto& cl : PlayerClient::PlayerClients) {
+			if (cl.second->state != PC_INGAME) continue;
+			if (cl.second->m_id == client->m_id) continue;
+			cl.second->SendStructPacket(obj);
+		}
+	}
+	break;
 	default:
 		break;
 	}
@@ -589,7 +614,10 @@ int main(int argc, char* argv[])
 			}
 
 			for (auto& cl : PlayerClient::PlayerClients) {
-				if (cl.second->state != PC_INGAME) continue;
+				{
+					std::lock_guard<std::mutex> lock(cl.second->c_mu);
+					if (cl.second->state != PC_INGAME) continue;
+				}
 				if (cl.second) {
 					std::shared_ptr<PlayerClient> player = cl.second;
 					auto& beforepos = player->GetPosition();
@@ -764,7 +792,10 @@ void ProcessAccept()
 				if (GameObject::gameObjects[obj->u_id]->is_alive == false) continue;
 				if (GameObject::gameObjects[obj->u_id]->Gethp() <= 0) continue;
 				remoteClient->SendAddPacket(GameObject::gameObjects[obj->u_id]);
-			}				
+			}	
+			for (auto& obj : GameObject::ConstructObjects) {
+				remoteClient->SendStructPacket(obj);
+			}
 		}
 		auto p_obj = std::make_unique<tree_obj>(remoteClient->m_id, remoteClient->GetPosition());
 		Octree::PlayerOctree.insert(std::move(p_obj));

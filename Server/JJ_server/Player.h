@@ -150,5 +150,6 @@ public:
 	void SendRemovePacket(shared_ptr<GameObject>);
 	void SendMovePacket(shared_ptr<GameObject>);
 	void SendAnimationPacket(shared_ptr<GameObject>);
+	void SendStructPacket(shared_ptr<GameObject>);
 };
 

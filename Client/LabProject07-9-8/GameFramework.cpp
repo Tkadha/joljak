@@ -78,7 +78,7 @@ void CGameFramework::ProcessPacket(char* packet)
 			m_pScene->PlayerList[recv_p->uid]->ChangeAnimation(recv_p->inputData);
 		}
 	}
-		break;
+	break;
 	case E_PACKET::E_P_LOGIN:
 	{
 		LOGIN_PACKET* recv_p = reinterpret_cast<LOGIN_PACKET*>(packet);
@@ -155,7 +155,7 @@ void CGameFramework::ProcessPacket(char* packet)
 			m_pScene->m_vGameObjects.erase(it);
 		}
 	}
-		break;
+	break;
 	case E_PACKET::E_O_MOVE:
 	{
 		MOVE_PACKET* recv_p = reinterpret_cast<MOVE_PACKET*>(packet);
@@ -187,7 +187,6 @@ void CGameFramework::ProcessPacket(char* packet)
 			if (Found_obj->m_pSkinnedAnimationController) Found_obj->ChangeAnimation(recv_p->a_type);
 		}
 	}
-		break;
 	break;
 	case E_PACKET::E_O_SETHP: {
 		OBJ_HP_PACKET* recv_p = reinterpret_cast<OBJ_HP_PACKET*>(packet);
@@ -250,6 +249,18 @@ void CGameFramework::ProcessPacket(char* packet)
 		}
 	}
 	break;
+	case E_PACKET::E_STRUCT_OBJ: {
+		STRUCT_OBJ_PACKET* recv_p = reinterpret_cast<STRUCT_OBJ_PACKET*>(packet);
+		FLOAT3 right = recv_p->right;
+		FLOAT3 up = recv_p->up;
+		FLOAT3 look = recv_p->look;
+		FLOAT3 position = recv_p->position;
+		OBJECT_TYPE o_type = recv_p->o_type;
+		ANIMATION_TYPE a_type = ANIMATION_TYPE::UNKNOWN;
+		int id = -1;
+		m_logQueue.push(log_inout{ E_PACKET::E_STRUCT_OBJ,0,right,up,look,position,o_type,a_type,id });
+	}
+	 break;
 	default:
 		break;
 	}
@@ -1224,7 +1235,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
 
-			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->SetOBB(1.f, 1.f, 1.1f, XMFLOAT3{ 0.f, 1.f, -0.5f });
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
@@ -1791,6 +1802,24 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			if (pGolemModel) delete(pGolemModel);
 		}
 		break;
+		case OBJECT_TYPE::ST_WOODWALL:
+		{
+			std::shared_ptr<CGameObject> prefab;
+			prefab = m_pResourceManager->GetPrefab("wood_wall");
+
+			CGameObject* gameObj = prefab->Clone();
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, -1.0f, 0.0f));
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+			m_pScene->m_vConstructionObjects.push_back(gameObj);
+		}
+		break;
 		default:
 			break;
 		}
@@ -2100,6 +2129,12 @@ void CGameFramework::FrameAdvance()
 				}
 			}
 				break;
+			case E_PACKET::E_STRUCT_OBJ:
+			{
+				std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+				AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id);
+			}
+			break;
 			default:
 				break;
 			}
@@ -2723,7 +2758,7 @@ void CGameFramework::FrameAdvance()
 
 				CGameObject* pInstalledObject = pObjectToClone->Clone();
 
-				pInstalledObject->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
+				pInstalledObject->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, -1.0f, 0.0f));
 				pInstalledObject->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 				pUploadCmdList->Close();
@@ -2744,9 +2779,41 @@ void CGameFramework::FrameAdvance()
 					pInstalledObject->isRender = true;
 					//m_pScene->m_vGameObjects.emplace_back(pInstalledObject);
 					m_pScene->m_vConstructionObjects.emplace_back(pInstalledObject);
+					{
+						auto& nwManager = NetworkManager::GetInstance();
+						STRUCT_OBJ_PACKET s_packet;
+						s_packet.type = static_cast<char>(E_PACKET::E_STRUCT_OBJ);
+						s_packet.size = sizeof(STRUCT_OBJ_PACKET);
+						s_packet.o_type = OBJECT_TYPE::ST_WOODWALL;
 
-					
-					
+						auto& obb = pInstalledObject->GetOBB();
+						s_packet.Center.x = obb.Center.x;
+						s_packet.Center.y = obb.Center.y;
+						s_packet.Center.z = obb.Center.z;
+						s_packet.Extents.x = obb.Extents.x;
+						s_packet.Extents.y = obb.Extents.y;
+						s_packet.Extents.z = obb.Extents.z;
+						s_packet.Orientation.x = obb.Orientation.x;
+						s_packet.Orientation.y = obb.Orientation.y;
+						s_packet.Orientation.z = obb.Orientation.z;
+						s_packet.Orientation.w = obb.Orientation.w;
+
+						auto& f4x4 = pInstalledObject->m_xmf4x4ToParent;
+						s_packet.right.x = f4x4._11;
+						s_packet.right.y = f4x4._12;
+						s_packet.right.z = f4x4._13;
+						s_packet.up.x = f4x4._21;
+						s_packet.up.y = f4x4._22;
+						s_packet.up.z = f4x4._23;
+						s_packet.look.x = f4x4._31;
+						s_packet.look.y = f4x4._32;
+						s_packet.look.z = f4x4._33;
+						s_packet.position.x = f4x4._41;
+						s_packet.position.y = f4x4._42;
+						s_packet.position.z = f4x4._43;
+
+						nwManager.PushSendQueue(s_packet, s_packet.size);
+					}
 				}
 			}
 		}

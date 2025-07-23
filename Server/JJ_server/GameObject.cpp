@@ -6,6 +6,7 @@
 #include "Octree.h"
 std::unordered_map<OBJECT_TYPE, std::shared_ptr<BoundingOrientedBox>> OBB_Manager::obb_list;
 std::vector<shared_ptr<GameObject>> GameObject::gameObjects;
+std::vector<shared_ptr<GameObject>> GameObject::ConstructObjects;
 
 
 GameObject::GameObject()
@@ -15,6 +16,15 @@ GameObject::GameObject()
 	xmf4x4 = Matrix4x4::Identity();
 	is_alive = true;
 	FSM_manager = std::make_shared<FSMManager<GameObject>>(this);
+}
+
+GameObject::GameObject(bool makefsm)
+{
+	animationType = ANIMATION_TYPE::UNKNOWN;
+	type = OBJECT_TYPE::OB_UNKNOWN;
+	xmf4x4 = Matrix4x4::Identity();
+	is_alive = true;
+	FSM_manager = nullptr;
 }
 
 GameObject::~GameObject()
