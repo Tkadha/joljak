@@ -143,7 +143,7 @@ public:
 	~CAnimationController();
 
 public:
-	float 							m_fTime = 0.0f;
+	//float 							m_fTime = 0.0f;
 
 	int 							m_nAnimationTracks = 0;
 	CAnimationTrack* m_pAnimationTracks = NULL;
@@ -192,4 +192,11 @@ public:
 
 	void UpdateBoneTransformCBVContents();
 	void UpdateBoneLocalTransformCBV();
+
+
+protected:
+	float m_fAnimationSpeed = 1.0f;
+
+public:
+	void SetAnimationSpeed(float fSpeed) { m_fAnimationSpeed = fSpeed; }
 };

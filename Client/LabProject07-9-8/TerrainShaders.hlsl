@@ -114,9 +114,23 @@ float CalcShadowFactor(float4 shadowPosH)
     return percentLit / 16.0f;
 }
 
-float GetNoise(float2 worldPosXZ, float2 offset)
+float N21(float2 p)
 {
-    return frac(sin(dot(worldPosXZ + offset, float2(12.9898, 78.233))) * 43758.5453);
+    return frac(sin(dot(p, float2(12.9898, 4.1414))) * 43758.5453);
+}
+
+float SimpleNoise(float2 p)
+{
+    float2 ip = floor(p); // 정수 (격자 칸 ID)
+    float2 fp = frac(p); // 소수 (격자 칸 내의 위치)
+    
+    float a = N21(ip);
+    float b = N21(ip + float2(1.0, 0.0));
+    float c = N21(ip + float2(0.0, 1.0));
+    float d = N21(ip + float2(1.0, 1.0));
+    
+    fp = fp * fp * (3.0 - 2.0 * fp);
+    return lerp(lerp(a, b, fp.x), lerp(c, d, fp.x), fp.y);
 }
 
 // --- Pixel Shader ---
@@ -125,27 +139,25 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     float4 splatWeights = gtxtTerrainSplatMap.Sample(gssWrap, input.uv0);
     
     // 월드 좌표를 기반으로 노이즈 값 계산
-    float noiseScale = 0.005f;
-    float2 noiseCoords = input.positionW.xz * noiseScale;
+    float noiseScale = 0.9f;
+    float blendNoise = SimpleNoise(input.positionW.xz * noiseScale);
 
-    // 서로 다른 오프셋으로 노이즈 값 계산
-    float dirtNoise = GetNoise(noiseCoords, float2(10.0, -5.0));
-    float grassNoise = GetNoise(noiseCoords, float2(-25.0, 15.0));
-    float rockNoise = GetNoise(noiseCoords, float2(5.0, 30.0));
-    
-    // 각 디테일 텍스처 샘플링
-    float2 tiled_uv = input.uv1 * 1.0f;
-    float4 cDirt1 = gtxtDirt01.Sample(gssWrap, tiled_uv);
-    float4 cDirt2 = gtxtDirt02.Sample(gssWrap, tiled_uv);
-    float4 cGrass1 = gtxtGrass01.Sample(gssWrap, tiled_uv);
-    float4 cGrass2 = gtxtGrass02.Sample(gssWrap, tiled_uv);
-    float4 cRock1 = gtxtRock01.Sample(gssWrap, tiled_uv);
-    float4 cRock2 = gtxtRock02.Sample(gssWrap, tiled_uv);
+    // ★★★ 2. 서로 다른 스케일과 오프셋으로 UV 좌표를 계산 ★★★
+    float2 tiled_uv1 = input.uv1 * 100.0f;
+    float2 tiled_uv2 = (input.uv1 * 57.0f) + 0.3f; // << 다른 스케일과 오프셋을 줍니다.
 
-    // 노이즈 값을 이용해 섞기
-    float4 cMixedDirt = lerp(cDirt1, cDirt2, dirtNoise);
-    float4 cMixedGrass = lerp(cGrass1, cGrass2, grassNoise);
-    float4 cMixedRock = lerp(cRock1, cRock2, rockNoise);
+    // 3. 서로 다른 UV로 각 디테일 텍스처를 샘플링합니다.
+    float4 cDirt1 = gtxtDirt01.Sample(gssWrap, tiled_uv1);
+    float4 cDirt2 = gtxtDirt02.Sample(gssWrap, tiled_uv2); // 다른 UV 사용
+    float4 cGrass1 = gtxtGrass01.Sample(gssWrap, tiled_uv1);
+    float4 cGrass2 = gtxtGrass02.Sample(gssWrap, tiled_uv2); // 다른 UV 사용
+    float4 cRock1 = gtxtRock01.Sample(gssWrap, tiled_uv1);
+    float4 cRock2 = gtxtRock02.Sample(gssWrap, tiled_uv2); // 다른 UV 사용
+
+    // ★★★ 4. 부드러운 노이즈 값을 이용해 섞습니다. ★★★
+    float4 cMixedDirt = lerp(cDirt1, cDirt2, blendNoise);
+    float4 cMixedGrass = lerp(cGrass1, cGrass2, blendNoise);
+    float4 cMixedRock = lerp(cRock1, cRock2, blendNoise);
     
     // 3. 스플랫 맵의 RGBA 채널 값을 가중치로 사용하여 디테일 텍스처들을 혼합합니다.
     float4 cDetailColor = splatWeights.r * cMixedDirt +
