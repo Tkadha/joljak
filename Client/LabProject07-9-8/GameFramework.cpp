@@ -261,6 +261,11 @@ void CGameFramework::ProcessPacket(char* packet)
 		m_logQueue.push(log_inout{ E_PACKET::E_STRUCT_OBJ,0,right,up,look,position,o_type,a_type,id });
 	}
 	 break;
+	case E_PACKET::E_SYNC_TIME:
+		{
+		TIME_SYNC_PACKET* recv_p = reinterpret_cast<TIME_SYNC_PACKET*>(packet);
+		m_pScene->m_fLightRotationAngle = recv_p->serverTime;
+	}
 	default:
 		break;
 	}

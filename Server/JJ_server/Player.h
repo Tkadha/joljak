@@ -151,5 +151,6 @@ public:
 	void SendMovePacket(shared_ptr<GameObject>);
 	void SendAnimationPacket(shared_ptr<GameObject>);
 	void SendStructPacket(shared_ptr<GameObject>);
+	void SendTimePacket(float);
 };
 

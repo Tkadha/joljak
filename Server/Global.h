@@ -25,7 +25,9 @@ enum class E_PACKET
 	E_P_SETHP = 17,
 	E_P_CHANGE_STAT = 18,
 
-	E_STRUCT_OBJ = 19, // 구조물 객체 추가
+	E_STRUCT_OBJ = 19, 
+
+	E_SYNC_TIME = 20, 
 
 	E_DB_REGISTER = 100,
 	E_DB_LOGIN = 101,
@@ -351,6 +353,16 @@ public:
 	}
 };
 
+class TIME_SYNC_PACKET : public PACKET
+{
+public:
+	float serverTime;
+	TIME_SYNC_PACKET() {
+		serverTime = 0.0f;
+		size = sizeof(TIME_SYNC_PACKET);
+		type = static_cast<char>(E_PACKET::E_SYNC_TIME); // 시간 동기화는 별도의 타입으로 정의할 수 있음
+	}
+};
 
 
 

@@ -160,8 +160,8 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	// 1. Waves 객체를 생성합니다.
 	m_pWavesObject = new CWavesObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 	// 물결이 보일 위치를 설정합니다. (맵의 중앙 근처, 수면 높이)
-	m_pWavesObject->SetPosition(5000.0f, 1000.0f, 5000.0f);
-	m_pWavesObject->SetScale(10.f, 1.f, 10.f);
+	m_pWavesObject->SetPosition(5000.0f, 1070.0f, 5000.0f);
+	m_pWavesObject->SetScale(15.f, 1.f, 15.f);
 	// 2. Waves를 위한 재질(Material)을 생성합니다.
 	CMaterial* pWavesMaterial = new CMaterial(1, m_pGameFramework);
 
@@ -914,7 +914,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		if (constructionObj && constructionObj->isRender) constructionObj->Render(pd3dCommandList, pCamera);
 	}
 
-	//if (m_pWavesObject) m_pWavesObject->Render(pd3dCommandList, pCamera);
+	if (m_pWavesObject) m_pWavesObject->Render(pd3dCommandList, pCamera);
 
 	for (auto branch : m_listBranchObjects) {
 		if (branch->isRender) {
@@ -1333,7 +1333,7 @@ void CScene::UpdateShadowTransform()
 void CScene::UpdateLights(float fTimeElapsed)
 {
 	// 1. 빛의 회전 각도를 업데이트합니다.
-	float rotationSpeed = 0.01f; // 속도를 약간 조절
+	float rotationSpeed = 0.5f; // 속도를 약간 조절
 	m_fLightRotationAngle += fTimeElapsed * rotationSpeed;
 	if (m_fLightRotationAngle > 360.0f) m_fLightRotationAngle -= 360.0f;
 

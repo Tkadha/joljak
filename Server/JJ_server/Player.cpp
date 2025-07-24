@@ -300,6 +300,7 @@ void PlayerClient::Update_test(float deltaTime)
     {
         deltaVel.x *= 1.5f;
         deltaVel.z *= 1.5f;
+
     }
     // 슬로우 효과 확인
     if (b_slow)
@@ -647,5 +648,14 @@ void PlayerClient::SendStructPacket(shared_ptr<GameObject> obj)
     s_packet.look.x = obj->GetNonNormalizeLook().x;
     s_packet.look.y = obj->GetNonNormalizeLook().y;
     s_packet.look.z = obj->GetNonNormalizeLook().z;
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
+void PlayerClient::SendTimePacket(float t)
+{
+    TIME_SYNC_PACKET s_packet;
+    s_packet.size = sizeof(TIME_SYNC_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_SYNC_TIME);
+    s_packet.serverTime = t;
     tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 }

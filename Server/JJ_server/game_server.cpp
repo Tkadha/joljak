@@ -48,6 +48,9 @@ Timer g_timer;
 
 std::atomic<bool> g_is_shutting_down{ false };
 
+static float time_accumulator = 0.0f;
+static int play_day = 0;
+
 BOOL WINAPI ConsoleHandler(DWORD dwCtrlType) {
 	if (dwCtrlType == CTRL_C_EVENT) {
 		std::cout << "\nINFO: Ctrl+C 신호 감지. 서버 종료 절차를 시작합니다..." << std::endl;
@@ -599,7 +602,16 @@ int main(int argc, char* argv[])
 		while (!g_is_shutting_down) {
 			g_timer.Tick(120.f);
 			float deltaTime = g_timer.GetTimeElapsed(); // Use Tick same deltaTime
-
+			float time_speed = 0.5f;
+			time_accumulator += deltaTime * time_speed;
+			if (time_accumulator > 360.0f) {
+				time_accumulator -= 360.0f;
+				play_day++;
+				for(auto& cl : PlayerClient::PlayerClients) {
+					if (cl.second->state != PC_INGAME) continue;
+					cl.second->SendTimePacket(time_accumulator);
+				}
+			}
 			for (auto& obj : GameObject::gameObjects) {
 				std::vector<tree_obj*> results;
 				tree_obj t_obj{ -1, obj->GetPosition() };
@@ -780,6 +792,9 @@ void ProcessAccept()
 				if (cl.second.get() == remoteClient.get()) continue; // 나 자신은 제외한다.
 				cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 			}
+
+			// 현재 서버 시간 동기화
+			remoteClient->SendTimePacket(time_accumulator);
 
 		}
 
