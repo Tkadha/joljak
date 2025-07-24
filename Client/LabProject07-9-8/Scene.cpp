@@ -177,7 +177,54 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	m_pWavesObject->SetMaterial(0, pWavesMaterial);
 
 
+	/////////////////////////////////////////이펙트 오브젝트
+	const int effectPoolSize = 20;
+	for (int i = 0; i < effectPoolSize; ++i)
+	{
 
+		auto* pEffect = new CAttackEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		pEffect->m_id = -1;
+
+		m_vAttackEffects.push_back(pEffect);
+
+
+		m_vGameObjects.push_back(pEffect);
+	}
+
+	CLoadedModelInfo* pWoodShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch_A.bin", m_pGameFramework);
+	CLoadedModelInfo* pRockShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/RockCluster_A_LOD0.bin", m_pGameFramework);
+
+	CMesh* pWoodMesh = pWoodShardModel->m_pModelRootObject->m_pMesh;
+	CMaterial* pWoodMaterial = pWoodShardModel->m_pModelRootObject->GetMaterial(0);
+	CMesh* pRockMesh = pRockShardModel->m_pModelRootObject->m_pMesh;
+	CMaterial* pRockMaterial = pRockShardModel->m_pModelRootObject->GetMaterial(0);
+
+	const int shardPoolSize = 50; // 풀 크기
+
+	// 2. 나무 파편 풀 생성
+	for (int i = 0; i < shardPoolSize; ++i) {
+		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pWoodMesh, pWoodMaterial);
+		pShard->SetScale(1.0f, 1.0f, 1.0f);
+		pShard->m_id = -1;
+		m_vWoodShards.push_back(pShard);
+		m_vGameObjects.push_back(pShard);
+	}
+
+	// 3. 돌 파편 풀 생성
+	for (int i = 0; i < shardPoolSize; ++i) {
+		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pRockMesh, pRockMaterial);
+
+		pShard->SetScale(0.2f, 0.2f, 0.2f);
+		pShard->m_id = -1;
+		m_vRockShards.push_back(pShard);
+		m_vGameObjects.push_back(pShard);
+	}
+
+	// 로드가 끝난 임시 모델 정보는 삭제
+	if (pWoodShardModel) delete pWoodShardModel;
+	if (pRockShardModel) delete pRockShardModel;
+
+	/////////////////////////////////////////
 
 
 	// 1. 그림자 맵 객체 생성
@@ -260,6 +307,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
+
 void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	
@@ -879,7 +927,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			std::lock_guard<std::mutex> lock(m_Mutex);
 
 			for (auto& obj : m_vGameObjects) {
-				if (obj) obj->Animate(m_fElapsedTime);
+				//if (obj) obj->Animate(m_fElapsedTime);
 				if (obj->isRender) obj->RenderShadow(pd3dCommandList);
 			}
 		}
@@ -945,7 +993,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
 		for (auto& obj : m_vGameObjects) {
-			//if (obj) obj->Animate(m_fElapsedTime);
+			if (obj) obj->Animate(m_fElapsedTime);
 			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
 		}
 		for (auto& obj : m_lEnvironmentObjects) {

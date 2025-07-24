@@ -732,7 +732,6 @@ void CGameObject::Animate(float fTimeElapsed)
 {
 	OnPrepareRender();
 
-	UpdateTransform(NULL);
 
 	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 
