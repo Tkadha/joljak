@@ -411,7 +411,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject *pRootGam
 //*
 void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGameObject)
 {
-	m_fTime += fTimeElapsed;
+	m_fTime += fTimeElapsed * m_fAnimationSpeed;
 	if (m_pAnimationTracks)
 	{
 		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++) 
