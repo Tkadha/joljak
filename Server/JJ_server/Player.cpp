@@ -13,6 +13,7 @@
 #define DIR_UP						0x10
 #define DIR_DOWN					0x20
 
+#define MIN_HEIGHT                  1055.f      
 unordered_map<PlayerClient*, shared_ptr<PlayerClient>> PlayerClient::PlayerClients;
 
 void PlayerClient::Move(ULONG dwDirection, float fDistance, bool bUpdateVelocity)
@@ -413,7 +414,7 @@ void PlayerClient::Update_test(float deltaTime)
     int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
     bool bReverseQuad = ((z % 2) != 0);
     FLOAT move_pos_y = Terrain::terrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
-    if (move_pos_y < 1.f) {
+    if (move_pos_y < MIN_HEIGHT) {
         moving_pos = m_Position;
     }
     else

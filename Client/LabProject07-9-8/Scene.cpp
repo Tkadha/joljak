@@ -10,6 +10,8 @@
 #include "AtkState.h"
 #include "WaveObject.h"
 
+#define MIN_HEIGHT                  1055.f      
+
 bool ChangeAlbedoTexture(
 	CGameObject* pParentGameObject,
 	int materialIndex,
@@ -835,9 +837,13 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 
 		// 기존 Render 함수를 호출하되, Shadow 셰이더는 재질/조명 정보를 무시할 것임
-		for (auto& obj : m_vGameObjects) {
-			if (obj) obj->Animate(m_fElapsedTime);
-			if (obj->isRender) obj->RenderShadow(pd3dCommandList);
+		{
+			std::lock_guard<std::mutex> lock(m_Mutex);
+
+			for (auto& obj : m_vGameObjects) {
+				if (obj) obj->Animate(m_fElapsedTime);
+				if (obj->isRender) obj->RenderShadow(pd3dCommandList);
+			}
 		}
 		for (auto& obj : m_lEnvironmentObjects) {
 			if (obj) obj->RenderShadow(pd3dCommandList);
@@ -1477,8 +1483,12 @@ void CScene::SpawnStaticObjects(const std::string& prefabName, int count, float 
 	for (int i = 0; i < count; ++i)
 	{
 		CGameObject* gameObj = prefab->Clone();
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		while (m_pTerrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
+			randompos = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		}
+
+		gameObj->SetPosition(randompos.first, m_pTerrain->GetHeight(randompos.first, randompos.second), randompos.second);
 
 		auto [w, h] = genRandom::generateRandomXZ(gen, scaleMin, scaleMax, scaleMin, scaleMax);
 		gameObj->SetScale(w, h, w);
