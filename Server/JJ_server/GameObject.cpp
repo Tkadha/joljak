@@ -46,7 +46,7 @@ void GameObject::MoveForward(float fDistance)
 	XMFLOAT3 test_move = GetPosition();
 	test_move.x = xmf3Position.x;
 	BoundingOrientedBox testOBBX;
-	XMMATRIX matX = XMMatrixTranslation(test_move.x, test_move.y, test_move.z);
+	XMMATRIX matX = XMMatrixTranslation(test_move.x, Terrain::terrain->GetHeight(test_move.x, test_move.z), test_move.z);
 	local_obb.Transform(testOBBX, matX);
 	testOBBX.Orientation.w = 1.f;
 	// 객체 순환해서 충돌 체크
@@ -58,7 +58,7 @@ void GameObject::MoveForward(float fDistance)
 		Octree::GameObjectOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, oresults);
 		for (auto& p_obj : presults) {
 			for (auto& cl : PlayerClient::PlayerClients) {
-				if (cl.second->state != PC_INGAME)continue;
+				if (cl.second->state != PC_INGAME) continue;
 				if (cl.second->m_id != p_obj->u_id) continue;
 				if (testOBBX.Intersects(cl.second->world_obb))
 				{
@@ -69,6 +69,7 @@ void GameObject::MoveForward(float fDistance)
 		}
 		for (auto& o_obj : oresults) {
 			if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
+			if (GameObject::gameObjects[o_obj->u_id]->Gethp() <= 0) continue;
 			if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
 			if (testOBBX.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
 			{
@@ -79,7 +80,7 @@ void GameObject::MoveForward(float fDistance)
 	}
 	test_move.z = xmf3Position.z;
 	BoundingOrientedBox testOBBZ;
-	XMMATRIX matZ = XMMatrixTranslation(test_move.x, test_move.y, test_move.z);
+	XMMATRIX matZ = XMMatrixTranslation(test_move.x, Terrain::terrain->GetHeight(test_move.x, test_move.z), test_move.z);
 	local_obb.Transform(testOBBZ, matZ);
 	testOBBZ.Orientation.w = 1.f;
 
@@ -102,6 +103,7 @@ void GameObject::MoveForward(float fDistance)
 		}
 		for (auto& o_obj : oresults) {
 			if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
+			if (GameObject::gameObjects[o_obj->u_id]->Gethp() <= 0) continue;
 			if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
 			if (testOBBX.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
 			{
@@ -111,8 +113,9 @@ void GameObject::MoveForward(float fDistance)
 		}
 	}
 
+	test_move.y = xmf3Position.y;
 
-	GameObject::SetPosition(xmf3Position);
+	GameObject::SetPosition(test_move);
 }
 void GameObject::Rotate(float fPitch, float fYaw, float fRoll)
 {

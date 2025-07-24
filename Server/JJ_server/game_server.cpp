@@ -1036,7 +1036,7 @@ void BuildObject()
 		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
 			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		}
-		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second) + 30, randompos.second);
+		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(9.f, 9.f, 9.f);
 		obj->SetID(obj_id++);
 		obj->_hp = 40;
