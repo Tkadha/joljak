@@ -105,6 +105,7 @@ public:
 	// 플레이어의 'F' 키 상호작용 요청을 처리하는 함수
 	void CheckPlayerInteraction(CPlayer* pPlayer);
 
+	void SpawnAttackEffect(const XMFLOAT3& centerPosition, int numEffects, float radius);
 
 	CSkyBox* GetSkyBox() const { return m_pSkyBox; }
 
@@ -124,7 +125,10 @@ public:
 
 	// 파도 오브젝트
 	CWavesObject* m_pWavesObject = nullptr;
-
+	//이펙트 오브젝트
+	std::vector<CAttackEffectObject*> m_vAttackEffects;
+	enum class ShardType { Wood, Rock };
+	void SpawnResourceShards(const XMFLOAT3& origin, ShardType type);
 
 	//int									m_nHierarchicalGameObjects = 0;
 	//CGameObject							**m_ppHierarchicalGameObjects = NULL;
@@ -170,7 +174,7 @@ public:
 
 	vector<CGameObject*> m_listBranchObjects; // 생성된 나뭇가지 저장 리스트
 	vector<CGameObject*> m_listRockObjects; // 생성된 나뭇가지 저장 리스트
-	std::vector<CRockShardEffect*> m_vRockShards; //돌파편
+	
 
 	void SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 	void SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
@@ -179,6 +183,8 @@ public:
 
 private:
 	bool m_bIsDaytime = true;
+	std::vector<CResourceShardEffect*> m_vWoodShards;
+	std::vector<CResourceShardEffect*> m_vRockShards;
 
 public:	// 그림자
 	bool IsDaytime() const { return m_bIsDaytime; }

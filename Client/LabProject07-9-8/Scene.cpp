@@ -311,7 +311,54 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	m_pWavesObject->SetMaterial(0, pWavesMaterial);
 	
 
+	/////////////////////////////////////////이펙트 오브젝트
+	const int effectPoolSize = 20; 
+	for (int i = 0; i < effectPoolSize; ++i)
+	{
+		
+		auto* pEffect = new CAttackEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 
+		
+		m_vAttackEffects.push_back(pEffect);
+
+		
+		m_vGameObjects.push_back(pEffect);
+	}
+
+	CLoadedModelInfo* pWoodShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch_A.bin", m_pGameFramework);
+	CLoadedModelInfo* pRockShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/RockCluster_A_LOD0.bin", m_pGameFramework);
+
+	CMesh* pWoodMesh = pWoodShardModel->m_pModelRootObject->m_pMesh;
+	CMaterial* pWoodMaterial = pWoodShardModel->m_pModelRootObject->GetMaterial(0);
+	CMesh* pRockMesh = pRockShardModel->m_pModelRootObject->m_pMesh;
+	CMaterial* pRockMaterial = pRockShardModel->m_pModelRootObject->GetMaterial(0);
+
+	const int shardPoolSize = 50; // 풀 크기
+
+	// 2. 나무 파편 풀 생성
+	for (int i = 0; i < shardPoolSize; ++i) {
+		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pWoodMesh, pWoodMaterial);
+
+		pShard->SetScale(1.0f, 1.0f, 1.0f);
+		m_vWoodShards.push_back(pShard);
+		m_vGameObjects.push_back(pShard);
+	}
+
+	// 3. 돌 파편 풀 생성
+	for (int i = 0; i < shardPoolSize; ++i) {
+		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pRockMesh, pRockMaterial);
+
+		pShard->SetScale(0.2f, 0.2f, 0.2f);
+
+		m_vRockShards.push_back(pShard);
+		m_vGameObjects.push_back(pShard);
+	}
+
+	// 로드가 끝난 임시 모델 정보는 삭제
+	if (pWoodShardModel) delete pWoodShardModel;
+	if (pRockShardModel) delete pRockShardModel;
+
+	/////////////////////////////////////////
 
 
 	// 1. 그림자 맵 객체 생성
@@ -562,13 +609,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		if (pWolfModel) delete pWolfModel;
 	}
 
-	const int rockShardPoolSize = 20;
-	for (int i = 0; i < rockShardPoolSize; ++i)
-	{
-		auto* shard = new CRockShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		m_vRockShards.push_back(shard);
-		m_vGameObjects.emplace_back(shard);
-	}
+	
 
 	//int materialIndexToChange = 0;
 	//UINT albedoTextureSlot = 0;
@@ -793,10 +834,7 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 	if (m_pWavesObject) m_pWavesObject->Animate(fTimeElapsed);
 
-	for (auto& shard : m_vRockShards)
-	{
-		shard->Update(fTimeElapsed);
-	}
+	
 }
 
 
@@ -1499,5 +1537,78 @@ void CScene::SpawnStaticObjects(const std::string& prefabName, int count, float 
 		gameObj->m_id = -1;
 		gameObj->m_treecount = tree_obj_count;
 		m_lEnvironmentObjects.emplace_back(gameObj);
+	}
+}
+
+void CScene::SpawnAttackEffect(const XMFLOAT3& centerPosition, int numEffects, float radius)
+{
+	
+	// [추가] 재활용을 위한 인덱스 변수
+	static int nEffectPoolIndex = 0;
+
+	float angleStep = 360.0f / numEffects;
+
+	for (int i = 0; i < numEffects; ++i)
+	{
+		float angle = XMConvertToRadians(i * angleStep);
+		XMFLOAT3 offset = XMFLOAT3(cos(angle) * radius, 0, sin(angle) * radius);
+		XMFLOAT3 spawnPos = Vector3::Add(centerPosition, offset);
+
+		if (m_pTerrain) {
+			spawnPos.y = m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + 5.0f;
+		}
+
+		CAttackEffectObject* pEffectToUse = nullptr;
+
+		
+		for (auto& pEffect : m_vAttackEffects)
+		{
+			if (!pEffect->isRender)
+			{
+				pEffectToUse = pEffect;
+				break;
+			}
+		}
+
+		
+		if (!pEffectToUse)
+		{
+			
+			pEffectToUse = m_vAttackEffects[nEffectPoolIndex];
+			nEffectPoolIndex = (nEffectPoolIndex + 1) % m_vAttackEffects.size();
+		}
+
+		
+		if (pEffectToUse)
+		{
+			pEffectToUse->Activate(spawnPos);
+		}
+	}
+}
+
+void CScene::SpawnResourceShards(const XMFLOAT3& origin, ShardType type)
+{
+	
+	std::vector<CResourceShardEffect*>& shardPool = (type == ShardType::Wood) ? m_vWoodShards : m_vRockShards;
+
+	int numShardsToSpawn = 8 + (rand() % 5); 
+
+	for (int i = 0; i < numShardsToSpawn; ++i)
+	{
+		
+		for (auto& pShard : shardPool)
+		{
+			if (!pShard->isRender)
+			{
+				
+				XMFLOAT3 velocity = XMFLOAT3(
+					((float)(rand() % 4000) - 2000.0f), // X: -2000 ~ +2000
+					((float)(rand() % 2000) + 1500.0f), // Y: +1500 ~ +3500 (위로 매우 강하게)
+					((float)(rand() % 4000) - 2000.0f)  // Z: -2000 ~ +2000
+				);
+				pShard->Activate(origin, velocity);
+				break;
+			}
+		}
 	}
 }

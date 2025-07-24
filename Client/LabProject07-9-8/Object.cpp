@@ -732,6 +732,8 @@ void CGameObject::Animate(float fTimeElapsed)
 {
 	OnPrepareRender();
 
+	UpdateTransform(NULL);
+
 	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 
 	if (m_pSibling) m_pSibling->Animate(fTimeElapsed);
@@ -2734,9 +2736,6 @@ CGameObject* CRockShardEffect::Clone()
 }
 
 
-
-
-
 CMonsterObject::CMonsterObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 }
@@ -2746,4 +2745,104 @@ CGameObject* CMonsterObject::Clone()
 	CMonsterObject* pNewInstance = new CMonsterObject(m_pGameFramework);
 	pNewInstance->CopyDataFrom(this);
 	return pNewInstance;
+}
+
+
+
+
+CAttackEffectObject::CAttackEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework)
+	: CGameObject(1, framework) 
+{
+	
+	CLoadedModelInfo* pEffectModel = CGameObject::LoadGeometryAndAnimationFromFile(device, cmdList, "Model/RockCluster_A_LOD0.bin", framework);
+
+	
+	if (pEffectModel && pEffectModel->m_pModelRootObject) {
+		if (pEffectModel->m_pModelRootObject->m_pMesh)
+			SetMesh(pEffectModel->m_pModelRootObject->m_pMesh);
+		if (pEffectModel->m_pModelRootObject->m_nMaterials > 0 && pEffectModel->m_pModelRootObject->m_ppMaterials[0])
+			SetMaterial(0, pEffectModel->m_pModelRootObject->m_ppMaterials[0]);
+		delete pEffectModel;
+	}
+
+	
+	isRender = false;
+}
+
+void CAttackEffectObject::Activate(const XMFLOAT3& position, float lifeTime)
+{
+
+	m_xmf4x4ToParent = Matrix4x4::Identity();
+
+	SetPosition(position);         
+	SetScale(5.0f, 20.0f, 5.0f); 
+
+	m_fLifeTime = lifeTime;       // 수명 설정
+	m_fElapsedTime = 0.0f;        
+	m_bIsActive = true;           
+	isRender = true;              
+}
+
+void CAttackEffectObject::Animate(float fTimeElapsed)
+{
+	
+	if (!m_bIsActive) return;
+
+	
+	m_fElapsedTime += fTimeElapsed;
+
+	
+	if (m_fElapsedTime > m_fLifeTime)
+	{
+		
+		m_bIsActive = false;
+		isRender = false;
+	}
+
+	
+	CGameObject::Animate(fTimeElapsed);
+}
+
+CResourceShardEffect::CResourceShardEffect(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework, CMesh* pSharedMesh, CMaterial* pSharedMaterial)
+	: CGameObject(1, framework)
+{
+	
+	if (pSharedMesh) SetMesh(pSharedMesh);
+	if (pSharedMaterial) SetMaterial(0, pSharedMaterial);
+
+	isRender = false;
+}
+
+void CResourceShardEffect::Activate(const XMFLOAT3& position, const XMFLOAT3& velocity)
+{
+	m_xmf4x4ToParent = Matrix4x4::Identity();
+	SetPosition(position);
+	//SetScale(2.0f, 2.0f, 2.0f); // 파편 크기
+
+	m_xmf3Velocity = velocity; // 발사 속도
+	m_fElapsedTime = 0.0f;
+	m_bIsActive = true;
+	isRender = true;
+}
+
+void CResourceShardEffect::Animate(float fTimeElapsed)
+{
+	if (!m_bIsActive) return;
+
+	m_fElapsedTime += fTimeElapsed;
+	if (m_fElapsedTime > m_fLifeTime)
+	{
+		m_bIsActive = false;
+		isRender = false;
+		return;
+	}
+
+	// 물리 계산: 중력을 적용하고 위치를 이동시킵니다.
+	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Gravity, fTimeElapsed));
+	Move(Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed));
+
+	// 회전 애니메이션 (선택 사항)
+	//Rotate(100.0f * fTimeElapsed, 200.0f * fTimeElapsed, 300.0f * fTimeElapsed);
+
+	CGameObject::Animate(fTimeElapsed);
 }
