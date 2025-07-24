@@ -706,7 +706,17 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				ShowTraitUI = !ShowTraitUI;
 				break;
 			case 'Y':
-				//m_pScene->SpawnRockShardEffectAtPlayer();
+				if (m_pScene && m_pPlayer)
+				{
+					
+					XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+					m_pScene->SpawnAttackEffect(playerPos,20,100.0f);
+				}
+				break;
+			case 'U':
+				XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+				playerPos.y += 15.0f;
+				m_pScene->SpawnResourceShards(playerPos, CScene::ShardType::Wood);
 				break;
 			}
 			break;
@@ -2744,11 +2754,11 @@ void CGameFramework::FrameAdvance()
 					pInstalledObject->isRender = true;
 					//m_pScene->m_vGameObjects.emplace_back(pInstalledObject);
 					m_pScene->m_vConstructionObjects.emplace_back(pInstalledObject);
-
 					
 					
 				}
 			}
+			
 		}
 		if (!m_bIsPreviewVisible) ImGui::EndDisabled();
 
