@@ -8,8 +8,8 @@
 
 short PORT = 8999; // 완성결과는 const 제외 하나의 포트가 왔다갔다 하는 형식
 const short GAME_PORT = 9000;
-char SERVER_ADDR[] = "58.228.11.233";
-//char SERVER_ADDR[] = "127.0.0.1";
+//char SERVER_ADDR[] = "58.228.11.233";
+char SERVER_ADDR[] = "127.0.0.1";
 
 void recv_callback(DWORD err, DWORD recv_size, LPWSAOVERLAPPED recv_over, DWORD sendflag)
 {

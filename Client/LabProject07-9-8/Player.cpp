@@ -781,7 +781,10 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 		m_pSkinnedAnimationController->SetTrackEnable(i, false);
 	}
-
+	//AttackMelee	9
+	//AttackAxe		10
+	//AttackPick	11
+	
 	PropagateAnimController(m_pSkinnedAnimationController);
 
 	m_pSkinnedAnimationController->SetCallbackKeys(2, 2);
@@ -795,7 +798,22 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 //	m_pSkinnedAnimationController->SetCallbackKey(1, 2, 0.39f, _T("Sound/Footstep03.wav"));
 #endif
 	CAnimationCallbackHandler *pAnimationCallbackHandler = new CSoundCallbackHandler();
-	m_pSkinnedAnimationController->SetAnimationCallbackHandler(1, pAnimationCallbackHandler);
+	m_pSkinnedAnimationController->SetAnimationCallbackHandler(2, pAnimationCallbackHandler);
+
+	int attackAnimTrack = 9;
+	m_pSkinnedAnimationController->SetCallbackKeys(attackAnimTrack, 1);
+	// 애니메이션 시작 0.2초 후 소리 재생
+	m_pSkinnedAnimationController->SetCallbackKey(attackAnimTrack, 0, 0.2f, _T("Sound/sword.wav"));
+	m_pSkinnedAnimationController->SetAnimationCallbackHandler(attackAnimTrack, new CSoundCallbackHandler());
+
+
+	int axeAnimTrack = 10;
+	m_pSkinnedAnimationController->SetCallbackKeys(axeAnimTrack, 1);
+	m_pSkinnedAnimationController->SetCallbackKey(axeAnimTrack, 0, 0.02f, _T("Sound/axe.wav"));
+	m_pSkinnedAnimationController->SetAnimationCallbackHandler(axeAnimTrack, new CSoundCallbackHandler());
+
+
+	m_pSkinnedAnimationController->SetAnimationSpeed(0.5f);
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	

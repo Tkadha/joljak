@@ -1792,20 +1792,34 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-
-	CMaterial* pTerrainMaterial = new CMaterial(2, pGameFramework);
+	
+	CMaterial* pTerrainMaterial = new CMaterial(8, pGameFramework);
 
 
 	std::shared_ptr<CTexture> pTerrainBaseTexture = pResourceManager->GetTexture(L"Terrain/DemoTerrain3.dds", pd3dCommandList);
-	std::shared_ptr<CTexture> pTerrainDetailTexture = pResourceManager->GetTexture(L"Terrain/TerrainGrass_basecolor.dds", pd3dCommandList);
+
+	std::shared_ptr<CTexture> pTerrainSplatMapTexture = pResourceManager->GetTexture(L"Terrain/Test2.dds", pd3dCommandList);
 
 
-	if (pTerrainBaseTexture) {
-		pTerrainMaterial->AssignTexture(0, pTerrainBaseTexture, pd3dDevice);
-	}
-	if (pTerrainDetailTexture) {
-		pTerrainMaterial->AssignTexture(1, pTerrainDetailTexture, pd3dDevice);
-	}
+	// 흙 디테일 텍스쳐 
+	std::shared_ptr<CTexture> pTerrainDirtTexture = pResourceManager->GetTexture(L"Terrain/dirt1.dds", pd3dCommandList);
+	std::shared_ptr<CTexture> pTerrainDirtTexture2 = pResourceManager->GetTexture(L"Terrain/TerrainDirt_basecolor.dds", pd3dCommandList);
+	// 풀 디테일 텍스쳐
+	std::shared_ptr<CTexture> pTerrainGrassTexture = pResourceManager->GetTexture(L"Terrain/TerrainGrass_basecolor.dds", pd3dCommandList);
+	std::shared_ptr<CTexture> pTerrainGrassTexture2 = pResourceManager->GetTexture(L"Terrain/TerrainForestFloor_Birch_basecolor.dds", pd3dCommandList);
+	// 돌 디테일 텍스쳐
+	std::shared_ptr<CTexture> pTerrainRockTexture = pResourceManager->GetTexture(L"Terrain/TerrainRock_basecolor.dds", pd3dCommandList);
+	std::shared_ptr<CTexture> pTerrainRockTexture2 = pResourceManager->GetTexture(L"Terrain/rock2.dds", pd3dCommandList);
+
+	if (pTerrainBaseTexture) pTerrainMaterial->AssignTexture(0, pTerrainBaseTexture, pd3dDevice);
+	if (pTerrainSplatMapTexture) pTerrainMaterial->AssignTexture(1, pTerrainSplatMapTexture, pd3dDevice);
+	if (pTerrainDirtTexture) pTerrainMaterial->AssignTexture(2, pTerrainDirtTexture, pd3dDevice);
+	if (pTerrainDirtTexture) pTerrainMaterial->AssignTexture(3, pTerrainDirtTexture2, pd3dDevice);
+	if (pTerrainGrassTexture) pTerrainMaterial->AssignTexture(4, pTerrainGrassTexture, pd3dDevice);
+	if (pTerrainGrassTexture) pTerrainMaterial->AssignTexture(5, pTerrainGrassTexture2, pd3dDevice);
+	if (pTerrainRockTexture) pTerrainMaterial->AssignTexture(6, pTerrainRockTexture, pd3dDevice);
+	if (pTerrainRockTexture) pTerrainMaterial->AssignTexture(7, pTerrainRockTexture2, pd3dDevice);
+
 
 
 	CShader* pTerrainShader = pShaderManager->GetShader("Terrain");

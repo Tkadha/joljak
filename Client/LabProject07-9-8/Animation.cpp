@@ -411,7 +411,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject *pRootGam
 //*
 void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGameObject)
 {
-	m_fTime += fTimeElapsed;
+	float scaledTimeElapsed = fTimeElapsed * m_fAnimationSpeed;
 	if (m_pAnimationTracks)
 	{
 		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++) 
@@ -422,7 +422,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 			if (m_pAnimationTracks[k].m_bEnable)
 			{
 				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSets[m_pAnimationTracks[k].m_nAnimationSet];
-				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
+				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, scaledTimeElapsed, pAnimationSet->m_fLength);
 				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 				{
 					//XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4ToParent;

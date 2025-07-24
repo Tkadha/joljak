@@ -12,9 +12,16 @@ cbuffer cbGameObjectInfo : register(b2) // 지형의 월드 변환 등에 사용
 };
 
 // --- 텍스처 ---
-Texture2D gtxtTerrainBaseTexture : register(t1); // 지형 기본 텍스처
-Texture2D gtxtTerrainDetailTexture : register(t2); // 지형 상세 텍스처
-Texture2D gShadowMap : register(t3);    // 그림자
+Texture2D gtxtTerrainBaseTexture    : register(t1); // 지형 기본 텍스처
+Texture2D gtxtTerrainSplatMap : register(t2);
+Texture2D gtxtDirt01 : register(t3);
+Texture2D gtxtDirt02 : register(t4);
+Texture2D gtxtGrass01 : register(t5);
+Texture2D gtxtGrass02 : register(t6);
+Texture2D gtxtRock01 : register(t7);
+Texture2D gtxtRock02 : register(t8);
+
+Texture2D gShadowMap : register(t9);
 
 // --- VS 입출력 구조체 ---
 struct VS_TERRAIN_INPUT
@@ -107,21 +114,68 @@ float CalcShadowFactor(float4 shadowPosH)
     return percentLit / 16.0f;
 }
 
+float N21(float2 p)
+{
+    return frac(sin(dot(p, float2(12.9898, 4.1414))) * 43758.5453);
+}
+
+float SimpleNoise(float2 p)
+{
+    float2 ip = floor(p); // 정수 (격자 칸 ID)
+    float2 fp = frac(p); // 소수 (격자 칸 내의 위치)
+    
+    float a = N21(ip);
+    float b = N21(ip + float2(1.0, 0.0));
+    float c = N21(ip + float2(0.0, 1.0));
+    float d = N21(ip + float2(1.0, 1.0));
+    
+    fp = fp * fp * (3.0 - 2.0 * fp);
+    return lerp(lerp(a, b, fp.x), lerp(c, d, fp.x), fp.y);
+}
+
 // --- Pixel Shader ---
 float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
 {     
-    // 텍스처 샘플링
-    float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
-    float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);
-
-    // 색상 조합 (예: 블렌딩)
-    // float4 cColor = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f)); // 단순 평균
-    //float4 cColor = input.color * lerp(cBaseTexColor, cDetailTexColor, 0.5); // 예: 정점 색상과 블렌딩
+    float4 splatWeights = gtxtTerrainSplatMap.Sample(gssWrap, input.uv0);
     
-    float4 cTextureColor = lerp(cBaseTexColor, cDetailTexColor, 0.5);
+    // 월드 좌표를 기반으로 노이즈 값 계산
+    float noiseScale = 0.9f;
+    float blendNoise = SimpleNoise(input.positionW.xz * noiseScale);
 
-     // 1. 그림자 계수 계산
-    float shadowFactor = 0.15; // 기본값은 그림자 없음
+    // ★★★ 2. 서로 다른 스케일과 오프셋으로 UV 좌표를 계산 ★★★
+    float2 tiled_uv1 = input.uv1 * 100.0f;
+    float2 tiled_uv2 = (input.uv1 * 57.0f) + 0.3f; // << 다른 스케일과 오프셋을 줍니다.
+
+    // 3. 서로 다른 UV로 각 디테일 텍스처를 샘플링합니다.
+    float4 cDirt1 = gtxtDirt01.Sample(gssWrap, tiled_uv1);
+    float4 cDirt2 = gtxtDirt02.Sample(gssWrap, tiled_uv2); // 다른 UV 사용
+    float4 cGrass1 = gtxtGrass01.Sample(gssWrap, tiled_uv1);
+    float4 cGrass2 = gtxtGrass02.Sample(gssWrap, tiled_uv2); // 다른 UV 사용
+    float4 cRock1 = gtxtRock01.Sample(gssWrap, tiled_uv1);
+    float4 cRock2 = gtxtRock02.Sample(gssWrap, tiled_uv2); // 다른 UV 사용
+
+    // ★★★ 4. 부드러운 노이즈 값을 이용해 섞습니다. ★★★
+    float4 cMixedDirt = lerp(cDirt1, cDirt2, blendNoise);
+    float4 cMixedGrass = lerp(cGrass1, cGrass2, blendNoise);
+    float4 cMixedRock = lerp(cRock1, cRock2, blendNoise);
+    
+    // 3. 스플랫 맵의 RGBA 채널 값을 가중치로 사용하여 디테일 텍스처들을 혼합합니다.
+    float4 cDetailColor = splatWeights.r * cMixedDirt +
+                          splatWeights.g * cMixedGrass +
+                          splatWeights.b * cMixedRock;
+    
+    // 남은 가중치는 풀로 채움
+    float baseWeight = 1.0f - saturate(splatWeights.r + splatWeights.g + splatWeights.b);
+    cDetailColor += baseWeight * cMixedGrass;
+    
+    // 멀리 있는 지형은 저해상도 베이스 텍스처와 섞기
+    float distanceToEye = distance(input.positionW, gvCameraPosition.xyz);
+    float baseTexWeight = saturate((distanceToEye - 4000.0f) / 1000.0f); // 4000~5000 거리
+    float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
+
+    float4 cTextureColor = lerp(cDetailColor, cBaseTexColor, baseTexWeight);
+    
+    float shadowFactor = 0.15; 
     if (gIsDaytime) 
     {
         shadowFactor = CalcShadowFactor(input.ShadowPosH);
