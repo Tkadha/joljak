@@ -137,8 +137,6 @@ void AtkNPCMoveState::Execute(std::shared_ptr<GameObject> npc)
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME)continue;
 			if (cl.second->m_id != p_obj->u_id) continue;
-			if(cl.second->viewlist.find(npc->GetID()) == cl.second->viewlist.end())
-				cl.second->SendAddPacket(npc);
 			cl.second->SendMovePacket(npc);
 		}
 	}
@@ -273,8 +271,6 @@ void AtkNPCChaseState::Execute(std::shared_ptr<GameObject> npc)
 				for (auto& cl : PlayerClient::PlayerClients) {
 					if (cl.second->state != PC_INGAME)continue;
 					if (cl.second->m_id != p_obj->u_id) continue;
-					if (cl.second->viewlist.find(npc->GetID()) == cl.second->viewlist.end())
-						cl.second->SendAddPacket(npc);
 					cl.second->SendMovePacket(npc);
 				}
 			}
@@ -293,8 +289,6 @@ void AtkNPCChaseState::Execute(std::shared_ptr<GameObject> npc)
 			for (auto& cl : PlayerClient::PlayerClients) {
 				if (cl.second->state != PC_INGAME)continue;
 				if (cl.second->m_id != p_obj->u_id) continue;
-				if (cl.second->viewlist.find(npc->GetID()) == cl.second->viewlist.end())
-					cl.second->SendAddPacket(npc);
 				cl.second->SendMovePacket(npc);
 			}
 		}
@@ -416,13 +410,6 @@ void AtkNPCRespawnState::Exit(std::shared_ptr<GameObject> npc)
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 
-	for (auto& p_obj : results) {
-		for (auto& cl : PlayerClient::PlayerClients) {
-			if (cl.second->state != PC_INGAME)continue;
-			if (cl.second->m_id != p_obj->u_id) continue;
-			cl.second->SendAddPacket(npc);
-		}
-	}
 }
 
 //=====================================Attack=================================================
@@ -478,8 +465,7 @@ void AtkNPCAttackState::Execute(std::shared_ptr<GameObject> npc)
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME)continue;
 			if (cl.second->m_id != p_obj->u_id) continue;
-			if (cl.second->viewlist.find(npc->GetID()) == cl.second->viewlist.end())
-				cl.second->SendAddPacket(npc);
+
 			cl.second->SendMovePacket(npc);
 		}
 	}
@@ -529,8 +515,7 @@ void AtkNPCHitState::Execute(std::shared_ptr<GameObject> npc)
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME)continue;
 			if (cl.second->m_id != p_obj->u_id) continue;
-			if (cl.second->viewlist.find(npc->GetID()) == cl.second->viewlist.end())
-				cl.second->SendAddPacket(npc);
+
 			cl.second->SendMovePacket(npc);
 		}
 	}

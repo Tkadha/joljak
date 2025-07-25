@@ -71,6 +71,8 @@ void GameObject::MoveForward(float fDistance)
 			if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
 			if (GameObject::gameObjects[o_obj->u_id]->Gethp() <= 0) continue;
 			if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
+			auto t = GameObject::gameObjects[o_obj->u_id]->GetType();
+			if (t != OBJECT_TYPE::OB_TREE && t != OBJECT_TYPE::OB_STONE && t != OBJECT_TYPE::ST_WOODWALL) continue;
 			if (testOBBX.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
 			{
 				test_move.x = GetPosition().x;
@@ -84,17 +86,12 @@ void GameObject::MoveForward(float fDistance)
 	local_obb.Transform(testOBBZ, matZ);
 	testOBBZ.Orientation.w = 1.f;
 
-	presults.clear();
-	oresults.clear();
 	{
-		tree_obj n_obj{ GetID() ,test_move };
-		Octree::PlayerOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, presults);
-		Octree::GameObjectOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, oresults);
 		for (auto& p_obj : presults) {
 			for (auto& cl : PlayerClient::PlayerClients) {
 				if (cl.second->state != PC_INGAME)continue;
 				if (cl.second->m_id != p_obj->u_id) continue;
-				if (testOBBX.Intersects(cl.second->world_obb))
+				if (testOBBZ.Intersects(cl.second->world_obb))
 				{
 					test_move.z = GetPosition().z;
 					break;
@@ -105,7 +102,9 @@ void GameObject::MoveForward(float fDistance)
 			if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
 			if (GameObject::gameObjects[o_obj->u_id]->Gethp() <= 0) continue;
 			if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
-			if (testOBBX.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
+			auto t = GameObject::gameObjects[o_obj->u_id]->GetType();
+			if (t != OBJECT_TYPE::OB_TREE && t != OBJECT_TYPE::OB_STONE && t != OBJECT_TYPE::ST_WOODWALL) continue;
+			if (testOBBZ.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
 			{
 				test_move.z = GetPosition().z;
 				break;
@@ -119,8 +118,43 @@ void GameObject::MoveForward(float fDistance)
 }
 void GameObject::Rotate(float fPitch, float fYaw, float fRoll)
 {
+	auto before4x4 = xmf4x4;
 	XMMATRIX mtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(fPitch), XMConvertToRadians(fYaw), XMConvertToRadians(fRoll));
 	xmf4x4 = Matrix4x4::Multiply(mtxRotate, xmf4x4);
+
+	BoundingOrientedBox testOBB;
+	local_obb.Transform(testOBB, XMLoadFloat4x4(&xmf4x4));
+
+	std::vector<tree_obj*> presults;
+	std::vector<tree_obj*> oresults;
+	{
+		tree_obj n_obj{ GetID() ,GetPosition()};
+		Octree::PlayerOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, presults);
+		Octree::GameObjectOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, oresults);
+		for (auto& p_obj : presults) {
+			for (auto& cl : PlayerClient::PlayerClients) {
+				if (cl.second->state != PC_INGAME) continue;
+				if (cl.second->m_id != p_obj->u_id) continue;
+				if (testOBB.Intersects(cl.second->world_obb))
+				{
+					xmf4x4 = before4x4;
+					break;
+				}
+			}
+		}
+		for (auto& o_obj : oresults) {
+			if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
+			if (GameObject::gameObjects[o_obj->u_id]->Gethp() <= 0) continue;
+			if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
+			auto t = GameObject::gameObjects[o_obj->u_id]->GetType();
+			if (t != OBJECT_TYPE::OB_TREE && t != OBJECT_TYPE::OB_STONE && t != OBJECT_TYPE::ST_WOODWALL) continue;
+			if (testOBB.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
+			{
+				xmf4x4 = before4x4;
+				break;
+			}
+		}
+	}
 }
 
 void GameObject::UpdateTransform()

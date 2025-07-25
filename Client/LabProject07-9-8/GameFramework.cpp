@@ -120,6 +120,11 @@ void CGameFramework::ProcessPacket(char* packet)
 		ADD_PACKET* recv_p = reinterpret_cast<ADD_PACKET*>(packet);
 
 		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+		auto already_it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [recv_p](CGameObject* obj) {
+			return obj->m_id == recv_p->id;
+			});
+		if (already_it != m_pScene->m_vGameObjects.end())
+			break;
 		auto it = std::find_if(m_pScene->m_listGameObjects.begin(), m_pScene->m_listGameObjects.end(), [recv_p](CGameObject* obj) {
 			return obj->m_id == recv_p->id;
 			});
@@ -316,7 +321,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CreateDirect3DDevice();
 	CreateCommandQueueAndList();
-	CreateCbvSrvDescriptorHeaps(200, 50000);
+	CreateCbvSrvDescriptorHeaps(200, 90000);
 	CreateRtvAndDsvDescriptorHeaps();
 	CreateSwapChain();
 	CreateDepthStencilView();
@@ -1760,7 +1765,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[12].SetAnimationType(ANIMATION_TYPE_ONCE);
 				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[13].SetAnimationType(ANIMATION_TYPE_ONCE);
 			}
-
+			gameObj->m_pSkinnedAnimationController->SetAnimationSpeed(0.5f);
 			gameObj->SetOwningScene(m_pScene);
 
 			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });

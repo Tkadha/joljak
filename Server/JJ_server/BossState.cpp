@@ -134,8 +134,7 @@ void BossMoveState::Execute(std::shared_ptr<GameObject> npc)
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME)continue;
 			if (cl.second->m_id != p_obj->u_id) continue;
-			if (cl.second->viewlist.find(npc->GetID()) == cl.second->viewlist.end())
-				cl.second->SendAddPacket(npc);
+
 			cl.second->SendMovePacket(npc);
 		}
 	}
@@ -177,7 +176,6 @@ void BossMoveState::Exit(std::shared_ptr<GameObject> npc)
 
 void BossChaseState::Enter(std::shared_ptr<GameObject> npc)
 {
-	if (npc->GetType() == OBJECT_TYPE::OB_BAT)	npc->fly_height = 13.f;
 	npc->SetAnimationType(ANIMATION_TYPE::WALK);
 	std::vector<tree_obj*> results;
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
@@ -217,7 +215,7 @@ void BossChaseState::Execute(std::shared_ptr<GameObject> npc)
 
 
 	for (auto& cl : PlayerClient::PlayerClients) {
-		if (cl.second->m_id != aggro_player_id) continue;
+		//if (cl.second->m_id != aggro_player_id) continue;
 
 		XMFLOAT3 playerPos = cl.second->GetPosition();
 		XMFLOAT3 npcPos = npc->GetPosition();
@@ -256,8 +254,10 @@ void BossChaseState::Execute(std::shared_ptr<GameObject> npc)
 		npc->Rotate(0.0f, deltaYaw * 2, 0.0f);
 
 
-
-		float attackRange = 100.0f;
+		float attackRange = 150.0f;
+		//if (current_count > 5) {
+		//	attackRange = 300.f;
+		//}
 		float distanceToPlayer = sqrt(pow(playerPos.x - npcPos.x, 2) + pow(playerPos.y - npcPos.y, 2) + pow(playerPos.z - npcPos.z, 2));
 
 		if (distanceToPlayer < attackRange)
@@ -269,8 +269,7 @@ void BossChaseState::Execute(std::shared_ptr<GameObject> npc)
 				for (auto& cl : PlayerClient::PlayerClients) {
 					if (cl.second->state != PC_INGAME)continue;
 					if (cl.second->m_id != p_obj->u_id) continue;
-					if (cl.second->viewlist.find(npc->GetID()) == cl.second->viewlist.end())
-						cl.second->SendAddPacket(npc);
+
 					cl.second->SendMovePacket(npc);
 				}
 			}
@@ -289,8 +288,7 @@ void BossChaseState::Execute(std::shared_ptr<GameObject> npc)
 			for (auto& cl : PlayerClient::PlayerClients) {
 				if (cl.second->state != PC_INGAME)continue;
 				if (cl.second->m_id != p_obj->u_id) continue;
-				if (cl.second->viewlist.find(npc->GetID()) == cl.second->viewlist.end())
-					cl.second->SendAddPacket(npc);
+
 				cl.second->SendMovePacket(npc);
 			}
 		}
@@ -406,13 +404,6 @@ void BossRespawnState::Exit(std::shared_ptr<GameObject> npc)
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 
-	for (auto& p_obj : results) {
-		for (auto& cl : PlayerClient::PlayerClients) {
-			if (cl.second->state != PC_INGAME)continue;
-			if (cl.second->m_id != p_obj->u_id) continue;
-			cl.second->SendAddPacket(npc);
-		}
-	}
 }
 
 //=====================================Attack=================================================
@@ -421,7 +412,7 @@ int BossAttackState::Sp_atk_counter = 0;
 void BossAttackState::Enter(std::shared_ptr<GameObject> npc)
 {
 	starttime = std::chrono::system_clock::now();
-	duration_time = 1.f * 1000; // 1초간
+	duration_time = 1.5f * 1000; // 1초간
 	Sp_atk_counter++;
 	if (Sp_atk_counter > 5) {
 		Sp_atk_counter = 0;
@@ -469,8 +460,6 @@ void BossAttackState::Execute(std::shared_ptr<GameObject> npc)
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME)continue;
 			if (cl.second->m_id != p_obj->u_id) continue;
-			if (cl.second->viewlist.find(npc->GetID()) == cl.second->viewlist.end())
-				cl.second->SendAddPacket(npc);
 			cl.second->SendMovePacket(npc);
 		}
 	}
@@ -487,7 +476,7 @@ void BossHitState::Enter(std::shared_ptr<GameObject> npc)
 {
 	npc->SetAnimationType(ANIMATION_TYPE::HIT);
 	starttime = std::chrono::system_clock::now();
-	duration_time = 1.0f * 1000; // 1초간 진행
+	duration_time = 1.5f * 1000; // 1초간 진행
 	std::vector<tree_obj*> results;
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
@@ -520,8 +509,6 @@ void BossHitState::Execute(std::shared_ptr<GameObject> npc)
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME)continue;
 			if (cl.second->m_id != p_obj->u_id) continue;
-			if (cl.second->viewlist.find(npc->GetID()) == cl.second->viewlist.end())
-				cl.second->SendAddPacket(npc);
 			cl.second->SendMovePacket(npc);
 		}
 	}

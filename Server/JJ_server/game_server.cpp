@@ -649,7 +649,6 @@ int main(int argc, char* argv[])
 								if (desiredstamina < 0) {
 									desiredstamina = 0;
 								}
-
 								if (player->Playerstamina.compare_exchange_weak(stamina, desiredstamina)) {
 									// 패킷전송
 									CHANGE_STAT_PACKET s_packet;
@@ -664,7 +663,7 @@ int main(int argc, char* argv[])
 						}
 					}
 					Octree::PlayerOctree.update(player->m_id, player->GetPosition());
-
+					//player->UpdateTransform();
 
 					player->vl_mu.lock();
 					std::unordered_set<int> before_vl = player->viewlist;
@@ -680,6 +679,11 @@ int main(int argc, char* argv[])
 						if (0 == new_vl.count(o_id)) {	// before에만 있다면 제거 패킷
 							player->SendRemovePacket(GameObject::gameObjects[o_id]);
 						}
+						else if (1 == new_vl.count(o_id)) {
+							if (GameObject::gameObjects[o_id]->is_alive == true) continue;
+							if (GameObject::gameObjects[o_id]->Gethp() > 0) continue;
+							player->SendRemovePacket(GameObject::gameObjects[o_id]);
+						}
 					}
 					for (auto o_id : new_vl) {
 						if (0 == before_vl.count(o_id)) { //new에만 있다면 추가 패킷
@@ -688,6 +692,11 @@ int main(int argc, char* argv[])
 							player->SendAddPacket(GameObject::gameObjects[o_id]);
 						}
 					}
+
+					player->vl_mu.lock();
+					player->viewlist = new_vl;
+					player->vl_mu.unlock();
+
 				}
 			}
 		}
@@ -805,6 +814,8 @@ void ProcessAccept()
 			std::vector<tree_obj*> results; // 시야 범위 내 객체 찾기
 			tree_obj p_obj{ -1,remoteClient->GetPosition() };
 			Octree::GameObjectOctree.query(p_obj, oct_distance, results);
+			std::unordered_set<int> new_vl;
+			for (auto& obj : results) new_vl.insert(obj->u_id);
 			for (auto& obj : results) {
 				if (GameObject::gameObjects[obj->u_id]->is_alive == false) continue;
 				if (GameObject::gameObjects[obj->u_id]->Gethp() <= 0) continue;
@@ -813,6 +824,9 @@ void ProcessAccept()
 			for (auto& obj : GameObject::ConstructObjects) {
 				remoteClient->SendStructPacket(obj);
 			}
+			remoteClient->vl_mu.lock();
+			remoteClient->viewlist = new_vl;
+			remoteClient->vl_mu.unlock();
 		}
 		auto p_obj = std::make_unique<tree_obj>(remoteClient->m_id, remoteClient->GetPosition());
 		Octree::PlayerOctree.insert(std::move(p_obj));
@@ -852,11 +866,11 @@ void BuildObject()
 {
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	float spawnmin = 3000, spawnmax = 10000;
+	float spawnmin = 500, spawnmax = 12000;
 	float objectMinSize = 15, objectMaxSize = 20;
 
 	int obj_id = 0;
-	int TreeCount = 500;
+	int TreeCount = 700;
 	for (int i = 0; i < TreeCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 
@@ -875,7 +889,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int RockCount = 500;
+	int RockCount = 700;
 	for (int i = 0; i < RockCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -895,7 +909,7 @@ void BuildObject()
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
 
-	int CowCount = 100;
+	int CowCount = 150;
 	for (int i = 0; i < CowCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -917,7 +931,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int PigCount = 100;
+	int PigCount = 150;
 	for (int i = 0; i < PigCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -940,7 +954,7 @@ void BuildObject()
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
 
-	int SpiderCount = 50;
+	int SpiderCount = 80;
 	for (int i = 0; i < SpiderCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -962,7 +976,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int WolfCount = 50;
+	int WolfCount = 80;
 	for (int i = 0; i < WolfCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -984,7 +998,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int ToadCount = 50;
+	int ToadCount = 80;
 	for (int i = 0; i < ToadCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -1006,7 +1020,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int BatCount = 50;
+	int BatCount = 80;
 	for (int i = 0; i < BatCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		obj->fly_height = 13.f;
@@ -1029,7 +1043,7 @@ void BuildObject()
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
 
-	int RaptorCount = 50;
+	int RaptorCount = 80;
 	for (int i = 0; i < RaptorCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);

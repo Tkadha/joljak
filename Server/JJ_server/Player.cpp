@@ -335,6 +335,7 @@ void PlayerClient::Update_test(float deltaTime)
         for (auto& p_obj : presults) {
             for (auto& cl : PlayerClient::PlayerClients) {
                 if (cl.second->state != PC_INGAME)continue;
+                if (m_id == p_obj->u_id) continue;
                 if (cl.second->m_id != p_obj->u_id) continue;
                 if (testOBBX.Intersects(cl.second->world_obb))
                 {
@@ -372,15 +373,11 @@ void PlayerClient::Update_test(float deltaTime)
         matZ = XMMatrixTranslation(moving_pos.x, moving_pos.y, moving_pos.z); local_obb.Transform(testOBBZ, matZ);
     testOBBZ.Orientation.w = 1.f;
 
-    presults.clear();
-    oresults.clear();
     {
-        tree_obj n_obj{ -1 ,moving_pos };
-        Octree::PlayerOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, presults);
-        Octree::GameObjectOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, oresults);
         for (auto& p_obj : presults) {
             for (auto& cl : PlayerClient::PlayerClients) {
                 if (cl.second->state != PC_INGAME)continue;
+                if (m_id == p_obj->u_id) continue;
                 if (cl.second->m_id != p_obj->u_id) continue;
                 if (testOBBZ.Intersects(cl.second->world_obb))
                 {
@@ -562,10 +559,15 @@ void PlayerClient::SendInvinciblePacket(int oid, bool invin_type)
 void PlayerClient::SendAddPacket(shared_ptr<GameObject> obj)
 {
     if (false == obj->is_alive) return; // 리스폰 중 상태라면
-    vl_mu.lock();
-    viewlist.insert(obj->GetID());
-    vl_mu.unlock();
-
+    //vl_mu.lock();
+    //if(viewlist.count(obj->GetID()) == 0)
+    //    viewlist.insert(obj->GetID());
+    //else {
+    //    vl_mu.unlock();
+	//	return; 
+    //}
+    //vl_mu.unlock();
+    std::cout<< "SendAddPacket: " << obj->GetID() << std::endl;
     ADD_PACKET s_packet;
     s_packet.size = sizeof(ADD_PACKET);
     s_packet.type = static_cast<char>(E_PACKET::E_O_ADD);
@@ -590,7 +592,12 @@ void PlayerClient::SendAddPacket(shared_ptr<GameObject> obj)
 void PlayerClient::SendRemovePacket(shared_ptr<GameObject> obj)
 {
     vl_mu.lock();
-    viewlist.erase(obj->GetID());
+    if (viewlist.count(obj->GetID()) == 1)
+        viewlist.erase(obj->GetID());
+    else {
+        vl_mu.unlock();
+		return; 
+    }
     vl_mu.unlock();
 
     REMOVE_PACKET s_packet;

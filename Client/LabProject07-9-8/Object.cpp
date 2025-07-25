@@ -140,8 +140,7 @@ void CGameObject::Check_attack()
 		if (m_anitype != 9) return;
 		break;
 	case GameObjectType::Golem:
-		return;
-		//if (m_anitype < 11) return;
+		if (m_anitype < 11) return;
 		break;
 	default:
 		break;
@@ -151,6 +150,11 @@ void CGameObject::Check_attack()
 		auto animation_pos = m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_fPosition;
 		if (animation_pos < pAnimationSet->m_fLength / 4) return;
 	}
+	else if (m_objectType == GameObjectType::Golem && m_anitype == 13) {
+		CAnimationSet* pAnimationSet = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_nAnimationSet];
+		auto animation_pos = m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_fPosition;
+		if (animation_pos != pAnimationSet->m_fLength / 2) return;
+	}
 	else {
 		CAnimationSet* pAnimationSet = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_nAnimationSet];
 		auto animation_pos = m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_fPosition;
@@ -159,6 +163,8 @@ void CGameObject::Check_attack()
 	// if attack animation
 	// check hit player
 	if (m_objectType == GameObjectType::Golem && m_anitype == 13) {
+		XMFLOAT3 objPos = GetPosition();
+		m_pScene->SpawnAttackEffect(objPos, 30, 100.0f);
 		auto p_info = m_pScene->GetPlayerInfo();
 		if (p_info) {
 			auto& pos = GetPosition();

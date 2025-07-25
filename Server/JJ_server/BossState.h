@@ -81,9 +81,9 @@ class BossAttackState : public FSMState<GameObject>
 {
 	std::chrono::time_point<std::chrono::system_clock> starttime;
 	std::chrono::time_point<std::chrono::system_clock> endtime;
-	static int Sp_atk_counter;
 	long long duration_time{};
 public:
+	static int Sp_atk_counter;
 
 	virtual void Enter(std::shared_ptr<GameObject> npc);
 
