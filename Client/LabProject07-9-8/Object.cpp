@@ -1768,6 +1768,39 @@ CGameObject* CGameObject::Clone()
 
 
 
+// 장비 오류
+void CGameObject::AttachEquipmentToSkeleton(CGameObject* targetCharacterRoot, CAnimationController* targetAnimController)
+{
+	if (!targetCharacterRoot)
+	{
+		OutputDebugString(L"Error: Target character root is null for equipment attachment.\n");
+		return;
+	}
+
+	// 대상 캐릭터의 모든 본을 맵에 수집합니다.
+	std::map<std::string, CGameObject*> targetBoneMap;
+	GetAllBoneTransforms(targetBoneMap, targetCharacterRoot);
+
+	// 이 장비 GameObject와 그 자식에서 모든 SkinnedMesh를 찾습니다.
+	std::vector<CSkinnedMesh*> equipmentSkinnedMeshes;
+	FindAllSkinnedMeshesOnEquipment(equipmentSkinnedMeshes, this); // 위에서 정의한 헬퍼 함수 사용
+
+	if (equipmentSkinnedMeshes.empty())
+	{
+		OutputDebugString(L"No skinned meshes found on equipment to attach.\n");
+		return;
+	}
+
+	for (CSkinnedMesh* equipmentMesh : equipmentSkinnedMeshes)
+	{
+		if (!equipmentMesh) continue;
+
+		equipmentMesh->PrepareSkinning(targetCharacterRoot);
+
+	}
+}
+
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

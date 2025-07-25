@@ -259,10 +259,12 @@ public:
 
 	void Check_attack();
 
-
 	// Prefab
 	void CopyDataFrom(CGameObject* pSource);
 	virtual CGameObject* Clone();
+
+	// 장비 오류 수정
+	void AttachEquipmentToSkeleton(CGameObject* targetCharacterRoot, CAnimationController* targetAnimController);
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -649,3 +651,53 @@ private:
 	XMFLOAT3 m_xmf3Velocity = { 0,0,0 };
 	XMFLOAT3 m_xmf3Gravity = { 0, -9800.0f, 0 }; // 중력
 };
+
+
+
+
+
+
+void GetAllBoneTransforms(std::map<std::string, CGameObject*>& boneMap, CGameObject* currentFrame)
+{
+	if (!currentFrame) return;
+
+	// 프레임 이름으로 맵에 추가
+	if (currentFrame->m_pstrFrameName[0] != '\0')
+	{
+		boneMap[currentFrame->m_pstrFrameName] = currentFrame;
+	}
+
+	// 재귀 호출
+	if (currentFrame->m_pChild)
+	{
+		GetAllBoneTransforms(boneMap, currentFrame->m_pChild);
+	}
+	if (currentFrame->m_pSibling)
+	{
+		GetAllBoneTransforms(boneMap, currentFrame->m_pSibling);
+	}
+}
+
+void FindAllSkinnedMeshesOnEquipment(std::vector<CSkinnedMesh*>& outSkinnedMeshes, CGameObject* currentObject)
+{
+	if (!currentObject) return;
+
+	// 현재 오브젝트가 스킨드 메쉬를 가지고 있는지 확인
+	if (currentObject->m_pMesh && (currentObject->m_pMesh->GetType() & VERTEXT_BONE_INDEX_WEIGHT))
+	{
+		outSkinnedMeshes.push_back(static_cast<CSkinnedMesh*>(currentObject->m_pMesh));
+	}
+
+	// 재귀 호출
+	if (currentObject->m_pChild)
+	{
+		FindAllSkinnedMeshesOnEquipment(outSkinnedMeshes, currentObject->m_pChild);
+	}
+	if (currentObject->m_pSibling)
+	{
+		FindAllSkinnedMeshesOnEquipment(outSkinnedMeshes, currentObject->m_pSibling);
+	}
+}
+
+
+
