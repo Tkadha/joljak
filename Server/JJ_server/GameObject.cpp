@@ -222,12 +222,13 @@ void GameObject::Rotate(float fPitch, float fYaw, float fRoll)
 	if (collisionCount > 0)
 	{
 		totalPushOutVector = XMVector3Normalize(totalPushOutVector);
-
+		totalPushOutVector = XMVectorSetY(totalPushOutVector, 0.0f);
+		totalPushOutVector = XMVector3Normalize(totalPushOutVector);
 		float pushMagnitude = 0.1f;
 
 		// 최종 위치 보정
 		xmf4x4._41 += XMVectorGetX(totalPushOutVector) * pushMagnitude;
-		xmf4x4._42 += XMVectorGetY(totalPushOutVector) * pushMagnitude;
+		//xmf4x4._42 += XMVectorGetY(totalPushOutVector) * pushMagnitude;
 		xmf4x4._43 += XMVectorGetZ(totalPushOutVector) * pushMagnitude;
 	}
 }
