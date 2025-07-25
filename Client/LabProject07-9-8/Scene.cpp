@@ -10,6 +10,8 @@
 #include "AtkState.h"
 #include "WaveObject.h"
 
+#define MIN_HEIGHT                  1055.f      
+
 bool ChangeAlbedoTexture(
 	CGameObject* pParentGameObject,
 	int materialIndex,
@@ -141,7 +143,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	std::vector<std::wstring> skyboxTextures = {
 	   L"Skybox/mor.dds",
 	   L"Skybox/nig.dds",
-	   L"Skybox/evening.dds"
+	   L"Skybox/eve.dds"
 	};
 
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pGameFramework);
@@ -149,7 +151,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 
 	srand((unsigned int)time(NULL));
 
-	XMFLOAT3 xmf3Scale(5.f, 0.2f, 5.f);
+	XMFLOAT3 xmf3Scale(5.f, 0.1f, 5.f);
 	XMFLOAT4 xmf4Color(0.0f, 0.0f, 0.0f, 0.0f);
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color, m_pGameFramework);
 	m_pTerrain->m_xmf4x4World = Matrix4x4::Identity();
@@ -160,8 +162,8 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	// 1. Waves 객체를 생성합니다.
 	m_pWavesObject = new CWavesObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 	// 물결이 보일 위치를 설정합니다. (맵의 중앙 근처, 수면 높이)
-	m_pWavesObject->SetPosition(5000.0f, 2160.0f, 5000.0f);
-	m_pWavesObject->SetScale(10.f, 1.f, 10.f);
+	m_pWavesObject->SetPosition(5000.0f, 1070.0f, 5000.0f);
+	m_pWavesObject->SetScale(15.f, 1.f, 15.f);
 	// 2. Waves를 위한 재질(Material)을 생성합니다.
 	CMaterial* pWavesMaterial = new CMaterial(1, m_pGameFramework);
 
@@ -175,7 +177,54 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	m_pWavesObject->SetMaterial(0, pWavesMaterial);
 
 
+	/////////////////////////////////////////이펙트 오브젝트
+	const int effectPoolSize = 20;
+	for (int i = 0; i < effectPoolSize; ++i)
+	{
 
+		auto* pEffect = new CAttackEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		pEffect->m_id = -1;
+
+		m_vAttackEffects.push_back(pEffect);
+
+
+		m_vGameObjects.push_back(pEffect);
+	}
+
+	CLoadedModelInfo* pWoodShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch_A.bin", m_pGameFramework);
+	CLoadedModelInfo* pRockShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/RockCluster_A_LOD0.bin", m_pGameFramework);
+
+	CMesh* pWoodMesh = pWoodShardModel->m_pModelRootObject->m_pMesh;
+	CMaterial* pWoodMaterial = pWoodShardModel->m_pModelRootObject->GetMaterial(0);
+	CMesh* pRockMesh = pRockShardModel->m_pModelRootObject->m_pMesh;
+	CMaterial* pRockMaterial = pRockShardModel->m_pModelRootObject->GetMaterial(0);
+
+	const int shardPoolSize = 50; // 풀 크기
+
+	// 2. 나무 파편 풀 생성
+	for (int i = 0; i < shardPoolSize; ++i) {
+		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pWoodMesh, pWoodMaterial);
+		pShard->SetScale(1.0f, 1.0f, 1.0f);
+		pShard->m_id = -1;
+		m_vWoodShards.push_back(pShard);
+		m_vGameObjects.push_back(pShard);
+	}
+
+	// 3. 돌 파편 풀 생성
+	for (int i = 0; i < shardPoolSize; ++i) {
+		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pRockMesh, pRockMaterial);
+
+		pShard->SetScale(0.2f, 0.2f, 0.2f);
+		pShard->m_id = -1;
+		m_vRockShards.push_back(pShard);
+		m_vGameObjects.push_back(pShard);
+	}
+
+	// 로드가 끝난 임시 모델 정보는 삭제
+	if (pWoodShardModel) delete pWoodShardModel;
+	if (pRockShardModel) delete pRockShardModel;
+
+	/////////////////////////////////////////
 
 
 	// 1. 그림자 맵 객체 생성
@@ -207,185 +256,37 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 
 	// 인자 : 객체이름, 갯수, 스폰위치 min, max, 크기 min, max, ~ , 텍스쳐인덱스, 텍스쳐 
 
-	SpawnStaticObjects("BushA", 100, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("Chervil", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("RedPoppy", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("ElephantEar", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("GrassPatch", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("Clovers", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("Daisies", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("Leaves", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("GroundPoppies", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("BushA", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Chervil", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("RedPoppy", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("ElephantEar", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("GrassPatch", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Clovers", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Daisies", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Leaves", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("GroundPoppies", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
 
 	float spawnMin = 500, spawnMax = 9500;
 	float objectMinSize = 15, objectMaxSize = 20;
 	
 	
+	// 생성할 건축물 목록 (프리팹 이름과 동일해야 함)
+	std::vector<std::string> buildableItems = { "wood_wall" /*, "wood_floor", ... */ };
 
+	for (const auto& itemName : buildableItems) {
+		std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab(itemName);
+		if (prefab) {
+			CGameObject* previewObject = prefab->Clone();
+			previewObject->isRender = false; // 처음에는 보이지 않도록 설정
+			previewObject->SetPosition(5000.0f, 2600.0f, 5000.0f);
+			previewObject->SetScale(10.0f, 10.0f, 10.0f);
+			previewObject->m_id = -1;
+			m_mapBuildPrefabs[itemName] = previewObject; // 맵에 이름으로 저장
+			m_vGameObjects.emplace_back(previewObject);     // 씬의 메인 목록에도 추가
+		}
+	}
 
-	m_pPreviewPine = new CConstructionObject(
-		pd3dDevice, pd3dCommandList, m_pGameFramework);
-	m_pPreviewPine->SetPosition(XMFLOAT3(0, 0, 0));
-
-	//auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-	m_pPreviewPine->SetScale(10, 10, 10);
-
-	m_pPreviewPine->isRender = false;
-
-	m_pPreviewPine->m_treecount = tree_obj_count;
-	m_vGameObjects.emplace_back(m_pPreviewPine);
-	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, m_pPreviewPine->m_worldOBB.Center);
-	octree.insert(std::move(t_obj));
-
-
-	//int nCowObjects = 1;
-	//int animate_count = 13;
-	//for (int i = 0; i < nCowObjects; ++i)
-	//{
-	//	CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Cow.bin", m_pGameFramework);
-	//	CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pCowModel, animate_count, m_pGameFramework);
-	//	gameobj->m_objectType = GameObjectType::Cow;
-	//	gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	//	for (int j = 1; j < animate_count; ++j) {
-	//		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
-	//		gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
-	//	}
-	//	gameobj->SetOwningScene(this);
-	//	//gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
-	//	//gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
-
-	//	gameobj->Rotate(0.f, 180.f, 0.f);
-	//	auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
-	//	gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-	//	gameobj->SetScale(12.0f, 12.0f, 12.0f);
-	//	gameobj->SetTerraindata(m_pTerrain);
-	//	gameobj->m_treecount = tree_obj_count;
-	//	m_vGameObjects.emplace_back(gameobj);
-	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
-	//	octree.insert(std::move(t_obj));
-	//	if (pCowModel) delete pCowModel;
-	//}
-	//int nPigObjects = 1;
-	//for (int i = 0; i < nPigObjects; ++i)
-	//{
-	//	CLoadedModelInfo* pPigModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Pig.bin", m_pGameFramework);
-	//	CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pPigModel, animate_count, m_pGameFramework);
-	//	gameobj->m_objectType = GameObjectType::Pig;
-	//	gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	//	for (int j = 1; j < animate_count; ++j) {
-	//		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
-	//		gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
-	//	}
-	//	gameobj->SetOwningScene(this);
-	//	//gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
-	//	//gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
-	//	gameobj->Rotate(0.f, 180.f, 0.f);
-	//	auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
-	//	gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-	//	gameobj->SetScale(10.0f, 10.0f, 10.0f);
-	//	gameobj->SetTerraindata(m_pTerrain);
-	//	gameobj->m_treecount = tree_obj_count;
-
-	//	m_vGameObjects.emplace_back(gameobj);
-	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
-	//	octree.insert(std::move(t_obj));
-	//	if (pPigModel) delete pPigModel;
-	//}
-
-	//int nSpiderObjects = 1;
-	//for (int i = 0; i < nSpiderObjects; ++i)
-	//{
-	//	CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Spider.bin", m_pGameFramework);
-	//	CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pSpiderModel, animate_count, m_pGameFramework);
-	//	gameobj->m_objectType = GameObjectType::Spider;
-	//	gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	//	for (int j = 1; j < animate_count; ++j) {
-	//		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
-	//		gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
-	//	}
-	//	gameobj->SetOwningScene(this);
-	//	//gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
-	//	//gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
-
-	//	gameobj->Rotate(0.f, 180.f, 0.f);
-	//	auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
-	//	gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-	//	gameobj->SetScale(8.f, 8.f, 8.f);
-	//	gameobj->SetTerraindata(m_pTerrain);
-	//	gameobj->m_treecount = tree_obj_count;
-	//	m_vGameObjects.emplace_back(gameobj);
-	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
-	//	octree.insert(std::move(t_obj));
-	//	if (pSpiderModel) delete pSpiderModel;
-	//}
-	//int nToadObjects = 1;
-	//for (int i = 0; i < nToadObjects; ++i)
-	//{
-	//	CLoadedModelInfo* pToadModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Toad.bin", m_pGameFramework);
-	//	CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pToadModel, animate_count, m_pGameFramework);
-	//	gameobj->m_objectType = GameObjectType::Toad;
-	//	gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	//	for (int j = 1; j < animate_count; ++j) {
-	//		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
-	//		gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
-	//	}
-	//	gameobj->SetOwningScene(this);
-	//	//gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
-	//	//gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
-
-	//	gameobj->Rotate(0.f, 180.f, 0.f);
-	//	auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
-	//	gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-	//	gameobj->SetScale(8.f, 8.f, 8.f);
-	//	gameobj->SetTerraindata(m_pTerrain);
-	//	gameobj->m_treecount = tree_obj_count;
-	//	m_vGameObjects.emplace_back(gameobj);
-	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
-	//	octree.insert(std::move(t_obj));
-	//	if (pToadModel) delete pToadModel;
-	//}
-	//int nWolfObjects = 1;
-	//for (int i = 0; i < nWolfObjects; ++i)
-	//{
-	//	CLoadedModelInfo* pWolfModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Wolf.bin", m_pGameFramework);
-	//	CGameObject* gameobj = new CMonsterObject(pd3dDevice, pd3dCommandList, pWolfModel, animate_count, m_pGameFramework);
-	//	gameobj->m_objectType = GameObjectType::Wolf;
-	//	gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	//	for (int j = 1; j < animate_count; ++j) {
-	//		gameobj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
-	//		gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
-	//	}
-	//	gameobj->SetOwningScene(this);
-	//	//gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
-	//	//gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
-
-	//	gameobj->Rotate(0.f, 180.f, 0.f);
-	//	auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
-	//	gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-	//	gameobj->SetScale(10.f, 10.f, 10.f);
-	//	gameobj->SetTerraindata(m_pTerrain);
-	//	gameobj->m_treecount = tree_obj_count;
-	//	m_vGameObjects.emplace_back(gameobj);
-	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
-	//	octree.insert(std::move(t_obj));
-	//	if (pWolfModel) delete pWolfModel;
-	//}
-
-	//const int rockShardPoolSize = 1;
-	//for (int i = 0; i < rockShardPoolSize; ++i)
-	//{
-	//	auto* shard = new CRockShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework);
-	//	m_vRockShards.push_back(shard);
-	//	m_vGameObjects.emplace_back(shard);
-	//}
-
-	//int materialIndexToChange = 0;
-	//UINT albedoTextureSlot = 0;
-	//const wchar_t* textureFile = L"Model/Textures/T_HU_M_Body_04_D.dds";
-	//CGameObject* gameObj = m_pPlayer->FindFrame("Bracers_Naked");
-	//ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
-
-	//m_pPlayer->SetCollisionTargets(m_vGameObjects);
+	
 
 	for (auto obj : m_vGameObjects) {
 		if (obj->m_objectType == GameObjectType::Tree) {
@@ -394,54 +295,19 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 		else if (obj->m_objectType == GameObjectType::Pig) {
 			obj->SetOBB(1.0f, 0.8f, 1.0f, XMFLOAT3(0.0f, 1.0f, -1.0f));
 		}
+		else if (obj->m_id = -1) {
+			obj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
+		}
 		else {
 			obj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
 		}
-
-		if (obj->m_pSkinnedAnimationController) obj->PropagateAnimController(obj->m_pSkinnedAnimationController);
-
-		switch (obj->m_objectType)
-		{
-		case GameObjectType::Wasp:
-		case GameObjectType::Snail:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[5].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[6].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		case GameObjectType::Snake:
-		case GameObjectType::Spider:
-		case GameObjectType::Bat:
-		case GameObjectType::Turtle:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		case GameObjectType::Wolf:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		case GameObjectType::Toad:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		case GameObjectType::Cow:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		case GameObjectType::Pig:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_localOBB.Center.y += 30.0f;
-			break;
-		default:
-			break;
-		}
-
+		
 		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	}
 	
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
+
 void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	
@@ -493,7 +359,54 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	m_pWavesObject->SetMaterial(0, pWavesMaterial);
 	
 
+	/////////////////////////////////////////이펙트 오브젝트
+	const int effectPoolSize = 20; 
+	for (int i = 0; i < effectPoolSize; ++i)
+	{
+		
+		auto* pEffect = new CAttackEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 
+		
+		m_vAttackEffects.push_back(pEffect);
+
+		
+		m_vGameObjects.push_back(pEffect);
+	}
+
+	CLoadedModelInfo* pWoodShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch_A.bin", m_pGameFramework);
+	CLoadedModelInfo* pRockShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/RockCluster_A_LOD0.bin", m_pGameFramework);
+
+	CMesh* pWoodMesh = pWoodShardModel->m_pModelRootObject->m_pMesh;
+	CMaterial* pWoodMaterial = pWoodShardModel->m_pModelRootObject->GetMaterial(0);
+	CMesh* pRockMesh = pRockShardModel->m_pModelRootObject->m_pMesh;
+	CMaterial* pRockMaterial = pRockShardModel->m_pModelRootObject->GetMaterial(0);
+
+	const int shardPoolSize = 50; // 풀 크기
+
+	// 2. 나무 파편 풀 생성
+	for (int i = 0; i < shardPoolSize; ++i) {
+		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pWoodMesh, pWoodMaterial);
+
+		pShard->SetScale(1.0f, 1.0f, 1.0f);
+		m_vWoodShards.push_back(pShard);
+		m_vGameObjects.push_back(pShard);
+	}
+
+	// 3. 돌 파편 풀 생성
+	for (int i = 0; i < shardPoolSize; ++i) {
+		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pRockMesh, pRockMaterial);
+
+		pShard->SetScale(0.2f, 0.2f, 0.2f);
+
+		m_vRockShards.push_back(pShard);
+		m_vGameObjects.push_back(pShard);
+	}
+
+	// 로드가 끝난 임시 모델 정보는 삭제
+	if (pWoodShardModel) delete pWoodShardModel;
+	if (pRockShardModel) delete pRockShardModel;
+
+	/////////////////////////////////////////
 
 
 	// 1. 그림자 맵 객체 생성
@@ -542,6 +455,24 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	SpawnStaticObjects("Daisies", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
 	SpawnStaticObjects("Leaves", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
 	SpawnStaticObjects("GroundPoppies", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+
+	
+
+	// 생성할 건축물 목록 (프리팹 이름과 동일해야 함)
+	std::vector<std::string> buildableItems = { "wood_wall" /*, "wood_floor", ... */ };
+
+	for (const auto& itemName : buildableItems) {
+		std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab(itemName);
+		if (prefab) {
+			CGameObject* previewObject = prefab->Clone();
+			previewObject->isRender = false; // 처음에는 보이지 않도록 설정
+			previewObject->SetPosition(5000.0f,2600.0f, 5000.0f);
+			previewObject->SetScale(10.0f, 10.0f, 10.0f);
+
+			m_mapBuildPrefabs[itemName] = previewObject; // 맵에 이름으로 저장
+			m_vGameObjects.emplace_back(previewObject);     // 씬의 메인 목록에도 추가
+		}
+	}
 
 	int animate_count = 13;
 	// Cow 배치
@@ -726,13 +657,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		if (pWolfModel) delete pWolfModel;
 	}
 
-	const int rockShardPoolSize = 20;
-	for (int i = 0; i < rockShardPoolSize; ++i)
-	{
-		auto* shard = new CRockShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		m_vRockShards.push_back(shard);
-		m_vGameObjects.emplace_back(shard);
-	}
+	
 
 	//int materialIndexToChange = 0;
 	//UINT albedoTextureSlot = 0;
@@ -957,10 +882,7 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 	if (m_pWavesObject) m_pWavesObject->Animate(fTimeElapsed);
 
-	for (auto& shard : m_vRockShards)
-	{
-		shard->Update(fTimeElapsed);
-	}
+	
 }
 
 
@@ -1001,9 +923,13 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 
 		// 기존 Render 함수를 호출하되, Shadow 셰이더는 재질/조명 정보를 무시할 것임
-		for (auto& obj : m_vGameObjects) {
-			if (obj) obj->Animate(m_fElapsedTime);
-			if (obj) obj->RenderShadow(pd3dCommandList);
+		{
+			std::lock_guard<std::mutex> lock(m_Mutex);
+
+			for (auto& obj : m_vGameObjects) {
+				//if (obj) obj->Animate(m_fElapsedTime);
+				if (obj->isRender) obj->RenderShadow(pd3dCommandList);
+			}
 		}
 		for (auto& obj : m_lEnvironmentObjects) {
 			if (obj) obj->RenderShadow(pd3dCommandList);
@@ -1063,17 +989,22 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 
 
+	
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
 		for (auto& obj : m_vGameObjects) {
-			//if (obj) obj->Animate(m_fElapsedTime);
+			if (obj) obj->Animate(m_fElapsedTime);
 			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
 		}
 		for (auto& obj : m_lEnvironmentObjects) {
 			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
 		}
 	}
-
+	
+	for (auto& constructionObj : m_vConstructionObjects) {
+		if (constructionObj) constructionObj->Animate(m_fElapsedTime);
+		if (constructionObj && constructionObj->isRender) constructionObj->Render(pd3dCommandList, pCamera);
+	}
 
 	if (m_pWavesObject) m_pWavesObject->Render(pd3dCommandList, pCamera);
 
@@ -1093,7 +1024,11 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 	//if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
 
-	//if (m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
+	//if (m_pPreviewPine && m_pPreviewPine->isRender) {
+	//	m_pPreviewPine->Animate(m_fElapsedTime);
+	//	m_pPreviewPine->Render(pd3dCommandList, pCamera);
+	//}
+
 
 
 	if (m_pPlayer) {
@@ -1105,7 +1040,9 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 				m_pPlayer->SetInvincibility();
 			}
 		}
+		m_pPlayer->pos_mu.lock();
 		m_pPlayer->Render(pd3dCommandList, pCamera);
+		m_pPlayer->pos_mu.unlock();
 	}
 	for (auto& p : PlayerList) {
 		if (p.second->m_pSkinnedAnimationController) p.second->Animate(m_fElapsedTime);
@@ -1135,10 +1072,11 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 				}
 			}
 
-			if (m_pPreviewPine && m_pPreviewPine->ShouldRenderOBB()) {
-				m_pPreviewPine->RenderOBB(pd3dCommandList, pCamera);
+			
+			for (auto& constructionObj : m_vConstructionObjects) {
+				if (constructionObj->ShouldRenderOBB()) 
+					constructionObj->RenderOBB(pd3dCommandList, pCamera);
 			}
-
 
 
 			if (m_pPlayer && m_pPlayer->ShouldRenderOBB()) {
@@ -1487,7 +1425,7 @@ void CScene::UpdateShadowTransform()
 void CScene::UpdateLights(float fTimeElapsed)
 {
 	// 1. 빛의 회전 각도를 업데이트합니다.
-	float rotationSpeed = 0.01f; // 속도를 약간 조절
+	float rotationSpeed = 0.5f; // 속도를 약간 조절
 	m_fLightRotationAngle += fTimeElapsed * rotationSpeed;
 	if (m_fLightRotationAngle > 360.0f) m_fLightRotationAngle -= 360.0f;
 
@@ -1517,8 +1455,8 @@ void CScene::UpdateLights(float fTimeElapsed)
 		m_xmf4GlobalAmbient = m_xmf4DaylightAmbient;
 		pMainLight->m_xmf4Diffuse = m_xmf4DaylightDiffuse;
 		pMainLight->m_xmf4Specular = m_xmf4DaylightSpecular;
-
-		GetSkyBox()->SetSkyboxIndex(0);
+		if(GetSkyBox()->GetCurrentTextureIndex() != 0)
+			GetSkyBox()->SetSkyboxIndex(0);
 	}
 	else // 빛이 위를 향하면 밤
 	{
@@ -1527,7 +1465,7 @@ void CScene::UpdateLights(float fTimeElapsed)
 		m_xmf4GlobalAmbient = m_xmf4MoonlightAmbient;
 		pMainLight->m_xmf4Diffuse = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // 빛 색상을 검은색
 		pMainLight->m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-
+		if (GetSkyBox()->GetCurrentTextureIndex() != 1)
 		GetSkyBox()->SetSkyboxIndex(1);
 	}
 }
@@ -1614,6 +1552,11 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	pLoadedModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Wolf.bin", m_pGameFramework);
 	pResourceManager->RegisterPrefab("Wolf", std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, pLoadedModel, 13, m_pGameFramework));
 	if (pLoadedModel) delete pLoadedModel;
+
+	//건축
+	pResourceManager->RegisterPrefab("wood_wall", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/buildobject/Fence_WoodC_A.bin", m_pGameFramework));
+
+
 }
 
 
@@ -1626,8 +1569,12 @@ void CScene::SpawnStaticObjects(const std::string& prefabName, int count, float 
 	for (int i = 0; i < count; ++i)
 	{
 		CGameObject* gameObj = prefab->Clone();
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		while (m_pTerrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
+			randompos = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		}
+
+		gameObj->SetPosition(randompos.first, m_pTerrain->GetHeight(randompos.first, randompos.second), randompos.second);
 
 		auto [w, h] = genRandom::generateRandomXZ(gen, scaleMin, scaleMax, scaleMin, scaleMax);
 		gameObj->SetScale(w, h, w);
@@ -1638,5 +1585,78 @@ void CScene::SpawnStaticObjects(const std::string& prefabName, int count, float 
 		gameObj->m_id = -1;
 		gameObj->m_treecount = tree_obj_count;
 		m_lEnvironmentObjects.emplace_back(gameObj);
+	}
+}
+
+void CScene::SpawnAttackEffect(const XMFLOAT3& centerPosition, int numEffects, float radius)
+{
+	
+	// [추가] 재활용을 위한 인덱스 변수
+	static int nEffectPoolIndex = 0;
+
+	float angleStep = 360.0f / numEffects;
+
+	for (int i = 0; i < numEffects; ++i)
+	{
+		float angle = XMConvertToRadians(i * angleStep);
+		XMFLOAT3 offset = XMFLOAT3(cos(angle) * radius, 0, sin(angle) * radius);
+		XMFLOAT3 spawnPos = Vector3::Add(centerPosition, offset);
+
+		if (m_pTerrain) {
+			spawnPos.y = m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + 5.0f;
+		}
+
+		CAttackEffectObject* pEffectToUse = nullptr;
+
+		
+		for (auto& pEffect : m_vAttackEffects)
+		{
+			if (!pEffect->isRender)
+			{
+				pEffectToUse = pEffect;
+				break;
+			}
+		}
+
+		
+		if (!pEffectToUse)
+		{
+			
+			pEffectToUse = m_vAttackEffects[nEffectPoolIndex];
+			nEffectPoolIndex = (nEffectPoolIndex + 1) % m_vAttackEffects.size();
+		}
+
+		
+		if (pEffectToUse)
+		{
+			pEffectToUse->Activate(spawnPos);
+		}
+	}
+}
+
+void CScene::SpawnResourceShards(const XMFLOAT3& origin, ShardType type)
+{
+	
+	std::vector<CResourceShardEffect*>& shardPool = (type == ShardType::Wood) ? m_vWoodShards : m_vRockShards;
+
+	int numShardsToSpawn = 8 + (rand() % 5); 
+
+	for (int i = 0; i < numShardsToSpawn; ++i)
+	{
+		
+		for (auto& pShard : shardPool)
+		{
+			if (!pShard->isRender)
+			{
+				
+				XMFLOAT3 velocity = XMFLOAT3(
+					((float)(rand() % 4000) - 2000.0f), // X: -2000 ~ +2000
+					((float)(rand() % 2000) + 1500.0f), // Y: +1500 ~ +3500 (위로 매우 강하게)
+					((float)(rand() % 4000) - 2000.0f)  // Z: -2000 ~ +2000
+				);
+				pShard->Activate(origin, velocity);
+				break;
+			}
+		}
 	}
 }

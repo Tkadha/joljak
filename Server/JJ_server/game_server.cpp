@@ -15,7 +15,7 @@
 #include "Event.h"
 #include <vector>
 
-
+#include "BossState.h"
 #include "NonAtkState.h"
 #include "AtkState.h"
 
@@ -24,6 +24,8 @@ using namespace std;
 #define LOBBY_PORT 8999
 #define PORT 9000
 #define DB_PORT 9001
+
+#define MIN_HEIGHT                  1055.f      
 //-----------------------------------------------
 // 
 //				game server
@@ -47,6 +49,9 @@ shared_ptr<thread> g_event_thread;
 Timer g_timer;
 
 std::atomic<bool> g_is_shutting_down{ false };
+
+static float time_accumulator = 0.0f;
+static int play_day = 0;
 
 BOOL WINAPI ConsoleHandler(DWORD dwCtrlType) {
 	if (dwCtrlType == CTRL_C_EVENT) {
@@ -106,24 +111,22 @@ void worker_thread()
 					return;
 				}
 
-				if (COMP_TYPE::OP_SEND == p_read_over->comp_type) {
+				if (readEvent.lpCompletionKey == (ULONG_PTR)g_l_socket.get()) // 리슨소켓이면
+				{
+					ProcessAccept();				
+				}
+				else if (COMP_TYPE::OP_SEND == p_read_over->comp_type) {
 
 					p_read_over->m_isReadOverlapped = false;
 					delete p_read_over; // 보냈다면 delete해주기
-					continue;
 				}
-				if (COMP_TYPE::OP_FSM_UPDATE == p_read_over->comp_type) // FSM 업데이트 요청이면
+				else if (COMP_TYPE::OP_FSM_UPDATE == p_read_over->comp_type) // FSM 업데이트 요청이면
 				{
 					auto obj = GameObject::gameObjects[p_read_over->obj_id];
 					if (obj) {
 						obj->FSMUpdate();
 					}
 					delete p_read_over;
-					continue;
-				}
-				if (readEvent.lpCompletionKey == (ULONG_PTR)g_l_socket.get()) // 리슨소켓이면
-				{
-					ProcessAccept();				
 				}
 				else  // TCP 연결 소켓이면
 				{					
@@ -322,6 +325,31 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 	{
 		CHANGE_STAT_PACKET* r_packet = reinterpret_cast<CHANGE_STAT_PACKET*>(packet);
 		client->Change_Stat(r_packet->stat, r_packet->value);
+	}
+	break;
+	case E_PACKET::E_STRUCT_OBJ:
+	{
+		STRUCT_OBJ_PACKET* r_packet = reinterpret_cast<STRUCT_OBJ_PACKET*>(packet);
+		std::shared_ptr<GameObject> obj = std::make_shared<GameObject>(false);
+		BoundingOrientedBox bb;
+		bb.Center = XMFLOAT3{ r_packet->Center.x, r_packet->Center.y, r_packet->Center.z };
+		bb.Extents = XMFLOAT3{ r_packet->Extents.x, r_packet->Extents.y, r_packet->Extents.z };
+		bb.Orientation = XMFLOAT4{ r_packet->Orientation.x, r_packet->Orientation.y, r_packet->Orientation.z, r_packet->Orientation.w };
+		obj->local_obb = bb;
+		obj->SetRight(XMFLOAT3{ r_packet->right.x, r_packet->right.y, r_packet->right.z });
+		obj->SetUp(XMFLOAT3{ r_packet->up.x, r_packet->up.y, r_packet->up.z });
+		obj->SetLook(XMFLOAT3{ r_packet->look.x, r_packet->look.y, r_packet->look.z });
+		obj->SetPosition(XMFLOAT3{ r_packet->position.x, r_packet->position.y, r_packet->position.z });
+		obj->SetType(r_packet->o_type);
+		GameObject::ConstructObjects.push_back(obj);
+		std::cout<< "Constructed object: " << "wood wall " << " at position: "
+			<< r_packet->position.x << ", " << r_packet->position.y << ", " << r_packet->position.z << std::endl;
+		// 다른 클라에게도 전송하기
+		for (auto& cl : PlayerClient::PlayerClients) {
+			if (cl.second->state != PC_INGAME) continue;
+			if (cl.second->m_id == client->m_id) continue;
+			cl.second->SendStructPacket(obj);
+		}
 	}
 	break;
 	default:
@@ -576,7 +604,16 @@ int main(int argc, char* argv[])
 		while (!g_is_shutting_down) {
 			g_timer.Tick(120.f);
 			float deltaTime = g_timer.GetTimeElapsed(); // Use Tick same deltaTime
-
+			float time_speed = 0.5f;
+			time_accumulator += deltaTime * time_speed;
+			if (time_accumulator > 360.0f) {
+				time_accumulator -= 360.0f;
+				play_day++;
+				for(auto& cl : PlayerClient::PlayerClients) {
+					if (cl.second->state != PC_INGAME) continue;
+					cl.second->SendTimePacket(time_accumulator);
+				}
+			}
 			for (auto& obj : GameObject::gameObjects) {
 				std::vector<tree_obj*> results;
 				tree_obj t_obj{ -1, obj->GetPosition() };
@@ -591,61 +628,65 @@ int main(int argc, char* argv[])
 			}
 
 			for (auto& cl : PlayerClient::PlayerClients) {
-				if (cl.second->state != PC_INGAME) continue;
-				std::shared_ptr<PlayerClient> player = cl.second;
-				auto& beforepos = player->GetPosition();
-				if (player->Playerstamina.load() > 0)
-					player->Update_test(deltaTime);
-				auto& pos = player->GetPosition();
-				if (beforepos.x != pos.x || beforepos.y != pos.y || beforepos.z != pos.z)
 				{
-					player->BroadCastPosPacket();
-					int stamina = player->Playerstamina.load();
+					std::lock_guard<std::mutex> lock(cl.second->c_mu);
+					if (cl.second->state != PC_INGAME) continue;
+				}
+				if (cl.second) {
+					std::shared_ptr<PlayerClient> player = cl.second;
+					auto& beforepos = player->GetPosition();
+					if (player->Playerstamina.load() > 0)
+						player->Update_test(deltaTime);
+					auto& pos = player->GetPosition();
+					if (beforepos.x != pos.x || beforepos.y != pos.y || beforepos.z != pos.z)
+					{
+						player->BroadCastPosPacket();
+						int stamina = player->Playerstamina.load();
+						if (stamina > 0 && player->GetCurrentState() == ServerPlayerState::Running) {
+							player->stamina_counter++;
+							if (player->stamina_counter > 15) {
+								int desiredstamina = stamina - 1;
+								if (desiredstamina < 0) {
+									desiredstamina = 0;
+								}
 
-					if (stamina > 0 && player->GetCurrentState() == ServerPlayerState::Running) {
-						player->stamina_counter++;
-						if (player->stamina_counter > 15) {
-							int desiredstamina = stamina - 1;
-							if (desiredstamina < 0) {
-								desiredstamina = 0;
+								if (player->Playerstamina.compare_exchange_weak(stamina, desiredstamina)) {
+									// 패킷전송
+									CHANGE_STAT_PACKET s_packet;
+									s_packet.size = sizeof(CHANGE_STAT_PACKET);
+									s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+									s_packet.stat = E_STAT::STAMINA;
+									s_packet.value = player->Playerstamina.load();
+									player->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+								}
+								player->stamina_counter = 0;
 							}
-
-							if (player->Playerstamina.compare_exchange_weak(stamina, desiredstamina)) {
-								// 패킷전송
-								CHANGE_STAT_PACKET s_packet;
-								s_packet.size = sizeof(CHANGE_STAT_PACKET);
-								s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
-								s_packet.stat = E_STAT::STAMINA;
-								s_packet.value = player->Playerstamina.load();
-								player->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
-							}
-							player->stamina_counter = 0;
 						}
 					}
-				}
-				Octree::PlayerOctree.update(player->m_id, player->GetPosition());
+					Octree::PlayerOctree.update(player->m_id, player->GetPosition());
 
 
-				player->vl_mu.lock();
-				std::unordered_set<int> before_vl = player->viewlist;
-				player->vl_mu.unlock();
+					player->vl_mu.lock();
+					std::unordered_set<int> before_vl = player->viewlist;
+					player->vl_mu.unlock();
 
-				std::unordered_set<int> new_vl;
-				std::vector<tree_obj*> results; // find obj
-				tree_obj p_obj{ -1,pos };
-				Octree::GameObjectOctree.query(p_obj, oct_distance, results);
-				for (auto& obj : results) new_vl.insert(obj->u_id);
+					std::unordered_set<int> new_vl;
+					std::vector<tree_obj*> results; // find obj
+					tree_obj p_obj{ -1,pos };
+					Octree::GameObjectOctree.query(p_obj, oct_distance, results);
+					for (auto& obj : results) new_vl.insert(obj->u_id);
 
-				for (auto o_id : before_vl) {
-					if (0 == new_vl.count(o_id)) {	// before에만 있다면 제거 패킷
-						player->SendRemovePacket(GameObject::gameObjects[o_id]);
+					for (auto o_id : before_vl) {
+						if (0 == new_vl.count(o_id)) {	// before에만 있다면 제거 패킷
+							player->SendRemovePacket(GameObject::gameObjects[o_id]);
+						}
 					}
-				}
-				for (auto o_id : new_vl) {
-					if (0 == before_vl.count(o_id)) { //new에만 있다면 추가 패킷
-						if (GameObject::gameObjects[o_id]->is_alive == false) continue;
-						if (GameObject::gameObjects[o_id]->Gethp() <= 0) continue;
-						player->SendAddPacket(GameObject::gameObjects[o_id]);
+					for (auto o_id : new_vl) {
+						if (0 == before_vl.count(o_id)) { //new에만 있다면 추가 패킷
+							if (GameObject::gameObjects[o_id]->is_alive == false) continue;
+							if (GameObject::gameObjects[o_id]->Gethp() <= 0) continue;
+							player->SendAddPacket(GameObject::gameObjects[o_id]);
+						}
 					}
 				}
 			}
@@ -754,6 +795,9 @@ void ProcessAccept()
 				cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 			}
 
+			// 현재 서버 시간 동기화
+			remoteClient->SendTimePacket(time_accumulator);
+
 		}
 
 		// 인게임 객체 다 보내기 (나중에 옥트리 이동 시 뷰리스트 적용)
@@ -765,7 +809,10 @@ void ProcessAccept()
 				if (GameObject::gameObjects[obj->u_id]->is_alive == false) continue;
 				if (GameObject::gameObjects[obj->u_id]->Gethp() <= 0) continue;
 				remoteClient->SendAddPacket(GameObject::gameObjects[obj->u_id]);
-			}				
+			}	
+			for (auto& obj : GameObject::ConstructObjects) {
+				remoteClient->SendStructPacket(obj);
+			}
 		}
 		auto p_obj = std::make_unique<tree_obj>(remoteClient->m_id, remoteClient->GetPosition());
 		Octree::PlayerOctree.insert(std::move(p_obj));
@@ -814,7 +861,7 @@ void BuildObject()
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
+		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
 			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
@@ -832,7 +879,7 @@ void BuildObject()
 	for (int i = 0; i < RockCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
+		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
 			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
@@ -852,7 +899,7 @@ void BuildObject()
 	for (int i = 0; i < CowCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
+		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
 			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
@@ -874,7 +921,7 @@ void BuildObject()
 	for (int i = 0; i < PigCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
+		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
 			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
@@ -897,7 +944,7 @@ void BuildObject()
 	for (int i = 0; i < SpiderCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
+		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
 			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
@@ -919,7 +966,7 @@ void BuildObject()
 	for (int i = 0; i < WolfCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
+		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
 			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
@@ -941,7 +988,7 @@ void BuildObject()
 	for (int i = 0; i < ToadCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
+		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
 			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
@@ -964,7 +1011,7 @@ void BuildObject()
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		obj->fly_height = 13.f;
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
+		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
 			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second) + obj->fly_height, randompos.second);
@@ -986,10 +1033,10 @@ void BuildObject()
 	for (int i = 0; i < RaptorCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < 2160.0f) {
+		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
 			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		}
-		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second) + 30, randompos.second);
+		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
 		obj->SetScale(9.f, 9.f, 9.f);
 		obj->SetID(obj_id++);
 		obj->_hp = 40;
@@ -1004,6 +1051,30 @@ void BuildObject()
 
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
+	}
+
+	{
+		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		//std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		//while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
+		//	randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
+		//}
+		obj->SetPosition(9000, Terrain::terrain->GetHeight(9000, 6000), 6000);
+		obj->SetScale(40.f, 40.f, 40.f);
+		obj->SetID(obj_id++);
+		obj->_hp = 400;
+		obj->_atk = 50;
+		obj->SetType(OBJECT_TYPE::OB_GOLEM);
+		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
+
+		obj->FSM_manager->SetCurrentState(std::make_shared<BossStandingState>());
+		obj->FSM_manager->SetGlobalState(std::make_shared<BossGlobalState>());
+
+		GameObject::gameObjects.push_back(obj);
+
+		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
+		Octree::GameObjectOctree.insert(std::move(t_obj));
+
 	}
 }
 void CloseServer()

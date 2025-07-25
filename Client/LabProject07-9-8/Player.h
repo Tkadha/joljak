@@ -11,7 +11,7 @@
 #include "Camera.h"
 #include <chrono>
 #include "PlayerStateMachine.h" 
-
+#include <mutex>
 enum class WeaponType : int {
 	Sword,
 	Axe,
@@ -80,6 +80,8 @@ public:
 	CGameObject* m_pAxe;
 	CGameObject* m_pPick;
 	
+	std::mutex pos_mu;
+
 	XMFLOAT3 GetPosition() { return(m_xmf3Position); }
 	XMFLOAT3 GetLookVector() { return(m_xmf3Look); }
 	XMFLOAT3 GetUpVector() { return(m_xmf3Up); }

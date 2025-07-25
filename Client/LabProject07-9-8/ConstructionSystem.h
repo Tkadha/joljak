@@ -9,30 +9,23 @@ class CConstructionSystem
 {
 public:
     void Init(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* pGameFramework, CScene* scene);
-    void EnterBuildMode(const CCamera* pCamera);
-    void ExitBuildMode();
-    void UpdatePreview(const XMFLOAT3& playerPos, const XMFLOAT3& forward);
-    void ConfirmPlacement();
-    void SetSelectedBuilding(const std::string& name);
-    void UpdatePreviewPosition(const CCamera* pCamera);
-    XMFLOAT3 GetPreviewPosition() const { return m_xmf3PreviewPosition; }
 
-    void RenderPreview(ID3D12GraphicsCommandList* cmdList, CCamera* camera);
+   
+    void EnterBuildMode(const std::string& prefabName, const CCamera* pCamera);
+    void ExitBuildMode();
+    void UpdatePreviewPosition(const CCamera* pCamera);
+    void RotatePreviewObject(float fYaw);
+    CGameObject* ConfirmPlacement();
 
     bool IsBuildMode() const { return m_bBuildMode; }
 
 private:
     bool m_bBuildMode = false;
-    CGameObject* m_pPreviewObject = nullptr;
-    XMFLOAT3 previewPos;
-    std::string m_sSelectedBuilding = "pine"; // 기본값�? pine
+    CGameObject* m_pPreviewObject = nullptr; 
 
+    
     ID3D12Device* m_pd3dDevice = nullptr;
     ID3D12GraphicsCommandList* m_pd3dCommandList = nullptr;
-    //ID3D12RootSignature* m_pd3dRootSignature = nullptr;
-    //ResourceManager* m_pResourceManager = nullptr;
-
     CGameFramework* m_pGameFramework = nullptr;
-    CScene* m_pScene = NULL;
-    XMFLOAT3 m_xmf3PreviewPosition;
+    CScene* m_pScene = nullptr;
 };

@@ -13,6 +13,7 @@
 #define DIR_UP						0x10
 #define DIR_DOWN					0x20
 
+#define MIN_HEIGHT                  1055.f      
 unordered_map<PlayerClient*, shared_ptr<PlayerClient>> PlayerClient::PlayerClients;
 
 void PlayerClient::Move(ULONG dwDirection, float fDistance, bool bUpdateVelocity)
@@ -300,6 +301,7 @@ void PlayerClient::Update_test(float deltaTime)
     {
         deltaVel.x *= 1.5f;
         deltaVel.z *= 1.5f;
+
     }
     // 슬로우 효과 확인
     if (b_slow)
@@ -315,7 +317,11 @@ void PlayerClient::Update_test(float deltaTime)
     XMFLOAT3 moving_pos = m_Position;
     moving_pos.x += deltaVel.x;
     BoundingOrientedBox testOBBX;
-    XMMATRIX matX = XMMatrixTranslation(moving_pos.x, moving_pos.y, moving_pos.z);
+    XMMATRIX matX;
+    if (m_Velocity.y == 0)
+        matX = XMMatrixTranslation(moving_pos.x, Terrain::terrain->GetHeight(moving_pos.x, moving_pos.z), moving_pos.z);
+    else
+        matX = XMMatrixTranslation(moving_pos.x, moving_pos.y, moving_pos.z);
     local_obb.Transform(testOBBX, matX);
     testOBBX.Orientation.w = 1.f;
 
@@ -347,13 +353,23 @@ void PlayerClient::Update_test(float deltaTime)
                 break;
             }
         }
+        for (auto& c_obj : GameObject::ConstructObjects) {
+            if (testOBBX.Intersects(c_obj->world_obb))
+            {
+                moving_pos.x = m_Position.x;
+                break;
+            }
+        }
     }
 
     // Z축 이동 시도
     moving_pos.z += deltaVel.z;
     BoundingOrientedBox testOBBZ;
-    XMMATRIX matZ = XMMatrixTranslation(moving_pos.x, moving_pos.y, moving_pos.z);
-    local_obb.Transform(testOBBZ, matZ);
+    XMMATRIX matZ;
+    if (m_Velocity.y == 0)
+        matZ = XMMatrixTranslation(moving_pos.x, Terrain::terrain->GetHeight(moving_pos.x, moving_pos.z), moving_pos.z);
+    else
+        matZ = XMMatrixTranslation(moving_pos.x, moving_pos.y, moving_pos.z); local_obb.Transform(testOBBZ, matZ);
     testOBBZ.Orientation.w = 1.f;
 
     presults.clear();
@@ -383,6 +399,13 @@ void PlayerClient::Update_test(float deltaTime)
                 break;
             }
         }
+        for (auto& c_obj : GameObject::ConstructObjects) {
+            if (testOBBZ.Intersects(c_obj->world_obb))
+            {
+                moving_pos.z = m_Position.z;
+                break;
+            }
+        }
     }
 
 
@@ -391,7 +414,7 @@ void PlayerClient::Update_test(float deltaTime)
     int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
     bool bReverseQuad = ((z % 2) != 0);
     FLOAT move_pos_y = Terrain::terrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
-    if (move_pos_y < 2149.f) {
+    if (move_pos_y < MIN_HEIGHT) {
         moving_pos = m_Position;
     }
     else
@@ -605,5 +628,35 @@ void PlayerClient::SendAnimationPacket(shared_ptr<GameObject> obj)
     s_packet.type = static_cast<char>(E_PACKET::E_O_CHANGEANIMATION);
     s_packet.oid = obj->GetID();
     s_packet.a_type = obj->GetAnimationType();
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
+void PlayerClient::SendStructPacket(shared_ptr<GameObject> obj)
+{
+    STRUCT_OBJ_PACKET s_packet;
+    s_packet.size = sizeof(STRUCT_OBJ_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_STRUCT_OBJ);
+    s_packet.o_type = obj->GetType();
+    s_packet.position.x = obj->GetPosition().x;
+    s_packet.position.y = obj->GetPosition().y;
+    s_packet.position.z = obj->GetPosition().z;
+    s_packet.right.x = obj->GetNonNormalizeRight().x;
+    s_packet.right.y = obj->GetNonNormalizeRight().y;
+    s_packet.right.z = obj->GetNonNormalizeRight().z;
+    s_packet.up.x = obj->GetNonNormalizeUp().x;
+    s_packet.up.y = obj->GetNonNormalizeUp().y;
+    s_packet.up.z = obj->GetNonNormalizeUp().z;
+    s_packet.look.x = obj->GetNonNormalizeLook().x;
+    s_packet.look.y = obj->GetNonNormalizeLook().y;
+    s_packet.look.z = obj->GetNonNormalizeLook().z;
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
+void PlayerClient::SendTimePacket(float t)
+{
+    TIME_SYNC_PACKET s_packet;
+    s_packet.size = sizeof(TIME_SYNC_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_SYNC_TIME);
+    s_packet.serverTime = t;
     tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 }

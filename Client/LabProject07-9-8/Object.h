@@ -53,7 +53,8 @@ enum class GameObjectType : int {
 	Turtle,
 	Snail,
 	Spider,
-	Raptor
+	Raptor,
+	Golem
 
 };
 
@@ -122,7 +123,6 @@ public:
 	LPVOID									terraindata = NULL;
 
 	CGameFramework* m_pGameFramework;
-
 	CAnimationController* m_pSharedAnimController = nullptr;
 	void PropagateAnimController(CAnimationController* controller); 
 
@@ -203,6 +203,7 @@ public:
 	void SetOBB(float scalex, float scaley, float scalez, const XMFLOAT3& centerOffset);
 	void SetOBB(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CShader* shader);
 	BoundingOrientedBox GetOBB();
+	BoundingOrientedBox GetBossOBB();
 	void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList);
 	void InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void SetColor(const XMFLOAT4& color);
@@ -308,6 +309,7 @@ public:
 	void SetSkyboxIndex(int index);
 	void LoadTextures(ID3D12GraphicsCommandList* cmdList, const std::vector<std::wstring>& texturePaths);
 	int  GetTextureCount() const { return static_cast<int>(m_vSkyboxTextures.size()); }
+	int GetCurrentTextureIndex() const { return m_nCurrentTextureIndex; }
 private:
 	std::vector<std::shared_ptr<CTexture>> m_vSkyboxTextures;
 	int m_nCurrentTextureIndex = 0;
@@ -592,12 +594,7 @@ public:
 	virtual CGameObject* Clone();
 };
 
-class CConstructionObject : public CGameObject
-{
-public:
-	CConstructionObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
-	virtual ~CConstructionObject() {}
-};
+
 
 class CRockShardEffect : public CGameObject
 {
@@ -615,4 +612,40 @@ private:
 	float m_fElapsedTime = 0.0f;
 	float m_fLifeTime = 2.0f;
 	XMFLOAT3 m_vVelocity = { 0, 0, 0 };
+};
+
+class CAttackEffectObject : public CGameObject
+{
+public:
+	
+	CAttackEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework);
+	virtual ~CAttackEffectObject() {}
+
+	
+	void Activate(const XMFLOAT3& position, float lifeTime = 0.5f);
+
+	
+	virtual void Animate(float fTimeElapsed) override;
+
+private:
+	bool  m_bIsActive = false;    
+	float m_fLifeTime = 0.5f;     // 이펙트가 유지될 시간
+	float m_fElapsedTime = 0.0f;  // 활성화된 후 지난 시간
+};
+
+class CResourceShardEffect : public CGameObject
+{
+public:
+	CResourceShardEffect(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework, CMesh* pSharedMesh, CMaterial* pSharedMaterial);
+	virtual ~CResourceShardEffect() {}
+
+	void Activate(const XMFLOAT3& position, const XMFLOAT3& velocity);
+	virtual void Animate(float fTimeElapsed) override;
+
+private:
+	bool     m_bIsActive = false;
+	float    m_fLifeTime = 2.0f;     // 파편 유지 시간
+	float    m_fElapsedTime = 0.0f;
+	XMFLOAT3 m_xmf3Velocity = { 0,0,0 };
+	XMFLOAT3 m_xmf3Gravity = { 0, -9800.0f, 0 }; // 중력
 };

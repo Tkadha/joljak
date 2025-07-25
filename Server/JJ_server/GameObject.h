@@ -24,9 +24,11 @@ class GameObject
 	int o_id{ -1 };
 public:
 	static std::vector<shared_ptr<GameObject>> gameObjects;
+	static std::vector<shared_ptr<GameObject>> ConstructObjects;
 	float fly_height{ 0 };
 
 	GameObject();
+	GameObject(bool makefsm);
 	virtual ~GameObject();
 
 	void SetID(int id) { o_id = id; }

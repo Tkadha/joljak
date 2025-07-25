@@ -1,4 +1,6 @@
-#include "ConstructionSystem.h"
+﻿#include "ConstructionSystem.h"
+#include "GameFramework.h" 
+#include "Object.h" 
 
 void CConstructionSystem::Init(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* pGameFramework, CScene* scene)
 {
@@ -8,91 +10,79 @@ void CConstructionSystem::Init(ID3D12Device* device, ID3D12GraphicsCommandList* 
     m_pScene = scene;
 }
 
-void CConstructionSystem::EnterBuildMode(const CCamera* pCamera)
+void CConstructionSystem::EnterBuildMode(const std::string& prefabName, const CCamera* pCamera)
 {
-    if (m_bBuildMode) return; 
-    m_pPreviewObject = m_pScene->m_pPreviewPine;
-    m_pPreviewObject->SetPosition(previewPos);
-    m_pPreviewObject->isRender = true;
-  
-    if (pCamera)
-        UpdatePreviewPosition(pCamera);
+    
+    if (m_pPreviewObject) {
+        m_pPreviewObject->isRender = false;
+    }
 
     m_bBuildMode = true;
+
+    // Scene에 미리 생성된 프리뷰 오브젝트를 이름으로 찾아온다.
+    if (m_pScene && m_pScene->m_mapBuildPrefabs.count(prefabName)) {
+        m_pPreviewObject = m_pScene->m_mapBuildPrefabs[prefabName];
+        m_pPreviewObject->isRender = true; // 찾아온 오브젝트를 보이게 만든다.
+    }
+    else {
+        m_pPreviewObject = nullptr; // 못 찾았으면 null 처리
+        m_bBuildMode = false;
+        return;
+    }
+
+    if (pCamera) UpdatePreviewPosition(pCamera);
 }
 
 
 void CConstructionSystem::ExitBuildMode()
 {
-    if (m_pPreviewObject)
-        m_pPreviewObject->isRender = false;
     m_bBuildMode = false;
+    // 활성화된 프리뷰 오브젝트가 있다면 다시 숨긴다.
+    if (m_pPreviewObject) {
+        m_pPreviewObject->isRender = false;
+        m_pPreviewObject = nullptr; // 현재 활성화된 프리뷰가 없음을 표시
+    }
 }
 
 void CConstructionSystem::UpdatePreviewPosition(const CCamera* pCamera)
 {
-    
-    if (!m_bBuildMode || !m_pPreviewObject) return;
+    if (!m_bBuildMode || !m_pPreviewObject || !pCamera) return;
 
     
     XMFLOAT3 camPos = pCamera->GetPosition();
     XMFLOAT3 camLook = pCamera->GetLookVector();
 
-    XMVECTOR vCamPos = XMLoadFloat3(&camPos);
-    XMVECTOR vCamLook = XMLoadFloat3(&camLook);
-    XMVECTOR vTarget = XMVectorAdd(vCamPos, XMVectorScale(vCamLook, 100.f));
+    XMVECTOR vPos = XMLoadFloat3(&camPos);
+    XMVECTOR vLook = XMLoadFloat3(&camLook);
+    XMVECTOR vTargetPos = XMVectorAdd(vPos, XMVectorScale(vLook, 100.0f));
 
+    XMFLOAT3 previewPos;
+    XMStoreFloat3(&previewPos, vTargetPos);
 
-    XMStoreFloat3(&previewPos, vTarget);
-    //previewPos.y += 40.f;
-    m_xmf3PreviewPosition = previewPos;
+    
 
     m_pPreviewObject->SetPosition(previewPos);
-    //m_pScene->octree.update(m_pPreviewObject->m_treecount, previewPos);
-
 }
 
-void CConstructionSystem::UpdatePreview(const XMFLOAT3& playerPos, const XMFLOAT3& forward)
+void CConstructionSystem::RotatePreviewObject(float fYaw)
 {
     if (!m_bBuildMode || !m_pPreviewObject) return;
 
-    XMFLOAT3 previewPos = {
-        playerPos.x + forward.x * 300.f,
-        playerPos.y,
-        playerPos.z + forward.z * 300.f
-    };
-
-    m_pPreviewObject->SetPosition(previewPos);
+    // Y축(Up Vector)을 기준으로 회전
+    m_pPreviewObject->Rotate(0.0f, fYaw, 0.0f);
 }
 
-void CConstructionSystem::ConfirmPlacement()
+CGameObject* CConstructionSystem::ConfirmPlacement()
 {
-    CGameObject* installedObject = new CConstructionObject(m_pd3dDevice, m_pd3dCommandList, m_pGameFramework);
-    installedObject->SetPosition(m_pPreviewObject->GetPosition());
-    installedObject->SetOBB(1.f, 1.f, 1.f, XMFLOAT3(0.f, 0.f, 0.f));
-    installedObject->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
-    installedObject->isRender = true;
-    m_pScene->m_vGameObjects.emplace_back(installedObject);
+    if (!m_bBuildMode || !m_pPreviewObject) return nullptr;
 
-    // �� ������ ������Ʈ�� ���� ������� ����
-    CGameObject* newPreview = new CConstructionObject(m_pd3dDevice, m_pd3dCommandList, m_pGameFramework);
-    newPreview->SetOBB(1.f, 1.f, 1.f, XMFLOAT3(0.f, 0.f, 0.f));
-    newPreview->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
-    newPreview->isRender = true;
+    // 1. 복제의 원본이 될 현재 프리뷰 오브젝트를 기억합니다.
+    CGameObject* pObjectToClone = m_pPreviewObject;
 
-    m_pPreviewObject = newPreview;
-    m_pScene->m_pPreviewPine = newPreview;
-    
+    // 2. 이제 프리뷰는 역할을 다했으므로 화면에서 숨기고 비활성화합니다.
+    m_pPreviewObject->isRender = false;
+    m_pPreviewObject = nullptr;
 
-    m_bBuildMode = false;
-}
-
-void CConstructionSystem::RenderPreview(ID3D12GraphicsCommandList* cmdList, CCamera* camera)
-{
-    if (m_bBuildMode && m_pPreviewObject)
-        m_pPreviewObject->Render(cmdList, camera);
-}
-void CConstructionSystem::SetSelectedBuilding(const std::string& name)
-{
-    m_sSelectedBuilding = name;
+    // 3. GameFramework가 복제할 수 있도록 원본 오브젝트를 반환합니다.
+    return pObjectToClone;
 }

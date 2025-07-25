@@ -16,6 +16,8 @@
 #include "AtkState.h"
 // 서버 연결 여부
 
+#include <sstream> // Test
+
 void CGameFramework::NerworkThread()
 {
 	auto& nwManager = NetworkManager::GetInstance();
@@ -49,7 +51,9 @@ void CGameFramework::ProcessPacket(char* packet)
 	{
 		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
 		if (recv_p->uid == _MyID) {
+			m_pPlayer->pos_mu.lock();
 			m_pPlayer->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z});
+			m_pPlayer->pos_mu.unlock();
 		}
 		else if (m_pScene->PlayerList.find(recv_p->uid) != m_pScene->PlayerList.end()) {
 			m_pScene->PlayerList[recv_p->uid]->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z });
@@ -74,7 +78,7 @@ void CGameFramework::ProcessPacket(char* packet)
 			m_pScene->PlayerList[recv_p->uid]->ChangeAnimation(recv_p->inputData);
 		}
 	}
-		break;
+	break;
 	case E_PACKET::E_P_LOGIN:
 	{
 		LOGIN_PACKET* recv_p = reinterpret_cast<LOGIN_PACKET*>(packet);
@@ -151,7 +155,7 @@ void CGameFramework::ProcessPacket(char* packet)
 			m_pScene->m_vGameObjects.erase(it);
 		}
 	}
-		break;
+	break;
 	case E_PACKET::E_O_MOVE:
 	{
 		MOVE_PACKET* recv_p = reinterpret_cast<MOVE_PACKET*>(packet);
@@ -183,7 +187,6 @@ void CGameFramework::ProcessPacket(char* packet)
 			if (Found_obj->m_pSkinnedAnimationController) Found_obj->ChangeAnimation(recv_p->a_type);
 		}
 	}
-		break;
 	break;
 	case E_PACKET::E_O_SETHP: {
 		OBJ_HP_PACKET* recv_p = reinterpret_cast<OBJ_HP_PACKET*>(packet);
@@ -246,6 +249,23 @@ void CGameFramework::ProcessPacket(char* packet)
 		}
 	}
 	break;
+	case E_PACKET::E_STRUCT_OBJ: {
+		STRUCT_OBJ_PACKET* recv_p = reinterpret_cast<STRUCT_OBJ_PACKET*>(packet);
+		FLOAT3 right = recv_p->right;
+		FLOAT3 up = recv_p->up;
+		FLOAT3 look = recv_p->look;
+		FLOAT3 position = recv_p->position;
+		OBJECT_TYPE o_type = recv_p->o_type;
+		ANIMATION_TYPE a_type = ANIMATION_TYPE::UNKNOWN;
+		int id = -1;
+		m_logQueue.push(log_inout{ E_PACKET::E_STRUCT_OBJ,0,right,up,look,position,o_type,a_type,id });
+	}
+	 break;
+	case E_PACKET::E_SYNC_TIME:
+		{
+		TIME_SYNC_PACKET* recv_p = reinterpret_cast<TIME_SYNC_PACKET*>(packet);
+		m_pScene->m_fLightRotationAngle = recv_p->serverTime;
+	}
 	default:
 		break;
 	}
@@ -296,7 +316,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CreateDirect3DDevice();
 	CreateCommandQueueAndList();
-	CreateCbvSrvDescriptorHeaps(200, 30000);
+	CreateCbvSrvDescriptorHeaps(200, 50000);
 	CreateRtvAndDsvDescriptorHeaps();
 	CreateSwapChain();
 	CreateDepthStencilView();
@@ -678,15 +698,22 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				ShowCraftingUI = !ShowCraftingUI;
 				break;
 			case 'B':
-				BuildMode = !BuildMode;
+				m_bBuildMode = !m_bBuildMode;
+				
+				if (!m_bBuildMode) {
+					m_bIsPreviewVisible = false;
+					m_nSelectedBuildingIndex = -1;
+					m_pConstructionSystem->ExitBuildMode();
+				}
 				break;
+				
 			case 'K':
 				ShowFurnaceUI = !ShowFurnaceUI;
 				break;
 			case 'R':
-				BuildMode = false;
-				bPrevBuildMode = BuildMode;
-				m_pConstructionSystem->ConfirmPlacement();
+				if (m_bBuildMode && m_pConstructionSystem) {
+					m_pConstructionSystem->RotatePreviewObject(-45.0f);
+				}
 				break;
 			case 'T':
 				m_pScene->obbRender = m_pScene->obbRender ? false : true;
@@ -695,7 +722,17 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				ShowTraitUI = !ShowTraitUI;
 				break;
 			case 'Y':
-				//m_pScene->SpawnRockShardEffectAtPlayer();
+				if (m_pScene && m_pPlayer)
+				{
+					
+					XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+					m_pScene->SpawnAttackEffect(playerPos,20,100.0f);
+				}
+				break;
+			case 'U':
+				XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+				playerPos.y += 15.0f;
+				m_pScene->SpawnResourceShards(playerPos, CScene::ShardType::Wood);
 				break;
 			}
 			break;
@@ -1213,7 +1250,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
 
-			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->SetOBB(1.2f, 1.f, 1.2f, XMFLOAT3{ 0.f, 1.f, -0.5f });
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
@@ -1236,6 +1273,16 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
 				p.size = sizeof(OBJ_OBB_PACKET);
 				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Cow ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
@@ -1271,10 +1318,12 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
 
-			gameObj->SetOBB(1.f, 0.8f, 1.f, XMFLOAT3{ 0.f,1.f,-1.f });
+			gameObj->SetOBB(1.f, 0.8f, 1.2f, XMFLOAT3{ 0.f,1.f,-1.f });
+			gameObj->m_localOBB.Center.y += 30.0f;
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
@@ -1297,6 +1346,17 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
 				p.size = sizeof(OBJ_OBB_PACKET);
 				nw.PushSendQueue(p, p.size);
+
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Pig ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
@@ -1362,6 +1422,16 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
 				p.size = sizeof(OBJ_OBB_PACKET);
 				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Spider ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
@@ -1427,6 +1497,16 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
 				p.size = sizeof(OBJ_OBB_PACKET);
 				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Toad ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
@@ -1492,6 +1572,16 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
 				p.size = sizeof(OBJ_OBB_PACKET);
 				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Wolf ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
@@ -1557,6 +1647,16 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
 				p.size = sizeof(OBJ_OBB_PACKET);
 				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Bat ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
@@ -1622,6 +1722,16 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
 				p.size = sizeof(OBJ_OBB_PACKET);
 				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Raptor ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
 			}
 
 			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
@@ -1630,38 +1740,104 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			if (pRaptorModel) delete(pRaptorModel);
 		}
 		break;
+		case OBJECT_TYPE::OB_GOLEM:
+		{
+			int animate_count = 15;
+			CLoadedModelInfo* pGolemModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/ForestGolem_Rd.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pGolemModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Golem;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[12].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[13].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetBossOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Golem ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
+			}
+
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pGolemModel) delete(pGolemModel);
+		}
+		break;
+		case OBJECT_TYPE::ST_WOODWALL:
+		{
+			std::shared_ptr<CGameObject> prefab;
+			prefab = m_pResourceManager->GetPrefab("wood_wall");
+
+			CGameObject* gameObj = prefab->Clone();
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, -1.0f, 0.0f));
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+			m_pScene->m_vConstructionObjects.push_back(gameObj);
+		}
+		break;
 		default:
 			break;
 		}
-
-		/*{
-		case GameObjectType::Wasp:
-		case GameObjectType::Snail:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[5].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[6].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		case GameObjectType::Snake:
-		case GameObjectType::Spider:
-		case GameObjectType::Bat:
-		case GameObjectType::Turtle:
-		case GameObjectType::Pig:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		case GameObjectType::Wolf:
-		case GameObjectType::Cow:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		case GameObjectType::Toad:
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
-			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
-			break;
-		}*/
 	}
 	else
 	{
@@ -1968,6 +2144,12 @@ void CGameFramework::FrameAdvance()
 				}
 			}
 				break;
+			case E_PACKET::E_STRUCT_OBJ:
+			{
+				std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+				AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id);
+			}
+			break;
 			default:
 				break;
 			}
@@ -1990,7 +2172,7 @@ void CGameFramework::FrameAdvance()
 		}
 	}
 
-	m_GameTimer.Tick(300.0f);
+	m_GameTimer.Tick(120.0f);
 
 	ProcessInput();
 	UpdateFurnace(m_GameTimer.GetTimeElapsed());
@@ -2524,52 +2706,143 @@ void CGameFramework::FrameAdvance()
 		ImGui::End();
 	}
 	////////////////////////////////////////////////////////////////////////////////////////////////////// 건축 UI
-	if (BuildMode)
+	if (m_bBuildMode)
 	{
-		ImGui::SetNextWindowPos(ImVec2(100, 100));
-		ImGui::SetNextWindowSize(ImVec2(200, 200));
-		ImGui::Begin("Build Mode", nullptr,
-			ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
+		
+		ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver); 
+		ImGui::SetNextWindowSize(ImVec2(220, 300), ImGuiCond_FirstUseEver); 
+		ImGui::Begin("Build Mode", &m_bBuildMode, ImGuiWindowFlags_NoCollapse);
 
-		static int selected = -1;
-		const char* buildings[] = { "나무 벽", "나무 문", "나무 바닥", "계단" };
-		//static bool bPrevBuildMode = false;
+		ImGui::Text("Buildable Items");
+		ImGui::Separator();
 
-		if (BuildMode && !bPrevBuildMode)
+		
+		struct BuildableItem {
+			const char* displayName;
+			const char* prefabKey;   
+		};
+		static std::vector<BuildableItem> buildableItems = {
+			{ "wood wall", "wood_wall" },
+			// { "나무 바닥", "wood_floor" },
+			// { "나무 문", "wood_door" }
+		};
+
+		
+		for (int i = 0; i < buildableItems.size(); i++)
 		{
-			m_pConstructionSystem->EnterBuildMode(m_pCamera); // 상태 전환 시 한 번만 실행
-		}
-		bPrevBuildMode = BuildMode;
-		/*
-		for (int i = 0; i < IM_ARRAYSIZE(buildings); i++)
-		{
-			if (ImGui::Selectable(buildings[i], selected == i))
+			
+			if (ImGui::Selectable(buildableItems[i].displayName, m_nSelectedBuildingIndex == i))
 			{
-				selected = i;
-
-				// 1. 문자열 매핑
-				std::string buildingKey;
-				if (selected == 0) buildingKey = "pine";
-				else if (selected == 1) buildingKey = "door";
-				else if (selected == 2) buildingKey = "floor";
-				else if (selected == 3) buildingKey = "stair";
-
-
-				// 3. 미리보기 재생성
+				// 이전에 선택한 것과 다른 것을 선택했다면
+				if (m_nSelectedBuildingIndex != i) {
+					m_nSelectedBuildingIndex = i;
+					m_bIsPreviewVisible = true; // 프리뷰를 보이게 설정
+					// ConstructionSystem에 선택된 프리팹 이름으로 건설 모드 진입을 알림
+					m_pConstructionSystem->EnterBuildMode(buildableItems[i].prefabKey, m_pCamera);
+				}
+				else { // 이미 선택된 것을 다시 클릭하면 선택 해제
+					m_nSelectedBuildingIndex = -1;
+					m_bIsPreviewVisible = false; // 프리뷰를 숨김
+					m_pConstructionSystem->ExitBuildMode();
+				}
 			}
 		}
-		*/
 
-		if (m_pConstructionSystem->IsBuildMode())
+		ImGui::Separator();
+
+		// --- 설치(R) 및 취소(B) 버튼 ---
+		// 프리뷰가 보일 때만 설치 버튼 활성화
+		if (!m_bIsPreviewVisible) ImGui::BeginDisabled();
+		if (ImGui::Button("Install (R)"))
 		{
-			XMFLOAT3 previewPos = m_pConstructionSystem->GetPreviewPosition(); // ★ getter 함수 필요
-			ImGui::Text("PreviewPos: %.2f, % .2f, % .2f", previewPos.x, previewPos.y, previewPos.z);
+			// 1. ConstructionSystem에 설치를 요청하고 복제할 원본 오브젝트를 받아옵니다.
+			CGameObject* pObjectToClone = m_pConstructionSystem->ConfirmPlacement();
+			XMFLOAT3 previewPos = pObjectToClone->GetPosition();
+
+
+			// 2. 받아온 오브젝트가 유효하면 설치 절차를 진행합니다.
+			if (pObjectToClone)
+			{
+				XMFLOAT4X4 previewWorldMatrix = pObjectToClone->m_xmf4x4World;
+				// --- GPU 리소스를 안전하게 생성하는 로직 시작 ---
+				ID3D12CommandAllocator* pUploadAllocator = m_pd3dUploadCommandAllocator;
+				ID3D12GraphicsCommandList* pUploadCmdList = m_pd3dUploadCommandList;
+
+				pUploadAllocator->Reset();
+				pUploadCmdList->Reset(pUploadAllocator, NULL);
+
+				CGameObject* pInstalledObject = pObjectToClone->Clone();
+
+				pInstalledObject->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, -1.0f, 0.0f));
+				pInstalledObject->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+				pUploadCmdList->Close();
+				ID3D12CommandList* ppd3dCommandLists[] = { pUploadCmdList };
+				m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+				WaitForGpuComplete();
+
+				if (pInstalledObject) pInstalledObject->ReleaseUploadBuffers();
+				// --- GPU 리소스 생성 로직 끝 ---
+
+				// 3. 성공적으로 생성된 오브젝트를 Scene에 최종 추가합니다.
+				if (pInstalledObject && m_pScene)
+				{
+					pInstalledObject->m_xmf4x4ToParent = previewWorldMatrix;
+					pInstalledObject->m_xmf4x4World = previewWorldMatrix;
+
+					pInstalledObject->SetPosition(previewPos);
+					pInstalledObject->isRender = true;
+					//m_pScene->m_vGameObjects.emplace_back(pInstalledObject);
+					m_pScene->m_vConstructionObjects.emplace_back(pInstalledObject);
+					{
+						auto& nwManager = NetworkManager::GetInstance();
+						STRUCT_OBJ_PACKET s_packet;
+						s_packet.type = static_cast<char>(E_PACKET::E_STRUCT_OBJ);
+						s_packet.size = sizeof(STRUCT_OBJ_PACKET);
+						s_packet.o_type = OBJECT_TYPE::ST_WOODWALL;
+
+						auto& obb = pInstalledObject->GetOBB();
+						s_packet.Center.x = obb.Center.x;
+						s_packet.Center.y = obb.Center.y;
+						s_packet.Center.z = obb.Center.z;
+						s_packet.Extents.x = obb.Extents.x;
+						s_packet.Extents.y = obb.Extents.y;
+						s_packet.Extents.z = obb.Extents.z;
+						s_packet.Orientation.x = obb.Orientation.x;
+						s_packet.Orientation.y = obb.Orientation.y;
+						s_packet.Orientation.z = obb.Orientation.z;
+						s_packet.Orientation.w = obb.Orientation.w;
+
+						auto& f4x4 = pInstalledObject->m_xmf4x4ToParent;
+						s_packet.right.x = f4x4._11;
+						s_packet.right.y = f4x4._12;
+						s_packet.right.z = f4x4._13;
+						s_packet.up.x = f4x4._21;
+						s_packet.up.y = f4x4._22;
+						s_packet.up.z = f4x4._23;
+						s_packet.look.x = f4x4._31;
+						s_packet.look.y = f4x4._32;
+						s_packet.look.z = f4x4._33;
+						s_packet.position.x = f4x4._41;
+						s_packet.position.y = f4x4._42;
+						s_packet.position.z = f4x4._43;
+
+						nwManager.PushSendQueue(s_packet, s_packet.size);
+					}
+				}
+			}
+			
 		}
-		if (ImGui::Button("Build End"))
+		if (!m_bIsPreviewVisible) ImGui::EndDisabled();
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Exit (B)"))
 		{
-			BuildMode = false;
-			bPrevBuildMode = BuildMode;
-			m_pConstructionSystem->ExitBuildMode();
+			if (m_pConstructionSystem) m_pConstructionSystem->ExitBuildMode();
+			m_bBuildMode = false; // UI 창을 닫음
+			m_nSelectedBuildingIndex = -1;
+			m_bIsPreviewVisible = false; // 프리뷰를 숨김
 		}
 
 		ImGui::End();

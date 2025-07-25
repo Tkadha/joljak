@@ -1,7 +1,7 @@
 #pragma once
 
 ///---------서버 연결------------
-//#define ONLINE
+#define ONLINE
 
 
 #define WIN32_LEAN_AND_MEAN     

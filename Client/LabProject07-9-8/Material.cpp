@@ -145,9 +145,9 @@ void CMaterial::LoadTextureFromFile(
 
     // 5. 변환된 Wide Char 파일 이름 저장
     if (m_ppstrTextureNames) lstrcpy(m_ppstrTextureNames[nTextureIndex], pwstrTextureName);
-    OutputDebugStringW(L"CMaterial::LoadTextureFromFile - Loading Texture: ");
-    OutputDebugStringW(pwstrTextureName);
-    OutputDebugStringW(L"\n");
+    //OutputDebugStringW(L"CMaterial::LoadTextureFromFile - Loading Texture: ");
+    //OutputDebugStringW(pwstrTextureName);
+    //OutputDebugStringW(L"\n");
 
     // 6. 재질 타입 마스크 설정
     SetMaterialType(nTextureType);
@@ -173,7 +173,7 @@ void CMaterial::LoadTextureFromFile(
             // 루트에서 텍스처 찾기
             pTexture = pRootGameObject->FindReplicatedTexture(pwstrTextureName); // shared_ptr 반환 받음
             if (pTexture) {
-                OutputDebugStringW(L"    Found replicated texture (manual AddRef).\n");
+                //OutputDebugStringW(L"    Found replicated texture (manual AddRef).\n");
                 }
             else {
                 OutputDebugStringW(L"    !!!!!!!! FAILED to find replicated texture !!!!!!!!\n");
