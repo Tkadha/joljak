@@ -33,22 +33,72 @@ GameObject::~GameObject()
 
 void GameObject::MoveForward(float fDistance)
 {
-	XMFLOAT3 xmf3Position = GetPosition();
-	XMFLOAT3 xmf3Look = GetLook();
-	xmf3Position = Vector3::Add(xmf3Position, xmf3Look, fDistance);
+	BoundingOrientedBox myCurrentOBB;
+	XMMATRIX myCurrentWorldMat = XMMatrixScalingFromVector(XMLoadFloat3(&GetScale()));
+	myCurrentWorldMat *= XMMatrixRotationQuaternion(XMLoadFloat4(&GetOrientation()));
+	myCurrentWorldMat *= XMMatrixTranslationFromVector(XMLoadFloat3(&GetPosition()));
+	local_obb.Transform(myCurrentOBB, myCurrentWorldMat);
+	std::vector<tree_obj*> nearby_objects;
+	tree_obj n_obj{ GetID(), GetPosition() };
+	Octree::GameObjectOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, nearby_objects);
 
-	XMFLOAT3 xmf3Scale = Terrain::terrain->GetScale();
-	int z = (int)(xmf3Position.z / xmf3Scale.z);
-	bool bReverseQuad = ((z % 2) != 0);
-	float fHeight = Terrain::terrain->GetHeight(xmf3Position.x, xmf3Position.z, bReverseQuad) + 0.0f;
-	xmf3Position.y = fHeight + fly_height;
+	XMVECTOR totalPushOutVector = XMVectorSet(0, 0, 0, 0);
+	int collisionCount = 0;
+	for (auto& other_info : nearby_objects)
+	{
+		// 자기 자신은 제외
+		if (other_info->u_id == GetID()) continue;
+
+		auto& other_obj = GameObject::gameObjects[other_info->u_id];
+		if (!other_obj || !other_obj->is_alive) continue;
+
+		// 충돌했다면 밀어낼 방향 계산
+		if (myCurrentOBB.Intersects(other_obj->world_obb))
+		{
+			XMVECTOR myCenter = XMLoadFloat3(&GetPosition());
+			XMVECTOR otherCenter = XMLoadFloat3(&other_obj->GetPosition());
+
+			// 상대방 중심 -> 내 중심 방향으로 밀어낼 벡터 계산
+			XMVECTOR pushDir = XMVector3Normalize(XMVectorSubtract(myCenter, otherCenter));
+
+			// 여러 객체와 겹쳤을 경우를 대비해 방향을 더해줌
+			totalPushOutVector = XMVectorAdd(totalPushOutVector, pushDir);
+			collisionCount++;
+		}
+	}
+	if (collisionCount > 0)
+	{
+		// 평균적인 밀어내기 방향 계산
+		totalPushOutVector = XMVector3Normalize(totalPushOutVector);
+
+		// 밀어내는 힘 (이 값은 실험을 통해 조절해야 합니다)
+		float pushMagnitude = 0.5f;
+
+		XMVECTOR currentPosVec = XMLoadFloat3(&GetPosition());
+		XMVECTOR newPosVec = XMVectorAdd(currentPosVec, XMVectorScale(totalPushOutVector, pushMagnitude));
+
+		XMFLOAT3 newPos;
+		XMStoreFloat3(&newPos, newPosVec);
+
+		// 위치 보정 (이때는 충돌 검사 없이 바로 적용)
+		SetPosition(newPos);
+	}
+
+	XMFLOAT3 xmf3CurrentPosition = GetPosition();
+	XMFLOAT3 xmf3Look = GetLook();
+	XMFLOAT3 xmf3TargetPosition = Vector3::Add(xmf3CurrentPosition, xmf3Look, fDistance);
+
+	xmf3TargetPosition.y = Terrain::terrain->GetHeight(xmf3TargetPosition.x, xmf3TargetPosition.z) + fly_height;
+
 	// 충돌처리
-	XMFLOAT3 test_move = GetPosition();
-	test_move.x = xmf3Position.x;
+	XMFLOAT3 test_move = xmf3CurrentPosition;
+	test_move.x = xmf3TargetPosition.x;
 	BoundingOrientedBox testOBBX;
-	XMMATRIX matX = XMMatrixTranslation(test_move.x, Terrain::terrain->GetHeight(test_move.x, test_move.z), test_move.z);
+
+	XMMATRIX matX = XMMatrixScalingFromVector(XMLoadFloat3(&GetScale()));
+	matX *= XMMatrixRotationQuaternion(XMLoadFloat4(&GetOrientation()));
+	matX *= XMMatrixTranslation(test_move.x, Terrain::terrain->GetHeight(test_move.x, test_move.z), test_move.z);
 	local_obb.Transform(testOBBX, matX);
-	testOBBX.Orientation.w = 1.f;
 	// 객체 순환해서 충돌 체크
 	std::vector<tree_obj*> presults;
 	std::vector<tree_obj*> oresults;
@@ -80,11 +130,13 @@ void GameObject::MoveForward(float fDistance)
 			}
 		}
 	}
-	test_move.z = xmf3Position.z;
+	test_move.z = xmf3TargetPosition.z;
 	BoundingOrientedBox testOBBZ;
-	XMMATRIX matZ = XMMatrixTranslation(test_move.x, Terrain::terrain->GetHeight(test_move.x, test_move.z), test_move.z);
+	XMMATRIX matZ = XMMatrixScalingFromVector(XMLoadFloat3(&GetScale()));
+	matZ *= XMMatrixRotationQuaternion(XMLoadFloat4(&GetOrientation()));
+	matZ *= XMMatrixTranslation(test_move.x, Terrain::terrain->GetHeight(test_move.x, test_move.z), test_move.z);
+
 	local_obb.Transform(testOBBZ, matZ);
-	testOBBZ.Orientation.w = 1.f;
 
 	{
 		for (auto& p_obj : presults) {
@@ -112,7 +164,7 @@ void GameObject::MoveForward(float fDistance)
 		}
 	}
 
-	test_move.y = xmf3Position.y;
+	test_move.y = Terrain::terrain->GetHeight(test_move.x, test_move.z) + fly_height;
 
 	GameObject::SetPosition(test_move);
 }
@@ -127,33 +179,56 @@ void GameObject::Rotate(float fPitch, float fYaw, float fRoll)
 
 	std::vector<tree_obj*> presults;
 	std::vector<tree_obj*> oresults;
-	{
-		tree_obj n_obj{ GetID() ,GetPosition()};
-		Octree::PlayerOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, presults);
-		Octree::GameObjectOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, oresults);
-		for (auto& p_obj : presults) {
-			for (auto& cl : PlayerClient::PlayerClients) {
-				if (cl.second->state != PC_INGAME) continue;
-				if (cl.second->m_id != p_obj->u_id) continue;
-				if (testOBB.Intersects(cl.second->world_obb))
-				{
-					xmf4x4 = before4x4;
-					break;
-				}
-			}
-		}
-		for (auto& o_obj : oresults) {
-			if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
-			if (GameObject::gameObjects[o_obj->u_id]->Gethp() <= 0) continue;
-			if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
-			auto t = GameObject::gameObjects[o_obj->u_id]->GetType();
-			if (t != OBJECT_TYPE::OB_TREE && t != OBJECT_TYPE::OB_STONE && t != OBJECT_TYPE::ST_WOODWALL) continue;
-			if (testOBB.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
+
+	XMVECTOR totalPushOutVector = XMVectorSet(0, 0, 0, 0);
+	int collisionCount = 0;
+
+	tree_obj n_obj{ GetID(), GetPosition() };
+	Octree::PlayerOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, presults);
+	Octree::GameObjectOctree.query(n_obj, XMFLOAT3{ 500,300,500 }, oresults);
+
+	for (auto& p_obj : presults) {
+		for (auto& cl : PlayerClient::PlayerClients) {
+			if (cl.second->state != PC_INGAME) continue;
+			if (cl.second->m_id != p_obj->u_id) continue;
+			if (testOBB.Intersects(cl.second->world_obb))
 			{
-				xmf4x4 = before4x4;
+				XMVECTOR myCenter = XMLoadFloat3(&GetPosition());
+				XMVECTOR otherCenter = XMLoadFloat3(&cl.second->world_obb.Center);
+				XMVECTOR pushDir = XMVector3Normalize(XMVectorSubtract(myCenter, otherCenter));
+				totalPushOutVector = XMVectorAdd(totalPushOutVector, pushDir);
+				collisionCount++;
 				break;
 			}
 		}
+	}
+
+	for (auto& o_obj : oresults) {
+		auto& other_obj = GameObject::gameObjects[o_obj->u_id];
+		if (!other_obj || !other_obj->is_alive || other_obj->Gethp() <= 0) continue;
+		auto t = other_obj->GetType();
+		if (t != OBJECT_TYPE::OB_TREE && t != OBJECT_TYPE::OB_STONE && t != OBJECT_TYPE::ST_WOODWALL) continue;
+
+		if (testOBB.Intersects(other_obj->world_obb))
+		{
+			XMVECTOR myCenter = XMLoadFloat3(&GetPosition());
+			XMVECTOR otherCenter = XMLoadFloat3(&other_obj->world_obb.Center);
+			XMVECTOR pushDir = XMVector3Normalize(XMVectorSubtract(myCenter, otherCenter));
+			totalPushOutVector = XMVectorAdd(totalPushOutVector, pushDir);
+			collisionCount++;
+		}
+	}
+
+	if (collisionCount > 0)
+	{
+		totalPushOutVector = XMVector3Normalize(totalPushOutVector);
+
+		float pushMagnitude = 0.1f;
+
+		// 최종 위치 보정
+		xmf4x4._41 += XMVectorGetX(totalPushOutVector) * pushMagnitude;
+		xmf4x4._42 += XMVectorGetY(totalPushOutVector) * pushMagnitude;
+		xmf4x4._43 += XMVectorGetZ(totalPushOutVector) * pushMagnitude;
 	}
 }
 

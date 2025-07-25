@@ -29,7 +29,7 @@ enum class SocketType
 	Udp,
 };
 
-enum class COMP_TYPE { OP_ACCEPT, OP_RECV, OP_SEND, OP_FSM_UPDATE };
+enum class COMP_TYPE { OP_ACCEPT, OP_RECV, OP_SEND, OP_FSM_UPDATE, OP_PLAYER_UPDATE };
 class OVER_EXP {
 public:
 	WSAOVERLAPPED over;

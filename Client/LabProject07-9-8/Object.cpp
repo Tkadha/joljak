@@ -153,7 +153,7 @@ void CGameObject::Check_attack()
 	else if (m_objectType == GameObjectType::Golem && m_anitype == 13) {
 		CAnimationSet* pAnimationSet = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_nAnimationSet];
 		auto animation_pos = m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_fPosition;
-		if (animation_pos != pAnimationSet->m_fLength / 2) return;
+		if (animation_pos < pAnimationSet->m_fLength / 2) return;
 	}
 	else {
 		CAnimationSet* pAnimationSet = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_nAnimationSet];

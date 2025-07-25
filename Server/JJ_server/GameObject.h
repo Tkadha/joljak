@@ -65,19 +65,30 @@ public:
 		XMVECTOR vLook = XMLoadFloat3(&xmf3Look);
 		XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&xmf4x4._31), vLook);
 	}
-
-	void SetScale(XMFLOAT3 xmf3Scale) {
-		XMVECTOR vScale = XMLoadFloat3(&xmf3Scale);
-		XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&xmf4x4._11), vScale);
-		XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&xmf4x4._21), vScale);
-		XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&xmf4x4._31), vScale);
-	}
 	void SetScale(float x, float y, float z)
 	{
 		XMMATRIX mtxScale = XMMatrixScaling(x, y, z);
 		xmf4x4 = Matrix4x4::Multiply(mtxScale, xmf4x4);
 	}
+	XMFLOAT3 GetScale() const {
+		XMFLOAT3 xmf3Scale;
+		xmf3Scale.x = Vector3::Length(XMFLOAT3(xmf4x4._11, xmf4x4._12, xmf4x4._13));
+		xmf3Scale.y = Vector3::Length(XMFLOAT3(xmf4x4._21, xmf4x4._22, xmf4x4._23));
+		xmf3Scale.z = Vector3::Length(XMFLOAT3(xmf4x4._31, xmf4x4._32, xmf4x4._33));
+		return xmf3Scale;
+	}
+	XMFLOAT4 GetOrientation() const {
+		XMMATRIX matrix = XMLoadFloat4x4(&xmf4x4);
 
+		XMVECTOR scale;
+		XMVECTOR rotationQuat;
+		XMVECTOR translation;
+
+		XMMatrixDecompose(&scale, &rotationQuat, &translation, matrix);
+		XMFLOAT4 orientation;
+		XMStoreFloat4(&orientation, rotationQuat);
+		return orientation;
+	}
 	void SetType(OBJECT_TYPE type) { this->type = type; }
 	OBJECT_TYPE GetType() { return type; }
 
@@ -129,7 +140,6 @@ public:
 	int GetAtk() { return _atk; }
 
 public:
-	// 해당 부분에 bin파일의 정점만 불러와서 obb를 만드는 코드 필요
 	BoundingOrientedBox local_obb;
 	BoundingOrientedBox world_obb;
 };

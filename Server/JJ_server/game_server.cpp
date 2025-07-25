@@ -663,7 +663,7 @@ int main(int argc, char* argv[])
 						}
 					}
 					Octree::PlayerOctree.update(player->m_id, player->GetPosition());
-					//player->UpdateTransform();
+					player->UpdateTransform();
 
 					player->vl_mu.lock();
 					std::unordered_set<int> before_vl = player->viewlist;

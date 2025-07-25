@@ -559,15 +559,6 @@ void PlayerClient::SendInvinciblePacket(int oid, bool invin_type)
 void PlayerClient::SendAddPacket(shared_ptr<GameObject> obj)
 {
     if (false == obj->is_alive) return; // 리스폰 중 상태라면
-    //vl_mu.lock();
-    //if(viewlist.count(obj->GetID()) == 0)
-    //    viewlist.insert(obj->GetID());
-    //else {
-    //    vl_mu.unlock();
-	//	return; 
-    //}
-    //vl_mu.unlock();
-    std::cout<< "SendAddPacket: " << obj->GetID() << std::endl;
     ADD_PACKET s_packet;
     s_packet.size = sizeof(ADD_PACKET);
     s_packet.type = static_cast<char>(E_PACKET::E_O_ADD);
