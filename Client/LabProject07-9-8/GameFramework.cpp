@@ -2074,9 +2074,8 @@ void CGameFramework::AnimateObjects()
 	if (m_eGameState == GameState::InGame)
 	{
 		if (m_pScene) m_pScene->AnimateObjects(fTimeElapsed);
-		if (m_pPlayer) m_pPlayer->Animate(fTimeElapsed);
+		//if (m_pPlayer) m_pPlayer->Animate(fTimeElapsed);
 	}
-
 	m_pPlayer->Animate(fTimeElapsed);
 }
 
