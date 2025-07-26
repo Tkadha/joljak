@@ -744,6 +744,9 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			case 'P':
 				ChangeGameState(GameState::Ending);
 				break;
+			case 'M':
+				ChangeGameState(GameState::Lobby);
+				break;
 			}
 			break;
 		default:
@@ -3155,6 +3158,7 @@ void CGameFramework::FrameAdvance()
 
 		if (ImGui::Button("GameStart", ImVec2(buttonWidth, buttonHeight)))
 		{
+
 			ChangeGameState(GameState::InGame);
 		}
 		ImGui::End();
