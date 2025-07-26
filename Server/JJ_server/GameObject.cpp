@@ -52,6 +52,11 @@ void GameObject::MoveForward(float fDistance)
 		auto& other_obj = GameObject::gameObjects[other_info->u_id];
 		if (!other_obj || !other_obj->is_alive) continue;
 
+		if (this->GetType() == OBJECT_TYPE::OB_BAT)
+		{
+			if (other_obj->GetType() != OBJECT_TYPE::OB_TREE) continue;
+		}
+
 		// 충돌했다면 밀어낼 방향 계산
 		if (myCurrentOBB.Intersects(other_obj->world_obb))
 		{
@@ -122,7 +127,10 @@ void GameObject::MoveForward(float fDistance)
 			if (GameObject::gameObjects[o_obj->u_id]->Gethp() <= 0) continue;
 			if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
 			auto t = GameObject::gameObjects[o_obj->u_id]->GetType();
-			if (t != OBJECT_TYPE::OB_TREE && t != OBJECT_TYPE::OB_STONE && t != OBJECT_TYPE::ST_WOODWALL) continue;
+			if (this->GetType() == OBJECT_TYPE::OB_BAT)
+			{
+				if (t != OBJECT_TYPE::OB_TREE) continue;
+			}
 			if (testOBBX.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
 			{
 				test_move.x = GetPosition().x;
@@ -155,7 +163,6 @@ void GameObject::MoveForward(float fDistance)
 			if (GameObject::gameObjects[o_obj->u_id]->Gethp() <= 0) continue;
 			if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
 			auto t = GameObject::gameObjects[o_obj->u_id]->GetType();
-			if (t != OBJECT_TYPE::OB_TREE && t != OBJECT_TYPE::OB_STONE && t != OBJECT_TYPE::ST_WOODWALL) continue;
 			if (testOBBZ.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
 			{
 				test_move.z = GetPosition().z;
@@ -191,6 +198,7 @@ void GameObject::Rotate(float fPitch, float fYaw, float fRoll)
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME) continue;
 			if (cl.second->m_id != p_obj->u_id) continue;
+
 			if (testOBB.Intersects(cl.second->world_obb))
 			{
 				XMVECTOR myCenter = XMLoadFloat3(&GetPosition());
@@ -206,9 +214,10 @@ void GameObject::Rotate(float fPitch, float fYaw, float fRoll)
 	for (auto& o_obj : oresults) {
 		auto& other_obj = GameObject::gameObjects[o_obj->u_id];
 		if (!other_obj || !other_obj->is_alive || other_obj->Gethp() <= 0) continue;
-		auto t = other_obj->GetType();
-		if (t != OBJECT_TYPE::OB_TREE && t != OBJECT_TYPE::OB_STONE && t != OBJECT_TYPE::ST_WOODWALL) continue;
-
+		if (this->GetType() == OBJECT_TYPE::OB_BAT)
+		{
+			if (other_obj->GetType() != OBJECT_TYPE::OB_TREE) continue;
+		}
 		if (testOBB.Intersects(other_obj->world_obb))
 		{
 			XMVECTOR myCenter = XMLoadFloat3(&GetPosition());
