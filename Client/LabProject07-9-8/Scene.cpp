@@ -467,7 +467,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	
 
 	// 생성할 건축물 목록 (프리팹 이름과 동일해야 함)
-	std::vector<std::string> buildableItems = { "wood_wall" /*, "wood_floor", ... */ };
+	std::vector<std::string> buildableItems = { "wood_wall" ,"furnace"/*, "wood_floor", ... */ };
 
 	for (const auto& itemName : buildableItems) {
 		std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab(itemName);
@@ -1563,6 +1563,9 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	//건축
 	pResourceManager->RegisterPrefab("wood_wall", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/buildobject/Fence_WoodC_A.bin", m_pGameFramework));
+	auto pFurnacePrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/buildobject/furnace.bin", m_pGameFramework);
+	pFurnacePrefab->m_objectType = GameObjectType::Furnace; // 타입 지정
+	pResourceManager->RegisterPrefab("furnace", pFurnacePrefab);
 
 
 }
@@ -1647,7 +1650,7 @@ void CScene::SpawnResourceShards(const XMFLOAT3& origin, ShardType type)
 	
 	std::vector<CResourceShardEffect*>& shardPool = (type == ShardType::Wood) ? m_vWoodShards : m_vRockShards;
 
-	int numShardsToSpawn = 8 + (rand() % 5); 
+	int numShardsToSpawn = 8 + (rand() % 5); //8~12
 
 	for (int i = 0; i < numShardsToSpawn; ++i)
 	{
@@ -1658,9 +1661,9 @@ void CScene::SpawnResourceShards(const XMFLOAT3& origin, ShardType type)
 			{
 				
 				XMFLOAT3 velocity = XMFLOAT3(
-					((float)(rand() % 4000) - 2000.0f), // X: -2000 ~ +2000
-					((float)(rand() % 2000) + 1500.0f), // Y: +1500 ~ +3500 (위로 매우 강하게)
-					((float)(rand() % 4000) - 2000.0f)  // Z: -2000 ~ +2000
+					((float)(rand() % 10) - 5.0f), // X: -2000 ~ +2000
+					((float)(rand() % 4) + 2.0f), // Y: +1500 ~ +3500 (위로 매우 강하게)
+					((float)(rand() % 10) - 5.0f)  // Z: -2000 ~ +2000
 				);
 				pShard->Activate(origin, velocity);
 				break;

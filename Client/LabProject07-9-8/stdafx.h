@@ -1,7 +1,7 @@
 #pragma once
 
 ///---------¼­¹ö ¿¬°á------------
-#define ONLINE
+//#define ONLINE
 
 
 #define WIN32_LEAN_AND_MEAN     
@@ -71,7 +71,7 @@ extern HINSTANCE						ghAppInstance;
 
 #pragma comment(lib, "dxguid.lib")
 
-// TODO: ï¿½ï¿½ï¿½Î±×·ï¿½ï¿½ï¿½ ï¿½Ê¿ï¿½ï¿½ï¿½ ï¿½ß°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿?ï¿½ï¿½ï¿½â¿¡ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
+
 
 extern UINT	gnCbvSrvDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;

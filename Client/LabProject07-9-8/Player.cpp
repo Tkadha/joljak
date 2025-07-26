@@ -369,13 +369,15 @@ void CPlayer::Update(float fTimeElapsed)
 
 	if (m_pPlayerUpdatedContext) OnPlayerUpdateCallback(fTimeElapsed);
 
-	DWORD nCurrentCameraMode = m_pCamera->GetMode();
-	if (nCurrentCameraMode == THIRD_PERSON_CAMERA) m_pCamera->Update(m_xmf3Position, fTimeElapsed);
-	if (m_pCameraUpdatedContext) OnCameraUpdateCallback(fTimeElapsed);
-	m_xmf3Position.y += 15.f;
-	if (nCurrentCameraMode == THIRD_PERSON_CAMERA) m_pCamera->SetLookAt(m_xmf3Position);
-	m_xmf3Position.y -= 15.f;
-	m_pCamera->RegenerateViewMatrix();
+	if (cameramove) {
+		DWORD nCurrentCameraMode = m_pCamera->GetMode();
+		if (nCurrentCameraMode == THIRD_PERSON_CAMERA) m_pCamera->Update(m_xmf3Position, fTimeElapsed);
+		if (m_pCameraUpdatedContext) OnCameraUpdateCallback(fTimeElapsed);
+		m_xmf3Position.y += 15.f;
+		if (nCurrentCameraMode == THIRD_PERSON_CAMERA) m_pCamera->SetLookAt(m_xmf3Position);
+		m_xmf3Position.y -= 15.f;
+		m_pCamera->RegenerateViewMatrix();
+	}
 
 	fLength = Vector3::Length(m_xmf3Velocity);
 	float fDeceleration = (m_fFriction * fTimeElapsed);
@@ -590,6 +592,11 @@ void CPlayer::UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFL
 	);
 	//XMStoreFloat4(&m_localOBB.Orientation, qRotation);
 	UpdateTransform();
+}
+
+void CPlayer::SetCameraMove()
+{
+	cameramove = false;
 }
 
 

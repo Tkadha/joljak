@@ -46,9 +46,9 @@ void CConstructionSystem::ExitBuildMode()
 
 void CConstructionSystem::UpdatePreviewPosition(const CCamera* pCamera)
 {
-    if (!m_bBuildMode || !m_pPreviewObject || !pCamera) return;
+    if (!m_bBuildMode || !m_pPreviewObject || !pCamera || !m_pScene || !m_pScene->m_pTerrain) return;
 
-    
+    // 1. 카메라 위치와 방향을 기준으로 기본 위치를 계산합니다. (기존 코드)
     XMFLOAT3 camPos = pCamera->GetPosition();
     XMFLOAT3 camLook = pCamera->GetLookVector();
 
@@ -59,8 +59,13 @@ void CConstructionSystem::UpdatePreviewPosition(const CCamera* pCamera)
     XMFLOAT3 previewPos;
     XMStoreFloat3(&previewPos, vTargetPos);
 
-    
+    // 2. [추가] 계산된 위치(X, Z)를 기준으로 지형의 높이를 가져옵니다.
+    float terrainHeight = m_pScene->m_pTerrain->GetHeight(previewPos.x, previewPos.z);
 
+    // 3. [추가] 프리뷰 오브젝트의 Y 좌표를 지형 높이로 설정합니다.
+    previewPos.y = terrainHeight;
+
+    // 4. 최종 계산된 위치를 프리뷰 오브젝트에 적용합니다.
     m_pPreviewObject->SetPosition(previewPos);
 }
 
