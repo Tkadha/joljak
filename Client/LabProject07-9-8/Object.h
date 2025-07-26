@@ -144,6 +144,7 @@ public:
 	void SetMaterial(int nMaterial, CMaterial *pMaterial);
 
 	void SetChild(CGameObject *pChild, bool bReferenceUpdate=false);
+	void RemoveChild(CGameObject* pChildToRemove);
 
 	virtual void BuildMaterials(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
 
@@ -174,6 +175,7 @@ public:
 	void SetUp(XMFLOAT3 xmf3Up);
 	void SetRight(XMFLOAT3 xmf3Right);
 
+	void SetRotation(float fPitch, float fYaw, float fRoll);
 
 	XMFLOAT3 GetToParentPosition();
 	void Move(XMFLOAT3 xmf3Offset);

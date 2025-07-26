@@ -645,6 +645,78 @@ CGameObject* CPlayer::FindFrame(char* framename)
 	return nullptr;
 } 
 
+
+
+
+void CPlayer::EquipTool(ToolType type)
+{
+	// 현재 장착된 도구 해제
+	if (m_pEquippedTool)
+	{
+		CGameObject* handFrame = FindFrame("thumb_02_r"); // 현재 도구가 붙어있던 손 프레임
+		if (handFrame) {
+			handFrame->RemoveChild(m_pEquippedTool); // 새로 구현해야 할 함수
+		}
+		m_pEquippedTool->isRender = false;
+		m_pEquippedTool = nullptr; // 포인터 초기화
+		m_eCurrentTool = ToolType::None;
+	}
+
+	// 새로운 도구 장착
+	CGameObject* newTool = nullptr;
+	// 각 도구에 맞는 로컬 변환
+	XMFLOAT3 localOffset = XMFLOAT3(0, 0, 0); 
+	XMFLOAT3 localRotation = XMFLOAT3(0, 0, 0);
+	XMFLOAT3 localScale = XMFLOAT3(1, 1, 1);
+
+	switch (type)
+	{
+	case ToolType::Sword:
+		newTool = m_pSword;
+		localOffset = XMFLOAT3(0.05, 0.00, -0.05);
+		localRotation = XMFLOAT3(90, 0, 0);
+		break;
+	case ToolType::Axe:
+		newTool = m_pAxe;
+		localOffset = XMFLOAT3(0.05, 0.25, -0.05); 
+		//localRotation = XMFLOAT3(90, 0, 0); 
+		break;
+	case ToolType::Pickaxe:
+		newTool = m_pPickaxe;
+		// localOffset = ... // 곡괭이의 적절한 offset
+		// localRotation = ... // 곡괭이의 적절한 rotation
+		break;
+	case ToolType::Hammer:
+		newTool = m_pHammer;
+		// localOffset = ... // 해머의 적절한 offset
+		// localRotation = ... // 해머의 적절한 rotation
+		break;
+	case ToolType::None:
+	default:
+		// 해제만 하는 경우
+		return;
+	}
+
+	if (newTool)
+	{
+		CGameObject* handFrame = FindFrame("thumb_02_r"); // 도구를 붙일 손 프레임
+		if (handFrame)
+		{
+			// 로컬 변환 설정 (이것은 AddObject가 처리해주던 부분)
+			newTool->SetPosition(localOffset);
+			newTool->SetScale(localScale.x, localScale.y, localScale.z);
+			newTool->SetRotation(localRotation.x, localRotation.y, localRotation.z);
+
+			handFrame->SetChild(newTool); // 손 프레임의 자식으로 붙임
+			newTool->isRender = true;
+			m_pEquippedTool = newTool;
+			m_eCurrentTool = type;
+
+		}
+	}
+	UpdateTransform(nullptr); // 플레이어의 월드 변환 갱신 (자식들의 변환도 함께 갱신됨)
+}
+
 CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, void *pContext, CGameFramework* pGameFramework) : CPlayer(pGameFramework)
 {
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
@@ -655,11 +727,17 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 
 	AddObject(pd3dDevice, pd3dCommandList, "Helmet", "Model/Hair_01.bin", pGameFramework, XMFLOAT3(0, 0.1, 0));
 
-	m_pSword = AddObject(pd3dDevice, pd3dCommandList, "thumb_02_r", "Model/Sword_01.bin", pGameFramework, XMFLOAT3(0.05, 0.00, -0.05));
+	m_pSword = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Ax_B.bin", pGameFramework)->m_pModelRootObject;
 	m_pSword->isRender = true;
-	m_pAxe = AddObject(pd3dDevice, pd3dCommandList, "thumb_01_r", "Model/Axe.bin", pGameFramework, XMFLOAT3(0.05, 0.25, -0.05), XMFLOAT3(90, 0, 00));
+	m_pAxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Sword_A.bin", pGameFramework)->m_pModelRootObject;
 	m_pAxe->isRender = false;
-	weaponType = WeaponType::Sword;
+	m_pPickaxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Chisel.bin", pGameFramework)->m_pModelRootObject;
+	m_pPickaxe->isRender = false;
+	m_pHammer = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Hammer_A.bin", pGameFramework)->m_pModelRootObject;
+	m_pHammer->isRender = false;
+
+	//m_eCurrentTool = ToolType::Sword;
+	EquipTool(ToolType::Sword);
 
 	AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, offset, XMFLOAT3(85, 0, 90), scale);
 
@@ -1136,9 +1214,9 @@ CGameObject* CTerrainPlayer::FindObjectHitByAttack() {
 	if (!pScene) return nullptr;
 
 	BoundingOrientedBox weapon;
-	if (weaponType == WeaponType::Sword)
+	if (m_eCurrentTool == ToolType::Sword)
 		weapon = m_pSword->m_worldOBB;
-	else if (weaponType == WeaponType::Axe)
+	else if (m_eCurrentTool == ToolType::Axe)
 		weapon = m_pAxe->m_worldOBB;
 
 

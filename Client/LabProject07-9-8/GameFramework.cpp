@@ -1918,18 +1918,18 @@ void CGameFramework::ProcessInput()
 
 						if (key == '1')
 						{
-							m_pPlayer->m_pSword->isRender = true;
-							m_pPlayer->m_pAxe->isRender = false;
-							m_pPlayer->weaponType = WeaponType::Sword;
+							m_pPlayer->EquipTool(ToolType::Sword);							
 						}
 
 						if (key == '2')
 						{
-							m_pPlayer->m_pSword->isRender = false;
-							m_pPlayer->m_pAxe->isRender = true;
-							m_pPlayer->weaponType = WeaponType::Axe;
+							m_pPlayer->EquipTool(ToolType::Axe);
 						}
 
+						if (key == '3')
+						{
+							m_pPlayer->EquipTool(ToolType::Pickaxe);
+						}
 						// 다른 키에 대한 처리 추가
 					}
 				}

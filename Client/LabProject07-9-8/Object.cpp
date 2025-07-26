@@ -115,6 +115,36 @@ void CGameObject::SetChild(CGameObject* pChild, bool bReferenceUpdate)
 		m_pChild = pChild;
 	}
 }
+
+void CGameObject::RemoveChild(CGameObject* pChildToRemove)
+{
+	if (!pChildToRemove || !m_pChild) return;
+
+	// 제거할 자식이 바로 첫 번째 자식인 경우
+	if (m_pChild == pChildToRemove)
+	{
+		m_pChild = pChildToRemove->m_pSibling;
+		pChildToRemove->m_pSibling = nullptr;    
+		pChildToRemove->m_pParent = nullptr;   
+		return;
+	}
+
+	// 첫 번째 자식이 아닌 경우, 자식-형제 목록을 순회
+	CGameObject* pCurrent = m_pChild;
+	while (pCurrent->m_pSibling && pCurrent->m_pSibling != pChildToRemove)
+	{
+		pCurrent = pCurrent->m_pSibling;
+	}
+
+	if (pCurrent->m_pSibling == pChildToRemove)
+	{
+		pCurrent->m_pSibling = pChildToRemove->m_pSibling; 
+		pChildToRemove->m_pSibling = nullptr;  
+		pChildToRemove->m_pParent = nullptr; 
+	}
+}
+
+
 void CGameObject::ProcessPlayerHit(CPlayer* pPlayerInfo)
 {
 	// 이미 무적이거나 죽은 상태면 아무것도 하지 않음
@@ -1065,6 +1095,29 @@ void CGameObject::SetRight(XMFLOAT3 xmf3Right)
 {
 	XMVECTOR vRight = XMLoadFloat3(&xmf3Right);
 	XMStoreFloat3(reinterpret_cast<XMFLOAT3*>(&m_xmf4x4ToParent._11), vRight);
+}
+
+void CGameObject::SetRotation(float fPitch, float fYaw, float fRoll)
+{
+	XMMATRIX mtxOldToParent = XMLoadFloat4x4(&m_xmf4x4ToParent);
+	XMVECTOR s, r, t;
+	XMMatrixDecompose(&s, &r, &t, mtxOldToParent);
+
+	XMMATRIX mtxNewRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(fPitch), XMConvertToRadians(fYaw), XMConvertToRadians(fRoll));
+
+	XMStoreFloat4x4(&m_xmf4x4ToParent, XMMatrixAffineTransformation(s, XMVectorZero(), mtxNewRotate.r[0], t)); 
+	
+	XMFLOAT3 pos = GetToParentPosition(); 
+	XMFLOAT3 scale_val = XMFLOAT3(
+		XMVectorGetX(XMVector3Length(mtxOldToParent.r[0])),
+		XMVectorGetX(XMVector3Length(mtxOldToParent.r[1])),
+		XMVectorGetX(XMVector3Length(mtxOldToParent.r[2]))
+	); 
+
+	XMMATRIX mtxScale = XMMatrixScaling(scale_val.x, scale_val.y, scale_val.z);
+	XMMATRIX mtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(fPitch), XMConvertToRadians(fYaw), XMConvertToRadians(fRoll));
+	XMMATRIX mtxTranslate = XMMatrixTranslation(pos.x, pos.y, pos.z);
+	XMStoreFloat4x4(&m_xmf4x4ToParent, mtxScale * mtxRotate * mtxTranslate);
 }
 
 void CGameObject::MoveStrafe(float fDistance)
