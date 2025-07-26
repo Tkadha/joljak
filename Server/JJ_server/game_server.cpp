@@ -49,7 +49,6 @@ shared_ptr<thread> g_event_thread;
 Timer g_timer;
 
 std::atomic<bool> g_is_shutting_down{ false };
-std::mutex g_clients_mutex;
 
 static float time_accumulator = 0.0f;
 static int play_day = 0;
@@ -131,73 +130,80 @@ void worker_thread()
 				}
 				else if (COMP_TYPE::OP_PLAYER_UPDATE == p_read_over->comp_type) {
 					shared_ptr<PlayerClient> Client;
-					Client = PlayerClient::PlayerClients[(PlayerClient*)readEvent.lpCompletionKey];
-					if (Client) {
-						std::lock_guard<std::mutex> lock(Client->c_mu);
-						if (Client->state != PC_INGAME) continue;
-						float deltaTime = g_timer.GetTimeElapsed();
-						auto& beforepos = Client->GetPosition();
-						if (Client->Playerstamina.load() > 0)
-							Client->Update_test(deltaTime);
-						auto& pos = Client->GetPosition();
-						if (beforepos.x != pos.x || beforepos.y != pos.y || beforepos.z != pos.z)
-						{
-							Client->BroadCastPosPacket();
-							int stamina = Client->Playerstamina.load();
-							if (stamina > 0 && Client->GetCurrentState() == ServerPlayerState::Running) {
-								Client->stamina_counter++;
-								if (Client->stamina_counter > 15) {
-									int desiredstamina = stamina - 1;
-									if (desiredstamina < 0) {
-										desiredstamina = 0;
-									}
-									if (Client->Playerstamina.compare_exchange_weak(stamina, desiredstamina)) {
-										// 패킷전송
-										CHANGE_STAT_PACKET s_packet;
-										s_packet.size = sizeof(CHANGE_STAT_PACKET);
-										s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
-										s_packet.stat = E_STAT::STAMINA;
-										s_packet.value = Client->Playerstamina.load();
-										Client->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
-									}
-									Client->stamina_counter = 0;
+					auto it = PlayerClient::PlayerClients.find((PlayerClient*)readEvent.lpCompletionKey);
+					if (it != PlayerClient::PlayerClients.end()) {
+						Client = it->second;
+					}
+					else {
+						delete p_read_over;
+						continue;
+					}
+					std::lock_guard<std::mutex> lock(Client->c_mu);
+					if (Client->state != PC_INGAME) continue;
+					float deltaTime = g_timer.GetTimeElapsed();
+					auto& beforepos = Client->GetPosition();
+					if (Client->Playerstamina.load() > 0)
+						Client->Update_test(deltaTime);
+					auto& pos = Client->GetPosition();
+					if (beforepos.x != pos.x || beforepos.y != pos.y || beforepos.z != pos.z)
+					{
+						Client->BroadCastPosPacket();
+						int stamina = Client->Playerstamina.load();
+						if (stamina > 0 && Client->GetCurrentState() == ServerPlayerState::Running) {
+							Client->stamina_counter++;
+							if (Client->stamina_counter > 15) {
+								int desiredstamina = stamina - 1;
+								if (desiredstamina < 0) {
+									desiredstamina = 0;
 								}
+								if (Client->Playerstamina.compare_exchange_weak(stamina, desiredstamina)) {
+									// 패킷전송
+									CHANGE_STAT_PACKET s_packet;
+									s_packet.size = sizeof(CHANGE_STAT_PACKET);
+									s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+									s_packet.stat = E_STAT::STAMINA;
+									s_packet.value = Client->Playerstamina.load();
+									Client->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+								}
+								Client->stamina_counter = 0;
 							}
 						}
-						Octree::PlayerOctree.update(Client->m_id, Client->GetPosition());
-						Client->UpdateTransform();
+					}
+					Octree::PlayerOctree.update(Client->m_id, Client->GetPosition());
+					Client->UpdateTransform();
 
-						Client->vl_mu.lock();
-						std::unordered_set<int> before_vl = Client->viewlist;
-						Client->vl_mu.unlock();
+					Client->vl_mu.lock();
+					std::unordered_set<int> before_vl = Client->viewlist;
+					Client->vl_mu.unlock();
 
-						std::unordered_set<int> new_vl;
-						std::vector<tree_obj*> results; // find obj
-						tree_obj p_obj{ -1,pos };
-						Octree::GameObjectOctree.query(p_obj, oct_distance, results);
-						for (auto& obj : results) new_vl.insert(obj->u_id);
+					std::unordered_set<int> new_vl;
+					std::vector<tree_obj*> results; // find obj
+					tree_obj p_obj{ -1,pos };
+					Octree::GameObjectOctree.query(p_obj, oct_distance, results);
+					for (auto& obj : results) new_vl.insert(obj->u_id);
 
-						for (auto o_id : before_vl) {
-							if (0 == new_vl.count(o_id)) {	// before에만 있다면 제거 패킷
-								Client->SendRemovePacket(GameObject::gameObjects[o_id]);
-							}
-							else if (1 == new_vl.count(o_id)) {
-								if (GameObject::gameObjects[o_id]->is_alive == true) continue;
-								if (GameObject::gameObjects[o_id]->Gethp() > 0) continue;
-								Client->SendRemovePacket(GameObject::gameObjects[o_id]);
-							}
+					for (auto o_id : before_vl) {
+						if (0 == new_vl.count(o_id)) {	// before에만 있다면 제거 패킷
+							Client->SendRemovePacket(GameObject::gameObjects[o_id]);
 						}
-						for (auto o_id : new_vl) {
-							if (0 == before_vl.count(o_id)) { //new에만 있다면 추가 패킷
-								if (GameObject::gameObjects[o_id]->is_alive == false) continue;
-								if (GameObject::gameObjects[o_id]->Gethp() <= 0) continue;
-								Client->SendAddPacket(GameObject::gameObjects[o_id]);
-							}
+						else if (1 == new_vl.count(o_id)) {
+							if (GameObject::gameObjects[o_id]->is_alive == true) continue;
+							if (GameObject::gameObjects[o_id]->Gethp() > 0) continue;
+							Client->SendRemovePacket(GameObject::gameObjects[o_id]);
 						}
-						Client->vl_mu.lock();
-						Client->viewlist = new_vl;
-						Client->vl_mu.unlock();
-					}				
+					}
+					for (auto o_id : new_vl) {
+						if (0 == before_vl.count(o_id)) { //new에만 있다면 추가 패킷
+							if (GameObject::gameObjects[o_id]->is_alive == false) continue;
+							if (GameObject::gameObjects[o_id]->Gethp() <= 0) continue;
+							Client->SendAddPacket(GameObject::gameObjects[o_id]);
+						}
+					}
+					Client->vl_mu.lock();
+					Client->viewlist = new_vl;
+					Client->vl_mu.unlock();
+
+					delete p_read_over;
 				}
 				else  // TCP 연결 소켓이면
 				{					

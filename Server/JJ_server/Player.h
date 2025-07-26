@@ -7,7 +7,8 @@
 #include <iostream>
 #include <atomic>
 // client Á¤º¸
-
+#include <mutex>
+extern std::mutex g_clients_mutex;
 
 class GameObject;
 

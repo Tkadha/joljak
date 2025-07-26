@@ -15,6 +15,7 @@
 
 #define MIN_HEIGHT                  1055.f      
 unordered_map<PlayerClient*, shared_ptr<PlayerClient>> PlayerClient::PlayerClients;
+std::mutex g_clients_mutex;
 
 void PlayerClient::Move(ULONG dwDirection, float fDistance, bool bUpdateVelocity)
 {
