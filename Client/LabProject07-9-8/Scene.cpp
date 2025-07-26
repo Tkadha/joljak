@@ -279,7 +279,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	
 
 	// 생성할 건축물 목록 (프리팹 이름과 동일해야 함)
-	std::vector<std::string> buildableItems = { "wood_wall" /*, "wood_floor", ... */ };
+	std::vector<std::string> buildableItems = { "wood_wall","furnace" /*, "wood_floor", ... */ };
 
 	for (const auto& itemName : buildableItems) {
 		std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab(itemName);

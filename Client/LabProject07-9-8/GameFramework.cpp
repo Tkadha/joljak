@@ -1877,6 +1877,23 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->m_vConstructionObjects.push_back(gameObj);
 		}
 		break;
+		case OBJECT_TYPE::ST_FURNACE:
+		{
+			std::shared_ptr<CGameObject> prefab;
+			prefab = m_pResourceManager->GetPrefab("furnace");
+
+			CGameObject* gameObj = prefab->Clone();
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+			m_pScene->m_vConstructionObjects.push_back(gameObj);
+		}
 		default:
 			break;
 		}
@@ -2878,8 +2895,11 @@ void CGameFramework::FrameAdvance()
 						STRUCT_OBJ_PACKET s_packet;
 						s_packet.type = static_cast<char>(E_PACKET::E_STRUCT_OBJ);
 						s_packet.size = sizeof(STRUCT_OBJ_PACKET);
-						s_packet.o_type = OBJECT_TYPE::ST_WOODWALL;
 
+						if(m_nSelectedBuildingIndex == 0)
+							s_packet.o_type = OBJECT_TYPE::ST_WOODWALL;
+						else if(m_nSelectedBuildingIndex == 1)
+							s_packet.o_type = OBJECT_TYPE::ST_FURNACE;
 						auto& obb = pInstalledObject->GetOBB();
 						s_packet.Center.x = obb.Center.x;
 						s_packet.Center.y = obb.Center.y;

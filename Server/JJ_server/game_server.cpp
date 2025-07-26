@@ -434,9 +434,7 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		obj->SetPosition(XMFLOAT3{ r_packet->position.x, r_packet->position.y, r_packet->position.z });
 		obj->SetType(r_packet->o_type);
 		GameObject::ConstructObjects.push_back(obj);
-		std::cout<< "Constructed object: " << "wood wall " << " at position: "
-			<< r_packet->position.x << ", " << r_packet->position.y << ", " << r_packet->position.z << std::endl;
-		// 다른 클라에게도 전송하기
+
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME) continue;
 			if (cl.second->m_id == client->m_id) continue;
