@@ -31,6 +31,49 @@ struct cbGameObjectInfo {
 };
 
 
+void CGameObject::GetAllBoneTransforms(std::map<std::string, CGameObject*>& boneMap, CGameObject* currentFrame)
+{
+	if (!currentFrame) return;
+
+	// 프레임 이름으로 맵에 추가
+	if (currentFrame->m_pstrFrameName[0] != '\0')
+	{
+		boneMap[currentFrame->m_pstrFrameName] = currentFrame;
+	}
+
+	// 재귀 호출
+	if (currentFrame->m_pChild)
+	{
+		GetAllBoneTransforms(boneMap, currentFrame->m_pChild);
+	}
+	if (currentFrame->m_pSibling)
+	{
+		GetAllBoneTransforms(boneMap, currentFrame->m_pSibling);
+	}
+}
+
+void FindAllSkinnedMeshesOnEquipment(std::vector<CSkinnedMesh*>& outSkinnedMeshes, CGameObject* currentObject)
+{
+	if (!currentObject) return;
+
+	// 현재 오브젝트가 스킨드 메쉬를 가지고 있는지 확인
+	if (currentObject->m_pMesh && (currentObject->m_pMesh->GetType() & VERTEXT_BONE_INDEX_WEIGHT))
+	{
+		outSkinnedMeshes.push_back(static_cast<CSkinnedMesh*>(currentObject->m_pMesh));
+	}
+
+	// 재귀 호출
+	if (currentObject->m_pChild)
+	{
+		FindAllSkinnedMeshesOnEquipment(outSkinnedMeshes, currentObject->m_pChild);
+	}
+	if (currentObject->m_pSibling)
+	{
+		FindAllSkinnedMeshesOnEquipment(outSkinnedMeshes, currentObject->m_pSibling);
+	}
+}
+
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -823,37 +866,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 				if (shaderType == "Skinned") {
 					CSkinnedMesh* pSkinnedMesh = dynamic_cast<CSkinnedMesh*>(m_pMesh);
 					if (pSkinnedMesh) {
-
-						ID3D12Resource* pOffsetBuffer = pSkinnedMesh->m_pd3dcbBindPoseBoneOffsets;
-						if (pOffsetBuffer) {
-							pd3dCommandList->SetGraphicsRootConstantBufferView(5, pOffsetBuffer->GetGPUVirtualAddress());
-						}
-
-
-						CAnimationController* pControllerToUse = nullptr;
-						if (this->m_pSkinnedAnimationController) {
-							// 오브젝트가 직접 컨트롤러를 소유한 경우
-							pControllerToUse = this->m_pSkinnedAnimationController;
-						}
-						else if (this->m_pSharedAnimController) {
-							// 오브젝트가 부모로부터 컨트롤러를 공유받은 경우 (무기, 장비)
-							pControllerToUse = this->m_pSharedAnimController;
-						}
-						if (pControllerToUse)
-						{
-							// 현재 메쉬가 컨트롤러의 몇 번째 메쉬인지 인덱스를 찾음
-							int nSkinnedMeshIndex = -1;
-							for (int i = 0; i < pControllerToUse->m_nSkinnedMeshes; ++i) {
-								if (pControllerToUse->m_ppSkinnedMeshes[i] == pSkinnedMesh) {
-									nSkinnedMeshIndex = i;
-									break;
-								}
-							}
-
-							if (nSkinnedMeshIndex != -1 && pControllerToUse->m_ppd3dcbSkinningBoneTransforms[nSkinnedMeshIndex]) {
-								pd3dCommandList->SetGraphicsRootConstantBufferView(6, pControllerToUse->m_ppd3dcbSkinningBoneTransforms[nSkinnedMeshIndex]->GetGPUVirtualAddress());
-							}
-						}
+						pSkinnedMesh->UpdateShaderVariables(pd3dCommandList);
 					}
 				}
 
@@ -903,12 +916,7 @@ void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 
 			CSkinnedMesh* pSkinnedMesh = dynamic_cast<CSkinnedMesh*>(m_pMesh);
 			if (pSkinnedMesh) {
-				pd3dCommandList->SetGraphicsRootConstantBufferView(5, pSkinnedMesh->m_pd3dcbBindPoseBoneOffsets->GetGPUVirtualAddress());
-				CAnimationController* pController = m_pSkinnedAnimationController ? m_pSkinnedAnimationController : m_pSharedAnimController;
-				if (pController && pController->m_ppd3dcbSkinningBoneTransforms[0]) {
-					pd3dCommandList->SetGraphicsRootConstantBufferView(6, pController->m_ppd3dcbSkinningBoneTransforms[0]->GetGPUVirtualAddress());
-				}
-			}
+				pSkinnedMesh->UpdateShaderVariables(pd3dCommandList);			}
 		}
 		else 
 		{
@@ -1777,13 +1785,8 @@ void CGameObject::AttachEquipmentToSkeleton(CGameObject* targetCharacterRoot, CA
 		return;
 	}
 
-	// 대상 캐릭터의 모든 본을 맵에 수집합니다.
-	std::map<std::string, CGameObject*> targetBoneMap;
-	GetAllBoneTransforms(targetBoneMap, targetCharacterRoot);
-
-	// 이 장비 GameObject와 그 자식에서 모든 SkinnedMesh를 찾습니다.
 	std::vector<CSkinnedMesh*> equipmentSkinnedMeshes;
-	FindAllSkinnedMeshesOnEquipment(equipmentSkinnedMeshes, this); // 위에서 정의한 헬퍼 함수 사용
+	FindAllSkinnedMeshesOnEquipment(equipmentSkinnedMeshes, this); 
 
 	if (equipmentSkinnedMeshes.empty())
 	{
@@ -1797,9 +1800,16 @@ void CGameObject::AttachEquipmentToSkeleton(CGameObject* targetCharacterRoot, CA
 
 		equipmentMesh->PrepareSkinning(targetCharacterRoot);
 
+		if (targetAnimController)
+		{
+			targetAnimController->AddSkinnedMesh(equipmentMesh, m_pGameFramework->GetDevice(), m_pGameFramework->GetCommandList());
+		}
+		else
+		{
+			OutputDebugString(L"Warning: Target animation controller is null. Skinned mesh on equipment may not be animated.\n");
+		}
 	}
 }
-
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

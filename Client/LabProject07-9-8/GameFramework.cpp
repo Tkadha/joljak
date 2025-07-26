@@ -1924,8 +1924,6 @@ void CGameFramework::ProcessInput()
 							m_pPlayer->m_pAxe->isRender = true;
 							m_pPlayer->weaponType = WeaponType::Axe;
 						}
-
-						// 다른 키에 대한 처리 추가
 					}
 				}
 				else

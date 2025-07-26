@@ -5,6 +5,7 @@
 class CGameObject;
 class CSkinnedMesh;
 class CAnimationSets;
+class CGameFramework;
 
 class CLoadedModelInfo
 {
@@ -156,6 +157,17 @@ public:
 	ID3D12Resource** m_ppd3dcbSkinningBoneTransforms = NULL; //[SkinnedMeshes]
 	XMFLOAT4X4** m_ppcbxmf4x4MappedSkinningBoneTransforms = NULL; //[SkinnedMeshes]
 
+// 장비 오류 수정
+	std::vector<CSkinnedMesh*> m_vSkinnedMeshes; 
+	std::vector<ID3D12Resource*> m_vpd3dcbSkinningBoneTransforms;
+	std::vector<XMFLOAT4X4*> m_vppcbxmf4x4MappedSkinningBoneTransforms;
+private:
+
+public:
+	void AddSkinnedMesh(CSkinnedMesh* pSkinnedMesh, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void RemoveSkinnedMesh(CSkinnedMesh* pSkinnedMesh);
+
+// -------------
 public:
 	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -180,6 +192,7 @@ private:
 public:
 	bool							m_bRootMotion = false;
 	CGameObject* m_pModelRootObject = NULL;
+	CGameFramework* m_pGameFramework = NULL;
 
 	CGameObject* m_pRootMotionObject = NULL;
 	XMFLOAT3						m_xmf3FirstRootMotionPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);

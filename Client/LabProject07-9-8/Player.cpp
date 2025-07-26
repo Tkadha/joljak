@@ -104,6 +104,31 @@ int ChangeTextureForHierarchy(
 	return totalChangedCount;
 }
 
+
+
+void GetAllBoneTransforms(std::map<std::string, CGameObject*>& boneMap, CGameObject* currentFrame)
+{
+	if (!currentFrame) return;
+
+	// 프레임 이름으로 맵에 추가
+	if (currentFrame->m_pstrFrameName[0] != '\0')
+	{
+		boneMap[currentFrame->m_pstrFrameName] = currentFrame;
+	}
+
+	// 재귀 호출
+	if (currentFrame->m_pChild)
+	{
+		GetAllBoneTransforms(boneMap, currentFrame->m_pChild);
+	}
+	if (currentFrame->m_pSibling)
+	{
+		GetAllBoneTransforms(boneMap, currentFrame->m_pSibling);
+	}
+}
+
+
+
 CPlayer::CPlayer(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	m_pCamera = NULL;
@@ -597,36 +622,87 @@ void CPlayer::UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFL
 
 CGameObject* CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework)
 {
-	CGameObject* handFrame = FindFrame(framename);
-	if (handFrame) {
-		CGameObject* weapon = new CStaticObject(pd3dDevice, pd3dCommandList, modelname, pGameFramework);
-		weapon->SetPosition(0, 0, 0); 
-		weapon->SetScale(1, 1, 1);
-		weapon->Rotate(0.0f, 0.0f, 0.0f);
+	CGameObject* targetFrame = FindFrame(framename);
+	if (targetFrame) {
+		CLoadedModelInfo* pLoadedEquipmentModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, modelname, pGameFramework);
+		if (!pLoadedEquipmentModel || !pLoadedEquipmentModel->m_pModelRootObject)
+		{
+			OutputDebugStringA(("Error: Failed to load equipment model: " + std::string(modelname) + "\n").c_str());
+			// 에러 처리 및 반환
+			if (pLoadedEquipmentModel) delete pLoadedEquipmentModel;
+			return nullptr;
+		}
 
-		handFrame->SetChild(weapon);
+		CGameObject* equipmentRootObject = pLoadedEquipmentModel->m_pModelRootObject;
+
+		equipmentRootObject->SetPosition(0, 0, 0);
+		equipmentRootObject->SetScale(1, 1, 1);
+		equipmentRootObject->Rotate(0.0f, 0.0f, 0.0f);
+
+
+		targetFrame->SetChild(equipmentRootObject);
+
+		CGameObject* userCharacterRoot = this->m_pChild;
+
+		if (userCharacterRoot && m_pSkinnedAnimationController)
+		{
+			equipmentRootObject->AttachEquipmentToSkeleton(userCharacterRoot, m_pSkinnedAnimationController);
+		}
+
+		equipmentRootObject->AttachEquipmentToSkeleton(userCharacterRoot, m_pSkinnedAnimationController);
+
+		if (m_pSkinnedAnimationController)
+		{
+			equipmentRootObject->PropagateAnimController(m_pSkinnedAnimationController);
+		}
+
 		UpdateTransform(nullptr); // 변환 행렬 즉시 갱신
 
-		return weapon;
+		delete pLoadedEquipmentModel;
+		return equipmentRootObject;
 	}
-
 	return nullptr;
 }
 CGameObject* CPlayer::AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate = {0,0,0}, XMFLOAT3 scale = { 1,1,1 })
 {
-	CGameObject* handFrame = FindFrame(framename);
-	if (handFrame) {
-		CGameObject* weapon = new CStaticObject(pd3dDevice, pd3dCommandList, modelname, pGameFramework);
-		weapon->SetPosition(offset);
-		weapon->SetScale(scale.x, scale.y, scale.z);
-		weapon->Rotate(rotate.x, rotate.y, rotate.z);
+	CGameObject* targetFrame = FindFrame(framename);
+	if (targetFrame) {
+		CLoadedModelInfo* pLoadedEquipmentModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, modelname, pGameFramework);
+		if (!pLoadedEquipmentModel || !pLoadedEquipmentModel->m_pModelRootObject)
+		{
+			OutputDebugStringA(("Error: Failed to load equipment model: " + std::string(modelname) + "\n").c_str());
+			// 에러 처리 및 반환
+			if (pLoadedEquipmentModel) delete pLoadedEquipmentModel; 
+			return nullptr;
+		}
 
-		handFrame->SetChild(weapon);
+		CGameObject* equipmentRootObject = pLoadedEquipmentModel->m_pModelRootObject;
+
+		equipmentRootObject->SetPosition(offset);
+		equipmentRootObject->SetScale(scale.x, scale.y, scale.z);
+		equipmentRootObject->Rotate(rotate.x, rotate.y, rotate.z);
+
+		targetFrame->SetChild(equipmentRootObject);
+
+		CGameObject* userCharacterRoot = this->m_pChild;
+
+		if (userCharacterRoot && m_pSkinnedAnimationController)
+		{
+			equipmentRootObject->AttachEquipmentToSkeleton(userCharacterRoot, m_pSkinnedAnimationController);
+		}
+
+		//equipmentRootObject->AttachEquipmentToSkeleton(userCharacterRoot, m_pSkinnedAnimationController);
+
+		if (m_pSkinnedAnimationController)
+		{
+			equipmentRootObject->PropagateAnimController(m_pSkinnedAnimationController);
+		}
+
 		UpdateTransform(nullptr); // 변환 행렬 즉시 갱신
 
-		return weapon;
+		delete pLoadedEquipmentModel;
+		return equipmentRootObject;
 	}
-	
 	return nullptr;
 }
 
@@ -645,136 +721,37 @@ CGameObject* CPlayer::FindFrame(char* framename)
 	return nullptr;
 } 
 
+
+void FindAllSkinnedMeshesOnEquipment2(std::vector<CSkinnedMesh*>& outSkinnedMeshes, CGameObject* currentObject)
+{
+	if (!currentObject) return;
+
+	// 현재 오브젝트가 스킨드 메쉬를 가지고 있는지 확인
+	if (currentObject->m_pMesh && (currentObject->m_pMesh->GetType() & VERTEXT_BONE_INDEX_WEIGHT))
+	{
+		outSkinnedMeshes.push_back(static_cast<CSkinnedMesh*>(currentObject->m_pMesh));
+	}
+
+	// 재귀 호출
+	if (currentObject->m_pChild)
+	{
+		FindAllSkinnedMeshesOnEquipment2(outSkinnedMeshes, currentObject->m_pChild);
+	}
+	if (currentObject->m_pSibling)
+	{
+		FindAllSkinnedMeshesOnEquipment2(outSkinnedMeshes, currentObject->m_pSibling);
+	}
+}
+
 CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, void *pContext, CGameFramework* pGameFramework) : CPlayer(pGameFramework)
 {
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 
 	CLoadedModelInfo *pPlayerModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList,
-	"Model/Player.bin", pGameFramework);
+	"Model/Test/Hu_M_Peasant_Rd.bin", pGameFramework);
 	SetChild(pPlayerModelInfo->m_pModelRootObject, true);
 
-	AddObject(pd3dDevice, pd3dCommandList, "Helmet", "Model/Hair_01.bin", pGameFramework, XMFLOAT3(0, 0.1, 0));
-
-	m_pSword = AddObject(pd3dDevice, pd3dCommandList, "thumb_02_r", "Model/Sword_01.bin", pGameFramework, XMFLOAT3(0.05, 0.00, -0.05));
-	m_pSword->isRender = true;
-	m_pAxe = AddObject(pd3dDevice, pd3dCommandList, "thumb_01_r", "Model/Axe.bin", pGameFramework, XMFLOAT3(0.05, 0.25, -0.05), XMFLOAT3(90, 0, 00));
-	m_pAxe->isRender = false;
-	weaponType = WeaponType::Sword;
-
-	AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, offset, XMFLOAT3(85, 0, 90), scale);
-
-
-	CLoadedModelInfo* pCapeModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Hu_M_Cape_Peasant_Rd_test.bin", pGameFramework);
-	if (pCapeModelInfo) {
-		if (pCapeModelInfo->m_ppSkinnedMeshes) { // m_ppSkinnedMeshes가 유효한지 확인
-			for (int i = 0; i < pCapeModelInfo->m_nSkinnedMeshes; ++i) {
-				if (pCapeModelInfo->m_ppSkinnedMeshes[i]) {
-					// 망토 메쉬는 플레이어의 루트 스켈레톤을 기준으로 본 매핑
-					pCapeModelInfo->m_ppSkinnedMeshes[i]->PrepareSkinning(pPlayerModelInfo->m_pModelRootObject);
-				}
-			}
-		}
-		//pCapeModelInfo->m_pModelRootObject->m_pChild->SetPosition(XMFLOAT3(0, 1000, 0));
-		SetChild(pCapeModelInfo->m_pModelRootObject);
-	}
-
-
-	// 망토
-	/*{
-		ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
-
-		int materialIndexToChange = 1;
-		UINT albedoTextureSlot = 0;
-		const wchar_t* textureFile = L"Model/Textures/T_Cape_Peasant_Bl_D.dds";
-		ChangeAlbedoTexture2(pCapeModelInfo->m_pModelRootObject, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
-	}*/
-
-	// 플레이어 커스터마이징(임시)
-	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
-
-	int changedCount = ChangeTextureForHierarchy(
-		this,                             // 탐색 시작 객체
-		_T("Model/Textures/T_HU_M_Body_05_D.dds"), // 현재 텍스처 경로
-		_T("Model/Textures/T_HU_M_Body_02_D.dds"), // 새 텍스처 경로
-		0,                                         // 변경할 텍스처 슬롯 (예: 알베도)
-		pResourceManager,
-		pd3dCommandList,
-		pd3dDevice,
-		true                                       // 머티리얼 내 텍스처 이름 문자열도 업데이트
-	);
-
-	ChangeTextureForHierarchy(
-		this,                             // 탐색 시작 객체
-		_T("Model/Textures/T_HU_M_Head_05_A_D.dds"), // 현재 텍스처 경로
-		_T("Model/Textures/T_HU_M_Head_02_A_D.dds"), // 새 텍스처 경로
-		0,                                         // 변경할 텍스처 슬롯 (예: 알베도)
-		pResourceManager,
-		pd3dCommandList,
-		pd3dDevice,
-		true                                       // 머티리얼 내 텍스처 이름 문자열도 업데이트
-	);
-
-	ChangeTextureForHierarchy(
-		this,                             // 탐색 시작 객체
-		_T("Model/Textures/T_HU_Hair_01_Br_D.dds"), // 현재 텍스처 경로
-		_T("Model/Textures/T_HU_Hair_01_Bk_D.dds"), // 새 텍스처 경로
-		0,                                         // 변경할 텍스처 슬롯 (예: 알베도)
-		pResourceManager,
-		pd3dCommandList,
-		pd3dDevice,
-		true                                       // 머티리얼 내 텍스처 이름 문자열도 업데이트
-	);
-
-	/*int materialIndexToChange = 0;
-	UINT albedoTextureSlot = 0;
-	const wchar_t* textureFile = L"Model/Textures/T_HU_M_Body_02_D.dds";
-
-	CGameObject* gameObj = FindFrame("Boots_Naked");
-	ChangeAlbedoTexture2(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
-	gameObj = FindFrame("Torso_Naked");
-	ChangeAlbedoTexture2(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
-	gameObj = FindFrame("Bracers_Naked");
-	ChangeAlbedoTexture2(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);*/
-
-
-	//CLoadedModelInfo* pChestModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList,
-	//	"Model/Hu_M_Chest_Peasant_03_Rd.bin", pGameFramework);
-	//SetChild(pChestModelInfo->m_pModelRootObject);
-
-	//CLoadedModelInfo* pChestModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Hu_M_Chest_Peasant_03_Rd.bin", pGameFramework);
-	//if (pChestModelInfo) {
-	//	if (pChestModelInfo->m_ppSkinnedMeshes) { // m_ppSkinnedMeshes가 유효한지 확인!
-	//		for (int i = 0; i < pChestModelInfo->m_nSkinnedMeshes; ++i) {
-	//			if (pChestModelInfo->m_ppSkinnedMeshes[i]) { // 개별 메쉬 포인터도 확인
-	//				// 상의 메쉬는 플레이어의 루트 스켈레톤을 기준으로 본 매핑
-	//				pChestModelInfo->m_ppSkinnedMeshes[i]->PrepareSkinning(pPlayerModelInfo->m_pModelRootObject);
-	//			}
-	//		}
-	//	}
-	//	SetChild(pChestModelInfo->m_pModelRootObject);
-	//}
-
-	//CLoadedModelInfo* pBootsModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Hu_M_Boots_Peasant.bin", pGameFramework);
-	//if (pBootsModelInfo) {
-	//	if (pBootsModelInfo->m_ppSkinnedMeshes) { // m_ppSkinnedMeshes가 유효한지 확인!
-	//		for (int i = 0; i < pBootsModelInfo->m_nSkinnedMeshes; ++i) {
-	//			if (pBootsModelInfo->m_ppSkinnedMeshes[i]) { // 개별 메쉬 포인터도 확인
-	//				// 상의 메쉬는 플레이어의 루트 스켈레톤을 기준으로 본 매핑
-	//				pBootsModelInfo->m_ppSkinnedMeshes[i]->PrepareSkinning(pPlayerModelInfo->m_pModelRootObject);
-	//			}
-	//		}
-	//	}
-	//	SetChild(pBootsModelInfo->m_pModelRootObject);
-	//}
-
-	//PrintFrameInfo(pPlayerModelInfo->m_pModelRootObject, nullptr);
-
-	
-	//AddObject(pd3dDevice, pd3dCommandList, "Boots_Peasant_Armor", "Model/Hu_M_Boots_Peasant_Rd.bin", pGameFramework);
-	//AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, XMFLOAT3(-0.25, 0.1, 0), XMFLOAT3(90, 0, 90));
-
-
-	int nAnimation{16};
+	int nAnimation{ 16 };
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimation, pPlayerModelInfo);
 	m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	for (int i = 1; i < nAnimation; ++i) {
@@ -784,7 +761,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	//AttackMelee	9
 	//AttackAxe		10
 	//AttackPick	11
-	
+
 	PropagateAnimController(m_pSkinnedAnimationController);
 
 	m_pSkinnedAnimationController->SetCallbackKeys(2, 2);
@@ -795,9 +772,9 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 #else
 	m_pSkinnedAnimationController->SetCallbackKey(2, 0, 0.2f, _T("Sound/Footstep01.wav"));
 	m_pSkinnedAnimationController->SetCallbackKey(2, 1, 0.5f, _T("Sound/Footstep02.wav"));
-//	m_pSkinnedAnimationController->SetCallbackKey(1, 2, 0.39f, _T("Sound/Footstep03.wav"));
+	//	m_pSkinnedAnimationController->SetCallbackKey(1, 2, 0.39f, _T("Sound/Footstep03.wav"));
 #endif
-	CAnimationCallbackHandler *pAnimationCallbackHandler = new CSoundCallbackHandler();
+	CAnimationCallbackHandler* pAnimationCallbackHandler = new CSoundCallbackHandler();
 	m_pSkinnedAnimationController->SetAnimationCallbackHandler(2, pAnimationCallbackHandler);
 
 	int attackAnimTrack = 9;
@@ -814,6 +791,65 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 
 
 	m_pSkinnedAnimationController->SetAnimationSpeed(0.5f);
+
+	// Sword
+	m_pSword = AddObject(pd3dDevice, pd3dCommandList, "thumb_02_r", "Model/Sword_01.bin", pGameFramework, XMFLOAT3(0.05, 0.00, -0.05)); 
+	m_pSword->isRender = true;
+	// Axe
+	m_pAxe = AddObject(pd3dDevice, pd3dCommandList, "thumb_01_r", "Model/Axe.bin", pGameFramework, XMFLOAT3(0.05, 0.25, -0.05), XMFLOAT3(90, 0, 00));
+	m_pAxe->isRender = false;
+
+	weaponType = WeaponType::Sword;
+
+	// Helmet (Hair)
+	CGameObject* pHelmetObject = AddObject(pd3dDevice, pd3dCommandList, "Helmet", "Model/Test/Hu_M_Hair_02_Br.bin", pGameFramework, XMFLOAT3(0, 0.1, 0)); 
+
+	// Torso Armor
+	XMFLOAT3 offset{ -0.230000, 0.040000, -0.010000 }, scale{ 1.10000, 1.250000, 1.150000 };
+	CGameObject* pTorsoObject = AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Test/Hu_M_Chest_Peasant_03_Rd.bin", pGameFramework, offset, XMFLOAT3(85, 0, 90), scale); 
+
+	// Cape
+	CGameObject* pCapeObject = AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Hu_M_Cape_Peasant_Rd_test.bin", pGameFramework, XMFLOAT3(0.0f, 0.0f, 0.0f)); // 위치 조정 필요
+
+	// 플레이어 커스터마이징(임시)
+	{
+		ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
+
+		int changedCount = ChangeTextureForHierarchy(
+			this,                             // 탐색 시작 객체
+			_T("Model/Textures/T_HU_M_Body_05_D.dds"), // 현재 텍스처 경로
+			_T("Model/Textures/T_HU_M_Body_02_D.dds"), // 새 텍스처 경로
+			0,                                         // 변경할 텍스처 슬롯 (예: 알베도)
+			pResourceManager,
+			pd3dCommandList,
+			pd3dDevice,
+			true                                       // 머티리얼 내 텍스처 이름 문자열도 업데이트
+		);
+
+		ChangeTextureForHierarchy(
+			this,                             // 탐색 시작 객체
+			_T("Model/Textures/T_HU_M_Head_05_A_D.dds"), // 현재 텍스처 경로
+			_T("Model/Textures/T_HU_M_Head_02_A_D.dds"), // 새 텍스처 경로
+			0,                                         // 변경할 텍스처 슬롯 (예: 알베도)
+			pResourceManager,
+			pd3dCommandList,
+			pd3dDevice,
+			true                                       // 머티리얼 내 텍스처 이름 문자열도 업데이트
+		);
+
+		ChangeTextureForHierarchy(
+			this,                             // 탐색 시작 객체
+			_T("Model/Textures/T_HU_Hair_01_Br_D.dds"), // 현재 텍스처 경로
+			_T("Model/Textures/T_HU_Hair_01_Bk_D.dds"), // 새 텍스처 경로
+			0,                                         // 변경할 텍스처 슬롯 (예: 알베도)
+			pResourceManager,
+			pd3dCommandList,
+			pd3dDevice,
+			true                                       // 머티리얼 내 텍스처 이름 문자열도 업데이트
+		);
+	}
+
+
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	

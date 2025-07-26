@@ -495,6 +495,9 @@ public:
                 //PlayWavSound(_T("Sound/sword.wav"));
                 m_bSound = false;
             }
+            if (hitObject) {
+                m_bAttackFinished = true;
+            }
         }
 
         if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) { 
@@ -536,6 +539,9 @@ public:
 
             CGameObject* hitObject = player->FindObjectHitByAttack(); // 공격 판정 함수 필요
             CollisionUpdate(player, hitObject);
+            if (hitObject) {
+                m_bAttackFinished = true;
+            }
         }
         if (m_bAttackFinished) {
             return PlayerStateID::Idle;

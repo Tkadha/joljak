@@ -1,5 +1,6 @@
 ﻿#include "Animation.h"
 #include "Object.h"
+#include "GameFramework.h"
 
 // 로그 확인용(나중에 제거)
 #include <sstream>     // std::wstringstream 사용
@@ -248,78 +249,104 @@ float CAnimationTrack::UpdatePosition(float fTrackPosition, float fElapsedTime, 
 //
 CAnimationController::CAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, CLoadedModelInfo* pModel)
 {
-	m_nAnimationTracks = nAnimationTracks;
-	m_pAnimationTracks = new CAnimationTrack[nAnimationTracks];
+	m_pGameFramework = pModel->m_pModelRootObject->m_pGameFramework; // GameFramework 포인터 저장
+	m_nAnimationTracks = nAnimationTracks; //
+	m_pAnimationTracks = new CAnimationTrack[nAnimationTracks]; //
 
-	m_pAnimationSets = pModel->m_pAnimationSets;
-	m_pAnimationSets->AddRef();
+	m_pAnimationSets = pModel->m_pAnimationSets; //
+	m_pAnimationSets->AddRef(); //
 
-	m_pModelRootObject = pModel->m_pModelRootObject;
+	m_pModelRootObject = pModel->m_pModelRootObject; //
 
-	m_nSkinnedMeshes = pModel->m_nSkinnedMeshes;
-	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
-	for (int i = 0; i < m_nSkinnedMeshes; i++) m_ppSkinnedMeshes[i] = pModel->m_ppSkinnedMeshes[i];
-
-	m_ppd3dcbSkinningBoneTransforms = new ID3D12Resource * [m_nSkinnedMeshes];
-	m_ppcbxmf4x4MappedSkinningBoneTransforms = new XMFLOAT4X4 * [m_nSkinnedMeshes];
-
-	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256의 배수
-	for (int i = 0; i < m_nSkinnedMeshes; i++)
+	// 기존 m_nSkinnedMeshes와 m_ppSkinnedMeshes 대신 m_vSkinnedMeshes 사용
+	// 초기 모델의 스킨드 메쉬들을 동적 배열에 추가
+	if (pModel->m_nSkinnedMeshes > 0 && pModel->m_ppSkinnedMeshes) //
 	{
-		m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
-		if (m_ppd3dcbSkinningBoneTransforms[i] == nullptr)
+		for (int i = 0; i < pModel->m_nSkinnedMeshes; ++i) //
 		{
-			// 실패 로그 (HRESULT 없이)
-			OutputDebugStringW(L"[AnimCtrl CBV Check] CreateBufferResource returned NULL for CBV index ");
-			OutputDebugStringW(std::to_wstring(i).c_str());
-			OutputDebugStringW(L".\n");
-
-			// --- 실패 시 Device Removed Reason 확인 (중요!) ---
-			HRESULT removedReason = pd3dDevice->GetDeviceRemovedReason();
-			
-			// 로그 확인용
-			auto FormatHRESULT = [](HRESULT hr) -> std::wstring {
-				std::wstringstream ss;
-				ss << L"0x" << std::hex << std::uppercase << std::setw(8) << std::setfill(L'0') << hr;
-				return ss.str();
-				}; 
-			std::wstring reasonMsg = L"[AnimCtrl CBV Check]   Device Removed Reason after NULL return: " + FormatHRESULT(removedReason) + L"\n";
-			OutputDebugStringW(reasonMsg.c_str());
-			// -----------------------------------------
-
-			m_ppcbxmf4x4MappedSkinningBoneTransforms[i] = nullptr; // 맵핑 포인터도 null 처리
-			// 여기서 중단점(breakpoint)을 설정하고 디버거로 상태를 확인하는 것이 유용합니다.
-			// __debugbreak(); // 필요시 중단점 설정
-		}
-		else
-		{
-			// 성공 시 맵핑 시도 (맵핑 실패 로그는 여전히 유용)
-			HRESULT mapHr = m_ppd3dcbSkinningBoneTransforms[i]->Map(0, NULL, (void**)&m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
-			if (FAILED(mapHr))
-			{
-				// 맵핑 실패 로그
-				// ...
-				m_ppcbxmf4x4MappedSkinningBoneTransforms[i] = nullptr;
-			}
+			AddSkinnedMesh(pModel->m_ppSkinnedMeshes[i], pd3dDevice, pd3dCommandList); //
 		}
 	}
 }
+
+void CAnimationController::AddSkinnedMesh(CSkinnedMesh* pSkinnedMesh, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (!pSkinnedMesh) return;
+
+	for (CSkinnedMesh* existingMesh : m_vSkinnedMeshes) {
+		if (existingMesh == pSkinnedMesh) {
+			OutputDebugStringW(L"Warning: Attempted to add an already existing SkinnedMesh to CAnimationController.\n");
+			return;
+		}
+	}
+
+	m_vSkinnedMeshes.push_back(pSkinnedMesh);
+
+	// 해당 SkinnedMesh를 위한 CBV 생성
+	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255);
+	ID3D12Resource* pNewCB = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
+	XMFLOAT4X4* pMappedCB = nullptr;
+
+	if (pNewCB)
+	{
+		pNewCB->Map(0, NULL, (void**)&pMappedCB);
+		m_vpd3dcbSkinningBoneTransforms.push_back(pNewCB);
+		m_vppcbxmf4x4MappedSkinningBoneTransforms.push_back(pMappedCB);
+
+		pSkinnedMesh->m_pd3dcbSkinningBoneTransforms = pNewCB;
+		pSkinnedMesh->m_pcbxmf4x4MappedSkinningBoneTransforms = pMappedCB;
+	}
+	else
+	{
+		OutputDebugStringW(L"ERROR: Failed to create CBV for new SkinnedMesh in CAnimationController.\n");
+		m_vpd3dcbSkinningBoneTransforms.push_back(nullptr);
+		m_vppcbxmf4x4MappedSkinningBoneTransforms.push_back(nullptr);
+	}
+}
+
+void CAnimationController::RemoveSkinnedMesh(CSkinnedMesh* pSkinnedMesh)
+{
+	if (!pSkinnedMesh) return;
+
+	for (size_t i = 0; i < m_vSkinnedMeshes.size(); ++i)
+	{
+		if (m_vSkinnedMeshes[i] == pSkinnedMesh)
+		{
+			if (m_vpd3dcbSkinningBoneTransforms[i])
+			{
+				m_vpd3dcbSkinningBoneTransforms[i]->Unmap(0, NULL);
+				m_vpd3dcbSkinningBoneTransforms[i]->Release();
+			}
+			m_vSkinnedMeshes.erase(m_vSkinnedMeshes.begin() + i);
+			m_vpd3dcbSkinningBoneTransforms.erase(m_vpd3dcbSkinningBoneTransforms.begin() + i);
+			m_vppcbxmf4x4MappedSkinningBoneTransforms.erase(m_vppcbxmf4x4MappedSkinningBoneTransforms.begin() + i);
+
+			pSkinnedMesh->m_pd3dcbSkinningBoneTransforms = nullptr;
+			pSkinnedMesh->m_pcbxmf4x4MappedSkinningBoneTransforms = nullptr;
+			return;
+		}
+	}
+}
+
+
 
 CAnimationController::~CAnimationController()
 {
 	if (m_pAnimationTracks) delete[] m_pAnimationTracks;
 
-	for (int i = 0; i < m_nSkinnedMeshes; i++)
+	for (size_t i = 0; i < m_vpd3dcbSkinningBoneTransforms.size(); ++i)
 	{
-		m_ppd3dcbSkinningBoneTransforms[i]->Unmap(0, NULL);
-		m_ppd3dcbSkinningBoneTransforms[i]->Release();
+		if (m_vpd3dcbSkinningBoneTransforms[i])
+		{
+			m_vpd3dcbSkinningBoneTransforms[i]->Unmap(0, NULL);
+			m_vpd3dcbSkinningBoneTransforms[i]->Release();
+		}
 	}
-	if (m_ppd3dcbSkinningBoneTransforms) delete[] m_ppd3dcbSkinningBoneTransforms;
-	if (m_ppcbxmf4x4MappedSkinningBoneTransforms) delete[] m_ppcbxmf4x4MappedSkinningBoneTransforms;
+	m_vpd3dcbSkinningBoneTransforms.clear();
+	m_vppcbxmf4x4MappedSkinningBoneTransforms.clear();
+	m_vSkinnedMeshes.clear();
 
 	if (m_pAnimationSets) m_pAnimationSets->Release();
-
-	if (m_ppSkinnedMeshes) delete[] m_ppSkinnedMeshes;
 }
 
 void CAnimationController::SetCallbackKeys(int nAnimationTrack, int nCallbackKeys)
@@ -368,11 +395,13 @@ void CAnimationController::SetTrackType(int nAnimationTrack, int type)
 }
 
 void CAnimationController::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
-{
-	for (int i = 0; i < m_nSkinnedMeshes; i++)
+{	
+	for (CSkinnedMesh* pSkinnedMesh : m_vSkinnedMeshes)
 	{
-		m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = m_ppd3dcbSkinningBoneTransforms[i];
-		m_ppSkinnedMeshes[i]->m_pcbxmf4x4MappedSkinningBoneTransforms = m_ppcbxmf4x4MappedSkinningBoneTransforms[i];
+		if (pSkinnedMesh) // 유효성 검사
+		{
+			pSkinnedMesh->UpdateShaderVariables(pd3dCommandList);
+		}
 	}
 }
 /*
@@ -438,7 +467,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 		pRootGameObject->UpdateTransform(NULL);
 
 		// CBV 내용 업데이트
-		UpdateBoneTransformCBVContents();
+		//UpdateBoneTransformCBVContents();
 
 		OnRootMotion(pRootGameObject);
 		OnAnimationIK(pRootGameObject);
@@ -449,45 +478,37 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 void CAnimationController::UpdateBoneTransformCBVContents()
 {
 	// 필요한 멤버 변수 유효성 검사
-	if (!m_pAnimationSets || !m_pAnimationSets->m_ppBoneFrameCaches || !m_ppSkinnedMeshes || !m_ppcbxmf4x4MappedSkinningBoneTransforms)
-		return;
+	if (!m_pAnimationSets) return;
 
-	// 이 컨트롤러가 관리하는 각 스키닝 메쉬에 대해 반복 (CBV 버퍼 업데이트)
-	for (int i = 0; i < m_nSkinnedMeshes; ++i)
+	// 이 컨트롤러가 관리하는 각 스키닝 메쉬에 대해 CBV 버퍼 업데이트
+	for (size_t i = 0; i < m_vSkinnedMeshes.size(); ++i)
 	{
-		CSkinnedMesh* pSkinnedMesh = m_ppSkinnedMeshes[i];
-		XMFLOAT4X4* pMappedBuffer = m_ppcbxmf4x4MappedSkinningBoneTransforms[i]; // 해당 메쉬용 CBV 버퍼
+		CSkinnedMesh* pSkinnedMesh = m_vSkinnedMeshes[i];
+		XMFLOAT4X4* pMappedBuffer = m_vppcbxmf4x4MappedSkinningBoneTransforms[i]; // 해당 메쉬용 CBV 버퍼
 
 		if (!pSkinnedMesh || !pMappedBuffer || !pSkinnedMesh->m_ppSkinningBoneFrameCaches) continue;
 
 		// 이 메쉬에 영향을 주는 각 뼈에 대해 반복
 		for (int j = 0; j < pSkinnedMesh->m_nSkinningBones; ++j)
 		{
-			// 메쉬의 뼈 캐시에서 해당 뼈의 GameObject 노드 찾기
 			CGameObject* pBoneNode = pSkinnedMesh->m_ppSkinningBoneFrameCaches[j];
 			if (pBoneNode)
 			{
-				// 이 뼈의 최종 월드 변환 행렬 가져오기
 				XMFLOAT4X4 worldMatrix = pBoneNode->m_xmf4x4World;
 				XMFLOAT4X4 transposedWorld;
-
-				// --- 월드 행렬만 전치해서 복사 ---
 				XMStoreFloat4x4(&transposedWorld, XMMatrixTranspose(XMLoadFloat4x4(&worldMatrix)));
 
-				// 계산된 행렬을 CBV의 해당 본 인덱스 위치에 복사
-				if (j < SKINNED_ANIMATION_BONES) { // SKINNED_ANIMATION_BONES 정의 필요
+				if (j < SKINNED_ANIMATION_BONES) {
 					pMappedBuffer[j] = transposedWorld;
 				}
 			}
 			else
 			{
-				// 뼈 노드 못찾음 오류 처리
 				if (j < SKINNED_ANIMATION_BONES) {
-					pMappedBuffer[j] = Matrix4x4::Identity(); // 예: Identity 행렬 넣기
+					pMappedBuffer[j] = Matrix4x4::Identity();
 				}
 			}
 		}
-		//m_ppd3dcbSkinningBoneTransforms[i]->Unmap(0, nullptr);
 	}
 }
 
@@ -544,33 +565,41 @@ void CAnimationController::UpdateBoneLocalTransformCBV()
 
 CAnimationController::CAnimationController(const CAnimationController& other, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// 애니메이션 트랙 복사
-	m_nAnimationTracks = other.m_nAnimationTracks;
-	m_pAnimationTracks = new CAnimationTrack[m_nAnimationTracks];
-	for (int i = 0; i < m_nAnimationTracks; ++i) {
-		m_pAnimationTracks[i] = other.m_pAnimationTracks[i];
+	m_pGameFramework = other.m_pGameFramework; 
+
+	m_nAnimationTracks = other.m_nAnimationTracks; 
+	m_pAnimationTracks = new CAnimationTrack[m_nAnimationTracks]; 
+	for (int i = 0; i < m_nAnimationTracks; ++i) { 
+		m_pAnimationTracks[i] = other.m_pAnimationTracks[i]; 
 	}
 
-	// 애니메이션 데이터 공유
-	m_pAnimationSets = other.m_pAnimationSets;
-	if (m_pAnimationSets) m_pAnimationSets->AddRef();
+	m_pAnimationSets = other.m_pAnimationSets; 
+	if (m_pAnimationSets) m_pAnimationSets->AddRef(); 
 
-	// 메쉬 정보 공유
-	m_nSkinnedMeshes = other.m_nSkinnedMeshes;
-	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
-	for (int i = 0; i < m_nSkinnedMeshes; i++) m_ppSkinnedMeshes[i] = nullptr;
+	m_pModelRootObject = other.m_pModelRootObject; 
 
-	// 루트 오브젝트 정보 복사
-	m_pModelRootObject = other.m_pModelRootObject;
+	m_vSkinnedMeshes.reserve(other.m_vSkinnedMeshes.size()); 
+	m_vpd3dcbSkinningBoneTransforms.reserve(other.m_vSkinnedMeshes.size()); 
+	m_vppcbxmf4x4MappedSkinningBoneTransforms.reserve(other.m_vSkinnedMeshes.size()); 
 
-	// 뼈 변환을 위한 상수 버퍼(CBV)는 새로 생성
-	m_ppd3dcbSkinningBoneTransforms = new ID3D12Resource * [m_nSkinnedMeshes];
-	m_ppcbxmf4x4MappedSkinningBoneTransforms = new XMFLOAT4X4 * [m_nSkinnedMeshes];
-	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255);
-	for (int i = 0; i < m_nSkinnedMeshes; i++)
+	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); 
+	for (size_t i = 0; i < other.m_vSkinnedMeshes.size(); ++i) 
 	{
-		m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
-		m_ppd3dcbSkinningBoneTransforms[i]->Map(0, NULL, (void**)&m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
+		ID3D12Resource* pNewCB = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, NULL); 
+		XMFLOAT4X4* pMappedCB = nullptr; 
+		if (pNewCB) { 
+			HRESULT mapHr = pNewCB->Map(0, NULL, (void**)&pMappedCB); 
+			if (FAILED(mapHr)) { 
+				OutputDebugStringW(L"[AnimCtrl Clone CBV Check] Map failed in Clone constructor.\n"); 
+				pMappedCB = nullptr; 
+			}
+		}
+		else { 
+			OutputDebugStringW(L"[AnimCtrl Clone CBV Check] CreateBufferResource returned NULL in Clone constructor.\n"); 
+		}
+		m_vpd3dcbSkinningBoneTransforms.push_back(pNewCB); 
+		m_vppcbxmf4x4MappedSkinningBoneTransforms.push_back(pMappedCB); 
+		m_vSkinnedMeshes.push_back(nullptr); 
 	}
 }
 
