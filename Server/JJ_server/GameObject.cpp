@@ -8,6 +8,7 @@ std::unordered_map<OBJECT_TYPE, std::shared_ptr<BoundingOrientedBox>> OBB_Manage
 std::vector<shared_ptr<GameObject>> GameObject::gameObjects;
 std::vector<shared_ptr<GameObject>> GameObject::ConstructObjects;
 
+#define MIN_HEIGHT                  1055.f      
 
 GameObject::GameObject()
 {
@@ -51,7 +52,7 @@ void GameObject::MoveForward(float fDistance)
 
 		auto& other_obj = GameObject::gameObjects[other_info->u_id];
 		if (!other_obj || !other_obj->is_alive) continue;
-
+		if (other_obj->Gethp() <= 0) continue;
 		if (this->GetType() == OBJECT_TYPE::OB_BAT)
 		{
 			if (other_obj->GetType() != OBJECT_TYPE::OB_TREE) continue;
@@ -173,7 +174,9 @@ void GameObject::MoveForward(float fDistance)
 	}
 
 	test_move.y = Terrain::terrain->GetHeight(test_move.x, test_move.z) + fly_height;
-
+	if (test_move.y < MIN_HEIGHT) {
+		test_move = GetPosition();
+	}
 	GameObject::SetPosition(test_move);
 }
 void GameObject::Rotate(float fPitch, float fYaw, float fRoll)
