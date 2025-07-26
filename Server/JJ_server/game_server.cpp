@@ -82,6 +82,7 @@ void ProcessClientLeave(shared_ptr<PlayerClient> remoteClient)
 		cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 	}
 	remoteClient->tcpConnection.Close();
+	std::lock_guard<std::mutex> g_lock(g_clients_mutex);
 	PlayerClient::PlayerClients.erase(remoteClient.get());
 
 	cout << "Client left. There are " << PlayerClient::PlayerClients.size() << " connections.\n";
@@ -350,8 +351,12 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 				else obj->ChangeState(std::make_shared<NonAtkNPCRunAwayState>());
 			}
 		}
-		else if (obj->GetType() == OBJECT_TYPE::OB_TREE || obj->GetType() == OBJECT_TYPE::OB_STONE) {
-			
+		else if (obj->GetType() == OBJECT_TYPE::OB_GOLEM) {
+			if (obj->FSM_manager) {
+				obj->SetInvincible();
+				if (obj->Gethp() <= 0) obj->ChangeState(std::make_shared<BossDieState>());
+				else obj->ChangeState(std::make_shared<BossHitState>());
+			}
 		}
 		else {
 			if (obj->FSM_manager) {

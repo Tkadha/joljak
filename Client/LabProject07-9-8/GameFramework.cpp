@@ -731,7 +731,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				{
 					
 					XMFLOAT3 playerPos = m_pPlayer->GetPosition();
-					m_pScene->SpawnAttackEffect(playerPos,20,100.0f);
+					m_pScene->SpawnAttackEffect(playerPos, 20, 100.0f);
 				}
 				break;
 			case 'U':

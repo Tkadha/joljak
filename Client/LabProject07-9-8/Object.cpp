@@ -115,9 +115,67 @@ void CGameObject::SetChild(CGameObject* pChild, bool bReferenceUpdate)
 		m_pChild = pChild;
 	}
 }
+void CGameObject::ProcessPlayerHit(CPlayer* pPlayerInfo)
+{
+	// 이미 무적이거나 죽은 상태면 아무것도 하지 않음
+	if (pPlayerInfo->invincibility || pPlayerInfo->m_pStateMachine->GetCurrentStateID() == PlayerStateID::Dead) {
+		return;
+	}
+
+	auto obj = dynamic_cast<CMonsterObject*>(this);
+	if (!obj) return;
+
+	pPlayerInfo->DecreaseHp(obj->GetAtk());
+	pPlayerInfo->SetInvincibility();
+
+	// 밀려나기 (넉백)
+	XMFLOAT3 monsterlook = obj->GetLook();
+	const float KnockBackDistance = 10.f;
+	XMFLOAT3 playerPos = pPlayerInfo->GetPosition();
+
+	XMFLOAT3 newPlayerPos;
+	newPlayerPos.x = playerPos.x + monsterlook.x * KnockBackDistance;
+	newPlayerPos.y = playerPos.y + monsterlook.y * KnockBackDistance;
+	newPlayerPos.z = playerPos.z + monsterlook.z * KnockBackDistance;
+	pPlayerInfo->SetPosition(newPlayerPos);
+
+	// 피격 상태로 전환
+	if (pPlayerInfo->m_pStateMachine->GetCurrentStateID() != PlayerStateID::HitReaction) {
+		pPlayerInfo->m_pStateMachine->PerformStateChange(PlayerStateID::HitReaction, true);
+	}
+
+	auto& nwManager = NetworkManager::GetInstance();
+	{
+		auto pos = pPlayerInfo->GetPosition();
+		POSITION_PACKET p;
+		p.position.x = pos.x;
+		p.position.y = pos.y;
+		p.position.z = pos.z;
+		nwManager.PushSendQueue(p, p.size);
+	}
+	{
+		SET_HP_HIT_OBJ_PACKET p;
+		p.hit_obj_id = obj->m_id;
+		p.hp = pPlayerInfo->getHp();
+		p.size = sizeof(SET_HP_HIT_OBJ_PACKET);
+		p.type = static_cast<char>(E_PACKET::E_P_SETHP);
+		nwManager.PushSendQueue(p, p.size);
+	}
+}
+bool CGameObject::IsInActiveFrame(float startRatio, float endRatio)
+{
+	CAnimationSet* pAnimationSet = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_nAnimationSet];
+	if (!pAnimationSet || pAnimationSet->m_fLength <= 0) return false;
+
+	float currentPosition = m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_fPosition;
+	float progressRatio = currentPosition / pAnimationSet->m_fLength;
+
+	return (progressRatio >= startRatio && progressRatio <= endRatio);
+}
+
 void CGameObject::Check_attack()
 {
-
+	bool isAttackAnim = false;
 	switch (m_objectType)
 	{
 	case GameObjectType::Spider:
@@ -126,143 +184,92 @@ void CGameObject::Check_attack()
 	case GameObjectType::Pig:
 	case GameObjectType::Snake:
 	case GameObjectType::Raptor:
-		if (m_anitype != 11) return;
+		if (m_anitype == 11) isAttackAnim = true;
 		break;
 	case GameObjectType::Snail:
 	case GameObjectType::Wasp:
-		if (m_anitype != 7) return;
+		if (m_anitype == 7) isAttackAnim = true;
 		break;
 	case GameObjectType::Wolf:
 	case GameObjectType::Cow:
-		if (m_anitype != 10) return;
+		if (m_anitype == 10) isAttackAnim = true;
 		break;
 	case GameObjectType::Toad:
-		if (m_anitype != 9) return;
+		if (m_anitype == 9) isAttackAnim = true;
 		break;
 	case GameObjectType::Golem:
-		if (m_anitype < 11) return;
+		if (m_anitype >= 11) isAttackAnim = true;
 		break;
 	default:
 		break;
 	}
-	if (GameObjectType::Toad == m_objectType) {
-		CAnimationSet* pAnimationSet = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_nAnimationSet];
-		auto animation_pos = m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_fPosition;
-		if (animation_pos < pAnimationSet->m_fLength / 4) return;
+	if (!isAttackAnim) return;
+
+	float startRatio = 0.0f, endRatio = 1.0f;
+	if (m_objectType == GameObjectType::Toad) {
+		startRatio = 0.25f;
+		endRatio = 0.9f;
 	}
-	else if (m_objectType == GameObjectType::Golem && m_anitype == 13) {
-		CAnimationSet* pAnimationSet = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_nAnimationSet];
-		auto animation_pos = m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_fPosition;
-		if (animation_pos < pAnimationSet->m_fLength / 2) return;
-	}
-	else {
-		CAnimationSet* pAnimationSet = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_nAnimationSet];
-		auto animation_pos = m_pSkinnedAnimationController->m_pAnimationTracks[m_anitype].m_fPosition;
-		if (animation_pos < pAnimationSet->m_fLength / 2) return;
-	}
-	// if attack animation
-	// check hit player
-	if (m_objectType == GameObjectType::Golem && m_anitype == 13) {
-		XMFLOAT3 objPos = GetPosition();
-		m_pScene->SpawnAttackEffect(objPos, 30, 100.0f);
-		auto p_info = m_pScene->GetPlayerInfo();
-		if (p_info) {
-			auto& pos = GetPosition();
-			auto& p_pos = p_info->GetPosition();
-			float distance = sqrtf(
-				(pos.x - p_pos.x) * (pos.x - p_pos.x) +
-				(pos.z - p_pos.z) * (pos.z - p_pos.z)
-			);
-			if (distance > 300)	return;
-			float height_distance = sqrtf(
-				(pos.y - p_pos.y) * (pos.y - p_pos.y)
-			);
-			if (height_distance > 15) return;
-			if (false == p_info->invincibility) {
-				auto obj = dynamic_cast<CMonsterObject*> (this);
-				p_info->DecreaseHp(obj->GetAtk());
-				p_info->SetInvincibility();
-
-				// 밀려나기
-				XMFLOAT3 monsterlook = obj->GetLook();
-				const float KnockBackDistance = 10.f;
-				XMFLOAT3 playerPos = p_info->GetPosition();
-
-				XMFLOAT3 newPlayerPos;
-				newPlayerPos.x = playerPos.x + monsterlook.x * KnockBackDistance;
-				newPlayerPos.y = playerPos.y + monsterlook.y * KnockBackDistance;
-				newPlayerPos.z = playerPos.z + monsterlook.z * KnockBackDistance;
-				p_info->SetPosition(newPlayerPos);
-
-				PlayerStateID currentState = p_info->m_pStateMachine->GetCurrentStateID();
-				if (currentState != PlayerStateID::HitReaction && currentState != PlayerStateID::Dead) {
-					p_info->m_pStateMachine->PerformStateChange(PlayerStateID::HitReaction, true);
-				}
-
-				auto& nwManager = NetworkManager::GetInstance();
-				{
-					auto pos = p_info->GetPosition();
-					POSITION_PACKET p;
-					p.position.x = pos.x;
-					p.position.y = pos.y;
-					p.position.z = pos.z;
-					nwManager.PushSendQueue(p, p.size);
-				}
-				{
-					SET_HP_HIT_OBJ_PACKET p;
-					p.hit_obj_id = obj->m_id;
-					p.hp = p_info->getHp();
-					p.size = sizeof(SET_HP_HIT_OBJ_PACKET);
-					p.type = static_cast<char>(E_PACKET::E_P_SETHP);
-					nwManager.PushSendQueue(p, p.size);
-				}
-			}
+	else if (m_objectType == GameObjectType::Golem) {
+		if (m_anitype == 13) {
+			startRatio = 0.5f;
+			endRatio = 0.6f;
+		}
+		else {
+			startRatio = 0.4f;
+			endRatio = 0.8f;
 		}
 	}
 	else {
-		auto p_info = m_pScene->GetPlayerInfo();
-		if (p_info) {
-			if (m_pScene->CollisionCheck(this, p_info)) {
-				if (false == p_info->invincibility) {
-					auto obj = dynamic_cast<CMonsterObject*> (this);
-					p_info->DecreaseHp(obj->GetAtk());
-					p_info->SetInvincibility();
+		startRatio = 0.4f;
+		endRatio = 0.7f;
+	}
 
-					// 밀려나기
-					XMFLOAT3 monsterlook = obj->GetLook();
-					const float KnockBackDistance = 10.f;
-					XMFLOAT3 playerPos = p_info->GetPosition();
+	if (!IsInActiveFrame(startRatio, endRatio)) return;
+	// if attack animation
+	// check hit player
+	CPlayer* pPlayerInfo = m_pScene->GetPlayerInfo();
+	if (!pPlayerInfo) return;
 
-					XMFLOAT3 newPlayerPos;
-					newPlayerPos.x = playerPos.x + monsterlook.x * KnockBackDistance;
-					newPlayerPos.y = playerPos.y + monsterlook.y * KnockBackDistance;
-					newPlayerPos.z = playerPos.z + monsterlook.z * KnockBackDistance;
-					p_info->SetPosition(newPlayerPos);
+	float MONSTER_FOV_DEGREES = 120.0f; // 일반 몬스터의 시야각 (120도)
+	if (m_objectType == GameObjectType::Golem && m_anitype == 13) {
+		MONSTER_FOV_DEGREES = 360.f;
+	}
+	XMFLOAT3 playerPos = pPlayerInfo->GetPosition();
+	XMFLOAT3 monsterPos = GetPosition();
 
-					PlayerStateID currentState = p_info->m_pStateMachine->GetCurrentStateID();
-					if (currentState != PlayerStateID::HitReaction && currentState != PlayerStateID::Dead) {
-						p_info->m_pStateMachine->PerformStateChange(PlayerStateID::HitReaction, true);
-					}
+	// 몬스터 -> 플레이어 방향 벡터 (Y축은 무시하여 수평으로만 계산)
+	XMVECTOR toPlayerVec = XMVector3Normalize(XMVectorSet(playerPos.x - monsterPos.x, 0.f, playerPos.z - monsterPos.z, 0.0f));
+	// 몬스터 정면 벡터
+	XMVECTOR monsterLookVec = XMVector3Normalize(XMLoadFloat3(&GetLook()));
 
-					auto& nwManager = NetworkManager::GetInstance();
-					{
-						auto pos = p_info->GetPosition();
-						POSITION_PACKET p;
-						p.position.x = pos.x;
-						p.position.y = pos.y;
-						p.position.z = pos.z;
-						nwManager.PushSendQueue(p, p.size);
-					}
-					{
-						SET_HP_HIT_OBJ_PACKET p;
-						p.hit_obj_id = obj->m_id;
-						p.hp = p_info->getHp();
-						p.size = sizeof(SET_HP_HIT_OBJ_PACKET);
-						p.type = static_cast<char>(E_PACKET::E_P_SETHP);
-						nwManager.PushSendQueue(p, p.size);
-					}
-				}
-			}
+	// 내적 계산
+	float dot = XMVectorGetX(XMVector3Dot(monsterLookVec, toPlayerVec));
+	// 시야각의 절반의 코사인 값
+	float cosHalfFov = cosf(XMConvertToRadians(MONSTER_FOV_DEGREES / 2.0f));
+
+	if (dot < cosHalfFov) {
+		return; // 시야각 밖에 있으므로 여기서 종료
+	}
+
+
+
+	if (m_objectType == GameObjectType::Golem && m_anitype == 13) {
+
+		m_pScene->SpawnAttackEffect(GetPosition(), 20, 100.0f);
+		m_pScene->SpawnAttackEffect(GetPosition(), 20, 200.0f);
+
+		float distance = Vector3::Length(Vector3::Subtract(GetPosition(), pPlayerInfo->GetPosition()));
+		float height_distance = std::abs(GetPosition().y - pPlayerInfo->GetPosition().y);
+
+		if (distance <= 300.0f && height_distance <= 10.0f) {
+			ProcessPlayerHit(pPlayerInfo);
+		}
+	}
+	else {
+		float distance = Vector3::Length(Vector3::Subtract(GetPosition(), pPlayerInfo->GetPosition()));
+		if (distance <= 100.0f && m_pScene->CollisionCheck(this, pPlayerInfo)) {
+			ProcessPlayerHit(pPlayerInfo);
 		}
 	}
 

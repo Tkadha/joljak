@@ -23,6 +23,7 @@ void BossStandingState::Enter(std::shared_ptr<GameObject> npc)
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 	for (auto& p_obj : results) {
+		std::lock_guard<mutex> lock(g_clients_mutex);
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME)continue;
 			if (cl.second->m_id != p_obj->u_id) continue;
@@ -45,6 +46,7 @@ void BossStandingState::Execute(std::shared_ptr<GameObject> npc)
 
 	//주변에 플레이어가 있는지 확인
 	//플레이어가 있으면 Chase로 변경
+	g_clients_mutex.lock();
 	for (auto& pl : PlayerClient::PlayerClients) {
 		if (pl.second->state != PC_INGAME) continue;
 		auto playerInfo = pl.second;
@@ -64,11 +66,14 @@ void BossStandingState::Execute(std::shared_ptr<GameObject> npc)
 			float detectionRange = 200.f;
 			if (distance < detectionRange)
 			{
+				g_clients_mutex.unlock();
 				npc->FSM_manager->ChangeState(std::make_shared<BossChaseState>());
 				return;
 			}
 		}
 	}
+	g_clients_mutex.unlock();
+
 }
 
 void BossStandingState::Exit(std::shared_ptr<GameObject> npc)
@@ -88,6 +93,7 @@ void BossMoveState::Enter(std::shared_ptr<GameObject> npc)
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 	for (auto& p_obj : results) {
+		std::lock_guard<mutex> lock(g_clients_mutex);
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME)continue;
 			if (cl.second->m_id != p_obj->u_id) continue;
@@ -131,6 +137,7 @@ void BossMoveState::Execute(std::shared_ptr<GameObject> npc)
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 	for (auto& p_obj : results) {
+		std::lock_guard<std::mutex> lock(g_clients_mutex);
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME)continue;
 			if (cl.second->m_id != p_obj->u_id) continue;
@@ -141,6 +148,7 @@ void BossMoveState::Execute(std::shared_ptr<GameObject> npc)
 
 	//주변에 플레이어가 있는지 확인
 	//플레이어가 있으면 Chase로 변경
+	g_clients_mutex.lock();
 	for (auto& pl : PlayerClient::PlayerClients) {
 		if (pl.second->state != PC_INGAME) continue;
 		auto playerInfo = pl.second;
@@ -160,11 +168,13 @@ void BossMoveState::Execute(std::shared_ptr<GameObject> npc)
 			float detectionRange = 200.f;
 			if (distance < detectionRange)
 			{
+				g_clients_mutex.unlock();
 				npc->FSM_manager->ChangeState(std::make_shared<BossChaseState>());
 				return;
 			}
 		}
 	}
+	g_clients_mutex.unlock();
 }
 
 void BossMoveState::Exit(std::shared_ptr<GameObject> npc)
@@ -181,6 +191,7 @@ void BossChaseState::Enter(std::shared_ptr<GameObject> npc)
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 	for (auto& p_obj : results) {
+		std::lock_guard<std::mutex> lock(g_clients_mutex);
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->m_id != p_obj->u_id) continue;
 			cl.second->SendAnimationPacket(npc);
@@ -214,10 +225,11 @@ void BossChaseState::Execute(std::shared_ptr<GameObject> npc)
 	}
 
 
+	g_clients_mutex.lock();
 	for (auto& cl : PlayerClient::PlayerClients) {
-		//if (cl.second->m_id != aggro_player_id) continue;
-
-		XMFLOAT3 playerPos = cl.second->GetPosition();
+		if (cl.second->m_id != aggro_player_id) continue;
+		auto& player = cl.second;
+		XMFLOAT3 playerPos = player->GetPosition();
 		XMFLOAT3 npcPos = npc->GetPosition();
 		// 플레이어 방향 벡터 계산
 		XMVECTOR targetDirectionVec = XMVector3Normalize(XMVectorSet(playerPos.x - npcPos.x, 0.0f, playerPos.z - npcPos.z, 0.0f));
@@ -226,42 +238,42 @@ void BossChaseState::Execute(std::shared_ptr<GameObject> npc)
 
 
 		// NPC의 Look 벡터 가져오기
-		XMFLOAT3 npcLook = npc->GetLook();
-		XMVECTOR npcLookVec = XMLoadFloat3(&npcLook);
+		XMVECTOR npcLookVec = XMLoadFloat3(&npc->GetLook());
 		XMFLOAT3 npcLookNorm;
 		XMStoreFloat3(&npcLookNorm, XMVector3Normalize(npcLookVec)); // Look 벡터도 정규화
-
-		// 수평면에서의 NPC Look 벡터 (Y 성분 0으로 설정 후 정규화)
 		XMVECTOR npcLookVecXZ = XMVector3Normalize(XMVectorSet(npcLookNorm.x, 0.0f, npcLookNorm.z, 0.0f));
 
-		// 목표 Yaw 값 계산 (수평 방향 벡터 사용)
 		float targetYaw = atan2f(targetDirection.x, targetDirection.z);
-
-		// 현재 NPC의 Yaw 값 계산 (수평 Look 벡터 사용)
 		float currentYaw = atan2f(npcLookNorm.x, npcLookNorm.z);
-
 		float deltaYaw = targetYaw - currentYaw;
 
-		if (deltaYaw > pi_f)
-		{
-			deltaYaw -= 2 * pi_f;
-		}
-		else if (deltaYaw < -pi_f)
-		{
-			deltaYaw += 2 * pi_f;
-		}
+		if (deltaYaw > pi_f) deltaYaw -= 2 * pi_f;
+		else if (deltaYaw < -pi_f) deltaYaw += 2 * pi_f;
+
 		// 목표 방향으로 회전
-		npc->Rotate(0.0f, deltaYaw * 2, 0.0f);
+		npc->Rotate(0.0f, deltaYaw * 2.f, 0.0f);
 
-
-		float attackRange = 150.0f;
-		//if (current_count > 5) {
-		//	attackRange = 300.f;
-		//}
+		float attackRange = 100.0f;
+		if (BossAttackState::Sp_atk_counter > 5) {
+			attackRange = 250.f;
+		}
 		float distanceToPlayer = sqrt(pow(playerPos.x - npcPos.x, 2) + pow(playerPos.y - npcPos.y, 2) + pow(playerPos.z - npcPos.z, 2));
 
 		if (distanceToPlayer < attackRange)
 		{
+			const float BOSS_FOV_DEGREES = 90.0f;
+
+			// 보스에서 플레이어로 향하는 방향 벡터 (정규화)
+			XMVECTOR toPlayerVec = XMVector3Normalize(XMVectorSet(playerPos.x - npcPos.x, playerPos.y - npcPos.y, playerPos.z - npcPos.z, 0.0f));
+			// 보스의 정면 방향 벡터 (정규화)
+			XMVECTOR normalizedNpcLookVec = XMVector3Normalize(npcLookVec);
+
+			// 두 벡터의 내적(dot product) 계산
+			float dot = XMVectorGetX(XMVector3Dot(normalizedNpcLookVec, toPlayerVec));
+
+			// 시야각의 절반(half-angle)의 코사인 값 계산
+			float cosHalfFov = cosf(XMConvertToRadians(BOSS_FOV_DEGREES / 2.0f));
+
 			std::vector<tree_obj*> results;
 			tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 			Octree::PlayerOctree.query(n_obj, oct_distance, results);
@@ -273,13 +285,20 @@ void BossChaseState::Execute(std::shared_ptr<GameObject> npc)
 					cl.second->SendMovePacket(npc);
 				}
 			}
-			auto obj = dynamic_cast<GameObject*> (npc.get());
-			if (obj->FSM_manager->GetAtkDelay() == false)
-				npc->FSM_manager->ChangeState(std::make_shared<BossAttackState>());
-			return;
+
+			if (dot >= cosHalfFov)
+			{
+				g_clients_mutex.unlock();
+				if (npc->FSM_manager->GetAtkDelay() == false) {
+					npc->FSM_manager->ChangeState(std::make_shared<BossAttackState>());
+				}
+				// 공격 상태로 전환하더라도 아래 로직은 실행하지 않으므로 여기서 return
+				return;
+			}
 		}
-		if (distanceToPlayer > attackRange)
-			npc->MoveForward(0.1f);
+
+		npc->MoveForward(0.1f);
+
 		Octree::GameObjectOctree.update(npc->GetID(), npc->GetPosition());
 		std::vector<tree_obj*> results;
 		tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
@@ -296,11 +315,13 @@ void BossChaseState::Execute(std::shared_ptr<GameObject> npc)
 		float loseRange = 400.f;
 		if (distanceToPlayer > loseRange)
 		{
+			g_clients_mutex.unlock();
 			npc->FSM_manager->ChangeState(std::make_shared<BossStandingState>());
 			return;
 		}
 		break;
 	}
+	g_clients_mutex.unlock();
 }
 
 void BossChaseState::Exit(std::shared_ptr<GameObject> npc)
@@ -312,13 +333,14 @@ void BossChaseState::Exit(std::shared_ptr<GameObject> npc)
 void BossDieState::Enter(std::shared_ptr<GameObject> npc)
 {
 	starttime = std::chrono::system_clock::now();
-	duration_time = 15 * 1000; // 10초간 죽어있음
+	duration_time = 25 * 1000; // 25초간 죽어있음
 
 	npc->SetAnimationType(ANIMATION_TYPE::DIE);
 	std::vector<tree_obj*> results;
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 	for (auto& p_obj : results) {
+		std::lock_guard<std::mutex> lock(g_clients_mutex);
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->m_id != p_obj->u_id) continue;
 			cl.second->SendAnimationPacket(npc);
@@ -359,6 +381,7 @@ void BossRespawnState::Enter(std::shared_ptr<GameObject> npc)
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 
 	for (auto& p_obj : results) {
+		std::lock_guard<std::mutex> lock(g_clients_mutex);
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME)continue;
 			if (cl.second->m_id != p_obj->u_id) continue;
@@ -427,6 +450,7 @@ void BossAttackState::Enter(std::shared_ptr<GameObject> npc)
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 	for (auto& p_obj : results) {
+		std::lock_guard<std::mutex> lock(g_clients_mutex);
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->m_id != p_obj->u_id) continue;
 			cl.second->SendAnimationPacket(npc);
@@ -457,6 +481,7 @@ void BossAttackState::Execute(std::shared_ptr<GameObject> npc)
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 	for (auto& p_obj : results) {
+		std::lock_guard<std::mutex> lock(g_clients_mutex);
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME)continue;
 			if (cl.second->m_id != p_obj->u_id) continue;
@@ -481,6 +506,7 @@ void BossHitState::Enter(std::shared_ptr<GameObject> npc)
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 	for (auto& p_obj : results) {
+		std::lock_guard<std::mutex> lock(g_clients_mutex);
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->m_id != p_obj->u_id) continue;
 			cl.second->SendAnimationPacket(npc);
@@ -506,6 +532,7 @@ void BossHitState::Execute(std::shared_ptr<GameObject> npc)
 	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 	Octree::PlayerOctree.query(n_obj, oct_distance, results);
 	for (auto& p_obj : results) {
+		std::lock_guard<std::mutex> lock(g_clients_mutex);
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME)continue;
 			if (cl.second->m_id != p_obj->u_id) continue;
@@ -536,6 +563,7 @@ void BossGlobalState::Execute(std::shared_ptr<GameObject> npc)
 			tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
 			Octree::PlayerOctree.query(n_obj, oct_distance, results);
 			for (auto& p_obj : results) {
+				std::lock_guard<std::mutex> lock(g_clients_mutex);
 				for (auto& cl : PlayerClient::PlayerClients) {
 					if (cl.second->state != PC_INGAME) continue;
 					if (cl.second->m_id != p_obj->u_id) continue;

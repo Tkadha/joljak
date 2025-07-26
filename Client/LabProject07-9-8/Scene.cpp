@@ -177,54 +177,6 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	m_pWavesObject->SetMaterial(0, pWavesMaterial);
 
 
-	/////////////////////////////////////////이펙트 오브젝트
-	const int effectPoolSize = 20;
-	for (int i = 0; i < effectPoolSize; ++i)
-	{
-
-		auto* pEffect = new CAttackEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		pEffect->m_id = -1;
-
-		m_vAttackEffects.push_back(pEffect);
-
-
-		m_vGameObjects.push_back(pEffect);
-	}
-
-	CLoadedModelInfo* pWoodShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch_A.bin", m_pGameFramework);
-	CLoadedModelInfo* pRockShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/RockCluster_A_LOD0.bin", m_pGameFramework);
-
-	CMesh* pWoodMesh = pWoodShardModel->m_pModelRootObject->m_pMesh;
-	CMaterial* pWoodMaterial = pWoodShardModel->m_pModelRootObject->GetMaterial(0);
-	CMesh* pRockMesh = pRockShardModel->m_pModelRootObject->m_pMesh;
-	CMaterial* pRockMaterial = pRockShardModel->m_pModelRootObject->GetMaterial(0);
-
-	const int shardPoolSize = 50; // 풀 크기
-
-	// 2. 나무 파편 풀 생성
-	for (int i = 0; i < shardPoolSize; ++i) {
-		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pWoodMesh, pWoodMaterial);
-		pShard->SetScale(1.0f, 1.0f, 1.0f);
-		pShard->m_id = -1;
-		m_vWoodShards.push_back(pShard);
-		m_vGameObjects.push_back(pShard);
-	}
-
-	// 3. 돌 파편 풀 생성
-	for (int i = 0; i < shardPoolSize; ++i) {
-		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pRockMesh, pRockMaterial);
-
-		pShard->SetScale(0.2f, 0.2f, 0.2f);
-		pShard->m_id = -1;
-		m_vRockShards.push_back(pShard);
-		m_vGameObjects.push_back(pShard);
-	}
-
-	// 로드가 끝난 임시 모델 정보는 삭제
-	if (pWoodShardModel) delete pWoodShardModel;
-	if (pRockShardModel) delete pRockShardModel;
-
-	/////////////////////////////////////////
 
 
 	// 1. 그림자 맵 객체 생성
@@ -269,7 +221,63 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	float spawnMin = 500, spawnMax = 9500;
 	float objectMinSize = 15, objectMaxSize = 20;
 	
+
+	/////////////////////////////////////////이펙트 오브젝트
+	const int effectPoolSize = 100;
+	for (int i = 0; i < effectPoolSize; ++i)
+	{
+
+		auto* pEffect = new CAttackEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		int materialIndexToChange = 0;
+		UINT albedoTextureSlot = 0;
+		const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
+		ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
+		ChangeAlbedoTexture(pEffect, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+
+		pEffect->m_id = -1;
+
+		m_vAttackEffects.push_back(pEffect);
+
+
+		m_vGameObjects.push_back(pEffect);
+	}
+
+	CLoadedModelInfo* pWoodShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch_A.bin", m_pGameFramework);
+	CLoadedModelInfo* pRockShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/RockCluster_A_LOD0.bin", m_pGameFramework);
+
+	CMesh* pWoodMesh = pWoodShardModel->m_pModelRootObject->m_pMesh;
+	CMaterial* pWoodMaterial = pWoodShardModel->m_pModelRootObject->GetMaterial(0);
+	CMesh* pRockMesh = pRockShardModel->m_pModelRootObject->m_pMesh;
+	CMaterial* pRockMaterial = pRockShardModel->m_pModelRootObject->GetMaterial(0);
+
+	const int shardPoolSize = 50; // 풀 크기
+
+	// 2. 나무 파편 풀 생성
+	for (int i = 0; i < shardPoolSize; ++i) {
+		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pWoodMesh, pWoodMaterial);
+		pShard->SetScale(1.0f, 1.0f, 1.0f);
+		pShard->m_id = -1;
+		m_vWoodShards.push_back(pShard);
+		m_vGameObjects.push_back(pShard);
+	}
+
+	// 3. 돌 파편 풀 생성
+	for (int i = 0; i < shardPoolSize; ++i) {
+		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pRockMesh, pRockMaterial);
+
+		pShard->SetScale(0.2f, 0.2f, 0.2f);
+		pShard->m_id = -1;
+		m_vRockShards.push_back(pShard);
+		m_vGameObjects.push_back(pShard);
+	}
+
+	// 로드가 끝난 임시 모델 정보는 삭제
+	if (pWoodShardModel) delete pWoodShardModel;
+	if (pRockShardModel) delete pRockShardModel;
+
+	/////////////////////////////////////////
 	
+
 	// 생성할 건축물 목록 (프리팹 이름과 동일해야 함)
 	std::vector<std::string> buildableItems = { "wood_wall" /*, "wood_floor", ... */ };
 

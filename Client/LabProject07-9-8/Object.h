@@ -258,8 +258,8 @@ public:
 	int GetAtk() { return atk; }
 
 	void Check_attack();
-
-
+	bool IsInActiveFrame(float startRatio, float endRatio);
+	void ProcessPlayerHit(CPlayer* pPlayerInfo);
 	// Prefab
 	void CopyDataFrom(CGameObject* pSource);
 	virtual CGameObject* Clone();
