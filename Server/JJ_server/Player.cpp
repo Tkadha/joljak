@@ -388,11 +388,10 @@ void PlayerClient::Update_test(float deltaTime)
 
             XMFLOAT3 newPos;
             XMStoreFloat3(&newPos, newPosVec);
-
+            newPos.y = Terrain::terrain->GetHeight(newPos.x, newPos.z);
             // 보정된 위치를 즉시 적용합니다.
             // SetPosition을 사용하거나 멤버 변수 m_Position을 직접 수정합니다.
-            // SetPosition(newPos); 
-            XMStoreFloat3(&m_Position, newPosVec);
+            SetPosition(newPos); 
         }
     }
     /* 충돌 처리*/

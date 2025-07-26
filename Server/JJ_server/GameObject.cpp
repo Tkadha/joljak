@@ -84,6 +84,7 @@ void GameObject::MoveForward(float fDistance)
 
 		XMFLOAT3 newPos;
 		XMStoreFloat3(&newPos, newPosVec);
+		newPos.y = Terrain::terrain->GetHeight(newPos.x, newPos.z);
 
 		// 위치 보정 (이때는 충돌 검사 없이 바로 적용)
 		SetPosition(newPos);
@@ -237,8 +238,8 @@ void GameObject::Rotate(float fPitch, float fYaw, float fRoll)
 
 		// 최종 위치 보정
 		xmf4x4._41 += XMVectorGetX(totalPushOutVector) * pushMagnitude;
-		//xmf4x4._42 += XMVectorGetY(totalPushOutVector) * pushMagnitude;
 		xmf4x4._43 += XMVectorGetZ(totalPushOutVector) * pushMagnitude;
+		xmf4x4._42 = Terrain::terrain->GetHeight(xmf4x4._41, xmf4x4._43);
 	}
 }
 
