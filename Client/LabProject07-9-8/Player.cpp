@@ -650,71 +650,51 @@ CGameObject* CPlayer::FindFrame(char* framename)
 
 void CPlayer::EquipTool(ToolType type)
 {
-	// 현재 장착된 도구 해제
-	if (m_pEquippedTool)
-	{
-		CGameObject* handFrame = FindFrame("thumb_02_r"); // 현재 도구가 붙어있던 손 프레임
-		if (handFrame) {
-			handFrame->RemoveChild(m_pEquippedTool); // 새로 구현해야 할 함수
-		}
-		m_pEquippedTool->isRender = false;
-		m_pEquippedTool = nullptr; // 포인터 초기화
-		m_eCurrentTool = ToolType::None;
-	}
+	if (m_pSword) m_pSword->isRender = false;
+	if (m_pAxe) m_pAxe->isRender = false;
+	if (m_pPickaxe) m_pPickaxe->isRender = false;
+	if (m_pHammer) m_pHammer->isRender = false;
 
-	// 새로운 도구 장착
-	CGameObject* newTool = nullptr;
-	// 각 도구에 맞는 로컬 변환
-	XMFLOAT3 localOffset = XMFLOAT3(0, 0, 0); 
-	XMFLOAT3 localRotation = XMFLOAT3(0, 0, 0);
-	XMFLOAT3 localScale = XMFLOAT3(1, 1, 1);
+	// 현재 장착한 도구 정보 초기화
+	m_pEquippedTool = nullptr;
+	m_eCurrentTool = ToolType::None;
 
+	// type에 해당하는 도구만 보이게 만듬
 	switch (type)
 	{
 	case ToolType::Sword:
-		newTool = m_pSword;
-		localOffset = XMFLOAT3(0.05, 0.00, -0.05);
-		localRotation = XMFLOAT3(90, 0, 0);
+		if (m_pSword) {
+			m_pSword->isRender = true;
+			m_pEquippedTool = m_pSword;   
+			m_eCurrentTool = type;        
+		}
 		break;
 	case ToolType::Axe:
-		newTool = m_pAxe;
-		localOffset = XMFLOAT3(0.05, 0.25, -0.05); 
-		//localRotation = XMFLOAT3(90, 0, 0); 
+		if (m_pAxe) {
+			m_pAxe->isRender = true;
+			m_pEquippedTool = m_pAxe;
+			m_eCurrentTool = type;
+		}
 		break;
 	case ToolType::Pickaxe:
-		newTool = m_pPickaxe;
-		// localOffset = ... // 곡괭이의 적절한 offset
-		// localRotation = ... // 곡괭이의 적절한 rotation
+		if (m_pPickaxe) {
+			m_pPickaxe->isRender = true;
+			m_pEquippedTool = m_pPickaxe;
+			m_eCurrentTool = type;
+		}
 		break;
 	case ToolType::Hammer:
-		newTool = m_pHammer;
-		// localOffset = ... // 해머의 적절한 offset
-		// localRotation = ... // 해머의 적절한 rotation
+		if (m_pHammer) {
+			m_pHammer->isRender = true;
+			m_pEquippedTool = m_pHammer;
+			m_eCurrentTool = type;
+		}
 		break;
 	case ToolType::None:
 	default:
-		// 해제만 하는 경우
-		return;
+		// 모든 도구가 꺼진 상태로 함수 종료
+		break;
 	}
-
-	if (newTool)
-	{
-		CGameObject* handFrame = FindFrame("thumb_02_r"); // 도구를 붙일 손 프레임
-		if (handFrame)
-		{
-			// 로컬 변환 설정 (이것은 AddObject가 처리해주던 부분)
-			newTool->SetPosition(localOffset);
-			newTool->SetScale(localScale.x, localScale.y, localScale.z);
-			newTool->SetRotation(localRotation.x, localRotation.y, localRotation.z);
-
-			handFrame->SetChild(newTool); // 손 프레임의 자식으로 붙임
-			newTool->isRender = true;
-			m_pEquippedTool = newTool;
-			m_eCurrentTool = type;
-
-		}
-	}
-	UpdateTransform(nullptr); // 플레이어의 월드 변환 갱신 (자식들의 변환도 함께 갱신됨)
 }
 
 CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, void *pContext, CGameFramework* pGameFramework) : CPlayer(pGameFramework)
@@ -727,17 +707,19 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 
 	AddObject(pd3dDevice, pd3dCommandList, "Helmet", "Model/Hair_01.bin", pGameFramework, XMFLOAT3(0, 0.1, 0));
 
-	m_pSword = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Ax_B.bin", pGameFramework)->m_pModelRootObject;
-	m_pSword->isRender = true;
-	m_pAxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Sword_A.bin", pGameFramework)->m_pModelRootObject;
+	m_pSword = AddObject(pd3dDevice, pd3dCommandList, "thumb_01_r", "Model/Tool/Sword_A.bin", pGameFramework, XMFLOAT3(0.05, 0.00, -0.05));
+	m_pSword->isRender = false;	
+	m_pAxe = AddObject(pd3dDevice, pd3dCommandList, "thumb_02_r", "Model/Tool/Ax_B.bin", pGameFramework, XMFLOAT3(0.05, 0.25, -0.05), XMFLOAT3(90, 0, 00));
 	m_pAxe->isRender = false;
-	m_pPickaxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Chisel.bin", pGameFramework)->m_pModelRootObject;
+	m_pPickaxe = AddObject(pd3dDevice, pd3dCommandList, "thumb_03_r", "Model/Tool/Chisel.bin", pGameFramework);
 	m_pPickaxe->isRender = false;
-	m_pHammer = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Hammer_A.bin", pGameFramework)->m_pModelRootObject;
+	m_pHammer = AddObject(pd3dDevice, pd3dCommandList, "hand_r", "Model/Tool/Hammer_A.bin", pGameFramework);
 	m_pHammer->isRender = false;
 
-	//m_eCurrentTool = ToolType::Sword;
-	EquipTool(ToolType::Sword);
+
+	m_pSword->isRender = true;
+	m_pEquippedTool = m_pSword;
+	m_eCurrentTool = ToolType::Sword;
 
 	AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, offset, XMFLOAT3(85, 0, 90), scale);
 
@@ -757,15 +739,6 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	}
 
 
-	// 망토
-	/*{
-		ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
-
-		int materialIndexToChange = 1;
-		UINT albedoTextureSlot = 0;
-		const wchar_t* textureFile = L"Model/Textures/T_Cape_Peasant_Bl_D.dds";
-		ChangeAlbedoTexture2(pCapeModelInfo->m_pModelRootObject, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
-	}*/
 
 	// 플레이어 커스터마이징(임시)
 	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
@@ -802,55 +775,6 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 		pd3dDevice,
 		true                                       // 머티리얼 내 텍스처 이름 문자열도 업데이트
 	);
-
-	/*int materialIndexToChange = 0;
-	UINT albedoTextureSlot = 0;
-	const wchar_t* textureFile = L"Model/Textures/T_HU_M_Body_02_D.dds";
-
-	CGameObject* gameObj = FindFrame("Boots_Naked");
-	ChangeAlbedoTexture2(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
-	gameObj = FindFrame("Torso_Naked");
-	ChangeAlbedoTexture2(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
-	gameObj = FindFrame("Bracers_Naked");
-	ChangeAlbedoTexture2(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);*/
-
-
-	//CLoadedModelInfo* pChestModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList,
-	//	"Model/Hu_M_Chest_Peasant_03_Rd.bin", pGameFramework);
-	//SetChild(pChestModelInfo->m_pModelRootObject);
-
-	//CLoadedModelInfo* pChestModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Hu_M_Chest_Peasant_03_Rd.bin", pGameFramework);
-	//if (pChestModelInfo) {
-	//	if (pChestModelInfo->m_ppSkinnedMeshes) { // m_ppSkinnedMeshes가 유효한지 확인!
-	//		for (int i = 0; i < pChestModelInfo->m_nSkinnedMeshes; ++i) {
-	//			if (pChestModelInfo->m_ppSkinnedMeshes[i]) { // 개별 메쉬 포인터도 확인
-	//				// 상의 메쉬는 플레이어의 루트 스켈레톤을 기준으로 본 매핑
-	//				pChestModelInfo->m_ppSkinnedMeshes[i]->PrepareSkinning(pPlayerModelInfo->m_pModelRootObject);
-	//			}
-	//		}
-	//	}
-	//	SetChild(pChestModelInfo->m_pModelRootObject);
-	//}
-
-	//CLoadedModelInfo* pBootsModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Hu_M_Boots_Peasant.bin", pGameFramework);
-	//if (pBootsModelInfo) {
-	//	if (pBootsModelInfo->m_ppSkinnedMeshes) { // m_ppSkinnedMeshes가 유효한지 확인!
-	//		for (int i = 0; i < pBootsModelInfo->m_nSkinnedMeshes; ++i) {
-	//			if (pBootsModelInfo->m_ppSkinnedMeshes[i]) { // 개별 메쉬 포인터도 확인
-	//				// 상의 메쉬는 플레이어의 루트 스켈레톤을 기준으로 본 매핑
-	//				pBootsModelInfo->m_ppSkinnedMeshes[i]->PrepareSkinning(pPlayerModelInfo->m_pModelRootObject);
-	//			}
-	//		}
-	//	}
-	//	SetChild(pBootsModelInfo->m_pModelRootObject);
-	//}
-
-	//PrintFrameInfo(pPlayerModelInfo->m_pModelRootObject, nullptr);
-
-	
-	//AddObject(pd3dDevice, pd3dCommandList, "Boots_Peasant_Armor", "Model/Hu_M_Boots_Peasant_Rd.bin", pGameFramework);
-	//AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, XMFLOAT3(-0.25, 0.1, 0), XMFLOAT3(90, 0, 90));
-
 
 	int nAnimation{16};
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimation, pPlayerModelInfo);

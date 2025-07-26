@@ -920,6 +920,8 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	if (!isRender) return;
+
     CScene* pScene = m_pGameFramework->GetScene();
     ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
     if (!pScene || !pShaderManager) return;
@@ -1762,9 +1764,9 @@ CGameObject* CGameObject::LoadGeometryFromFile(ID3D12Device* pd3dDevice, ID3D12G
 
 void CGameObject::PropagateAnimController(CAnimationController* controller) {
 	CAnimationController* controllerToUse = m_pSkinnedAnimationController ? m_pSkinnedAnimationController : controller;
-	if (m_pMesh && dynamic_cast<CSkinnedMesh*>(m_pMesh)) {
+	//if (m_pMesh && dynamic_cast<CSkinnedMesh*>(m_pMesh)) {
 		m_pSharedAnimController = controllerToUse;
-	}
+	//}
 	if (m_pChild) m_pChild->PropagateAnimController(controllerToUse);
 	if (m_pSibling) m_pSibling->PropagateAnimController(controller);
 }

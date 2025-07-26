@@ -1019,7 +1019,9 @@ void CGameFramework::BuildObjects()
 	m_pScene->m_pPlayer = m_pPlayer = pPlayer;
 	m_pCamera = m_pPlayer->GetCamera();
 	m_pPlayer->SetOwningScene(m_pScene);
-	
+
+	m_pPlayer->EquipTool(ToolType::Sword);
+
 	m_pPlayer->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 
 	XMFLOAT3 position = XMFLOAT3(0.0f, 1.0f, 0.0f);
@@ -1901,7 +1903,7 @@ void CGameFramework::ProcessInput()
 
 
 			// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
-			UCHAR toggleKeys[] = { 'R','1','2','3' /*, 다른 키들 */ };
+			UCHAR toggleKeys[] = { 'R','1','2','3','4' /*, 다른 키들 */};
 			for (UCHAR key : toggleKeys)
 			{
 				if (pKeysBuffer[key] & 0xF0)
