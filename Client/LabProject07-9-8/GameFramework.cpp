@@ -1920,15 +1920,17 @@ void CGameFramework::ProcessInput()
 						{
 							m_pPlayer->EquipTool(ToolType::Sword);							
 						}
-
 						if (key == '2')
 						{
 							m_pPlayer->EquipTool(ToolType::Axe);
 						}
-
 						if (key == '3')
 						{
 							m_pPlayer->EquipTool(ToolType::Pickaxe);
+						}
+						if (key == '4')
+						{
+							m_pPlayer->EquipTool(ToolType::Hammer);
 						}
 						// 다른 키에 대한 처리 추가
 					}
