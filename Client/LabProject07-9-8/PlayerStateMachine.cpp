@@ -783,15 +783,15 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         if (tree && !tree->IsFalling() && !tree->HasFallen()) {
             int hp = tree->getHp();
             if (hp > 0) {
-                switch (player->weaponType)
+                switch (player->m_eCurrentTool)
                 {
-                case WeaponType::Sword:
+                case ToolType::Sword:
                     hp -= 8;
                     break;
-                case WeaponType::Axe:
+                case ToolType::Axe:
                     hp -= 10;
                     break;
-                case WeaponType::Pick:
+                case ToolType::Pickaxe:
                     hp -= 5;
                     break;
                 default:
@@ -816,15 +816,15 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         if (rock) {
             int hp = rock->getHp();
             if (hp > 0) {
-                switch (player->weaponType)
+                switch (player->m_eCurrentTool)
                 {
-                case WeaponType::Sword:
+                case ToolType::Sword:
                     hp -= 8;
                     break;
-                case WeaponType::Axe:
+                case ToolType::Axe:
                     hp -= 10;
                     break;
-                case WeaponType::Pick:
+                case ToolType::Pickaxe:
                     hp -= 5;
                     break;
                 default:
@@ -894,17 +894,17 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         auto& nwManager = NetworkManager::GetInstance();
         OBJ_HIT_PACKET packet;
         packet.oid = npc->m_id;
-        switch (player->weaponType)
+        switch (player->m_eCurrentTool)
         {
-        case WeaponType::Sword:
+        case ToolType::Sword:
             npc->Decreasehp(10);
             packet.damage = 10;
             break;
-        case WeaponType::Axe:
+        case ToolType::Axe:
             npc->Decreasehp(8);
             packet.damage = 8;
             break;
-        case WeaponType::Pick:
+        case ToolType::Pickaxe:
             npc->Decreasehp(6);
             packet.damage = 6;
             break;
@@ -934,17 +934,17 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         auto& nwManager = NetworkManager::GetInstance();
         OBJ_HIT_PACKET packet;
         packet.oid = npc->m_id;
-        switch (player->weaponType)
+        switch (player->m_eCurrentTool)
         {
-        case WeaponType::Sword:
+        case ToolType::Sword:
             npc->Decreasehp(10);
             packet.damage = 10;
             break;
-        case WeaponType::Axe:
+        case ToolType::Axe:
             npc->Decreasehp(8);
             packet.damage = 8;
             break;
-        case WeaponType::Pick:
+        case ToolType::Pickaxe:
             npc->Decreasehp(6);
             packet.damage = 6;
             break;

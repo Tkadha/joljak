@@ -12,10 +12,12 @@
 #include <chrono>
 #include "PlayerStateMachine.h" 
 #include <mutex>
-enum class WeaponType : int {
+enum class ToolType : int {
+	None,
 	Sword,
 	Axe,
-	Pick
+	Pickaxe,
+	Hammer
 };
 
 class CPlayer : public CGameObject
@@ -76,12 +78,16 @@ public:
 	int Totalxp = 20;
 	bool invincibility = false;
 	std::chrono::time_point<std::chrono::system_clock> starttime; 
-	WeaponType weaponType;
 
-	CGameObject* m_pSword;
-	CGameObject* m_pAxe;
-	CGameObject* m_pPick;
-	
+	ToolType m_eCurrentTool;
+	CGameObject* m_pEquippedTool = nullptr;
+	CGameObject* m_pSword = nullptr;
+	CGameObject* m_pAxe = nullptr;
+	CGameObject* m_pPickaxe = nullptr;
+	CGameObject* m_pHammer = nullptr;  
+
+	void EquipTool(ToolType type);
+
 	std::mutex pos_mu;
 
 	XMFLOAT3 GetPosition() { return(m_xmf3Position); }
