@@ -46,7 +46,8 @@ struct FurnaceSlot
 enum class GameState
 {
 	Lobby,
-	InGame
+	InGame,
+	Ending
 };
 
 #include <unordered_map>

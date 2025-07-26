@@ -1555,7 +1555,9 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	//건축
 	pResourceManager->RegisterPrefab("wood_wall", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/buildobject/Fence_WoodC_A.bin", m_pGameFramework));
-	pResourceManager->RegisterPrefab("furnace", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/buildobject/furnace.bin", m_pGameFramework));
+	auto pFurnacePrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/buildobject/furnace.bin", m_pGameFramework);
+	pFurnacePrefab->m_objectType = GameObjectType::Furnace; // 타입 지정
+	pResourceManager->RegisterPrefab("furnace", pFurnacePrefab);
 
 
 }
