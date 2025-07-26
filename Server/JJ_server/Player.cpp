@@ -741,3 +741,19 @@ void PlayerClient::SendTimePacket(float t)
     s_packet.serverTime = t;
     tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 }
+
+void PlayerClient::SendStartGamePacket()
+{
+    GAME_START_PACKET s_packet;
+    s_packet.size = sizeof(GAME_START_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_GAME_START);
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
+void PlayerClient::SendEndGamePacket()
+{
+    GAME_END_PACKET s_packet;
+    s_packet.size = sizeof(GAME_END_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_GAME_END);
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}

@@ -47,6 +47,10 @@ void CGameFramework::ProcessPacket(char* packet)
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
+	case E_PACKET::E_GAME_START:{
+		ChangeGameState(GameState::InGame);
+	}
+	break;
 	case E_PACKET::E_P_POSITION:
 	{
 		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
@@ -267,12 +271,13 @@ void CGameFramework::ProcessPacket(char* packet)
 		int id = -1;
 		m_logQueue.push(log_inout{ E_PACKET::E_STRUCT_OBJ,0,right,up,look,position,o_type,a_type,id });
 	}
-	 break;
+	break;
 	case E_PACKET::E_SYNC_TIME:
 		{
 		TIME_SYNC_PACKET* recv_p = reinterpret_cast<TIME_SYNC_PACKET*>(packet);
 		m_pScene->m_fLightRotationAngle = recv_p->serverTime;
 	}
+	break;
 	default:
 		break;
 	}
@@ -744,10 +749,29 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				m_pScene->SpawnResourceShards(playerPos, CScene::ShardType::Wood);
 				break;
 			case 'P':
+				if (m_eGameState != GameState::InGame) break;
 				ChangeGameState(GameState::Ending);
+				{
+					auto& nwManager = NetworkManager::GetInstance();
+					GAME_END_PACKET p;
+					p.type = static_cast<char>(E_PACKET::E_GAME_END);
+					p.size = sizeof(GAME_END_PACKET);
+					nwManager.PushSendQueue(p, p.size);
+				}
 				break;
 			case 'M':
+				if (m_eGameState != GameState::Ending) break;
 				ChangeGameState(GameState::Lobby);
+				// 씬에 있는 모든 객체 초기화 해야함
+				m_pScene->ClearObj();
+				m_pScene->NewGameBuildObj();
+				{
+					auto& nwManager = NetworkManager::GetInstance();
+					NEW_GAME_PACKET p;
+					p.type = static_cast<char>(E_PACKET::E_GAME_NEW);
+					p.size = sizeof(NEW_GAME_PACKET);
+					nwManager.PushSendQueue(p, p.size);
+				}
 				break;
 			}
 			break;
@@ -3160,8 +3184,11 @@ void CGameFramework::FrameAdvance()
 
 		if (ImGui::Button("GameStart", ImVec2(buttonWidth, buttonHeight)))
 		{
+			auto& nwManager = NetworkManager::GetInstance();
+			GAME_START_PACKET p;
+			nwManager.PushSendQueue(p, p.size);
 
-			ChangeGameState(GameState::InGame);
+			//ChangeGameState(GameState::InGame);
 		}
 		ImGui::End();
 	}
@@ -3242,6 +3269,9 @@ void CGameFramework::FrameAdvance()
 
 	MoveToNextFrame();
 
+	for (auto& obj : m_pScene->m_vGameObjects) {
+		if (!obj->is_load) obj->is_load = true;
+	}
 	m_GameTimer.GetFrameRate(m_pszFrameRate + 18, 37);
 	size_t nLength = _tcslen(m_pszFrameRate);
 	XMFLOAT3 xmf3Position = m_pPlayer->GetPosition();

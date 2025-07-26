@@ -1002,7 +1002,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		std::lock_guard<std::mutex> lock(m_Mutex);
 		for (auto& obj : m_vGameObjects) {
 			if (obj) obj->Animate(m_fElapsedTime);
-			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
+			if (obj->isRender && obj->is_load) obj->Render(pd3dCommandList, pCamera);
 		}
 		for (auto& obj : m_lEnvironmentObjects) {
 			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
@@ -1286,6 +1286,33 @@ void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity
 	m_listRockObjects.emplace_back(newBranch);
 	//auto t_obj = std::make_unique<newBranch>(tree_obj_count++, gameObj->m_worldOBB.Center);
 	//octree.insert(std::move(t_obj));
+}
+
+void CScene::NewGameBuildObj()
+{
+	for (auto& obj : m_vAttackEffects)
+	{
+		m_vGameObjects.push_back(obj);
+	}
+	for (auto& obj : m_vWoodShards)
+	{
+		m_vGameObjects.push_back(obj);
+	}
+	for (auto& obj : m_vRockShards)
+	{
+		m_vGameObjects.push_back(obj);
+	}
+	for (auto& obj : m_mapBuildPrefabs)
+	{
+		m_vGameObjects.emplace_back(obj.second);
+	}
+}
+
+void CScene::ClearObj()
+{
+	m_vGameObjects.clear();
+	m_vConstructionObjects.clear();
+	m_listGameObjects.clear();
 }
 
 

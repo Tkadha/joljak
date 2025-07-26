@@ -15,7 +15,7 @@ public:
 };
 
 
-class GameObject
+class GameObject : public std::enable_shared_from_this<GameObject>
 {
 	OBJECT_TYPE type;
 	ANIMATION_TYPE animationType;
@@ -28,9 +28,7 @@ public:
 	float fly_height{ 0 };
 
 	GameObject();
-	GameObject(bool makefsm);
 	virtual ~GameObject();
-
 	void SetID(int id) { o_id = id; }
 	int GetID() { return o_id; }
 public:
@@ -103,6 +101,10 @@ public:
 	bool is_alive;
 	std::shared_ptr<FSMManager<GameObject>> FSM_manager = NULL;
 	mutable mutex FSM_mutex;
+	void InitFSM() 
+	{
+		FSM_manager = std::make_shared<FSMManager<GameObject>>(shared_from_this());
+	}
 	void FSMUpdate()
 	{
 		lock_guard<mutex> lock(FSM_mutex);

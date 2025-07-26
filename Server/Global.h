@@ -18,16 +18,19 @@ enum class E_PACKET
 	E_O_CHANGEANIMATION = 11,
 	E_O_MOVE = 12,
 	E_O_HIT = 13,
-	E_O_INVINCIBLE = 14, 
-	E_O_SETHP = 15, 
+	E_O_INVINCIBLE = 14,
+	E_O_SETHP = 15,
 	E_O_SETOBB = 16,
 
 	E_P_SETHP = 17,
 	E_P_CHANGE_STAT = 18,
 
-	E_STRUCT_OBJ = 19, 
+	E_STRUCT_OBJ = 19,
+	E_SYNC_TIME = 20,
 
-	E_SYNC_TIME = 20, 
+	E_GAME_START = 21,
+	E_GAME_END = 22,
+	E_GAME_NEW = 23,
 
 	E_DB_REGISTER = 100,
 	E_DB_LOGIN = 101,
@@ -364,8 +367,31 @@ public:
 	}
 };
 
+class GAME_START_PACKET:public PACKET
+{
+public:
+	GAME_START_PACKET() {
+		type = static_cast<char>(E_PACKET::E_GAME_START);
+		size = sizeof(GAME_START_PACKET);
+	}
+};
+class GAME_END_PACKET :public PACKET
+{
+public:
+	GAME_END_PACKET() {
+		type = static_cast<char>(E_PACKET::E_GAME_END);
+		size = sizeof(GAME_END_PACKET);
+	}
+};
 
-
+class NEW_GAME_PACKET :public PACKET
+{
+public:
+	NEW_GAME_PACKET() {
+		type = static_cast<char>(E_PACKET::E_GAME_NEW);
+		size = sizeof(NEW_GAME_PACKET);
+	}
+};
 
 class LOGIN_PACKET : public PACKET
 {

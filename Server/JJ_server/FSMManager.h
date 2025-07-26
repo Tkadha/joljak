@@ -4,11 +4,11 @@
 template <class entity_type>
 class FSMManager
 {
-	std::shared_ptr<entity_type> Owner;
+	std::weak_ptr<entity_type> Owner;
 	std::shared_ptr<FSMState<entity_type>> Currentstate;
 	std::shared_ptr<FSMState<entity_type>> Globalstate;
 public:
-	FSMManager(entity_type* owner) : Owner(owner), Currentstate(NULL), Globalstate(NULL) {}
+	FSMManager(std::shared_ptr<entity_type> owner) : Owner(owner), Currentstate(NULL), Globalstate(NULL) {}
 	virtual ~FSMManager() {}
 
 	FSMManager(const FSMManager&) = delete;
@@ -21,15 +21,19 @@ public:
 
 	void Update()const
 	{
-		if (Globalstate) Globalstate->Execute(Owner);
-		if (Currentstate) Currentstate->Execute(Owner);
+		if (auto owner_sp = Owner.lock()) {
+			if (Globalstate) Globalstate->Execute(owner_sp);
+			if (Currentstate) Currentstate->Execute(owner_sp);
+		}
 	}
 
 	void ChangeState(std::shared_ptr<FSMState<entity_type>> newstate)
 	{
-		Currentstate->Exit(Owner);
-		Currentstate = newstate;
-		Currentstate->Enter(Owner);
+		if (auto owner_sp = Owner.lock()) {
+			Currentstate->Exit(owner_sp);
+			Currentstate = newstate;
+			Currentstate->Enter(owner_sp);
+		}
 	}
 
 	std::shared_ptr<FSMState<entity_type>> GetCurrentState()  const { 
