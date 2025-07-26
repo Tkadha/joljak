@@ -709,7 +709,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				break;
 				
 			case 'K':
-				ShowFurnaceUI = !ShowFurnaceUI;
+				CheckAndToggleFurnaceUI();
 				break;
 			case 'R':
 				if (m_bBuildMode && m_pConstructionSystem) {
