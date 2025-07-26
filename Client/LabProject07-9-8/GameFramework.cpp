@@ -50,11 +50,13 @@ void CGameFramework::ProcessPacket(char* packet)
 	case E_PACKET::E_P_POSITION:
 	{
 		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
+		
 		if (recv_p->uid == _MyID) {
 			m_pPlayer->pos_mu.lock();
 			m_pPlayer->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z});
 			m_pPlayer->pos_mu.unlock();
 		}
+		
 		else if (m_pScene->PlayerList.find(recv_p->uid) != m_pScene->PlayerList.end()) {
 			m_pScene->PlayerList[recv_p->uid]->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z });
 		}
@@ -2071,12 +2073,11 @@ void CGameFramework::AnimateObjects()
 {
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 
-	if (m_eGameState == GameState::InGame)
-	{
-		if (m_pScene) m_pScene->AnimateObjects(fTimeElapsed);
-		//if (m_pPlayer) m_pPlayer->Animate(fTimeElapsed);
-	}
-	m_pPlayer->Animate(fTimeElapsed);
+	
+	if (m_pScene) m_pScene->AnimateObjects(fTimeElapsed);
+	if (m_pPlayer) m_pPlayer->Animate(fTimeElapsed);
+	
+	
 }
 
 void CGameFramework::WaitForGpuComplete()
@@ -2190,7 +2191,9 @@ void CGameFramework::FrameAdvance()
 	}
 
 	m_GameTimer.Tick(120.0f);
-
+	if (m_eGameState == GameState::InGame || m_eGameState == GameState::Lobby) {
+		m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
+	}
 	ProcessInput();
 	UpdateFurnace(m_GameTimer.GetTimeElapsed());
     AnimateObjects();
@@ -2274,9 +2277,9 @@ void CGameFramework::FrameAdvance()
 			m_pCamera->GenerateViewMatrix(currentPos, XMFLOAT3(5000.0f, 0.0f, 5000.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
 		}
 	}
-	else if (m_eGameState == GameState::InGame) {
-		m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
-	}
+	
+
+	//m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 #endif	
