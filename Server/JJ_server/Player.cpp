@@ -311,7 +311,90 @@ void PlayerClient::Update_test(float deltaTime)
         deltaVel.z /= 1.75f;
     }
 
+    // 밀림 처리
+    {
+        BoundingOrientedBox myCurrentOBB = world_obb;
+        std::vector<tree_obj*> presults;
+        std::vector<tree_obj*> oresults;
+        tree_obj n_obj{ -1, m_Position };
+        Octree::PlayerOctree.query(n_obj, XMFLOAT3{ 500, 300, 500 }, presults);
+        Octree::GameObjectOctree.query(n_obj, XMFLOAT3{ 500, 300, 500 }, oresults);
 
+        XMVECTOR totalPushOutVector = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+        int collisionCount = 0;
+        for (auto& p_obj : presults)
+        {
+            for (auto& cl : PlayerClient::PlayerClients) {
+                if (cl.second->state != PC_INGAME)continue;
+                if (m_id == p_obj->u_id) continue;
+                if (cl.second->m_id != p_obj->u_id) continue;
+
+                auto other_player = cl.second;
+
+                if (myCurrentOBB.Intersects(other_player->world_obb))
+                {
+                    XMVECTOR myCenter = XMLoadFloat3(&m_Position);
+                    XMVECTOR otherCenter = XMLoadFloat3(&other_player->GetPosition());
+
+                    XMVECTOR pushDir = XMVector3Normalize(XMVectorSubtract(myCenter, otherCenter));
+                    totalPushOutVector = XMVectorAdd(totalPushOutVector, pushDir);
+                    collisionCount++;
+                }
+            }
+        }
+
+        // 다른 게임 오브젝트와 겹침 확인
+        for (auto& o_obj : oresults)
+        {
+            // 비활성/죽은 객체 제외 (기존 코드와 동일)
+            auto& other_obj = GameObject::gameObjects[o_obj->u_id];
+            if (!other_obj || !other_obj->is_alive || other_obj->Gethp() <= 0) continue;
+
+            if (myCurrentOBB.Intersects(other_obj->world_obb))
+            {
+                XMVECTOR myCenter = XMLoadFloat3(&m_Position);
+                XMVECTOR otherCenter = XMLoadFloat3(&other_obj->GetPosition());
+
+                XMVECTOR pushDir = XMVector3Normalize(XMVectorSubtract(myCenter, otherCenter));
+                totalPushOutVector = XMVectorAdd(totalPushOutVector, pushDir);
+                collisionCount++;
+            }
+        }
+
+        // 건설된 오브젝트와 겹침 확인
+        for (auto& c_obj : GameObject::ConstructObjects)
+        {
+            if (myCurrentOBB.Intersects(c_obj->world_obb))
+            {
+                XMVECTOR myCenter = XMLoadFloat3(&m_Position);
+                XMVECTOR otherCenter = XMLoadFloat3(&c_obj->GetPosition());
+
+                XMVECTOR pushDir = XMVector3Normalize(XMVectorSubtract(myCenter, otherCenter));
+                totalPushOutVector = XMVectorAdd(totalPushOutVector, pushDir);
+                collisionCount++;
+            }
+        }
+        // 4. 계산된 방향으로 위치를 보정합니다.
+        if (collisionCount > 0)
+        {
+            // 여러 객체와 겹쳤을 경우를 대비해 평균 밀어내기 방향을 계산
+            totalPushOutVector = XMVector3Normalize(totalPushOutVector);
+
+            // 밀어내는 힘의 크기 (이 값은 실험을 통해 적절히 조절해야 합니다)
+            float pushMagnitude = 0.5f;
+
+            XMVECTOR currentPosVec = XMLoadFloat3(&m_Position);
+            XMVECTOR newPosVec = XMVectorAdd(currentPosVec, XMVectorScale(totalPushOutVector, pushMagnitude));
+
+            XMFLOAT3 newPos;
+            XMStoreFloat3(&newPos, newPosVec);
+
+            // 보정된 위치를 즉시 적용합니다.
+            // SetPosition을 사용하거나 멤버 변수 m_Position을 직접 수정합니다.
+            // SetPosition(newPos); 
+            XMStoreFloat3(&m_Position, newPosVec);
+        }
+    }
     /* 충돌 처리*/
     // 이동 충돌처리 적용
     // X축 이동 시도
