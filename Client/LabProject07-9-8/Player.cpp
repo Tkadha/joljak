@@ -707,17 +707,44 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 
 	AddObject(pd3dDevice, pd3dCommandList, "Helmet", "Model/Hair_01.bin", pGameFramework, XMFLOAT3(0, 0.1, 0));
 
-	m_pSword = AddObject(pd3dDevice, pd3dCommandList, "thumb_01_r", "Model/Tool/Sword_A.bin", pGameFramework, XMFLOAT3(0.05, 0.00, -0.05));
-	m_pSword->isRender = false;	
-	m_pAxe = AddObject(pd3dDevice, pd3dCommandList, "thumb_02_r", "Model/Tool/Ax_B.bin", pGameFramework, XMFLOAT3(0.05, 0.25, -0.05), XMFLOAT3(90, 0, 00));
-	m_pAxe->isRender = false;
-	m_pPickaxe = AddObject(pd3dDevice, pd3dCommandList, "thumb_03_r", "Model/Tool/Chisel.bin", pGameFramework);
-	m_pPickaxe->isRender = false;
-	m_pHammer = AddObject(pd3dDevice, pd3dCommandList, "hand_r", "Model/Tool/Hammer_A.bin", pGameFramework);
-	m_pHammer->isRender = false;
+	m_pSword = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Sword_A.bin", pGameFramework)->m_pModelRootObject;
+	CGameObject* handFrame = FindFrame("thumb_01_r"); 
+	if (handFrame)
+	{
+		m_pSword->SetPosition(0.0f, 0.0f, 0.0f);
+		m_pSword->SetRotation(0.0f, 0.0f, 0.0f);
+		handFrame->SetChild(m_pSword);
+	}
+	m_pAxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Ax_B.bin", pGameFramework)->m_pModelRootObject;
+	handFrame = FindFrame("thumb_02_r");
+	if (handFrame)
+	{
+		m_pAxe->SetPosition(0.0f, 0.0f, 0.0f);
+		m_pAxe->SetRotation(0.0f, 0.0f, 0.0f);
+		handFrame->SetChild(m_pAxe);
+	}
+	m_pPickaxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Chisel.bin", pGameFramework)->m_pModelRootObject;
+	handFrame = FindFrame("thumb_03_r");
+	if (handFrame)
+	{
+		m_pPickaxe->SetPosition(0.0f, 0.0f, 0.0f);
+		m_pPickaxe->SetRotation(0.0f, 0.0f, 0.0f);
+		handFrame->SetChild(m_pPickaxe);
+	}
+	m_pHammer = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Hammer_A.bin", pGameFramework)->m_pModelRootObject;
+	handFrame = FindFrame("middle_01_r");
+	if (handFrame)
+	{
+		m_pHammer->SetPosition(0.0f, 0.0f, 0.0f);
+		m_pHammer->SetRotation(0.0f, 0.0f, 0.0f);
+		handFrame->SetChild(m_pHammer);
+	}
 
+	if (m_pSword) m_pSword->isRender = true;
+	if (m_pAxe) m_pAxe->isRender = false;
+	if (m_pPickaxe) m_pPickaxe->isRender = false;
+	if (m_pHammer) m_pHammer->isRender = false;
 
-	m_pSword->isRender = true;
 	m_pEquippedTool = m_pSword;
 	m_eCurrentTool = ToolType::Sword;
 
