@@ -213,7 +213,7 @@ public:
 	void keyInput(UCHAR* key);
 
 
-	CGameObject* FindObjectHitByAttack();
+	std::vector<CGameObject*>  FindObjectHitByAttack();
 
 
 };

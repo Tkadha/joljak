@@ -471,14 +471,15 @@ public:
 class AttackMeleeState : public IPlayerState {
 private:
     bool m_bAttackFinished = false;
-    bool m_bSound = true;
     int m_nAnimTrack = BlendConfig::PRIMARY_TRACK; // 공격 애니메이션을 재생할 트랙
+    bool m_bHasAppliedHit = false; 
 
 public:
     PlayerStateID GetID() const override { return PlayerStateID::AttackMelee; }
 
     void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
         m_bAttackFinished = false;
+        m_bHasAppliedHit = false;
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f });
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
         PlayWavSound(_T("Sound/sword.wav"));
@@ -488,12 +489,15 @@ public:
         float currentPosition = stateMachine->GetTrackPosition(m_nAnimTrack);
         float animLength = stateMachine->GetAnimationLength(m_nAnimTrack);
 
-        if (!m_bAttackFinished && currentPosition >= animLength * 0.66f) {
-            CGameObject* hitObject = player->FindObjectHitByAttack();
-            CollisionUpdate(player, hitObject);
-            if(m_bSound){
-                //PlayWavSound(_T("Sound/sword.wav"));
-                m_bSound = false;
+        if (!m_bHasAppliedHit && currentPosition >= animLength * 0.66f) {
+            m_bHasAppliedHit = true; // 판정은 한 번
+
+            std::vector<CGameObject*> hitObjects = player->FindObjectHitByAttack();
+
+            if (!hitObjects.empty()) {
+                for (CGameObject* hitObject : hitObjects) {
+                    CollisionUpdate(player, hitObject);
+                }
             }
         }
 
@@ -517,11 +521,13 @@ class AttackAxeState : public IPlayerState {
 private:
     bool m_bAttackFinished = false;
     int m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
+    bool m_bHasAppliedHit = false; 
 public:
     PlayerStateID GetID() const override { return PlayerStateID::AttackAxe; }
 
     void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
         m_bAttackFinished = false;
+        m_bHasAppliedHit = false;
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); 
         PlayWavSound(_T("Sound/axe.wav"));
@@ -531,15 +537,28 @@ public:
         float currentPosition = stateMachine->GetTrackPosition(m_nAnimTrack);
         float animLength = stateMachine->GetAnimationLength(m_nAnimTrack);
 
+        if (!m_bHasAppliedHit && currentPosition >= animLength * 0.66f) {
+            m_bHasAppliedHit = true; // 판정은 한 번
+
+            std::vector<CGameObject*> hitObjects = player->FindObjectHitByAttack();
+
+            if (!hitObjects.empty()) {
+                for (CGameObject* hitObject : hitObjects) {
+                    CollisionUpdate(player, hitObject);
+                }
+            }
+        }
+
         if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) {
             m_bAttackFinished = true;
-
-            CGameObject* hitObject = player->FindObjectHitByAttack(); // 공격 판정 함수 필요
-            CollisionUpdate(player, hitObject);
         }
+
+        // 애니메이션이 끝나면 Idle 상태로 전환
         if (m_bAttackFinished) {
             return PlayerStateID::Idle;
         }
+
+        // 공격 중에는 다른 입력 무시하고 현재 상태 유지
         return PlayerStateID::AttackAxe;
     }
 
@@ -551,11 +570,13 @@ class AttackPickState : public IPlayerState {
 private:
     bool m_bAttackFinished = false;
     int m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
+    bool m_bHasAppliedHit = false;
 public:
     PlayerStateID GetID() const override { return PlayerStateID::AttackPick; }
 
     void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
         m_bAttackFinished = false;
+        m_bHasAppliedHit = false;
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK; 
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); 
         PlayWavSound(_T("Sound/pickaxe.wav"));
@@ -565,15 +586,28 @@ public:
         float currentPosition = stateMachine->GetTrackPosition(m_nAnimTrack);
         float animLength = stateMachine->GetAnimationLength(m_nAnimTrack);
 
-        if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) { 
-            m_bAttackFinished = true;
+        if (!m_bHasAppliedHit && currentPosition >= animLength * 0.66f) {
+            m_bHasAppliedHit = true; // 판정은 한 번
 
-            CGameObject* hitObject = player->FindObjectHitByAttack(); // 공격 판정 함수 필요
-            CollisionUpdate(player, hitObject);
+            std::vector<CGameObject*> hitObjects = player->FindObjectHitByAttack();
+
+            if (!hitObjects.empty()) {
+                for (CGameObject* hitObject : hitObjects) {
+                    CollisionUpdate(player, hitObject);
+                }
+            }
         }
+
+        if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) {
+            m_bAttackFinished = true;
+        }
+
+        // 애니메이션이 끝나면 Idle 상태로 전환
         if (m_bAttackFinished) {
             return PlayerStateID::Idle;
         }
+
+        // 공격 중에는 다른 입력 무시하고 현재 상태 유지
         return PlayerStateID::AttackPick;
     }
 

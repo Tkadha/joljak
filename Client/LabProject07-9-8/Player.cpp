@@ -1137,32 +1137,27 @@ void CTerrainPlayer::keyInput(UCHAR* key) {
 
 #include "GameFramework.h"
 
-CGameObject* CTerrainPlayer::FindObjectHitByAttack() {
-	if (!m_pGameFramework) return nullptr;
+std::vector<CGameObject*> CTerrainPlayer::FindObjectHitByAttack() {
+	std::vector<CGameObject*> hitObjects; // 충돌한 객체들을 담을 벡터
+
+	if (!m_pGameFramework) return hitObjects;
 	CScene* pScene = m_pGameFramework->GetScene();
-	if (!pScene) return nullptr;
+	if (!pScene) return hitObjects;
 
-	BoundingOrientedBox weapon;
-	if (weaponType == WeaponType::Sword)
-		weapon = m_pSword->m_worldOBB;
-	else if (weaponType == WeaponType::Axe)
-		weapon = m_pAxe->m_worldOBB;
-
+	BoundingOrientedBox weaponOBB;
+	if (weaponType == WeaponType::Sword) weaponOBB = m_pSword->m_worldOBB;
+	else if (weaponType == WeaponType::Axe) weaponOBB = m_pAxe->m_worldOBB;
+	else if (weaponType == WeaponType::Pick) weaponOBB = m_pPick->m_worldOBB;
 
 	for (const auto& obj : pScene->m_vGameObjects) {
-		if (obj->m_id == -1) continue;
-		if (obj->isRender == false) continue;
-		std::vector<DirectX::BoundingOrientedBox> obbList;
-		if(obj->m_objectType == GameObjectType::Golem)
-			obj->m_objectType = GameObjectType::Golem;
-		pScene->CollectHierarchyObjects(obj, obbList);
-		for (const auto& obb : obbList) {
-			if (weapon.Intersects(obb)) 
-				return obj;
-		}		
+		if (obj->m_id == -1 || !obj->isRender) continue;
+
+		if (weaponOBB.Intersects(obj->m_worldOBB)) {
+			hitObjects.push_back(obj); 
+		}
 	}
 
-	return nullptr;
+	return hitObjects;
 }
 
 
