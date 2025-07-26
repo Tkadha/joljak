@@ -365,6 +365,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	InitializeCraftItems();
 	ItemManager::Initialize();
 	InitializeItemIcons();
+	m_imGuiLobbyBackgroundTextureId = LoadIconTexture(L"lobby.png");
 
 
 	m_pConstructionSystem = new CConstructionSystem();
@@ -935,7 +936,7 @@ ImTextureID CGameFramework::LoadIconTexture(const std::wstring& filename)
 void CGameFramework::CreateIconDescriptorHeap()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-	desc.NumDescriptors = 32; // 예를 들어 아이콘 32개쯤? (원하는 수)
+	desc.NumDescriptors = 33; // 예를 들어 아이콘 32개쯤? (원하는 수)
 	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
@@ -988,6 +989,7 @@ void CGameFramework::BuildObjects()
 	m_pResourceManager = std::make_unique<ResourceManager>();
 	m_pResourceManager->Initialize(this);
 
+	//m_imGuiLobbyBackgroundTextureId = LoadIconTexture(L"lobby.png");
 
 	m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
 
@@ -1002,7 +1004,9 @@ void CGameFramework::BuildObjects()
 #endif
 	}
 
-	
+	m_vTestPlayerNames.push_back("Player_Alpha");
+	m_vTestPlayerNames.push_back("Player_Bravo (Ready)");
+	m_vTestPlayerNames.push_back("Player_Charlie");
 
 #ifdef _WITH_TERRAIN_PLAYER
 	CTerrainPlayer *pPlayer = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pTerrain, this);
@@ -2723,7 +2727,7 @@ void CGameFramework::FrameAdvance()
 		};
 		static std::vector<BuildableItem> buildableItems = {
 			{ "wood wall", "wood_wall" },
-			// { "나무 바닥", "wood_floor" },
+			 { "furnace",   "furnace" },
 			// { "나무 문", "wood_door" }
 		};
 
@@ -2848,7 +2852,7 @@ void CGameFramework::FrameAdvance()
 		ImGui::End();
 	}
 
-	/////////////////////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////////////////////////// 화로
 	if (ShowFurnaceUI)
 	{
 		const float slotSize = 72.0f;
@@ -3054,7 +3058,63 @@ void CGameFramework::FrameAdvance()
 		ImGui::End();
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////// 로비화면
+	if (m_eGameState == GameState::Lobby)
+	{
+		// --- 1. 배경 이미지 그리기 ---
+	
+		ImGui::SetNextWindowPos(ImVec2(0, 0));
+		ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+		ImGui::Begin("LobbyBackground", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBackground);
+
+		// BuildObjects에서 로드해 둔 배경 이미지가 있다면 화면 전체에 그립니다.
+		if (m_imGuiLobbyBackgroundTextureId != 0)
+		{
+			ImGui::GetWindowDrawList()->AddImage(m_imGuiLobbyBackgroundTextureId, ImVec2(0, 0), ImGui::GetIO().DisplaySize);
+		}
+		ImGui::End();
+
+		
+		ImVec2 screenSize = ImGui::GetIO().DisplaySize;
+
+		
+
+		// 왼쪽 플레이어 목록
+		ImGui::SetNextWindowPos(ImVec2(screenSize.x * 0.1f, screenSize.y * 0.25f));
+		ImGui::SetNextWindowSize(ImVec2(screenSize.x * 0.2f, screenSize.y * 0.5f));
+		ImGui::Begin("Player List", nullptr, ImGuiWindowFlags_NoTitleBar);
+		ImGui::Text("Player List");
+		ImGui::Separator();
+		// (예시) 실제로는 네트워크에서 받은 플레이어 목록을 여기에 표시합니다.
+		for (const auto& playerName : m_vTestPlayerNames)
+		{
+			ImGui::Text(playerName.c_str());
+		}
+		ImGui::End();
+
+		// 오른쪽 버튼들
+		float buttonWidth = 250.0f;
+		float buttonHeight = 50.0f;
+		ImVec2 buttonsPos = ImVec2(screenSize.x * 0.65f, screenSize.y * 0.4f);
+
+		ImGui::SetNextWindowPos(buttonsPos);
+		ImGui::Begin("Buttons", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground);
+
+		if (ImGui::Button("Ready", ImVec2(buttonWidth, buttonHeight)))
+		{
+			// 준비 완료 로직
+		}
+
+		ImGui::Dummy(ImVec2(0.0f, 20.0f)); // 버튼 사이 간격
+
+		if (ImGui::Button("GameStart", ImVec2(buttonWidth, buttonHeight)))
+		{
+			ChangeGameState(GameState::InGame);
+		}
+		ImGui::End();
+	}
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////
 	ImGui::Render();
 	ID3D12DescriptorHeap* ppHeaps[] = { m_pd3dSrvDescriptorHeapForImGui };
 	m_pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
@@ -3562,4 +3622,75 @@ D3D12_CPU_DESCRIPTOR_HANDLE CGameFramework::GetCurrentRtvCPUDescriptorHandle()
 D3D12_CPU_DESCRIPTOR_HANDLE CGameFramework::GetDsvCPUDescriptorHandle()
 {
 	return m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+}
+
+void CGameFramework::ChangeGameState(GameState newState)
+{
+	if (m_eGameState == newState) return; // 같은 상태로의 변경은 무시
+
+	m_eGameState = newState;
+	/*
+	if (m_eGameState == GameState::InGame)
+	{
+		// "Game Start" 버튼을 눌렀을 때 실행되는 부분
+		// 기존 BuildObjects의 내용을 여기에 붙여넣습니다.
+
+		m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
+
+		m_pScene = new CScene(this);
+		if (m_pScene) {
+			m_pScene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
+		}
+
+		CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pTerrain, this);
+		m_pScene->m_pPlayer = m_pPlayer = pPlayer;
+		m_pCamera = m_pPlayer->GetCamera();
+		m_pPlayer->SetOwningScene(m_pScene);
+
+		m_pPlayer->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+		m_pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+
+		// ... (이하 기존 BuildObjects에 있던 나머지 코드들) ...
+
+		m_pd3dCommandList->Close();
+		ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList };
+		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+
+		WaitForGpuComplete();
+
+		if (m_pScene) m_pScene->ReleaseUploadBuffers();
+		if (m_pPlayer) m_pPlayer->ReleaseUploadBuffers();
+
+		m_GameTimer.Reset();
+
+		// 건축 시스템 초기화도 여기서 수행
+		m_pConstructionSystem = new CConstructionSystem();
+		m_pConstructionSystem->Init(m_pd3dDevice, m_pd3dCommandList, this, m_pScene);
+	}
+	*/
+}
+
+void CGameFramework::CheckAndToggleFurnaceUI()
+{
+	if (!m_pPlayer || !m_pScene) return;
+
+	const float interactionDistance = 150.0f;
+	XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+
+	// [수정] 씬의 전체 오브젝트가 아닌, 건축물 목록만 순회합니다.
+	for (auto& pConstructionObj : m_pScene->m_vConstructionObjects)
+	{
+		// 이 오브젝트가 '화로'인지 확인합니다.
+		if (pConstructionObj && pConstructionObj->m_pChild && strcmp(pConstructionObj->m_pChild->m_pstrFrameName, "furnace") == 0)
+		{
+			XMFLOAT3 furnacePos = pConstructionObj->GetPosition();
+			float distance = Vector3::Distance(playerPos, furnacePos);
+
+			if (distance <= interactionDistance)
+			{
+				ShowFurnaceUI = !ShowFurnaceUI;
+				return;
+			}
+		}
+	}
 }
