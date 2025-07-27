@@ -1373,7 +1373,6 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 0.8f, 1.2f, XMFLOAT3{ 0.f,1.f,-1.f });
-			gameObj->m_localOBB.Center.y += 30.0f;
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
