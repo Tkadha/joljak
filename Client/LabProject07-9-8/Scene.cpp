@@ -141,8 +141,8 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	}
 
 	std::vector<std::wstring> skyboxTextures = {
-	   L"Skybox/mor.dds",
-	   L"Skybox/nig.dds",
+	   L"Skybox/Morning.dds",
+	   L"Skybox/Night.dds",
 	   L"Skybox/eve.dds"
 	};
 
@@ -352,7 +352,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	}
 
 	std::vector<std::wstring> skyboxTextures = {
-	   L"Skybox/mor.dds",
+	   L"Skybox/Morning.dds",
 	   L"Skybox/nig.dds"
 	};
 
@@ -955,11 +955,20 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			std::lock_guard<std::mutex> lock(m_Mutex);
 
 			for (auto& obj : m_vGameObjects) {
-				//if (obj) obj->Animate(m_fElapsedTime);
-				if (obj->isRender) obj->RenderShadow(pd3dCommandList);
+				if (obj->m_objectType != GameObjectType::Toad && obj->m_objectType != GameObjectType::Wasp &&
+					obj->m_objectType != GameObjectType::Wolf && obj->m_objectType != GameObjectType::Bat &&
+					obj->m_objectType != GameObjectType::Snake && obj->m_objectType != GameObjectType::Turtle &&
+					obj->m_objectType != GameObjectType::Raptor && obj->m_objectType != GameObjectType::Snail && 
+					obj->m_objectType != GameObjectType::Spider)
+				{
+					if (obj->isRender) obj->RenderShadow(pd3dCommandList);
+				}
 			}
 		}
 		for (auto& obj : m_lEnvironmentObjects) {
+			if (obj) obj->RenderShadow(pd3dCommandList);
+		}
+		for (auto& obj : m_vConstructionObjects) {
 			if (obj) obj->RenderShadow(pd3dCommandList);
 		}
 
@@ -1021,8 +1030,20 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
 		for (auto& obj : m_vGameObjects) {
-			if (obj) obj->Animate(m_fElapsedTime);
-			if (obj->isRender && obj->is_load) obj->Render(pd3dCommandList, pCamera);
+			if (obj->m_objectType != GameObjectType::Toad && obj->m_objectType != GameObjectType::Wasp &&
+				obj->m_objectType != GameObjectType::Wolf && obj->m_objectType != GameObjectType::Bat &&
+				obj->m_objectType != GameObjectType::Snake && obj->m_objectType != GameObjectType::Turtle &&
+				obj->m_objectType != GameObjectType::Raptor && obj->m_objectType != GameObjectType::Snail &&
+				obj->m_objectType != GameObjectType::Spider) {
+				if (obj) obj->Animate(m_fElapsedTime);
+				if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
+			}
+			else {
+				if (!IsDaytime()) {
+					if (obj) obj->Animate(m_fElapsedTime);
+					if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
+				}
+			}
 		}
 		for (auto& obj : m_lEnvironmentObjects) {
 			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
@@ -1125,22 +1146,22 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 
 
-	{
-		// --- 그림자 맵 디버그 출력 ---
-		CShader* pDebugShader = pShaderManager->GetShader("Debug");
-		pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
-		pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
+	//{
+	//	// --- 그림자 맵 디버그 출력 ---
+	//	CShader* pDebugShader = pShaderManager->GetShader("Debug");
+	//	pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
+	//	pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
 
-		// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
-		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
+	//	// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
+	//	pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
 
 
-		// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
-		pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
-		pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
-		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
-	}
+	//	// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
+	//	pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
+	//	pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
+	//	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//	pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+	//}
 }
 
 
@@ -1480,7 +1501,7 @@ void CScene::UpdateShadowTransform()
 void CScene::UpdateLights(float fTimeElapsed)
 {
 	// 1. 빛의 회전 각도를 업데이트합니다.
-	float rotationSpeed = 0.5f; // 속도를 약간 조절
+	float rotationSpeed = 0.75f; // 속도를 약간 조절
 	m_fLightRotationAngle += fTimeElapsed * rotationSpeed;
 	if (m_fLightRotationAngle > 360.0f) m_fLightRotationAngle -= 360.0f;
 
@@ -1559,7 +1580,16 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	// 나무
 	pResourceManager->RegisterPrefab("PineTree", std::make_shared<CPineObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
-	pResourceManager->RegisterPrefab("BirchTree", std::make_shared<CBirchObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+
+	auto pBirchPrefab = std::make_shared<CBirchObject>(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	pBirchPrefab->m_bIsPrefab = true;
+
+	int materialIndexToChange = 1;
+	UINT albedoTextureSlot = 0;
+	const wchar_t* textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
+	ChangeAlbedoTexture(pBirchPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+
+	pResourceManager->RegisterPrefab("BirchTree", pBirchPrefab);
 
 	// 바위
 	pResourceManager->RegisterPrefab("RockClusterA", std::make_shared<CRockClusterAObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));

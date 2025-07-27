@@ -2520,19 +2520,102 @@ CStaticObject::CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	if (pInFile) fclose(pInFile);
 }
 
+void UserObject::EquipTool(ToolType type)
+{
+	if (m_pSword) m_pSword->isRender = false;
+	if (m_pAxe) m_pAxe->isRender = false;
+	if (m_pPickaxe) m_pPickaxe->isRender = false;
+	if (m_pHammer) m_pHammer->isRender = false;
+
+	// 현재 장착한 도구 정보 초기화
+	m_pEquippedTool = nullptr;
+	m_eCurrentTool = ToolType::None;
+
+	// type에 해당하는 도구만 보이게 만듬
+	switch (type)
+	{
+	case ToolType::Sword:
+		if (m_pSword) {
+			m_pSword->isRender = true;
+			m_pEquippedTool = m_pSword;
+			m_eCurrentTool = type;
+		}
+		break;
+	case ToolType::Axe:
+		if (m_pAxe) {
+			m_pAxe->isRender = true;
+			m_pEquippedTool = m_pAxe;
+			m_eCurrentTool = type;
+		}
+		break;
+	case ToolType::Pickaxe:
+		if (m_pPickaxe) {
+			m_pPickaxe->isRender = true;
+			m_pEquippedTool = m_pPickaxe;
+			m_eCurrentTool = type;
+		}
+		break;
+	case ToolType::Hammer:
+		if (m_pHammer) {
+			m_pHammer->isRender = true;
+			m_pEquippedTool = m_pHammer;
+			m_eCurrentTool = type;
+		}
+		break;
+	case ToolType::None:
+	default:
+		// 모든 도구가 꺼진 상태로 함수 종료
+		break;
+	}
+}
 UserObject::UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CLoadedModelInfo* pModel, int nAnimationTracks, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	CLoadedModelInfo* pUserModel = pModel;
 	if (!pUserModel) pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Hu_M_FullBody.bin", pGameFramework);
 	SetChild(pUserModel->m_pModelRootObject, true);
 
-	AddObject(pd3dDevice, pd3dCommandList, "thumb_02_r", "Model/Sword_01.bin", pGameFramework, XMFLOAT3(0.05, 0.00, -0.05), XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
 	AddObject(pd3dDevice, pd3dCommandList, "Helmet", "Model/Hair_01.bin", pGameFramework, XMFLOAT3(0, 0.1, 0), XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
-	//AddWeapon(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Boots_Peasant_Armor", "Model/Boots_Peasant_Armor.bin");
-	//AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, XMFLOAT3(-0.25, 0.1, 0), XMFLOAT3(90, 0, 90), XMFLOAT3(1, 1, 1));
+	
+	m_pSword = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Sword_A.bin", pGameFramework)->m_pModelRootObject;
+	CGameObject* handFrame = FindFrame("thumb_01_r");
+	if (handFrame)
+	{
+		m_pSword->SetPosition(0.0f, -0.15f, -0.03f);
+		m_pSword->SetRotation(0.0f, 20.0f, 0.0f);
+		handFrame->SetChild(m_pSword);
+	}
+	m_pAxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Ax_B.bin", pGameFramework)->m_pModelRootObject;
+	handFrame = FindFrame("thumb_02_r");
+	if (handFrame)
+	{
+		m_pAxe->SetPosition(0.0f, -0.15f, -0.03f);
+		m_pAxe->SetRotation(0.0f, 20.0f, 0.0f);
+		handFrame->SetChild(m_pAxe);
+	}
+	m_pPickaxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Chisel.bin", pGameFramework)->m_pModelRootObject;
+	handFrame = FindFrame("thumb_03_r");
+	if (handFrame)
+	{
+		m_pPickaxe->SetPosition(-0.03f, -0.15f, -0.03f);
+		m_pPickaxe->SetRotation(0.0f, 20.0f, 0.0f);
+		handFrame->SetChild(m_pPickaxe);
+	}
+	m_pHammer = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Hammer_A.bin", pGameFramework)->m_pModelRootObject;
+	handFrame = FindFrame("middle_01_r");
+	if (handFrame)
+	{
+		m_pHammer->SetPosition(0.01f, -0.1f, -0.06f);
+		m_pHammer->SetRotation(45.0f, -33.0f, -10.0f);
+		handFrame->SetChild(m_pHammer);
+	}
 
-	XMFLOAT3 offset{ -0.230000, 0.040000, -0.010000 }, scale{ 1.10000, 1.250000, 1.150000 };
-	AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, offset, XMFLOAT3(85, 0, 90), scale);
+	if (m_pSword) m_pSword->isRender = true;
+	if (m_pAxe) m_pAxe->isRender = false;
+	if (m_pPickaxe) m_pPickaxe->isRender = false;
+	if (m_pHammer) m_pHammer->isRender = false;
+
+	m_pEquippedTool = m_pSword;
+	m_eCurrentTool = ToolType::Sword;
 
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pUserModel);
 }
@@ -2598,10 +2681,11 @@ void UserObject::ChangeAnimation(PlayerInput inputData)
 	else if (inputData.MoveBackward) on_track = 2;
 	else if (inputData.WalkLeft) on_track = 3;
 	else if (inputData.WalkRight) on_track = 4;
-	else if (inputData.Jump) {}
+	else if (inputData.Jump) on_track = 9;
+	else if (inputData.Hit) on_track = 15;
 	else if (inputData.Interact) {}
 	else on_track = 0;
-
+	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->SetTrackPosition(on_track, 0.f);
 	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->SetTrackEnable(on_track, true);
 }
 

@@ -44,6 +44,7 @@ void GameObject::MoveForward(float fDistance)
 		auto& other_obj = GameObject::gameObjects[other_info->u_id];
 		if (!other_obj || !other_obj->is_alive) continue;
 		if (other_obj->Gethp() <= 0) continue;
+		if (!other_obj->IsRenderObj()) continue;
 		if (this->GetType() == OBJECT_TYPE::OB_BAT)
 		{
 			if (other_obj->GetType() != OBJECT_TYPE::OB_TREE) continue;
@@ -118,6 +119,7 @@ void GameObject::MoveForward(float fDistance)
 		for (auto& o_obj : oresults) {
 			if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
 			if (GameObject::gameObjects[o_obj->u_id]->Gethp() <= 0) continue;
+			if (!GameObject::gameObjects[o_obj->u_id]->IsRenderObj()) continue;
 			if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
 			auto t = GameObject::gameObjects[o_obj->u_id]->GetType();
 			if (this->GetType() == OBJECT_TYPE::OB_BAT)
@@ -125,6 +127,13 @@ void GameObject::MoveForward(float fDistance)
 				if (t != OBJECT_TYPE::OB_TREE) continue;
 			}
 			if (testOBBX.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
+			{
+				test_move.x = GetPosition().x;
+				break;
+			}
+		}
+		for (auto& st_obj : GameObject::ConstructObjects) {
+			if (testOBBX.Intersects(st_obj->world_obb))
 			{
 				test_move.x = GetPosition().x;
 				break;
@@ -154,9 +163,17 @@ void GameObject::MoveForward(float fDistance)
 		for (auto& o_obj : oresults) {
 			if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
 			if (GameObject::gameObjects[o_obj->u_id]->Gethp() <= 0) continue;
+			if (!GameObject::gameObjects[o_obj->u_id]->IsRenderObj()) continue;
 			if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
 			auto t = GameObject::gameObjects[o_obj->u_id]->GetType();
 			if (testOBBZ.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
+			{
+				test_move.z = GetPosition().z;
+				break;
+			}
+		}
+		for (auto& st_obj : GameObject::ConstructObjects) {
+			if (testOBBX.Intersects(st_obj->world_obb))
 			{
 				test_move.z = GetPosition().z;
 				break;
@@ -209,6 +226,7 @@ void GameObject::Rotate(float fPitch, float fYaw, float fRoll)
 	for (auto& o_obj : oresults) {
 		auto& other_obj = GameObject::gameObjects[o_obj->u_id];
 		if (!other_obj || !other_obj->is_alive || other_obj->Gethp() <= 0) continue;
+		if (!other_obj->IsRenderObj()) continue;
 		if (this->GetType() == OBJECT_TYPE::OB_BAT)
 		{
 			if (other_obj->GetType() != OBJECT_TYPE::OB_TREE) continue;
@@ -217,6 +235,16 @@ void GameObject::Rotate(float fPitch, float fYaw, float fRoll)
 		{
 			XMVECTOR myCenter = XMLoadFloat3(&GetPosition());
 			XMVECTOR otherCenter = XMLoadFloat3(&other_obj->world_obb.Center);
+			XMVECTOR pushDir = XMVector3Normalize(XMVectorSubtract(myCenter, otherCenter));
+			totalPushOutVector = XMVectorAdd(totalPushOutVector, pushDir);
+			collisionCount++;
+		}
+	}
+	for (auto& st_obj : GameObject::ConstructObjects) {
+		if (testOBB.Intersects(st_obj->world_obb))
+		{
+			XMVECTOR myCenter = XMLoadFloat3(&GetPosition());
+			XMVECTOR otherCenter = XMLoadFloat3(&st_obj->world_obb.Center);
 			XMVECTOR pushDir = XMVector3Normalize(XMVectorSubtract(myCenter, otherCenter));
 			totalPushOutVector = XMVectorAdd(totalPushOutVector, pushDir);
 			collisionCount++;

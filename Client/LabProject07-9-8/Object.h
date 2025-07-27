@@ -58,6 +58,13 @@ enum class GameObjectType : int {
 	Furnace
 
 };
+enum class ToolType : int {
+	None,
+	Sword,
+	Axe,
+	Pickaxe,
+	Hammer
+};
 
 enum class ANIMATION_TYPE;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -350,6 +357,15 @@ class UserObject : public CGameObject
 public:
 	int on_track = 0;
 
+	ToolType m_eCurrentTool;
+	CGameObject* m_pEquippedTool = nullptr;
+	CGameObject* m_pSword = nullptr;
+	CGameObject* m_pAxe = nullptr;
+	CGameObject* m_pPickaxe = nullptr;
+	CGameObject* m_pHammer = nullptr;
+
+	void EquipTool(ToolType type);
+
 	UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CLoadedModelInfo* pModel, int nAnimationTracks, CGameFramework* pGameFramework);
 	virtual ~UserObject();
 
@@ -431,7 +447,7 @@ public:
 class CTreeObject : virtual public CGameObject
 {
 public:
-	CTreeObject() { m_objectType = GameObjectType::Tree; };
+	CTreeObject() { m_objectType = GameObjectType::Tree; hp = 30; };
 	CTreeObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) { m_objectType = GameObjectType::Tree; };
 	CTreeObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) {};
 	virtual ~CTreeObject() {};
@@ -503,7 +519,7 @@ public:
 class CRockObject : virtual public CGameObject
 {
 public:
-	CRockObject() { m_objectType = GameObjectType::Rock; };
+	CRockObject() { m_objectType = GameObjectType::Rock; hp = 30; };
 	CRockObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) { m_objectType = GameObjectType::Rock; };
 	CRockObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) {};
 	virtual ~CRockObject() {};

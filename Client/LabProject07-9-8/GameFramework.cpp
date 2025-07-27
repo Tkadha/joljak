@@ -55,6 +55,50 @@ void CGameFramework::ProcessPacket(char* packet)
 		ChangeGameState(GameState::Ending);
 	}
 	break;
+	case E_PACKET::E_GAME_NEW: {
+		ChangeGameState(GameState::Lobby);
+		m_pScene->ClearObj();
+		m_pScene->NewGameBuildObj();
+		m_pPlayer->PlayerHunger = 100.0f;
+		m_pPlayer->PlayerThirst = 100.0f;
+		m_pPlayer->PlayerLevel = 1;
+		m_pPlayer->Playerhp = 300;
+		m_pPlayer->Maxhp = 300;
+		m_pPlayer->Playerstamina = 150;
+		m_pPlayer->Maxstamina = 150;
+		m_pPlayer->StatPoint = 5;
+		m_pPlayer->PlayerAttack = 10;
+		m_pPlayer->PlayerSpeed = 10.0f;
+		m_pPlayer->PlayerSpeedLevel = 0;
+		m_pPlayer->Playerxp = 0;
+		m_pPlayer->Totalxp = 20;
+	}
+	break;
+	case E_PACKET::E_P_RESPAWN:{
+		// 인벤토리 초기화
+	}
+	break;
+	case E_PACKET::E_P_WEAPON_CHANGE:
+	{
+		WEAPON_CHANGE_PACKET* r_packet = reinterpret_cast<WEAPON_CHANGE_PACKET*>(packet);
+		if (m_pScene->PlayerList.find(r_packet->uid) != m_pScene->PlayerList.end()) {
+			switch (r_packet->weapon_type) {
+			case 1:
+				m_pScene->PlayerList[r_packet->uid]->EquipTool(ToolType::Sword);
+				break;
+			case 2:
+				m_pScene->PlayerList[r_packet->uid]->EquipTool(ToolType::Axe);
+				break;
+			case 3:
+				m_pScene->PlayerList[r_packet->uid]->EquipTool(ToolType::Pickaxe);
+				break;
+			case 4:
+				m_pScene->PlayerList[r_packet->uid]->EquipTool(ToolType::Hammer);
+				break;
+			}
+		}
+	}
+	break;
 	case E_PACKET::E_P_POSITION:
 	{
 		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
@@ -380,6 +424,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 		m_pd3dSrvDescriptorHeapForImGui->GetGPUDescriptorHandleForHeapStart()
 	);
 	InitializeCraftItems();
+	InitializeBuildRecipes();
 	ItemManager::Initialize();
 	InitializeItemIcons();
 	m_imGuiLobbyBackgroundTextureId = LoadIconTexture(L"lobby.png");
@@ -678,7 +723,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			switch (wParam)
 			{
 				case VK_ESCAPE:
-					::PostQuitMessage(0);
+					//::PostQuitMessage(0);
 					break;
 				case VK_RETURN:
 					break;
@@ -1071,6 +1116,8 @@ void CGameFramework::BuildObjects()
 	m_pPlayer->SetOBB(position, size, rotation);
 	m_pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
 
+	//LoadTools();
+
 #ifdef ONLINE
 	NetworkManager& nw = NetworkManager::GetInstance();
 	OBJ_OBB_PACKET p;
@@ -1371,7 +1418,6 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 0.8f, 1.2f, XMFLOAT3{ 0.f,1.f,-1.f });
-			gameObj->m_localOBB.Center.y += 30.0f;
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
@@ -1900,6 +1946,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 			m_pScene->m_vConstructionObjects.push_back(gameObj);
 		}
+		break;
 		default:
 			break;
 		}
@@ -1960,53 +2007,55 @@ void CGameFramework::ProcessInput()
 			else m_pPlayer->keyInput(pKeysBuffer);
 
 
-			// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
-			UCHAR toggleKeys[] = { 'R','1','2','3','4' /*, 다른 키들 */};
-			for (UCHAR key : toggleKeys)
+			for (int i = 0; i < 5; ++i)
 			{
-				if (pKeysBuffer[key] & 0xF0)
+				// '1' 키부터 '5' 키까지 확인
+				if (pKeysBuffer['1' + i] & 0xF0)
 				{
-					if (!keyPressed[key])
+					// 키가 처음 눌리는 순간에만 실행
+					if (!keyPressed['1' + i])
 					{
-						toggleStates[key] = !toggleStates[key];
-						keyPressed[key] = true;
-						// 토글된 상태에 따른 동작 수행
-						if (key == 'R')
+						// [핵심 수정] 핫바 인덱스가 실제로 변경되었을 때만 장착 로직을 실행
+						if (m_SelectedHotbarIndex != i)
 						{
-							obbRender = toggleStates[key];
-						}
+							m_SelectedHotbarIndex = i; // 인덱스 변경
 
-						if (key == '1')
-						{
-							m_pPlayer->EquipTool(ToolType::Sword);							
+							// --- 선택된 핫바 슬롯의 아이템에 따라 도구 장착 ---
+							InventorySlot& selectedSlot = m_inventorySlots[m_SelectedHotbarIndex];
+
+							if (selectedSlot.IsEmpty())
+							{
+								m_pPlayer->EquipTool(ToolType::Sword); // 빈 슬롯은 기본 무기(검)
+							}
+							else
+							{
+								// [수정] 아이템 이름을 가져와서 '==' 연산자로 정확하게 비교합니다.
+								std::string itemName = selectedSlot.item->GetName();
+
+								if (itemName == "wooden_sword" || itemName == "stone_sword" || itemName == "iron_sword") {
+									m_pPlayer->EquipTool(ToolType::Sword);
+								}
+								else if (itemName == "wooden_axe" || itemName == "stone_axe" || itemName == "iron_axe") {
+									m_pPlayer->EquipTool(ToolType::Axe);
+								}
+								else if (itemName == "wooden_pickaxe" || itemName == "stone_pickaxe" || itemName == "iron_pickaxe") {
+									m_pPlayer->EquipTool(ToolType::Pickaxe);
+								}
+								else if (itemName == "wooden_hammer" || itemName == "stone_hammer" || itemName == "iron_hammer") {
+									m_pPlayer->EquipTool(ToolType::Hammer);
+								}
+								else {
+									// 도구가 아닌 아이템을 선택했을 경우 기본 무기(검) 장착
+									m_pPlayer->EquipTool(ToolType::Sword);
+								}
+							}
 						}
-						if (key == '2')
-						{
-							m_pPlayer->EquipTool(ToolType::Axe);
-						}
-						if (key == '3')
-						{
-							m_pPlayer->EquipTool(ToolType::Pickaxe);
-						}
-						if (key == '4')
-						{
-							m_pPlayer->EquipTool(ToolType::Hammer);
-						}
-						// 다른 키에 대한 처리 추가
+						keyPressed['1' + i] = true;
 					}
 				}
 				else
 				{
-					keyPressed[key] = false;
-				}
-			}
-
-			for (int i = 0; i < 5; ++i)
-			{
-				if (GetAsyncKeyState('1' + i) & 0x8000)
-				{
-					m_SelectedHotbarIndex = i;
-					break;
+					keyPressed['1' + i] = false;
 				}
 			}
 			// 카메라 모드에 따른 입력 처리 (기존 코드와 동일)
@@ -2123,6 +2172,7 @@ void CGameFramework::AnimateObjects()
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 
 	
+	if (m_pScene) m_pScene->UpdateLights(fTimeElapsed);
 	if (m_pScene) m_pScene->AnimateObjects(fTimeElapsed);
 	if (m_pPlayer) m_pPlayer->Animate(fTimeElapsed);
 	
@@ -2172,7 +2222,7 @@ void CGameFramework::FrameAdvance()
 			case E_PACKET::E_P_LOGIN:
 			{
 				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/Player.bin", this);
-				int animate_count = 15;
+				int animate_count = 16;
 				m_pScene->PlayerList[log.ID] = std::make_unique<UserObject>(m_pd3dDevice, m_pd3dUploadCommandList, pUserModel, animate_count, this);
 				m_pScene->PlayerList[log.ID]->m_objectType = GameObjectType::Player;
 				m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
@@ -2336,19 +2386,25 @@ void CGameFramework::FrameAdvance()
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
+
+	// 도구 위치 잡기용 추가
+	//OnImGuiRender();
+	//UpdateToolTransforms();
+	//--------------------
 	
 	///////////////////////////////////////////////////////////// 아이템 핫바
 	
-		const int HotbarCount = 5;
-		const float SlotSize = 54.0f;
-		const float SlotSpacing = 6.0f;
-		const float ExtraPadding = 18.0f;
+	ImVec2 displaySize = ImGui::GetIO().DisplaySize;
 
-		const float TotalWidth = (SlotSize * HotbarCount) + (SlotSpacing * (HotbarCount - 1));
-		const float WindowWidth = TotalWidth + ExtraPadding;
+	// --- 1. 핫바 UI (화면 왼쪽 하단) ---
+	const int HotbarCount = 5;
+	const float SlotSize = displaySize.x * 0.03f; // 화면 너비의 3%
+	const float SlotSpacing = displaySize.x * 0.005f;
+	const float WindowWidth = (SlotSize * HotbarCount) + (SlotSpacing * (HotbarCount - 1)) + 20.0f;
+	const float WindowHeight = SlotSize + 20.0f;
 
-		ImVec2 displaySize = ImGui::GetIO().DisplaySize;
-		ImVec2 hotbarPos = ImVec2(30.0f, displaySize.y - 80.0f);
+	// 위치를 화면 너비와 높이에 대한 비율로 설정
+	ImVec2 hotbarPos = ImVec2(displaySize.x * 0.02f, displaySize.y * 0.9f);
 
 		if (m_eGameState == GameState::InGame) {
 			ImGui::SetNextWindowPos(hotbarPos);
@@ -2406,12 +2462,14 @@ void CGameFramework::FrameAdvance()
 			//////////////////////////////////////////////////플레이어 UI
 
 			{
-				const float hudWidth = 300.0f;
-				const float hudHeight = 100.0f;
-				const float barWidth = 100.0f;
-				const float barHeight = 15.0f;
+				const float hudWidth = displaySize.x * 0.18f;
+				const float hudHeight = displaySize.y * 0.15f;
+				const float barWidth = displaySize.x * 0.07f;
 
-				ImVec2 hudPos = ImVec2(displaySize.x - hudWidth + 10.0f, displaySize.y - hudHeight);
+				// [추가] hudHeight를 기준으로 ProgressBar의 높이를 계산합니다.
+				const float barHeight = hudHeight * 0.15f; // 예: HUD 창 높이의 15%
+
+				ImVec2 hudPos = ImVec2(displaySize.x - hudWidth - (displaySize.x * 0.02f), displaySize.y - hudHeight - (displaySize.y * 0.01f));
 
 				ImGui::SetNextWindowPos(hudPos);
 				ImGui::SetNextWindowSize(ImVec2(hudWidth, hudHeight));
@@ -2498,35 +2556,34 @@ void CGameFramework::FrameAdvance()
 			for (int i = 0; i < m_inventorySlots.size(); ++i)
 			{
 				ImGui::PushID(i);
-
-				bool isClicked = false;
-
 				ImVec2 pos = ImGui::GetCursorScreenPos();
-				ImGui::Button(" ", ImVec2(slotSize, slotSize)); // 버튼만 깔아줌 (배경 유지용)
-
 				if (!m_inventorySlots[i].IsEmpty())
 				{
-					// 아이콘 출력
 					Item* item = m_inventorySlots[i].item.get();
 					ImTextureID icon = item->GetIconHandle();
-					if (icon)
+
+					// [수정] ImageButton의 올바른 사용법
+					// 1번째 인자: 버튼의 고유 ID (문자열)
+					// 2번째 인자: 이미지 텍스처 ID
+					// 3번째 인자: 버튼 크기
+					if (ImGui::ImageButton(std::to_string(i).c_str(), icon, ImVec2(slotSize, slotSize)))
 					{
-						ImGui::GetWindowDrawList()->AddImage(
-							icon,
-							pos,
-							ImVec2(pos.x + slotSize, pos.y + slotSize)
-						);
+						// 클릭 시 로직 (아래 IsItemClicked 블록으로 이동)
 					}
 
-					// 수량 텍스트 표시
-					ImVec2 min = pos;
-					ImVec2 max = ImVec2(pos.x + slotSize, pos.y + slotSize);
-					ImVec2 textPos = ImVec2(min.x + 2, max.y - 18);
-					ImGui::GetWindowDrawList()->AddText(
-						textPos,
-						IM_COL32_WHITE,
-						std::to_string(m_inventorySlots[i].quantity).c_str()
-					);
+					// 수량 텍스트를 버튼 바로 위에 그립니다.
+					ImVec2 min = ImGui::GetItemRectMin(); // 방금 그려진 ImageButton의 위치를 가져옴
+					float font_size = ImGui::GetFontSize();
+					ImVec2 textPos = ImVec2(min.x + 5, min.y + slotSize - font_size - 5);
+					ImGui::GetWindowDrawList()->AddText(textPos, IM_COL32_WHITE, std::to_string(m_inventorySlots[i].quantity).c_str());
+				}
+				else
+				{
+					// 빈 슬롯은 일반 버튼으로 표시
+					if (ImGui::Button(" ", ImVec2(slotSize, slotSize)))
+					{
+						// 클릭 시 로직 (아래 IsItemClicked 블록으로 이동)
+					}
 				}
 
 				// ✅ 선택 테두리 강조
@@ -2839,10 +2896,12 @@ void CGameFramework::FrameAdvance()
 			{
 				// 이전에 선택한 것과 다른 것을 선택했다면
 				if (m_nSelectedBuildingIndex != i) {
-					m_nSelectedBuildingIndex = i;
-					m_bIsPreviewVisible = true; // 프리뷰를 보이게 설정
-					// ConstructionSystem에 선택된 프리팹 이름으로 건설 모드 진입을 알림
-					m_pConstructionSystem->EnterBuildMode(buildableItems[i].prefabKey, m_pCamera);
+					if (CheckBuildMaterials(buildableItems[i].prefabKey)) {
+						m_nSelectedBuildingIndex = i;
+						m_bIsPreviewVisible = true; // 프리뷰를 보이게 설정
+						// ConstructionSystem에 선택된 프리팹 이름으로 건설 모드 진입을 알림
+						m_pConstructionSystem->EnterBuildMode(buildableItems[i].prefabKey, m_pCamera);
+					}
 				}
 				else { // 이미 선택된 것을 다시 클릭하면 선택 해제
 					m_nSelectedBuildingIndex = -1;
@@ -2860,6 +2919,8 @@ void CGameFramework::FrameAdvance()
 		if (ImGui::Button("Install (R)"))
 		{
 			// 1. ConstructionSystem에 설치를 요청하고 복제할 원본 오브젝트를 받아옵니다.
+			const char* prefabKeyToConsume = buildableItems[m_nSelectedBuildingIndex].prefabKey;
+			ConsumeBuildMaterials(prefabKeyToConsume);
 			CGameObject* pObjectToClone = m_pConstructionSystem->ConfirmPlacement();
 			XMFLOAT3 previewPos = pObjectToClone->GetPosition();
 
@@ -3809,4 +3870,191 @@ void CGameFramework::CheckAndToggleFurnaceUI()
 			}
 		}
 	}
+}
+
+
+
+
+
+
+void CGameFramework::LoadTools()
+{
+	// 플레이어 오브젝트를 찾아야 합니다. 씬에서 플레이어를 찾는 로직이 필요합니다.
+	// 여기서는 m_pPlayer가 플레이어 오브젝트를 가리킨다고 가정합니다.
+	CGameObject* pPlayer = m_pScene->m_pPlayer;
+	if (!pPlayer) return;
+
+	// 초기값 설정
+	m_swordTransform.position = { 0.01f, 0.0f, 0.0f };
+	m_axeTransform.position = { -0.2f, 0.0f, 0.0f };
+	m_pickaxeTransform.position = { 0.5f, 0.0f, 0.0f };
+	m_hammerTransform.position = { 0.2f, 0.0f, 0.0f };
+	m_hammerTransform.rotation = { 45.0f, 0.0f, 0.0f };
+
+	// 칼 로드 및 부착
+	m_pSword = m_pPlayer->m_pSword;
+	m_pAxe = m_pPlayer->m_pAxe;
+	m_pPickaxe = m_pPlayer->m_pPickaxe;
+	m_pHammer = m_pPlayer->m_pHammer;
+}
+
+void CGameFramework::OnImGuiRender()
+{
+	// 1. 원하는 기본 창 크기를 ImVec2(가로, 세로) 형태로 정의합니다.
+	ImVec2 toolWindowSize = ImVec2(2000, 1000); 
+
+	// 2. 다음에 생성될 창의 크기를 미리 설정합니다.
+	// ImGuiCond_FirstUseEver 플래그는 프로그램 첫 실행 시에만 이 크기를 강제하고,
+	// 그 이후에는 사용자가 직접 조절한 창 크기를 기억해서 사용하게 해주는 유용한 옵션입니다.
+	ImGui::SetNextWindowSize(toolWindowSize, ImGuiCond_FirstUseEver);
+
+	ImGui::Begin("Tool Transform Editor");
+
+	if (ImGui::CollapsingHeader("Sword"))
+	{
+		ImGui::DragFloat3("Position##Sword", &m_swordTransform.position.x, 0.01f);
+		ImGui::DragFloat3("Rotation##Sword", &m_swordTransform.rotation.x, 1.0f);
+	}
+	if (ImGui::CollapsingHeader("Axe"))
+	{
+		ImGui::DragFloat3("Position##Axe", &m_axeTransform.position.x, 0.01f);
+		ImGui::DragFloat3("Rotation##Axe", &m_axeTransform.rotation.x, 1.0f);
+	}
+	if (ImGui::CollapsingHeader("Pickaxe"))
+	{
+		ImGui::DragFloat3("Position##Pickaxe", &m_pickaxeTransform.position.x, 0.01f);
+		ImGui::DragFloat3("Rotation##Pickaxe", &m_pickaxeTransform.rotation.x, 1.0f);
+	}
+	if (ImGui::CollapsingHeader("Hammer"))
+	{
+		ImGui::DragFloat3("Position##Hammer", &m_hammerTransform.position.x, 0.01f);
+		ImGui::DragFloat3("Rotation##Hammer", &m_hammerTransform.rotation.x, 1.0f);
+	}
+
+	ImGui::End();
+}
+
+void CGameFramework::UpdateToolTransforms()
+{
+	XMMATRIX mtxScale, mtxRotate, mtxTranslate;
+
+	if (m_pSword)
+	{
+		mtxScale = XMMatrixScaling(1.0f, 1.0f, 1.0f); // 필요시 스케일 값도 변수로 조절 가능
+		mtxRotate = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(m_swordTransform.rotation.x),
+			XMConvertToRadians(m_swordTransform.rotation.y),
+			XMConvertToRadians(m_swordTransform.rotation.z)
+		);
+		mtxTranslate = XMMatrixTranslation(
+			m_swordTransform.position.x,
+			m_swordTransform.position.y,
+			m_swordTransform.position.z
+		);
+		XMStoreFloat4x4(&m_pSword->m_xmf4x4ToParent, mtxScale * mtxRotate * mtxTranslate);
+	}
+	if (m_pAxe)
+	{
+		mtxScale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+		mtxRotate = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(m_axeTransform.rotation.x),
+			XMConvertToRadians(m_axeTransform.rotation.y),
+			XMConvertToRadians(m_axeTransform.rotation.z)
+		);
+		mtxTranslate = XMMatrixTranslation(
+			m_axeTransform.position.x,
+			m_axeTransform.position.y,
+			m_axeTransform.position.z
+		);
+		XMStoreFloat4x4(&m_pAxe->m_xmf4x4ToParent, mtxScale * mtxRotate * mtxTranslate);
+	}
+	if (m_pPickaxe)
+	{
+		mtxScale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+		mtxRotate = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(m_pickaxeTransform.rotation.x),
+			XMConvertToRadians(m_pickaxeTransform.rotation.y),
+			XMConvertToRadians(m_pickaxeTransform.rotation.z)
+		);
+		mtxTranslate = XMMatrixTranslation(
+			m_pickaxeTransform.position.x,
+			m_pickaxeTransform.position.y,
+			m_pickaxeTransform.position.z
+		);
+		XMStoreFloat4x4(&m_pPickaxe->m_xmf4x4ToParent, mtxScale * mtxRotate * mtxTranslate);
+	}
+	if (m_pHammer)
+	{
+		mtxScale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+		mtxRotate = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(m_hammerTransform.rotation.x),
+			XMConvertToRadians(m_hammerTransform.rotation.y),
+			XMConvertToRadians(m_hammerTransform.rotation.z)
+		);
+		mtxTranslate = XMMatrixTranslation(
+			m_hammerTransform.position.x,
+			m_hammerTransform.position.y,
+			m_hammerTransform.position.z
+		);
+		XMStoreFloat4x4(&m_pHammer->m_xmf4x4ToParent, mtxScale * mtxRotate * mtxTranslate);
+	}
+}
+void CGameFramework::InitializeBuildRecipes()
+{
+	m_mapBuildRecipes["wood_wall"] = { {"wood", 4} }; // 나무 벽: 나무 4개 필요
+	m_mapBuildRecipes["furnace"] = { {"stone", 10} }; // 화로: 돌 10개 필요
+	// ... 다른 건축물 레시피도 여기에 추가 ...
+}
+
+bool CGameFramework::CheckBuildMaterials(const std::string& buildableName)
+{
+	if (m_mapBuildRecipes.find(buildableName) == m_mapBuildRecipes.end()) return false; // 레시피 없음
+
+	const auto& materials = m_mapBuildRecipes[buildableName];
+	for (const auto& mat : materials)
+	{
+		int playerQuantity = 0;
+		for (const auto& slot : m_inventorySlots)
+		{
+			if (!slot.IsEmpty() && slot.item->GetName() == mat.MaterialName)
+			{
+				playerQuantity += slot.quantity;
+			}
+		}
+		if (playerQuantity < mat.Quantity) return false; // 재료 부족
+	}
+	return true; // 재료 충분
+}
+
+void CGameFramework::ConsumeBuildMaterials(const std::string& buildableName)
+{
+	// 먼저 재료가 충분한지 다시 확인
+	
+
+	const auto& materials = m_mapBuildRecipes[buildableName];
+	for (const auto& mat : materials)
+	{
+		int remaining = mat.Quantity;
+		for (InventorySlot& slot : m_inventorySlots)
+		{
+			if (remaining > 0 && !slot.IsEmpty() && slot.item->GetName() == mat.MaterialName)
+			{
+				if (slot.quantity >= remaining)
+				{
+					slot.quantity -= remaining;
+					remaining = 0;
+				}
+				else
+				{
+					remaining -= slot.quantity;
+					slot.quantity = 0;
+				}
+
+				if (slot.quantity == 0) {
+					slot.item = nullptr; // 아이템이 없으면 슬롯 비우기
+				}
+			}
+		}
+	}
+	
 }

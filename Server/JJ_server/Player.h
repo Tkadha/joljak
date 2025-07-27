@@ -157,11 +157,30 @@ public:
 		m_direction = 0;
 		m_currentState = ServerPlayerState::Idle;
 		m_pPlayerUpdatedContext = NULL;
+
+		Playerhp = 300;
+		Maxhp = 300;
+		Playerstamina = 150;
+		Maxstamina = 150;
+		PlayerHunger = 100.0f;
+		PlayerThirst = 100.0f;
+		Speed_stat = 0;
+	}
+	void RespawnPlayer()
+	{
+		m_Position = XMFLOAT3(8000.f, Terrain::terrain->GetHeight(8000.f, 8000.f), 8000.f);	// 테스트용 임의 지정
+		m_Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		Playerhp.store(Maxhp.load());
+		Playerstamina.store(Maxstamina.load());
+		PlayerHunger.store(100.0f);
+		PlayerThirst.store(100.0f);
 	}
 public:
 	void BroadCastPosPacket();
 	void BroadCastRotatePacket();
 	void BroadCastInputPacket();
+	void BroadCastWeaponPacket(WEAPON_CHANGE_PACKET);
+	void BroadCastHitPacket(PlayerInput pi);
 	void SendHpPacket(int,int);
 	void SendInvinciblePacket(int, bool);
 	void SendAddPacket(shared_ptr<GameObject>);
@@ -172,5 +191,6 @@ public:
 	void SendTimePacket(float);
 	void SendStartGamePacket();
 	void SendEndGamePacket();
+	void SendNewGamePacket();
 };
 

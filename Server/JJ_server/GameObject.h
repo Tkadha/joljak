@@ -14,7 +14,6 @@ public:
 	}
 };
 
-
 class GameObject : public std::enable_shared_from_this<GameObject>
 {
 	OBJECT_TYPE type;
@@ -31,6 +30,17 @@ public:
 	virtual ~GameObject();
 	void SetID(int id) { o_id = id; }
 	int GetID() { return o_id; }
+
+	bool IsRenderObj()
+	{
+		if (g_is_night) return true;
+
+		return type == OBJECT_TYPE::OB_TREE || type == OBJECT_TYPE::OB_STONE ||
+			type == OBJECT_TYPE::OB_COW || type == OBJECT_TYPE::OB_PIG ||
+			type == OBJECT_TYPE::ST_FURNACE || type == OBJECT_TYPE::ST_WOODWALL || 
+			type == OBJECT_TYPE::OB_GOLEM;
+	}
+
 public:
 	void SetPosition(float x, float y, float z) {
 		xmf4x4._41 = x;

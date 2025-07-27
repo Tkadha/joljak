@@ -666,6 +666,7 @@ void CPlayer::EquipTool(ToolType type)
 	m_pEquippedTool = nullptr;
 	m_eCurrentTool = ToolType::None;
 
+	char weapon_t = -1;
 	// type에 해당하는 도구만 보이게 만듬
 	switch (type)
 	{
@@ -673,7 +674,8 @@ void CPlayer::EquipTool(ToolType type)
 		if (m_pSword) {
 			m_pSword->isRender = true;
 			m_pEquippedTool = m_pSword;   
-			m_eCurrentTool = type;        
+			m_eCurrentTool = type;  
+			weapon_t = 1;
 		}
 		break;
 	case ToolType::Axe:
@@ -681,6 +683,7 @@ void CPlayer::EquipTool(ToolType type)
 			m_pAxe->isRender = true;
 			m_pEquippedTool = m_pAxe;
 			m_eCurrentTool = type;
+			weapon_t = 2;
 		}
 		break;
 	case ToolType::Pickaxe:
@@ -688,6 +691,7 @@ void CPlayer::EquipTool(ToolType type)
 			m_pPickaxe->isRender = true;
 			m_pEquippedTool = m_pPickaxe;
 			m_eCurrentTool = type;
+			weapon_t = 3;
 		}
 		break;
 	case ToolType::Hammer:
@@ -695,6 +699,7 @@ void CPlayer::EquipTool(ToolType type)
 			m_pHammer->isRender = true;
 			m_pEquippedTool = m_pHammer;
 			m_eCurrentTool = type;
+			weapon_t = 4;
 		}
 		break;
 	case ToolType::None:
@@ -702,6 +707,14 @@ void CPlayer::EquipTool(ToolType type)
 		// 모든 도구가 꺼진 상태로 함수 종료
 		break;
 	}
+
+	auto& nwManager = NetworkManager::GetInstance();
+	WEAPON_CHANGE_PACKET p;
+	p.weapon_type = weapon_t;
+	p.material_type = 1; // stone
+	p.type = static_cast<char>(E_PACKET::E_P_WEAPON_CHANGE);
+	p.size = sizeof(WEAPON_CHANGE_PACKET);
+	nwManager.PushSendQueue(p, p.size);
 }
 
 CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, void *pContext, CGameFramework* pGameFramework) : CPlayer(pGameFramework)
@@ -718,32 +731,32 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	CGameObject* handFrame = FindFrame("thumb_01_r"); 
 	if (handFrame)
 	{
-		m_pSword->SetPosition(0.0f, 0.0f, 0.0f);
-		m_pSword->SetRotation(0.0f, 0.0f, 0.0f);
+		m_pSword->SetPosition(0.0f, -0.15f, -0.03f);
+		m_pSword->SetRotation(0.0f, 20.0f, 0.0f);
 		handFrame->SetChild(m_pSword);
 	}
 	m_pAxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Ax_B.bin", pGameFramework)->m_pModelRootObject;
 	handFrame = FindFrame("thumb_02_r");
 	if (handFrame)
 	{
-		m_pAxe->SetPosition(0.0f, 0.0f, 0.0f);
-		m_pAxe->SetRotation(0.0f, 0.0f, 0.0f);
+		m_pAxe->SetPosition(0.0f, -0.15f, -0.03f);
+		m_pAxe->SetRotation(0.0f, 20.0f, 0.0f);
 		handFrame->SetChild(m_pAxe);
 	}
 	m_pPickaxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Chisel.bin", pGameFramework)->m_pModelRootObject;
 	handFrame = FindFrame("thumb_03_r");
 	if (handFrame)
 	{
-		m_pPickaxe->SetPosition(0.0f, 0.0f, 0.0f);
-		m_pPickaxe->SetRotation(0.0f, 0.0f, 0.0f);
+		m_pPickaxe->SetPosition(-0.03f, -0.15f, -0.03f);
+		m_pPickaxe->SetRotation(0.0f, 20.0f, 0.0f);
 		handFrame->SetChild(m_pPickaxe);
 	}
 	m_pHammer = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Hammer_A.bin", pGameFramework)->m_pModelRootObject;
 	handFrame = FindFrame("middle_01_r");
 	if (handFrame)
 	{
-		m_pHammer->SetPosition(0.0f, 0.0f, 0.0f);
-		m_pHammer->SetRotation(0.0f, 0.0f, 0.0f);
+		m_pHammer->SetPosition(0.01f, -0.1f, -0.06f);
+		m_pHammer->SetRotation(45.0f, -33.0f, -10.0f);
 		handFrame->SetChild(m_pHammer);
 	}
 
@@ -755,7 +768,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pEquippedTool = m_pSword;
 	m_eCurrentTool = ToolType::Sword;
 
-	AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, offset, XMFLOAT3(85, 0, 90), scale);
+	//AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, offset, XMFLOAT3(85, 0, 90), scale);
 
 
 
@@ -765,7 +778,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	int changedCount = ChangeTextureForHierarchy(
 		this,                             // 탐색 시작 객체
 		_T("Model/Textures/T_HU_M_Body_05_D.dds"), // 현재 텍스처 경로
-		_T("Model/Textures/T_HU_M_Body_02_D.dds"), // 새 텍스처 경로
+		_T("Model/Textures/T_HU_M_Body_01_D.dds"), // 새 텍스처 경로
 		0,                                         // 변경할 텍스처 슬롯 (예: 알베도)
 		pResourceManager,
 		pd3dCommandList,
@@ -776,7 +789,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	ChangeTextureForHierarchy(
 		this,                             // 탐색 시작 객체
 		_T("Model/Textures/T_HU_M_Head_05_A_D.dds"), // 현재 텍스처 경로
-		_T("Model/Textures/T_HU_M_Head_02_A_D.dds"), // 새 텍스처 경로
+		_T("Model/Textures/T_HU_M_Head_01_A_D.dds"), // 새 텍스처 경로
 		0,                                         // 변경할 텍스처 슬롯 (예: 알베도)
 		pResourceManager,
 		pd3dCommandList,

@@ -12,13 +12,7 @@
 #include <chrono>
 #include "PlayerStateMachine.h" 
 #include <mutex>
-enum class ToolType : int {
-	None,
-	Sword,
-	Axe,
-	Pickaxe,
-	Hammer
-};
+
 
 class CPlayer : public CGameObject
 {

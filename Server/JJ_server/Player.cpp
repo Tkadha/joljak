@@ -207,7 +207,7 @@ void PlayerClient::Update_test(float deltaTime)
         }
         else if (currentInput.Jump && isGrounded) {
             m_currentState = ServerPlayerState::Jumping;
-            m_Velocity.y = 150.0f; // 점프 초기 속도
+            m_Velocity.y = 100.0f; // 점프 초기 속도
         }
         else if (isGrounded && m_currentState == ServerPlayerState::Falling) { // 착지
             m_currentState = ServerPlayerState::Idle; // 착지하면 Idle
@@ -349,7 +349,7 @@ void PlayerClient::Update_test(float deltaTime)
             // 비활성/죽은 객체 제외 (기존 코드와 동일)
             auto& other_obj = GameObject::gameObjects[o_obj->u_id];
             if (!other_obj || !other_obj->is_alive || other_obj->Gethp() <= 0) continue;
-
+            if (!other_obj->IsRenderObj()) continue;
             if (myCurrentOBB.Intersects(other_obj->world_obb))
             {
                 XMVECTOR myCenter = XMLoadFloat3(&m_Position);
@@ -431,6 +431,7 @@ void PlayerClient::Update_test(float deltaTime)
             if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
             if (GameObject::gameObjects[o_obj->u_id]->_hp <= 0) continue;
             if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
+            if (!GameObject::gameObjects[o_obj->u_id]->IsRenderObj()) continue;
             if (testOBBX.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
             {
                 moving_pos.x = m_Position.x;
@@ -472,6 +473,7 @@ void PlayerClient::Update_test(float deltaTime)
         for (auto& o_obj : oresults) {
             if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
             if (GameObject::gameObjects[o_obj->u_id]->_hp <= 0) continue;
+            if (!GameObject::gameObjects[o_obj->u_id]->IsRenderObj()) continue;
             if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
             if (testOBBZ.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
             {
@@ -619,6 +621,31 @@ void PlayerClient::BroadCastInputPacket()
     }
 }
 
+void PlayerClient::BroadCastWeaponPacket(WEAPON_CHANGE_PACKET p)
+{
+    WEAPON_CHANGE_PACKET s_packet = p;
+    s_packet.uid = m_id;
+    for (auto& cl : PlayerClient::PlayerClients) {
+        if (cl.second->state != PC_INGAME) continue;
+        if (cl.second->m_id == m_id) continue; // 나 자신은 제외한다.
+        cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+    }
+}
+
+void PlayerClient::BroadCastHitPacket(PlayerInput pi)
+{
+    INPUT_PACKET s_packet;
+    s_packet.size = sizeof(INPUT_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_P_INPUT);
+    s_packet.inputData = pi;
+    s_packet.uid = m_id;
+    for (auto& cl : PlayerClient::PlayerClients) {
+        if (cl.second->state != PC_INGAME) continue;
+        if (cl.second->m_id == m_id) continue; // 나 자신은 제외한다.
+        cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+    }
+}
+
 void PlayerClient::SendHpPacket(int oid, int hp)
 {
     OBJ_HP_PACKET s_packet;
@@ -756,4 +783,13 @@ void PlayerClient::SendEndGamePacket()
     s_packet.size = sizeof(GAME_END_PACKET);
     s_packet.type = static_cast<char>(E_PACKET::E_GAME_END);
     tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
+void PlayerClient::SendNewGamePacket()
+{
+    NEW_GAME_PACKET s_packet;
+    s_packet.size = sizeof(NEW_GAME_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_GAME_NEW);
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+
 }

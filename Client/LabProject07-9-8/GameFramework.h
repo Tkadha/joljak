@@ -20,6 +20,11 @@
 using namespace Microsoft::WRL; // 추가
 
 
+struct ToolTransform
+{
+	XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };
+	XMFLOAT3 rotation = { 0.0f, 0.0f, 0.0f };
+};
 
 struct CraftMaterial
 {
@@ -48,6 +53,10 @@ enum class GameState
 	Lobby,
 	InGame,
 	Ending
+};
+struct BuildMaterial {
+	std::string MaterialName;
+	int Quantity;
 };
 
 #include <unordered_map>
@@ -125,6 +134,10 @@ public:
 	void ProcessPacket(char* packet);
 
 	void AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id);
+
+	bool CheckBuildMaterials(const std::string& buildableName);
+	void ConsumeBuildMaterials(const std::string& buildableName);
+	void InitializeBuildRecipes();
 private:
 	HINSTANCE					m_hInstance;
 	HWND						m_hWnd; 
@@ -142,6 +155,8 @@ private:
 	bool						m_bBuildMode = false; // 건축 모드 활성화 여부
 	bool						m_bIsPreviewVisible = false; // 프리뷰 오브젝트가 보이는지 여부
 	int							m_nSelectedBuildingIndex = -1; // UI에서 선택한 건축물 인덱스
+
+	std::unordered_map<std::string, std::vector<BuildMaterial>> m_mapBuildRecipes;
 
 	void CheckAndToggleFurnaceUI();
         
@@ -289,5 +304,24 @@ public:
 	// 서버연결 확인코드
 	bool serverConnected = false;
 	std::atomic_bool b_running;
+
+
+
+// 도구 위치 잡기
+private:
+	CGameObject* m_pSword = nullptr;
+	CGameObject* m_pAxe = nullptr;
+	CGameObject* m_pPickaxe = nullptr;
+	CGameObject* m_pHammer = nullptr;
+
+	ToolTransform m_swordTransform;
+	ToolTransform m_axeTransform;
+	ToolTransform m_pickaxeTransform;
+	ToolTransform m_hammerTransform;
+
+public:
+	void LoadTools();              // 도구 로딩을 위한 함수
+	void OnImGuiRender();          // ImGui UI를 그리는 함수
+	void UpdateToolTransforms();   // ImGui 값으로 도구 위치를 업데이트하는 함수
 };
 
