@@ -757,3 +757,12 @@ void PlayerClient::SendEndGamePacket()
     s_packet.type = static_cast<char>(E_PACKET::E_GAME_END);
     tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 }
+
+void PlayerClient::SendNewGamePacket()
+{
+    NEW_GAME_PACKET s_packet;
+    s_packet.size = sizeof(NEW_GAME_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_GAME_NEW);
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+
+}

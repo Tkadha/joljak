@@ -55,6 +55,12 @@ void CGameFramework::ProcessPacket(char* packet)
 		ChangeGameState(GameState::Ending);
 	}
 	break;
+	case E_PACKET::E_GAME_NEW: {
+		ChangeGameState(GameState::Lobby);
+		m_pScene->ClearObj();
+		m_pScene->NewGameBuildObj();
+	}
+	break;
 	case E_PACKET::E_P_POSITION:
 	{
 		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);

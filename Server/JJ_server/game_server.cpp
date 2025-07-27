@@ -469,7 +469,13 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 	break;
 	case E_PACKET::E_GAME_NEW:
 	{
-		if (!g_is_start_game.load()) {		
+		if (!g_is_start_game.load()) {	
+
+			for (auto& cl : PlayerClient::PlayerClients)
+			{
+				auto& player = cl.second;
+				player->SendNewGamePacket();
+			}
 			for (auto& cl : PlayerClient::PlayerClients)
 			{
 				auto& player = cl.second;
@@ -522,6 +528,10 @@ void event_thread()
 					}
 					break;
 					case EVENT_TYPE::E_P_REGENERATE_HP: {
+						if (!g_is_start_game.load()) {
+							EVENT::add_timer(ev, 1500);
+							break;
+						}
 						auto uid = ev.player_id;
 						for (auto it : PlayerClient::PlayerClients) {
 							if (it.second->m_id != uid) continue;
@@ -551,6 +561,10 @@ void event_thread()
 					}
 						break;
 					case EVENT_TYPE::E_P_REGENERATE_STAMINA: {
+						if (!g_is_start_game.load()) {
+							EVENT::add_timer(ev, 750);
+							break;
+						}
 						auto uid = ev.player_id;
 						for (auto it : PlayerClient::PlayerClients) {
 							if (it.second->m_id != uid) continue;
@@ -579,6 +593,10 @@ void event_thread()
 					}
 						break;
 					case EVENT_TYPE::E_P_CONSUME_HUNGER: {
+						if (!g_is_start_game.load()) {
+							EVENT::add_timer(ev, 5000);
+							break;
+						}
 						auto uid = ev.player_id;
 						for (auto it : PlayerClient::PlayerClients) {
 							if (it.second->m_id != uid) continue;
@@ -608,6 +626,10 @@ void event_thread()
 					}
 						break;
 					case EVENT_TYPE::E_P_CONSUME_THIRST: {
+						if (!g_is_start_game.load()) {
+							EVENT::add_timer(ev, 2500);
+							break;
+						}
 						auto uid = ev.player_id;
 						for (auto it : PlayerClient::PlayerClients) {
 							if (it.second->m_id != uid) continue;
@@ -638,6 +660,7 @@ void event_thread()
 					}
 						break;
 					case EVENT_TYPE::E_P_BLEEDING: {
+						if (!g_is_start_game.load()) break;
 						if (ev.end_time < std::chrono::system_clock::now()) break;
 						auto uid = ev.player_id;
 						for (auto it : PlayerClient::PlayerClients) {
@@ -668,6 +691,7 @@ void event_thread()
 					}
 						break;
 					case EVENT_TYPE::E_P_POISON: {
+						if (!g_is_start_game.load()) break;						
 						if (ev.end_time < std::chrono::system_clock::now()) break;
 						auto uid = ev.player_id;
 						for (auto it : PlayerClient::PlayerClients) {
@@ -766,7 +790,7 @@ int main(int argc, char* argv[])
 			g_timer.Tick(120.f);
 			if (!g_is_start_game) continue;
 			float deltaTime = g_timer.GetTimeElapsed(); // Use Tick same deltaTime
-			float time_speed = 1.f;
+			float time_speed = 0.75f;
 			time_accumulator += deltaTime * time_speed;
 			if (time_accumulator > 360.0f) {
 				time_accumulator -= 360.0f;
