@@ -159,6 +159,7 @@ private:
 	std::unordered_map<std::string, std::vector<BuildMaterial>> m_mapBuildRecipes;
 
 	void CheckAndToggleFurnaceUI();
+	void CheckEscape();
         
 	IDXGIFactory4				*m_pdxgiFactory = NULL;
 	IDXGISwapChain3				*m_pdxgiSwapChain = NULL;

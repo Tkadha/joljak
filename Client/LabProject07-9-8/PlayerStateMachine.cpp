@@ -1014,6 +1014,9 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
                 player->Totalxp *= 2;
                 player->StatPoint += 5;
             }
+            if (npc->m_objectType == GameObjectType::Golem) {
+                player->m_pGameFramework->AddItem("ruby", 1);
+            }
         }
 
 

@@ -55,7 +55,8 @@ enum class GameObjectType : int {
 	Spider,
 	Raptor,
 	Golem,
-	Furnace
+	Furnace,
+	Antenna
 
 };
 enum class ToolType : int {

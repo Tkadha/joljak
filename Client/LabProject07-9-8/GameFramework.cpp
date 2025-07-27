@@ -775,6 +775,8 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			case 'K':
 				CheckAndToggleFurnaceUI();
 				break;
+			case 'E':
+				CheckEscape();
 			case 'R':
 				if (m_bBuildMode && m_pConstructionSystem) {
 					m_pConstructionSystem->RotatePreviewObject(-45.0f);
@@ -3865,7 +3867,7 @@ void CGameFramework::CheckAndToggleFurnaceUI()
 {
 	if (!m_pPlayer || !m_pScene) return;
 
-	const float interactionDistance = 150.0f;
+	const float interactionDistance = 100.0f;
 	XMFLOAT3 playerPos = m_pPlayer->GetPosition();
 
 	for (auto& pConstructionObj : m_pScene->m_vConstructionObjects)
@@ -3880,6 +3882,50 @@ void CGameFramework::CheckAndToggleFurnaceUI()
 			{
 				ShowFurnaceUI = !ShowFurnaceUI;
 				return;
+			}
+		}
+	}
+}
+
+void CGameFramework::CheckEscape()
+{
+	if (!m_pPlayer || !m_pScene) return;
+
+	const float interactionDistance = 50.0f;
+	XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+
+	bool hasRuby = false;
+	for (const auto& slot : m_inventorySlots)
+	{
+		if (!slot.IsEmpty() && slot.item->GetName() == "ruby")
+		{
+			hasRuby = true;
+			break; // 루비를 찾았으면 더 이상 확인할 필요가 없습니다.
+		}
+	}
+
+	// [추가] 2. 루비가 없으면 함수를 즉시 종료합니다.
+	if (!hasRuby) return;
+
+	for (auto& pConstructionObj : m_pScene->m_vGameObjects)
+	{
+		// [핵심 수정] 오브젝트의 타입을 직접 비교합니다.
+		if (pConstructionObj && pConstructionObj->m_objectType == GameObjectType::Antenna)
+		{
+			XMFLOAT3 furnacePos = pConstructionObj->GetPosition();
+			float distance = Vector3::Distance(playerPos, furnacePos);
+
+			if (distance <= interactionDistance)
+			{
+				if (m_eGameState != GameState::InGame) break;
+				ChangeGameState(GameState::Ending);
+				{
+					auto& nwManager = NetworkManager::GetInstance();
+					GAME_END_PACKET p;
+					p.type = static_cast<char>(E_PACKET::E_GAME_END);
+					p.size = sizeof(GAME_END_PACKET);
+					nwManager.PushSendQueue(p, p.size);
+				}
 			}
 		}
 	}
