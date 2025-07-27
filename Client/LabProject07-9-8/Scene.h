@@ -121,7 +121,7 @@ public:
 	std::list<CGameObject*> 			m_listGameObjects;
 	std::list<CGameObject*>				m_lEnvironmentObjects;
 	std::unordered_map<std::string, CGameObject*> m_mapBuildPrefabs;
-	
+	std::list<CGameObject*>				heilport_anthena;
 
 	// 파도 오브젝트
 	CWavesObject* m_pWavesObject = nullptr;

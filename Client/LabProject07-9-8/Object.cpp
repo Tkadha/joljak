@@ -2594,7 +2594,14 @@ void UserObject::ChangeAnimation(PlayerInput inputData)
 {
 	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->SetTrackEnable(on_track, false);
 
-	if (inputData.Attack) on_track = 12;
+	if (inputData.Attack) {
+		if (m_equippedToolName.find("Sword") != std::string::npos)
+			on_track = 12;
+		if (m_equippedToolName.find("Axe") != std::string::npos)
+			on_track = 13;
+		if (m_equippedToolName.find("Pickaxe") != std::string::npos)
+			on_track = 14;
+	}
 	else if (inputData.Run) {
 		if (inputData.MoveForward) on_track = 5;
 		else if (inputData.MoveBackward) on_track = 6;
