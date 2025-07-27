@@ -847,10 +847,9 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				AddItem("pork", 30);
 				break;
 			case VK_F1:
-				AddItem("wooden_sword", 1);
-				AddItem("wooden_axe", 1);
-				AddItem("wooden_pickaxe", 1);
-				AddItem("wooden_hammer", 1);
+				AddItem("stone_sword", 1);
+				AddItem("stone_axe", 1);
+				AddItem("stone_pickaxe", 1);
 				break;
 			case VK_F3:
 			{
@@ -2636,33 +2635,22 @@ void CGameFramework::FrameAdvance()
 			{
 				ImGui::PushID(i);
 				ImVec2 pos = ImGui::GetCursorScreenPos();
+				ImGui::InvisibleButton(std::to_string(i).c_str(), ImVec2(slotSize, slotSize));
+
+				// 2. 슬롯의 배경을 그려줍니다. (선택 사항이지만, 명확성을 위해 추가)
+				ImGui::GetWindowDrawList()->AddRectFilled(pos, ImVec2(pos.x + slotSize, pos.y + slotSize), IM_COL32(50, 50, 50, 255));
+
+				// 3. 아이템이 있다면 그 위에 아이콘과 수량을 덮어 그립니다.
 				if (!m_inventorySlots[i].IsEmpty())
 				{
 					Item* item = m_inventorySlots[i].item.get();
 					ImTextureID icon = item->GetIconHandle();
 
-					// [수정] ImageButton의 올바른 사용법
-					// 1번째 인자: 버튼의 고유 ID (문자열)
-					// 2번째 인자: 이미지 텍스처 ID
-					// 3번째 인자: 버튼 크기
-					if (ImGui::ImageButton(std::to_string(i).c_str(), icon, ImVec2(slotSize, slotSize)))
-					{
-						// 클릭 시 로직 (아래 IsItemClicked 블록으로 이동)
-					}
+					ImGui::GetWindowDrawList()->AddImage(icon, pos, ImVec2(pos.x + slotSize, pos.y + slotSize));
 
-					// 수량 텍스트를 버튼 바로 위에 그립니다.
-					ImVec2 min = ImGui::GetItemRectMin(); // 방금 그려진 ImageButton의 위치를 가져옴
 					float font_size = ImGui::GetFontSize();
-					ImVec2 textPos = ImVec2(min.x + 5, min.y + slotSize - font_size - 5);
+					ImVec2 textPos = ImVec2(pos.x + 5, pos.y + slotSize - font_size - 5);
 					ImGui::GetWindowDrawList()->AddText(textPos, IM_COL32_WHITE, std::to_string(m_inventorySlots[i].quantity).c_str());
-				}
-				else
-				{
-					// 빈 슬롯은 일반 버튼으로 표시
-					if (ImGui::Button(" ", ImVec2(slotSize, slotSize)))
-					{
-						// 클릭 시 로직 (아래 IsItemClicked 블록으로 이동)
-					}
 				}
 
 				// ✅ 선택 테두리 강조
