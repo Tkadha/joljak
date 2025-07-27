@@ -28,4 +28,5 @@ private:
     ID3D12GraphicsCommandList* m_pd3dCommandList = nullptr;
     CGameFramework* m_pGameFramework = nullptr;
     CScene* m_pScene = nullptr;
+    std::string m_sCurrentPrefabName;
 };
