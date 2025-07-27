@@ -180,7 +180,8 @@ public:
 	void SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 	//void SpawnRockShardEffect(const XMFLOAT3& origin);
 	//void SpawnRockShardEffectAtPlayer();
-
+	void NewGameBuildObj();
+	void ClearObj();
 private:
 	bool m_bIsDaytime = true;
 	std::vector<CResourceShardEffect*> m_vWoodShards;

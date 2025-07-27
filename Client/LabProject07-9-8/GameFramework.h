@@ -43,7 +43,12 @@ struct FurnaceSlot
 	float smeltTime = 0.0f;
 	bool isSmelting = false;
 };
-
+enum class GameState
+{
+	Lobby,
+	InGame,
+	Ending
+};
 
 #include <unordered_map>
 #include <queue>
@@ -137,6 +142,8 @@ private:
 	bool						m_bBuildMode = false; // 건축 모드 활성화 여부
 	bool						m_bIsPreviewVisible = false; // 프리뷰 오브젝트가 보이는지 여부
 	int							m_nSelectedBuildingIndex = -1; // UI에서 선택한 건축물 인덱스
+
+	void CheckAndToggleFurnaceUI();
         
 	IDXGIFactory4				*m_pdxgiFactory = NULL;
 	IDXGISwapChain3				*m_pdxgiSwapChain = NULL;
@@ -195,6 +202,13 @@ private:
 	//ShaderManager* m_pShaderManager;
 	std::unique_ptr<ShaderManager> m_pShaderManager;
 
+	GameState m_eGameState = GameState::Lobby;
+	ImTextureID m_imGuiLobbyBackgroundTextureId = 0;
+	std::vector<std::string> m_vTestPlayerNames;
+
+	CCamera* m_pEndingCamera = nullptr; // [추가] 엔딩 연출용 카메라
+	float    m_fEndingSequenceTimer = 0.0f; // [추가] 엔딩 연출 경과 시간
+
 public:
 	bool AllocateCbvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle);
 	bool AllocateSrvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle);
@@ -238,6 +252,8 @@ public:
 
 	D3D12_VERTEX_BUFFER_VIEW GetDebugQuadVBView() const { return m_d3dDebugQuadVBView; }
 	D3D12_INDEX_BUFFER_VIEW GetDebugQuadIBView() const { return m_d3dDebugQuadIBView; }
+
+	void ChangeGameState(GameState newState);
 
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;

@@ -49,6 +49,8 @@ protected:
 
 	CCamera						*m_pCamera = NULL;
 	const std::list<CGameObject*>* m_pCollisionTargets = nullptr;
+
+	bool cameramove = true;
 	
 
 
@@ -143,7 +145,8 @@ public:
 	bool CheckCollisionOBB(CGameObject* other);
 	//void SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
 	void UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
-
+	
+	void SetCameraMove();
 
 	CGameObject* AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework);
 	CGameObject* AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate, XMFLOAT3 scale);
@@ -216,7 +219,7 @@ public:
 	void keyInput(UCHAR* key);
 
 
-	CGameObject* FindObjectHitByAttack();
+	std::vector<CGameObject*>  FindObjectHitByAttack();
 
 
 };

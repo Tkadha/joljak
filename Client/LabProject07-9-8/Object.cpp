@@ -2918,12 +2918,20 @@ void CResourceShardEffect::Animate(float fTimeElapsed)
 		return;
 	}
 
-	// 물리 계산: 중력을 적용하고 위치를 이동시킵니다.
 	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Gravity, fTimeElapsed));
-	Move(Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed));
 
-	// 회전 애니메이션 (선택 사항)
-	//Rotate(100.0f * fTimeElapsed, 200.0f * fTimeElapsed, 300.0f * fTimeElapsed);
+	XMFLOAT3 currentPos = GetPosition();
+
+	// 이번 프레임에 움직일 거리를 계산
+	XMFLOAT3 shift = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed);
+
+	// [핵심 수정] 계산된 이동량을 증폭시킵니다.
+	const float speedMultiplier = 0.1f; // 속도를 5배로 증폭 (이 값을 조절)
+	shift = Vector3::ScalarProduct(shift, speedMultiplier);
+
+	XMFLOAT3 newPos = Vector3::Add(currentPos, shift);
+
+	SetPosition(newPos);
 
 	CGameObject::Animate(fTimeElapsed);
 }

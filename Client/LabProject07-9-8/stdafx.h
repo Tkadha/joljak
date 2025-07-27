@@ -71,7 +71,7 @@ extern HINSTANCE						ghAppInstance;
 
 #pragma comment(lib, "dxguid.lib")
 
-// TODO: ���α׷��� �ʿ��� �߰� �����?���⿡�� �����մϴ�.
+
 
 extern UINT	gnCbvSrvDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;

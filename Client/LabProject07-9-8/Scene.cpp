@@ -279,7 +279,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	
 
 	// 생성할 건축물 목록 (프리팹 이름과 동일해야 함)
-	std::vector<std::string> buildableItems = { "wood_wall" /*, "wood_floor", ... */ };
+	std::vector<std::string> buildableItems = { "wood_wall","furnace" /*, "wood_floor", ... */ };
 
 	for (const auto& itemName : buildableItems) {
 		std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab(itemName);
@@ -467,7 +467,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	
 
 	// 생성할 건축물 목록 (프리팹 이름과 동일해야 함)
-	std::vector<std::string> buildableItems = { "wood_wall" /*, "wood_floor", ... */ };
+	std::vector<std::string> buildableItems = { "wood_wall" ,"furnace"/*, "wood_floor", ... */ };
 
 	for (const auto& itemName : buildableItems) {
 		std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab(itemName);
@@ -1002,7 +1002,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		std::lock_guard<std::mutex> lock(m_Mutex);
 		for (auto& obj : m_vGameObjects) {
 			if (obj) obj->Animate(m_fElapsedTime);
-			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
+			if (obj->isRender && obj->is_load) obj->Render(pd3dCommandList, pCamera);
 		}
 		for (auto& obj : m_lEnvironmentObjects) {
 			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
@@ -1288,6 +1288,33 @@ void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity
 	//octree.insert(std::move(t_obj));
 }
 
+void CScene::NewGameBuildObj()
+{
+	for (auto& obj : m_vAttackEffects)
+	{
+		m_vGameObjects.push_back(obj);
+	}
+	for (auto& obj : m_vWoodShards)
+	{
+		m_vGameObjects.push_back(obj);
+	}
+	for (auto& obj : m_vRockShards)
+	{
+		m_vGameObjects.push_back(obj);
+	}
+	for (auto& obj : m_mapBuildPrefabs)
+	{
+		m_vGameObjects.emplace_back(obj.second);
+	}
+}
+
+void CScene::ClearObj()
+{
+	m_vGameObjects.clear();
+	m_vConstructionObjects.clear();
+	m_listGameObjects.clear();
+}
+
 
 
 
@@ -1563,6 +1590,9 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	//건축
 	pResourceManager->RegisterPrefab("wood_wall", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/buildobject/Fence_WoodC_A.bin", m_pGameFramework));
+	auto pFurnacePrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/buildobject/furnace.bin", m_pGameFramework);
+	pFurnacePrefab->m_objectType = GameObjectType::Furnace; // 타입 지정
+	pResourceManager->RegisterPrefab("furnace", pFurnacePrefab);
 
 
 }
@@ -1647,7 +1677,7 @@ void CScene::SpawnResourceShards(const XMFLOAT3& origin, ShardType type)
 	
 	std::vector<CResourceShardEffect*>& shardPool = (type == ShardType::Wood) ? m_vWoodShards : m_vRockShards;
 
-	int numShardsToSpawn = 8 + (rand() % 5); 
+	int numShardsToSpawn = 8 + (rand() % 5); //8~12
 
 	for (int i = 0; i < numShardsToSpawn; ++i)
 	{
@@ -1658,9 +1688,9 @@ void CScene::SpawnResourceShards(const XMFLOAT3& origin, ShardType type)
 			{
 				
 				XMFLOAT3 velocity = XMFLOAT3(
-					((float)(rand() % 4000) - 2000.0f), // X: -2000 ~ +2000
-					((float)(rand() % 2000) + 1500.0f), // Y: +1500 ~ +3500 (위로 매우 강하게)
-					((float)(rand() % 4000) - 2000.0f)  // Z: -2000 ~ +2000
+					((float)(rand() % 10) - 5.0f), // X: -2000 ~ +2000
+					((float)(rand() % 4) + 2.0f), // Y: +1500 ~ +3500 (위로 매우 강하게)
+					((float)(rand() % 10) - 5.0f)  // Z: -2000 ~ +2000
 				);
 				pShard->Activate(origin, velocity);
 				break;

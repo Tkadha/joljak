@@ -54,7 +54,8 @@ enum class GameObjectType : int {
 	Snail,
 	Spider,
 	Raptor,
-	Golem
+	Golem,
+	Furnace
 
 };
 
@@ -265,6 +266,8 @@ public:
 	// Prefab
 	void CopyDataFrom(CGameObject* pSource);
 	virtual CGameObject* Clone();
+public:
+	bool is_load = false;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -646,7 +649,7 @@ public:
 
 private:
 	bool     m_bIsActive = false;
-	float    m_fLifeTime = 2.0f;     // 파편 유지 시간
+	float    m_fLifeTime = 1.0f;     // 파편 유지 시간
 	float    m_fElapsedTime = 0.0f;
 	XMFLOAT3 m_xmf3Velocity = { 0,0,0 };
 	XMFLOAT3 m_xmf3Gravity = { 0, -9800.0f, 0 }; // 중력

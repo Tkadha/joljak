@@ -140,7 +140,24 @@ public:
 	XMFLOAT3 GetUpVector() { return(m_Up); }
 	XMFLOAT3 GetRightVector() { return(m_Right); }
 
+	void ResetState()
+	{
+		m_Position = XMFLOAT3(8000.f, 0.0f, 8000.f);	// 테스트용 임의 지정
+		m_Right = XMFLOAT3(1.0f, 0.0f, 0.0f);
+		m_Up = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		m_Look = XMFLOAT3(0.0f, 0.0f, 1.0f);
+		m_Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
+		m_Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		m_Gravity = XMFLOAT3(0.0f, -250.0f, 0.0f);
+		m_fMaxVelocityXZ = 100.f;
+		m_fMaxVelocityY = 400.0f;
+		m_fFriction = 250.0f;
+
+		m_direction = 0;
+		m_currentState = ServerPlayerState::Idle;
+		m_pPlayerUpdatedContext = NULL;
+	}
 public:
 	void BroadCastPosPacket();
 	void BroadCastRotatePacket();
@@ -153,5 +170,7 @@ public:
 	void SendAnimationPacket(shared_ptr<GameObject>);
 	void SendStructPacket(shared_ptr<GameObject>);
 	void SendTimePacket(float);
+	void SendStartGamePacket();
+	void SendEndGamePacket();
 };
 
