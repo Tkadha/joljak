@@ -727,21 +727,6 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	//AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, offset, XMFLOAT3(85, 0, 90), scale);
 
 
-	//CLoadedModelInfo* pCapeModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Hu_M_Cape_Peasant_Rd_test.bin", pGameFramework);
-	//if (pCapeModelInfo) {
-	//	if (pCapeModelInfo->m_ppSkinnedMeshes) { // m_ppSkinnedMeshes가 유효한지 확인
-	//		for (int i = 0; i < pCapeModelInfo->m_nSkinnedMeshes; ++i) {
-	//			if (pCapeModelInfo->m_ppSkinnedMeshes[i]) {
-	//				// 망토 메쉬는 플레이어의 루트 스켈레톤을 기준으로 본 매핑
-	//				pCapeModelInfo->m_ppSkinnedMeshes[i]->PrepareSkinning(pPlayerModelInfo->m_pModelRootObject);
-	//			}
-	//		}
-	//	}
-	//	//pCapeModelInfo->m_pModelRootObject->m_pChild->SetPosition(XMFLOAT3(0, 1000, 0));
-	//	SetChild(pCapeModelInfo->m_pModelRootObject);
-	//}
-
-
 
 	// 플레이어 커스터마이징(임시)
 	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();

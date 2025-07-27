@@ -216,11 +216,29 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	SpawnStaticObjects("Clovers", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
 	SpawnStaticObjects("Daisies", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
 	SpawnStaticObjects("Leaves", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("GroundPoppies", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("GroundPoppies", 1, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
 
-	float spawnMin = 500, spawnMax = 9500;
-	float objectMinSize = 15, objectMaxSize = 20;
-	
+	// 탈출장치
+	//SpawnStaticObjects("Anthena", 1, 8050, 8050, 10, 10, gen, pd3dDevice, pd3dCommandList);
+	//SpawnStaticObjects("Helipad", 1, 8000, 8000, 10, 10, gen, pd3dDevice, pd3dCommandList);
+
+	std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab("Helipad");
+	CGameObject* gameObj = prefab->Clone();
+	float x = 8000, z = 8450;
+	gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+	gameObj->SetScale(10.0f, 10.0f, 10.0f);
+	gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+	gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+	m_vGameObjects.emplace_back(gameObj);
+
+	prefab = pResourceManager->GetPrefab("Anthena");
+	z = 8500;
+	gameObj = prefab->Clone();
+	gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+	gameObj->SetScale(10.0f, 10.0f, 10.0f);
+	gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+	gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+	m_vGameObjects.emplace_back(gameObj);
 
 	/////////////////////////////////////////이펙트 오브젝트
 	const int effectPoolSize = 100;
@@ -1591,6 +1609,10 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	pResourceManager->RegisterPrefab("Leaves", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Leaves.bin", m_pGameFramework));
 	pResourceManager->RegisterPrefab("GroundPoppies", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Poppies.bin", m_pGameFramework));
 
+	// 탈출장치?
+	pResourceManager->RegisterPrefab("Anthena", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Anthena/Props_Roof_Antenna.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Helipad", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Anthena/Props_Roof_Helipad.bin", m_pGameFramework));
+	
 	// 몬스터
 	CLoadedModelInfo* pLoadedModel = nullptr;
 
