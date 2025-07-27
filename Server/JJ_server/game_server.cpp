@@ -1079,7 +1079,7 @@ void BuildObject()
 	for (int i = 0; i < TreeCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT && !InHeilpad(randompos.first, randompos.second)) {
+		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT || InHeilpad(randompos.first, randompos.second)) {
 			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
@@ -1097,7 +1097,7 @@ void BuildObject()
 	for (int i = 0; i < RockCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT && !InHeilpad(randompos.first, randompos.second)) {
+		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT || InHeilpad(randompos.first, randompos.second)) {
 			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
@@ -1160,7 +1160,7 @@ void BuildObject()
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
 
-	int SpiderCount = 80;
+	int SpiderCount = 100;
 	for (int i = 0; i < SpiderCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -1183,7 +1183,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int WolfCount = 80;
+	int WolfCount = 100;
 	for (int i = 0; i < WolfCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -1229,7 +1229,7 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
-	int BatCount = 80;
+	int BatCount = 40;
 	for (int i = 0; i < BatCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		obj->fly_height = 13.f;
@@ -1253,7 +1253,7 @@ void BuildObject()
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 	}
 
-	int RaptorCount = 80;
+	int RaptorCount = 40;
 	for (int i = 0; i < RaptorCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
