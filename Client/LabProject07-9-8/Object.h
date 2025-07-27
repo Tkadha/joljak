@@ -266,6 +266,8 @@ public:
 	// Prefab
 	void CopyDataFrom(CGameObject* pSource);
 	virtual CGameObject* Clone();
+public:
+	bool is_load = false;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -429,7 +431,7 @@ public:
 class CTreeObject : virtual public CGameObject
 {
 public:
-	CTreeObject() { m_objectType = GameObjectType::Tree; };
+	CTreeObject() { m_objectType = GameObjectType::Tree; hp = 30; };
 	CTreeObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) { m_objectType = GameObjectType::Tree; };
 	CTreeObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) {};
 	virtual ~CTreeObject() {};
@@ -501,7 +503,7 @@ public:
 class CRockObject : virtual public CGameObject
 {
 public:
-	CRockObject() { m_objectType = GameObjectType::Rock; };
+	CRockObject() { m_objectType = GameObjectType::Rock; hp = 30; };
 	CRockObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) { m_objectType = GameObjectType::Rock; };
 	CRockObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) {};
 	virtual ~CRockObject() {};

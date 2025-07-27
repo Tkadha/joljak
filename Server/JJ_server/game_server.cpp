@@ -49,6 +49,7 @@ shared_ptr<thread> g_event_thread;
 Timer g_timer;
 
 std::atomic<bool> g_is_shutting_down{ false };
+std::atomic<bool> g_is_start_game{ false };
 
 static float time_accumulator = 0.0f;
 static int play_day = 0;
@@ -91,7 +92,7 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet);
 void ProcessAccept();
 void CloseServer();
 void BuildObject();
-
+void ReleaseObject();
 void worker_thread()
 {
 	try {
@@ -123,13 +124,19 @@ void worker_thread()
 				}
 				else if (COMP_TYPE::OP_FSM_UPDATE == p_read_over->comp_type) // FSM 업데이트 요청이면
 				{
-					auto obj = GameObject::gameObjects[p_read_over->obj_id];
-					if (obj) {
-						obj->FSMUpdate();
+					if (g_is_start_game) {
+						auto obj = GameObject::gameObjects[p_read_over->obj_id];
+						if (obj) {
+							obj->FSMUpdate();
+						}
 					}
 					delete p_read_over;
 				}
 				else if (COMP_TYPE::OP_PLAYER_UPDATE == p_read_over->comp_type) {
+					if (!g_is_start_game) {
+						delete p_read_over;
+						continue;
+					}
 					shared_ptr<PlayerClient> Client;
 					auto it = PlayerClient::PlayerClients.find((PlayerClient*)readEvent.lpCompletionKey);
 					if (it != PlayerClient::PlayerClients.end()) {
@@ -354,7 +361,10 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		else if (obj->GetType() == OBJECT_TYPE::OB_GOLEM) {
 			if (obj->FSM_manager) {
 				obj->SetInvincible();
-				if (obj->Gethp() <= 0) obj->ChangeState(std::make_shared<BossDieState>());
+				if (obj->Gethp() <= 0) {
+					obj->ChangeState(std::make_shared<BossDieState>());
+
+				}
 				else obj->ChangeState(std::make_shared<BossHitState>());
 			}
 		}
@@ -412,7 +422,7 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 	case E_PACKET::E_STRUCT_OBJ:
 	{
 		STRUCT_OBJ_PACKET* r_packet = reinterpret_cast<STRUCT_OBJ_PACKET*>(packet);
-		std::shared_ptr<GameObject> obj = std::make_shared<GameObject>(false);
+		std::shared_ptr<GameObject> obj = std::make_shared<GameObject>();
 		BoundingOrientedBox bb;
 		bb.Center = XMFLOAT3{ r_packet->Center.x, r_packet->Center.y, r_packet->Center.z };
 		bb.Extents = XMFLOAT3{ r_packet->Extents.x, r_packet->Extents.y, r_packet->Extents.z };
@@ -424,13 +434,65 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		obj->SetPosition(XMFLOAT3{ r_packet->position.x, r_packet->position.y, r_packet->position.z });
 		obj->SetType(r_packet->o_type);
 		GameObject::ConstructObjects.push_back(obj);
-		std::cout<< "Constructed object: " << "wood wall " << " at position: "
-			<< r_packet->position.x << ", " << r_packet->position.y << ", " << r_packet->position.z << std::endl;
-		// 다른 클라에게도 전송하기
+
 		for (auto& cl : PlayerClient::PlayerClients) {
 			if (cl.second->state != PC_INGAME) continue;
 			if (cl.second->m_id == client->m_id) continue;
 			cl.second->SendStructPacket(obj);
+		}
+	}
+	break;
+	case E_PACKET::E_GAME_START:
+	{
+		for (auto& cl : PlayerClient::PlayerClients) {
+			if (cl.second->state != PC_INGAME) continue;
+			cl.second->SendStartGamePacket();
+			cl.second->SendTimePacket(time_accumulator);
+		}
+		std::cout << "start game" << std::endl;
+		g_is_start_game.store(true);
+	}
+	break;
+	case E_PACKET::E_GAME_END:
+	{
+		if (g_is_start_game.load()) {
+			for (auto& cl : PlayerClient::PlayerClients) {
+				if (cl.second->state != PC_INGAME) continue;
+				cl.second->SendEndGamePacket();
+			}
+			std::cout << "end game" << std::endl;
+			g_is_start_game.store(false);
+			EVENT ev{ EVENT_TYPE::E_REBUILD_OBJ,0,-1 };
+			EVENT::add_timer(ev, 1000);
+		}
+	}
+	break;
+	case E_PACKET::E_GAME_NEW:
+	{
+		if (!g_is_start_game.load()) {		
+			for (auto& cl : PlayerClient::PlayerClients)
+			{
+				auto& player = cl.second;
+				cl.second->ResetState();
+				std::vector<tree_obj*> results; // 시야 범위 내 객체 찾기
+				tree_obj p_obj{ -1,player->GetPosition() };
+				Octree::GameObjectOctree.query(p_obj, oct_distance, results);
+				std::unordered_set<int> new_vl;
+				for (auto& obj : results) new_vl.insert(obj->u_id);
+				for (auto& obj : results) {
+					if (GameObject::gameObjects[obj->u_id]->is_alive == false) continue;
+					if (GameObject::gameObjects[obj->u_id]->Gethp() <= 0) continue;
+					player->SendAddPacket(GameObject::gameObjects[obj->u_id]);
+				}
+				for (auto& obj : GameObject::ConstructObjects) {
+					player->SendStructPacket(obj);
+				}
+				player->vl_mu.lock();
+				player->viewlist = new_vl;
+				player->vl_mu.unlock();
+
+				player->SendTimePacket(time_accumulator);
+			}
 		}
 	}
 	break;
@@ -635,6 +697,23 @@ void event_thread()
 						}
 					}
 						break;
+					case EVENT_TYPE::E_END_GAME: {
+						for (auto& cl : PlayerClient::PlayerClients) {
+							cl.second->SendEndGamePacket();
+						}
+						g_is_start_game.store(false);
+					}
+						break;
+					case EVENT_TYPE::E_REBUILD_OBJ:
+					{
+						g_is_start_game.store(false);
+						ReleaseObject();
+						std::cout << "Release all obj" << std::endl;
+						BuildObject();
+						time_accumulator = 0;
+						std::cout << "Build obj" << std::endl;
+					}
+					break;
 					default:
 						break;
 					}
@@ -685,6 +764,7 @@ int main(int argc, char* argv[])
 		g_timer.Start();
 		while (!g_is_shutting_down) {
 			g_timer.Tick(120.f);
+			if (!g_is_start_game) continue;
 			float deltaTime = g_timer.GetTimeElapsed(); // Use Tick same deltaTime
 			float time_speed = 0.5f;
 			time_accumulator += deltaTime * time_speed;
@@ -700,7 +780,6 @@ int main(int argc, char* argv[])
 				std::vector<tree_obj*> results;
 				tree_obj t_obj{ -1, obj->GetPosition() };
 				Octree::PlayerOctree.query(t_obj, oct_distance, results);
-				// Do not update if there is no player nearby
 				if (results.size() > 0 && obj->FSM_manager) {
 					OVER_EXP* p_over = new OVER_EXP();
 					p_over->comp_type = COMP_TYPE::OP_FSM_UPDATE;
@@ -943,6 +1022,7 @@ void BuildObject()
 		obj->SetType(OBJECT_TYPE::OB_COW);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
 
+		obj->InitFSM();
 		obj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 
@@ -965,6 +1045,7 @@ void BuildObject()
 		obj->SetType(OBJECT_TYPE::OB_PIG);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
 
+		obj->InitFSM();
 		obj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 
@@ -988,6 +1069,7 @@ void BuildObject()
 		obj->SetType(OBJECT_TYPE::OB_SPIDER);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
 
+		obj->InitFSM();
 		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
@@ -1010,6 +1092,7 @@ void BuildObject()
 		obj->SetType(OBJECT_TYPE::OB_WOLF);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
 
+		obj->InitFSM();
 		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
@@ -1032,6 +1115,7 @@ void BuildObject()
 		obj->SetType(OBJECT_TYPE::OB_TOAD);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
 
+		obj->InitFSM();
 		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
@@ -1054,6 +1138,7 @@ void BuildObject()
 		obj->SetType(OBJECT_TYPE::OB_BAT);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
 
+		obj->InitFSM();
 		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
@@ -1078,6 +1163,7 @@ void BuildObject()
 		obj->SetType(OBJECT_TYPE::OB_RAPTOR);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
 
+		obj->InitFSM();
 		obj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
@@ -1101,6 +1187,7 @@ void BuildObject()
 		obj->SetType(OBJECT_TYPE::OB_GOLEM);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);
 
+		obj->InitFSM();
 		obj->FSM_manager->SetCurrentState(std::make_shared<BossStandingState>());
 		obj->FSM_manager->SetGlobalState(std::make_shared<BossGlobalState>());
 
@@ -1110,6 +1197,21 @@ void BuildObject()
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 
 	}
+
+	for (auto& obj : GameObject::gameObjects) {
+		auto it = OBB_Manager::obb_list.find(obj->GetType());
+		if (it != OBB_Manager::obb_list.end()) {
+			obj->local_obb = *it->second;
+			obj->UpdateTransform();
+		}
+	}
+}
+void ReleaseObject()
+{
+	GameObject::gameObjects.clear();
+	GameObject::ConstructObjects.clear();
+	Octree::GameObjectOctree.clear();
+	//Octree::PlayerOctree.clear();
 }
 void CloseServer()
 {

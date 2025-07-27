@@ -920,6 +920,8 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	if (!isRender) return;
+
     CScene* pScene = m_pGameFramework->GetScene();
     ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
     if (!pScene || !pShaderManager) return;

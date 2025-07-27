@@ -62,6 +62,7 @@ public:
 
     void query(const tree_obj& obj, const XMFLOAT3& distance, std::vector<tree_obj*>& results);
 
+    void clear();
 private:
     int depth; 
     

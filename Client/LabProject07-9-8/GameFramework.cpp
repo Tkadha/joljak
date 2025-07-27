@@ -47,6 +47,14 @@ void CGameFramework::ProcessPacket(char* packet)
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
+	case E_PACKET::E_GAME_START:{
+		ChangeGameState(GameState::InGame);
+	}
+	break;
+	case E_PACKET::E_GAME_END: {
+		ChangeGameState(GameState::Ending);
+	}
+	break;
 	case E_PACKET::E_P_POSITION:
 	{
 		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
@@ -267,12 +275,13 @@ void CGameFramework::ProcessPacket(char* packet)
 		int id = -1;
 		m_logQueue.push(log_inout{ E_PACKET::E_STRUCT_OBJ,0,right,up,look,position,o_type,a_type,id });
 	}
-	 break;
+	break;
 	case E_PACKET::E_SYNC_TIME:
 		{
 		TIME_SYNC_PACKET* recv_p = reinterpret_cast<TIME_SYNC_PACKET*>(packet);
 		m_pScene->m_fLightRotationAngle = recv_p->serverTime;
 	}
+	break;
 	default:
 		break;
 	}
@@ -744,10 +753,29 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				m_pScene->SpawnResourceShards(playerPos, CScene::ShardType::Wood);
 				break;
 			case 'P':
+				if (m_eGameState != GameState::InGame) break;
 				ChangeGameState(GameState::Ending);
+				{
+					auto& nwManager = NetworkManager::GetInstance();
+					GAME_END_PACKET p;
+					p.type = static_cast<char>(E_PACKET::E_GAME_END);
+					p.size = sizeof(GAME_END_PACKET);
+					nwManager.PushSendQueue(p, p.size);
+				}
 				break;
 			case 'M':
+				if (m_eGameState != GameState::Ending) break;
 				ChangeGameState(GameState::Lobby);
+				// 씬에 있는 모든 객체 초기화 해야함
+				m_pScene->ClearObj();
+				m_pScene->NewGameBuildObj();
+				{
+					auto& nwManager = NetworkManager::GetInstance();
+					NEW_GAME_PACKET p;
+					p.type = static_cast<char>(E_PACKET::E_GAME_NEW);
+					p.size = sizeof(NEW_GAME_PACKET);
+					nwManager.PushSendQueue(p, p.size);
+				}
 				break;
 			}
 			break;
@@ -1032,7 +1060,9 @@ void CGameFramework::BuildObjects()
 	m_pScene->m_pPlayer = m_pPlayer = pPlayer;
 	m_pCamera = m_pPlayer->GetCamera();
 	m_pPlayer->SetOwningScene(m_pScene);
-	
+
+	m_pPlayer->EquipTool(ToolType::Sword);
+
 	m_pPlayer->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 
 	XMFLOAT3 position = XMFLOAT3(0.0f, 1.0f, 0.0f);
@@ -1040,6 +1070,8 @@ void CGameFramework::BuildObjects()
 	XMFLOAT4 rotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 	m_pPlayer->SetOBB(position, size, rotation);
 	m_pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+
+	//LoadTools();
 
 #ifdef ONLINE
 	NetworkManager& nw = NetworkManager::GetInstance();
@@ -1853,6 +1885,23 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->m_vConstructionObjects.push_back(gameObj);
 		}
 		break;
+		case OBJECT_TYPE::ST_FURNACE:
+		{
+			std::shared_ptr<CGameObject> prefab;
+			prefab = m_pResourceManager->GetPrefab("furnace");
+
+			CGameObject* gameObj = prefab->Clone();
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+			m_pScene->m_vConstructionObjects.push_back(gameObj);
+		}
 		default:
 			break;
 		}
@@ -2291,6 +2340,11 @@ void CGameFramework::FrameAdvance()
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
+
+	// 도구 위치 잡기용 추가
+	//OnImGuiRender();
+	//UpdateToolTransforms();
+	//--------------------
 	
 	///////////////////////////////////////////////////////////// 아이템 핫바
 	
@@ -2857,8 +2911,11 @@ void CGameFramework::FrameAdvance()
 						STRUCT_OBJ_PACKET s_packet;
 						s_packet.type = static_cast<char>(E_PACKET::E_STRUCT_OBJ);
 						s_packet.size = sizeof(STRUCT_OBJ_PACKET);
-						s_packet.o_type = OBJECT_TYPE::ST_WOODWALL;
 
+						if(m_nSelectedBuildingIndex == 0)
+							s_packet.o_type = OBJECT_TYPE::ST_WOODWALL;
+						else if(m_nSelectedBuildingIndex == 1)
+							s_packet.o_type = OBJECT_TYPE::ST_FURNACE;
 						auto& obb = pInstalledObject->GetOBB();
 						s_packet.Center.x = obb.Center.x;
 						s_packet.Center.y = obb.Center.y;
@@ -3163,8 +3220,11 @@ void CGameFramework::FrameAdvance()
 
 		if (ImGui::Button("GameStart", ImVec2(buttonWidth, buttonHeight)))
 		{
+			auto& nwManager = NetworkManager::GetInstance();
+			GAME_START_PACKET p;
+			nwManager.PushSendQueue(p, p.size);
 
-			ChangeGameState(GameState::InGame);
+			//ChangeGameState(GameState::InGame);
 		}
 		ImGui::End();
 	}
@@ -3245,6 +3305,9 @@ void CGameFramework::FrameAdvance()
 
 	MoveToNextFrame();
 
+	for (auto& obj : m_pScene->m_vGameObjects) {
+		if (!obj->is_load) obj->is_load = true;
+	}
 	m_GameTimer.GetFrameRate(m_pszFrameRate + 18, 37);
 	size_t nLength = _tcslen(m_pszFrameRate);
 	XMFLOAT3 xmf3Position = m_pPlayer->GetPosition();
@@ -3753,5 +3816,133 @@ void CGameFramework::CheckAndToggleFurnaceUI()
 				return;
 			}
 		}
+	}
+}
+
+
+
+
+
+
+void CGameFramework::LoadTools()
+{
+	// 플레이어 오브젝트를 찾아야 합니다. 씬에서 플레이어를 찾는 로직이 필요합니다.
+	// 여기서는 m_pPlayer가 플레이어 오브젝트를 가리킨다고 가정합니다.
+	CGameObject* pPlayer = m_pScene->m_pPlayer;
+	if (!pPlayer) return;
+
+	// 초기값 설정
+	m_swordTransform.position = { 0.01f, 0.0f, 0.0f };
+	m_axeTransform.position = { -0.2f, 0.0f, 0.0f };
+	m_pickaxeTransform.position = { 0.5f, 0.0f, 0.0f };
+	m_hammerTransform.position = { 0.2f, 0.0f, 0.0f };
+	m_hammerTransform.rotation = { 45.0f, 0.0f, 0.0f };
+
+	// 칼 로드 및 부착
+	m_pSword = m_pPlayer->m_pSword;
+	m_pAxe = m_pPlayer->m_pAxe;
+	m_pPickaxe = m_pPlayer->m_pPickaxe;
+	m_pHammer = m_pPlayer->m_pHammer;
+}
+
+void CGameFramework::OnImGuiRender()
+{
+	// 1. 원하는 기본 창 크기를 ImVec2(가로, 세로) 형태로 정의합니다.
+	ImVec2 toolWindowSize = ImVec2(2000, 1000); 
+
+	// 2. 다음에 생성될 창의 크기를 미리 설정합니다.
+	// ImGuiCond_FirstUseEver 플래그는 프로그램 첫 실행 시에만 이 크기를 강제하고,
+	// 그 이후에는 사용자가 직접 조절한 창 크기를 기억해서 사용하게 해주는 유용한 옵션입니다.
+	ImGui::SetNextWindowSize(toolWindowSize, ImGuiCond_FirstUseEver);
+
+	ImGui::Begin("Tool Transform Editor");
+
+	if (ImGui::CollapsingHeader("Sword"))
+	{
+		ImGui::DragFloat3("Position##Sword", &m_swordTransform.position.x, 0.01f);
+		ImGui::DragFloat3("Rotation##Sword", &m_swordTransform.rotation.x, 1.0f);
+	}
+	if (ImGui::CollapsingHeader("Axe"))
+	{
+		ImGui::DragFloat3("Position##Axe", &m_axeTransform.position.x, 0.01f);
+		ImGui::DragFloat3("Rotation##Axe", &m_axeTransform.rotation.x, 1.0f);
+	}
+	if (ImGui::CollapsingHeader("Pickaxe"))
+	{
+		ImGui::DragFloat3("Position##Pickaxe", &m_pickaxeTransform.position.x, 0.01f);
+		ImGui::DragFloat3("Rotation##Pickaxe", &m_pickaxeTransform.rotation.x, 1.0f);
+	}
+	if (ImGui::CollapsingHeader("Hammer"))
+	{
+		ImGui::DragFloat3("Position##Hammer", &m_hammerTransform.position.x, 0.01f);
+		ImGui::DragFloat3("Rotation##Hammer", &m_hammerTransform.rotation.x, 1.0f);
+	}
+
+	ImGui::End();
+}
+
+void CGameFramework::UpdateToolTransforms()
+{
+	XMMATRIX mtxScale, mtxRotate, mtxTranslate;
+
+	if (m_pSword)
+	{
+		mtxScale = XMMatrixScaling(1.0f, 1.0f, 1.0f); // 필요시 스케일 값도 변수로 조절 가능
+		mtxRotate = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(m_swordTransform.rotation.x),
+			XMConvertToRadians(m_swordTransform.rotation.y),
+			XMConvertToRadians(m_swordTransform.rotation.z)
+		);
+		mtxTranslate = XMMatrixTranslation(
+			m_swordTransform.position.x,
+			m_swordTransform.position.y,
+			m_swordTransform.position.z
+		);
+		XMStoreFloat4x4(&m_pSword->m_xmf4x4ToParent, mtxScale * mtxRotate * mtxTranslate);
+	}
+	if (m_pAxe)
+	{
+		mtxScale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+		mtxRotate = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(m_axeTransform.rotation.x),
+			XMConvertToRadians(m_axeTransform.rotation.y),
+			XMConvertToRadians(m_axeTransform.rotation.z)
+		);
+		mtxTranslate = XMMatrixTranslation(
+			m_axeTransform.position.x,
+			m_axeTransform.position.y,
+			m_axeTransform.position.z
+		);
+		XMStoreFloat4x4(&m_pAxe->m_xmf4x4ToParent, mtxScale * mtxRotate * mtxTranslate);
+	}
+	if (m_pPickaxe)
+	{
+		mtxScale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+		mtxRotate = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(m_pickaxeTransform.rotation.x),
+			XMConvertToRadians(m_pickaxeTransform.rotation.y),
+			XMConvertToRadians(m_pickaxeTransform.rotation.z)
+		);
+		mtxTranslate = XMMatrixTranslation(
+			m_pickaxeTransform.position.x,
+			m_pickaxeTransform.position.y,
+			m_pickaxeTransform.position.z
+		);
+		XMStoreFloat4x4(&m_pPickaxe->m_xmf4x4ToParent, mtxScale * mtxRotate * mtxTranslate);
+	}
+	if (m_pHammer)
+	{
+		mtxScale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+		mtxRotate = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(m_hammerTransform.rotation.x),
+			XMConvertToRadians(m_hammerTransform.rotation.y),
+			XMConvertToRadians(m_hammerTransform.rotation.z)
+		);
+		mtxTranslate = XMMatrixTranslation(
+			m_hammerTransform.position.x,
+			m_hammerTransform.position.y,
+			m_hammerTransform.position.z
+		);
+		XMStoreFloat4x4(&m_pHammer->m_xmf4x4ToParent, mtxScale * mtxRotate * mtxTranslate);
 	}
 }

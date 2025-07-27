@@ -279,7 +279,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	
 
 	// 생성할 건축물 목록 (프리팹 이름과 동일해야 함)
-	std::vector<std::string> buildableItems = { "wood_wall" /*, "wood_floor", ... */ };
+	std::vector<std::string> buildableItems = { "wood_wall","furnace" /*, "wood_floor", ... */ };
 
 	for (const auto& itemName : buildableItems) {
 		std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab(itemName);
@@ -1002,7 +1002,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		std::lock_guard<std::mutex> lock(m_Mutex);
 		for (auto& obj : m_vGameObjects) {
 			if (obj) obj->Animate(m_fElapsedTime);
-			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
+			if (obj->isRender && obj->is_load) obj->Render(pd3dCommandList, pCamera);
 		}
 		for (auto& obj : m_lEnvironmentObjects) {
 			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
@@ -1105,22 +1105,22 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 
 
-	{
-		// --- 그림자 맵 디버그 출력 ---
-		CShader* pDebugShader = pShaderManager->GetShader("Debug");
-		pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
-		pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
+	//{
+	//	// --- 그림자 맵 디버그 출력 ---
+	//	CShader* pDebugShader = pShaderManager->GetShader("Debug");
+	//	pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
+	//	pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
 
-		// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
-		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
+	//	// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
+	//	pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
 
 
-		// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
-		pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
-		pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
-		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
-	}
+	//	// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
+	//	pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
+	//	pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
+	//	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//	pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+	//}
 }
 
 
@@ -1286,6 +1286,33 @@ void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity
 	m_listRockObjects.emplace_back(newBranch);
 	//auto t_obj = std::make_unique<newBranch>(tree_obj_count++, gameObj->m_worldOBB.Center);
 	//octree.insert(std::move(t_obj));
+}
+
+void CScene::NewGameBuildObj()
+{
+	for (auto& obj : m_vAttackEffects)
+	{
+		m_vGameObjects.push_back(obj);
+	}
+	for (auto& obj : m_vWoodShards)
+	{
+		m_vGameObjects.push_back(obj);
+	}
+	for (auto& obj : m_vRockShards)
+	{
+		m_vGameObjects.push_back(obj);
+	}
+	for (auto& obj : m_mapBuildPrefabs)
+	{
+		m_vGameObjects.emplace_back(obj.second);
+	}
+}
+
+void CScene::ClearObj()
+{
+	m_vGameObjects.clear();
+	m_vConstructionObjects.clear();
+	m_listGameObjects.clear();
 }
 
 
@@ -1512,7 +1539,16 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	// 나무
 	pResourceManager->RegisterPrefab("PineTree", std::make_shared<CPineObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
-	pResourceManager->RegisterPrefab("BirchTree", std::make_shared<CBirchObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+
+	auto pBirchPrefab = std::make_shared<CBirchObject>(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	pBirchPrefab->m_bIsPrefab = true;
+
+	int materialIndexToChange = 1;
+	UINT albedoTextureSlot = 0;
+	const wchar_t* textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
+	ChangeAlbedoTexture(pBirchPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+
+	pResourceManager->RegisterPrefab("BirchTree", pBirchPrefab);
 
 	// 바위
 	pResourceManager->RegisterPrefab("RockClusterA", std::make_shared<CRockClusterAObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));

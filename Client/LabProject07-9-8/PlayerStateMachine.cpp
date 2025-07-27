@@ -471,14 +471,15 @@ public:
 class AttackMeleeState : public IPlayerState {
 private:
     bool m_bAttackFinished = false;
-    bool m_bSound = true;
     int m_nAnimTrack = BlendConfig::PRIMARY_TRACK; // 공격 애니메이션을 재생할 트랙
+    bool m_bHasAppliedHit = false; 
 
 public:
     PlayerStateID GetID() const override { return PlayerStateID::AttackMelee; }
 
     void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
         m_bAttackFinished = false;
+        m_bHasAppliedHit = false;
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f });
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
         PlayWavSound(_T("Sound/sword.wav"));
@@ -488,12 +489,15 @@ public:
         float currentPosition = stateMachine->GetTrackPosition(m_nAnimTrack);
         float animLength = stateMachine->GetAnimationLength(m_nAnimTrack);
 
-        if (!m_bAttackFinished && currentPosition >= animLength * 0.66f) {
-            CGameObject* hitObject = player->FindObjectHitByAttack();
-            CollisionUpdate(player, hitObject);
-            if(m_bSound){
-                //PlayWavSound(_T("Sound/sword.wav"));
-                m_bSound = false;
+        if (!m_bHasAppliedHit && currentPosition >= animLength * 0.66f) {
+            m_bHasAppliedHit = true; // 판정은 한 번
+
+            std::vector<CGameObject*> hitObjects = player->FindObjectHitByAttack();
+
+            if (!hitObjects.empty()) {
+                for (CGameObject* hitObject : hitObjects) {
+                    CollisionUpdate(player, hitObject);
+                }
             }
         }
 
@@ -517,11 +521,13 @@ class AttackAxeState : public IPlayerState {
 private:
     bool m_bAttackFinished = false;
     int m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
+    bool m_bHasAppliedHit = false; 
 public:
     PlayerStateID GetID() const override { return PlayerStateID::AttackAxe; }
 
     void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
         m_bAttackFinished = false;
+        m_bHasAppliedHit = false;
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); 
         PlayWavSound(_T("Sound/axe.wav"));
@@ -531,15 +537,28 @@ public:
         float currentPosition = stateMachine->GetTrackPosition(m_nAnimTrack);
         float animLength = stateMachine->GetAnimationLength(m_nAnimTrack);
 
+        if (!m_bHasAppliedHit && currentPosition >= animLength * 0.66f) {
+            m_bHasAppliedHit = true; // 판정은 한 번
+
+            std::vector<CGameObject*> hitObjects = player->FindObjectHitByAttack();
+
+            if (!hitObjects.empty()) {
+                for (CGameObject* hitObject : hitObjects) {
+                    CollisionUpdate(player, hitObject);
+                }
+            }
+        }
+
         if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) {
             m_bAttackFinished = true;
-
-            CGameObject* hitObject = player->FindObjectHitByAttack(); // 공격 판정 함수 필요
-            CollisionUpdate(player, hitObject);
         }
+
+        // 애니메이션이 끝나면 Idle 상태로 전환
         if (m_bAttackFinished) {
             return PlayerStateID::Idle;
         }
+
+        // 공격 중에는 다른 입력 무시하고 현재 상태 유지
         return PlayerStateID::AttackAxe;
     }
 
@@ -551,11 +570,13 @@ class AttackPickState : public IPlayerState {
 private:
     bool m_bAttackFinished = false;
     int m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
+    bool m_bHasAppliedHit = false;
 public:
     PlayerStateID GetID() const override { return PlayerStateID::AttackPick; }
 
     void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
         m_bAttackFinished = false;
+        m_bHasAppliedHit = false;
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK; 
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); 
         PlayWavSound(_T("Sound/pickaxe.wav"));
@@ -565,15 +586,28 @@ public:
         float currentPosition = stateMachine->GetTrackPosition(m_nAnimTrack);
         float animLength = stateMachine->GetAnimationLength(m_nAnimTrack);
 
-        if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) { 
-            m_bAttackFinished = true;
+        if (!m_bHasAppliedHit && currentPosition >= animLength * 0.66f) {
+            m_bHasAppliedHit = true; // 판정은 한 번
 
-            CGameObject* hitObject = player->FindObjectHitByAttack(); // 공격 판정 함수 필요
-            CollisionUpdate(player, hitObject);
+            std::vector<CGameObject*> hitObjects = player->FindObjectHitByAttack();
+
+            if (!hitObjects.empty()) {
+                for (CGameObject* hitObject : hitObjects) {
+                    CollisionUpdate(player, hitObject);
+                }
+            }
         }
+
+        if (!m_bAttackFinished && currentPosition >= animLength * 0.95f) {
+            m_bAttackFinished = true;
+        }
+
+        // 애니메이션이 끝나면 Idle 상태로 전환
         if (m_bAttackFinished) {
             return PlayerStateID::Idle;
         }
+
+        // 공격 중에는 다른 입력 무시하고 현재 상태 유지
         return PlayerStateID::AttackPick;
     }
 
@@ -792,7 +826,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
                     hp -= 10;
                     break;
                 case ToolType::Pickaxe:
-                    hp -= 5;
+                    hp -= 6;
                     break;
                 default:
                     break;
@@ -819,13 +853,13 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
                 switch (player->m_eCurrentTool)
                 {
                 case ToolType::Sword:
-                    hp -= 8;
+                    hp -= 3;
                     break;
                 case ToolType::Axe:
-                    hp -= 10;
+                    hp -= 5;
                     break;
                 case ToolType::Pickaxe:
-                    hp -= 5;
+                    hp -= 10;
                     break;
                 default:
                     break;
@@ -1054,7 +1088,7 @@ IPlayerState* PlayerStateMachine::GetState(PlayerStateID id) {
 
 void PlayerStateMachine::PerformStateChange(PlayerStateID newStateID, bool forceImmediate) {
     
-    // 블렌딩 해제(임시)
+    // 블렌딩 해제
     forceImmediate = true;
 
     if (newStateID == m_eCurrentStateID || !m_pAnimController) return; // 같은 상태거나 컨트롤러 없으면 무시
@@ -1361,46 +1395,23 @@ PlayerStateID PlayerStateMachine::DetermineAttackState() {
         return PlayerStateID::AttackMelee; // 기본 공격 (씬 없음)
     }
 
-    CGameObject* targetObject = nullptr;
-    float interactionRangeSq = 100.0f * 100.0f; // 예시: 상호작용/공격 범위 (반경 100 유닛) - 조정 필요
-
-    // 1. 일반 객체들 (m_vGameObjects) 검사 (최적화 필요!)
-    for (auto& pOtherObject : pScene->m_vGameObjects) {
-        if (!pOtherObject || !pOtherObject->isRender) continue;
-
-        // 거리 체크
-        //float distSq = Vector3::LengthSq(Vector3::Subtract(pOtherObject->GetPosition(), m_pOwner->GetPosition()));
-        //if (distSq > interactionRangeSq) continue;
-
-        // 충돌 체크 (OBB 사용)
-        if (m_pOwner->m_worldOBB.Intersects(pOtherObject->m_worldOBB)) {
-            // 타입별 처리
-            switch (pOtherObject->m_objectType) { // m_eObjectType 멤버가 있다고 가정
-            case GameObjectType::Tree:
-                OutputDebugString(L"나무 충돌!");
-                return PlayerStateID::AttackAxe; // 나무 발견 시 즉시 반환
-            case GameObjectType::Rock:
-                return PlayerStateID::AttackPick; // 바위 발견 시 즉시 반환
-            case GameObjectType::Cow:
-            case GameObjectType::Pig:
-                // 살아있는 몬스터인지 확인 (HP > 0)
-                return PlayerStateID::AttackMelee;
-            //{
-            //    auto npc = dynamic_cast<CMonsterObject*>(pOtherObject);
-            //    if (npc && npc->Gethp() > 0) {
-            //        return PlayerStateID::AttackMelee; // 몬스터 발견 시 즉시 반환
-            //    }
-            //}
-            break;
-            // 다른 공격 가능한 몬스터 타입들 추가...
-            default:
-                // 공격 불가능하거나 특별한 처리 없는 타입은 일단 무시하고 계속 탐색
-                break;
-            }
-            // 만약 여러 타입이 겹쳐있을 때 우선순위를 정하려면 여기서 break하지 않고 계속 탐색하며 가장 중요한 대상을 저장
-        }
+    switch (m_pOwner->m_eCurrentTool)
+    {
+    case ToolType::Sword:
+        return PlayerStateID::AttackMelee;
+        break;
+    case ToolType::Axe:
+        return PlayerStateID::AttackAxe;
+        break;
+    case ToolType::Pickaxe:
+        return PlayerStateID::AttackPick;
+        break;
+    case ToolType::Hammer:
+        return PlayerStateID::AttackMelee;
+        break;
+    default:
+        break;
     }
 
-    // 특별히 상호작용할 대상을 찾지 못했으면 기본 공격 상태 반환
     return PlayerStateID::AttackMelee;
 }

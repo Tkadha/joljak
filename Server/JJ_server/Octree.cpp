@@ -88,6 +88,18 @@ void Octree::query(const tree_obj& object, const XMFLOAT3& distance, std::vector
     }
 }
 
+void Octree::clear()
+{
+    std::lock_guard<std::mutex> lock(oct_mu);
+    for (int i = 0; i < 8; ++i) {
+        if (children[i] != nullptr) {
+            delete children[i];
+            children[i] = nullptr;
+        }
+    }
+    objects.clear();
+}
+
 void Octree::subdivide() {
     XMFLOAT3 center = { (minBound.x + maxBound.x) / 2,
                 (minBound.y + maxBound.y) / 2,

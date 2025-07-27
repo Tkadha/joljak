@@ -20,6 +20,11 @@
 using namespace Microsoft::WRL; // 추가
 
 
+struct ToolTransform
+{
+	XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };
+	XMFLOAT3 rotation = { 0.0f, 0.0f, 0.0f };
+};
 
 struct CraftMaterial
 {
@@ -289,5 +294,24 @@ public:
 	// 서버연결 확인코드
 	bool serverConnected = false;
 	std::atomic_bool b_running;
+
+
+
+// 도구 위치 잡기
+private:
+	CGameObject* m_pSword = nullptr;
+	CGameObject* m_pAxe = nullptr;
+	CGameObject* m_pPickaxe = nullptr;
+	CGameObject* m_pHammer = nullptr;
+
+	ToolTransform m_swordTransform;
+	ToolTransform m_axeTransform;
+	ToolTransform m_pickaxeTransform;
+	ToolTransform m_hammerTransform;
+
+public:
+	void LoadTools();              // 도구 로딩을 위한 함수
+	void OnImGuiRender();          // ImGui UI를 그리는 함수
+	void UpdateToolTransforms();   // ImGui 값으로 도구 위치를 업데이트하는 함수
 };
 
