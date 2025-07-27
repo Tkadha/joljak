@@ -209,15 +209,32 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 
 	// 인자 : 객체이름, 갯수, 스폰위치 min, max, 크기 min, max, ~ , 텍스쳐인덱스, 텍스쳐 
 
-	SpawnStaticObjects("BushA", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("Chervil", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("RedPoppy", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("ElephantEar", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("GrassPatch", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("Clovers", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("Daisies", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("Leaves", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("GroundPoppies", 1, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("BushA", 1000, 500, 9500, 7, 12, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("BushB", 1000, 500, 9500, 7, 12, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Fern", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Chervil", 1000, 500, 9500, 5, 8, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("RedPoppy", 1000, 500, 9500, 5, 8, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("BluePoppy", 1000, 500, 9500, 5, 8, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Dandelion", 1000, 500, 9500, 5, 8, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Daisy", 1000, 500, 9500, 5, 8, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("ElephantEarA", 1000, 500, 9500, 5, 10, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("ElephantEarB", 1000, 500, 9500, 5, 10, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("GrassTall", 1000, 500, 9500, 7, 12, gen, pd3dDevice, pd3dCommandList);
+
+	/*
+	pResourceManager->RegisterPrefab("BushA", std::make_shared<CBushAObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+	pResourceManager->RegisterPrefab("BushB", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Bush_B_LOD0.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Fern", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Fern_LOD0.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Chervil", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/ChervilCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("RedPoppy", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/RedPoppyCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("BluePoppy", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/BluePoppyCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Dandelion", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/DandelionCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Daisy", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/DaisyCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("ElephantEarA", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/ElephantEar_A.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("ElephantEarB", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/ElephantEar_B.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("GrassTall", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/GrassTall.bin", m_pGameFramework));
+	*/
+
 
 	// 탈출장치
 	//SpawnStaticObjects("Anthena", 1, 8050, 8050, 10, 10, gen, pd3dDevice, pd3dCommandList);
@@ -1667,15 +1684,16 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	// 수풀 및 식물
 	pResourceManager->RegisterPrefab("BushA", std::make_shared<CBushAObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+	pResourceManager->RegisterPrefab("BushB", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Bush_B_LOD0.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Fern", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Fern_LOD0.bin", m_pGameFramework));
 	pResourceManager->RegisterPrefab("Chervil", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/ChervilCluster.bin", m_pGameFramework));
 	pResourceManager->RegisterPrefab("RedPoppy", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/RedPoppyCluster.bin", m_pGameFramework));
-	pResourceManager->RegisterPrefab("Speedwell", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Speedwell.bin", m_pGameFramework));
-	pResourceManager->RegisterPrefab("ElephantEar", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/ElephantEar_A.bin", m_pGameFramework));
-	pResourceManager->RegisterPrefab("GrassPatch", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/GrassPatch_LOD0.bin", m_pGameFramework));
-	pResourceManager->RegisterPrefab("Clovers", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Clovers.bin", m_pGameFramework));
-	pResourceManager->RegisterPrefab("Daisies", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Daisies.bin", m_pGameFramework));
-	pResourceManager->RegisterPrefab("Leaves", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Leaves.bin", m_pGameFramework));
-	pResourceManager->RegisterPrefab("GroundPoppies", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Poppies.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("BluePoppy", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/BluePoppyCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Dandelion", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/DandelionCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Daisy", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/DaisyCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("ElephantEarA", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/ElephantEar_A.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("ElephantEarB", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/ElephantEar_B.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("GrassTall", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/GrassTall.bin", m_pGameFramework));
 
 	// 탈출장치?
 	pResourceManager->RegisterPrefab("Helipad", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Anthena/Props_Roof_Helipad.bin", m_pGameFramework));
