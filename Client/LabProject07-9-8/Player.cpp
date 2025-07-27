@@ -718,32 +718,32 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	CGameObject* handFrame = FindFrame("thumb_01_r"); 
 	if (handFrame)
 	{
-		m_pSword->SetPosition(0.0f, 0.0f, 0.0f);
-		m_pSword->SetRotation(0.0f, 0.0f, 0.0f);
+		m_pSword->SetPosition(0.0f, -0.15f, -0.03f);
+		m_pSword->SetRotation(0.0f, 20.0f, 0.0f);
 		handFrame->SetChild(m_pSword);
 	}
 	m_pAxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Ax_B.bin", pGameFramework)->m_pModelRootObject;
 	handFrame = FindFrame("thumb_02_r");
 	if (handFrame)
 	{
-		m_pAxe->SetPosition(0.0f, 0.0f, 0.0f);
-		m_pAxe->SetRotation(0.0f, 0.0f, 0.0f);
+		m_pAxe->SetPosition(0.0f, -0.15f, -0.03f);
+		m_pAxe->SetRotation(0.0f, 20.0f, 0.0f);
 		handFrame->SetChild(m_pAxe);
 	}
 	m_pPickaxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Chisel.bin", pGameFramework)->m_pModelRootObject;
 	handFrame = FindFrame("thumb_03_r");
 	if (handFrame)
 	{
-		m_pPickaxe->SetPosition(0.0f, 0.0f, 0.0f);
-		m_pPickaxe->SetRotation(0.0f, 0.0f, 0.0f);
+		m_pPickaxe->SetPosition(-0.03f, -0.15f, -0.03f);
+		m_pPickaxe->SetRotation(0.0f, 20.0f, 0.0f);
 		handFrame->SetChild(m_pPickaxe);
 	}
 	m_pHammer = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Hammer_A.bin", pGameFramework)->m_pModelRootObject;
 	handFrame = FindFrame("middle_01_r");
 	if (handFrame)
 	{
-		m_pHammer->SetPosition(0.0f, 0.0f, 0.0f);
-		m_pHammer->SetRotation(0.0f, 0.0f, 0.0f);
+		m_pHammer->SetPosition(0.01f, -0.1f, -0.06f);
+		m_pHammer->SetRotation(45.0f, -33.0f, -10.0f);
 		handFrame->SetChild(m_pHammer);
 	}
 
@@ -755,22 +755,22 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pEquippedTool = m_pSword;
 	m_eCurrentTool = ToolType::Sword;
 
-	AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, offset, XMFLOAT3(85, 0, 90), scale);
+	//AddObject(pd3dDevice, pd3dCommandList, "spine_01", "Model/Torso_Peasant_03_Armor.bin", pGameFramework, offset, XMFLOAT3(85, 0, 90), scale);
 
 
-	CLoadedModelInfo* pCapeModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Hu_M_Cape_Peasant_Rd_test.bin", pGameFramework);
-	if (pCapeModelInfo) {
-		if (pCapeModelInfo->m_ppSkinnedMeshes) { // m_ppSkinnedMeshes가 유효한지 확인
-			for (int i = 0; i < pCapeModelInfo->m_nSkinnedMeshes; ++i) {
-				if (pCapeModelInfo->m_ppSkinnedMeshes[i]) {
-					// 망토 메쉬는 플레이어의 루트 스켈레톤을 기준으로 본 매핑
-					pCapeModelInfo->m_ppSkinnedMeshes[i]->PrepareSkinning(pPlayerModelInfo->m_pModelRootObject);
-				}
-			}
-		}
-		//pCapeModelInfo->m_pModelRootObject->m_pChild->SetPosition(XMFLOAT3(0, 1000, 0));
-		SetChild(pCapeModelInfo->m_pModelRootObject);
-	}
+	//CLoadedModelInfo* pCapeModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Hu_M_Cape_Peasant_Rd_test.bin", pGameFramework);
+	//if (pCapeModelInfo) {
+	//	if (pCapeModelInfo->m_ppSkinnedMeshes) { // m_ppSkinnedMeshes가 유효한지 확인
+	//		for (int i = 0; i < pCapeModelInfo->m_nSkinnedMeshes; ++i) {
+	//			if (pCapeModelInfo->m_ppSkinnedMeshes[i]) {
+	//				// 망토 메쉬는 플레이어의 루트 스켈레톤을 기준으로 본 매핑
+	//				pCapeModelInfo->m_ppSkinnedMeshes[i]->PrepareSkinning(pPlayerModelInfo->m_pModelRootObject);
+	//			}
+	//		}
+	//	}
+	//	//pCapeModelInfo->m_pModelRootObject->m_pChild->SetPosition(XMFLOAT3(0, 1000, 0));
+	//	SetChild(pCapeModelInfo->m_pModelRootObject);
+	//}
 
 
 
