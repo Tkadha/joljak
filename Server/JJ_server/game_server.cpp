@@ -66,6 +66,11 @@ BOOL WINAPI ConsoleHandler(DWORD dwCtrlType) {
 	return FALSE;
 }
 
+bool InHeilpad(float x, float z)
+{
+	return x >= 7600 && x <= 8700 && z >= 7600 && z <= 8700;
+}
+
 void ProcessClientLeave(shared_ptr<PlayerClient> remoteClient)
 {
 	// 에러 혹은 소켓 종료이다.
@@ -1054,7 +1059,7 @@ void BuildObject()
 	for (int i = 0; i < TreeCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
+		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT && !InHeilpad(randompos.first, randompos.second)) {
 			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
@@ -1072,7 +1077,7 @@ void BuildObject()
 	for (int i = 0; i < RockCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
-		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
+		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT && !InHeilpad(randompos.first, randompos.second)) {
 			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		}
 		obj->SetPosition(randompos.first, Terrain::terrain->GetHeight(randompos.first, randompos.second), randompos.second);
