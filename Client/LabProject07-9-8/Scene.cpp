@@ -224,22 +224,20 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 
 	std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab("Helipad");
 	CGameObject* gameObj = prefab->Clone();
-	float x = 8000, z = 8000;
+	float x = 8000, z = 8450;
 	gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 	gameObj->SetScale(10.0f, 10.0f, 10.0f);
 	gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 	gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
-
 	m_vGameObjects.emplace_back(gameObj);
 
 	prefab = pResourceManager->GetPrefab("Anthena");
-	x = z = 8050;
+	z = 8500;
 	gameObj = prefab->Clone();
 	gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 	gameObj->SetScale(10.0f, 10.0f, 10.0f);
 	gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 	gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
-
 	m_vGameObjects.emplace_back(gameObj);
 
 	/////////////////////////////////////////이펙트 오브젝트
