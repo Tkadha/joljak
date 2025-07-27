@@ -931,16 +931,16 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         switch (player->m_eCurrentTool)
         {
         case ToolType::Sword:
-            npc->Decreasehp(10);
-            packet.damage = 10;
+            npc->Decreasehp(player->PlayerAttack*player->attackdamage);
+            packet.damage = player->PlayerAttack * player->attackdamage;
             break;
         case ToolType::Axe:
-            npc->Decreasehp(8);
-            packet.damage = 8;
+            npc->Decreasehp((player->PlayerAttack-2) * player->attackdamage);
+            packet.damage = (player->PlayerAttack-2) * player->attackdamage;
             break;
         case ToolType::Pickaxe:
-            npc->Decreasehp(6);
-            packet.damage = 6;
+            npc->Decreasehp((player->PlayerAttack-4)*player->attackdamage);
+            packet.damage = (player->PlayerAttack-4) * player->attackdamage;
             break;
         default:
             break;
@@ -950,6 +950,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         npc->SetInvincible(true); // set invincible
         if (npc->Gethp() <= 0) {
             player->m_pGameFramework->AddItem("pork", 2);
+            
         }
         if (hitObject->FSM_manager) {
             if (npc->Gethp() > 0) hitObject->FSM_manager->ChangeState(std::make_shared<NonAtkNPCRunAwayState>());
@@ -971,16 +972,16 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         switch (player->m_eCurrentTool)
         {
         case ToolType::Sword:
-            npc->Decreasehp(10);
-            packet.damage = 10;
+            npc->Decreasehp(player->PlayerAttack * player->attackdamage);
+            packet.damage = player->PlayerAttack * player->attackdamage;
             break;
         case ToolType::Axe:
-            npc->Decreasehp(8);
-            packet.damage = 8;
+            npc->Decreasehp((player->PlayerAttack - 2) * player->attackdamage);
+            packet.damage = (player->PlayerAttack - 2) * player->attackdamage;
             break;
         case ToolType::Pickaxe:
-            npc->Decreasehp(6);
-            packet.damage = 6;
+            npc->Decreasehp((player->PlayerAttack - 4) * player->attackdamage);
+            packet.damage = (player->PlayerAttack - 4) * player->attackdamage;
             break;
         default:
             break;
@@ -990,6 +991,12 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         npc->SetInvincible(true); // set invincible
         if (npc->Gethp() <= 0) {
             player->Playerxp += 20;
+            if (player->killheal) {
+                if (player->Maxhp - player->Playerhp < 20)
+                    player->Playerhp += player->Maxhp - player->Playerhp;
+                else
+                    player->Playerhp += 20;
+            }
             if (player->Playerxp >= player->Totalxp) {
                 player->PlayerLevel++;
                 player->Playerxp = player->Playerxp - player->Totalxp;

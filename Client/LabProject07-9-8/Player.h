@@ -71,6 +71,8 @@ public:
 	int Playerxp = 0;
 	int Totalxp = 20;
 	bool invincibility = false;
+	float attackdamage = 1.0f;
+	bool killheal = false;
 	std::chrono::time_point<std::chrono::system_clock> starttime; 
 
 	ToolType m_eCurrentTool;

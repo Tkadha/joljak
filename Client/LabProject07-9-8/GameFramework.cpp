@@ -3132,10 +3132,8 @@ void CGameFramework::FrameAdvance()
 			{
 				std::vector<std::tuple<int, const char*, const char*>> hpTraits = {
 					{350, "Extra Health", "Increases base max HP"},
-					{400, "HP-based Damage", "Damage increases with HP"},
-					{450, "Regenerate When Starving", "Health regen continues even at 0 hunger"},
-					{500, "Enhanced HP Damage", "Stronger scaling with HP"},
-					{550, "Health Regen Skill", "Gain a passive healing effect"}
+					{450, "HP-based Damage", "Damage increases by HP"},
+					
 				};
 
 				for (auto& [req, name, effect] : hpTraits)
@@ -3153,11 +3151,9 @@ void CGameFramework::FrameAdvance()
 			if (ImGui::BeginTabItem("Stamina"))
 			{
 				std::vector<std::tuple<int, const char*, const char*>> staminaTraits = {
-					{200, "Work Speed Boost", "Faster gathering/crafting"},
-					{250, "Lower Stamina Cost", "Reduced stamina usage"},
-					{300, "Faster Recovery", "Stamina regeneration rate up"},
-					{350, "Power Surge", "Boost speed/attack if stamina is high"},
-					{400, "Exhausted Action", "Can still act briefly at 0 stamina"}
+					{200, "Stamina Regenaration Boost", "Stamina Regenaration Boost"},
+					{300, "Lower Stamina Cost", "Reduced stamina usage"},
+					
 				};
 
 				for (auto& [req, name, effect] : staminaTraits)
@@ -3175,11 +3171,9 @@ void CGameFramework::FrameAdvance()
 			if (ImGui::BeginTabItem("Attack"))
 			{
 				std::vector<std::tuple<int, const char*, const char*>> atkTraits = {
-					{15, "Triple Hit Bonus", "Every 3rd attack deals 2x damage"},
-					{20, "Kill Heal", "Heal some HP when killing enemies"},
-					{25, "Bleed Effect", "Applies bleed status"},
-					{30, "Damage Multiplier", "Boost weapon/tool damage"},
-					{35, "3s Invincibility", "Become invincible for 3s (180s cooldown)"}
+					{15, "Double Damage", "50% to deal damage"},
+					{25, "Kill Heal", "Heal some HP when killing enemies"},
+					
 				};
 
 				for (auto& [req, name, effect] : atkTraits)
@@ -3198,10 +3192,8 @@ void CGameFramework::FrameAdvance()
 			{
 				std::vector<std::tuple<int, const char*, const char*>> speedTraits = {
 					{15, "Extra Dash", "Gain an extra dash"},
-					{20, "Slow Resist", "Reduces duration of slowing effects"},
-					{25, "Speed on Kill", "Gain movement speed after killing"},
-					{30, "Dash Attack", "Dash deals damage"},
-					{35, "Evade Hit", "Chance to dodge when hit"}
+					{25, "Slow Resist", "Reduces duration of slowing effects"},
+					
 				};
 
 				for (auto& [req, name, effect] : speedTraits)
