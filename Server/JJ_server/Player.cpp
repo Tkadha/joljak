@@ -293,8 +293,8 @@ void PlayerClient::Update_test(float deltaTime)
     XMFLOAT3 deltaVel = Vector3::ScalarProduct(m_Velocity, 0.75f);
 
     if (Speed_stat > 0) {
-        deltaVel.x *= (1.f + 0.1f * Speed_stat);
-        deltaVel.z *= (1.f + 0.1f * Speed_stat);
+        deltaVel.x *= (1.f + 0.03f * Speed_stat);
+        deltaVel.z *= (1.f + 0.03f * Speed_stat);
     }
 
     // ·±´× ÆÇÁ¤
