@@ -1006,9 +1006,20 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 				}
 			}
 		}
+		const float fRenderDistanceSq = 800.0f * 800.0f;
+		XMVECTOR playerPos = XMLoadFloat3(&m_pPlayer->GetPosition());
 		for (auto& obj : m_lEnvironmentObjects) {
-			if (obj) obj->RenderShadow(pd3dCommandList);
+
+			if (!obj) continue;
+			XMVECTOR objPos = XMLoadFloat3(&obj->GetPosition());
+			float fDistanceSq = XMVectorGetX(XMVector3LengthSq(XMVectorSubtract(playerPos, objPos)));
+
+			if (fDistanceSq <= fRenderDistanceSq)
+			{
+				obj->RenderShadow(pd3dCommandList);
+			}
 		}
+
 		for (auto& obj : m_vConstructionObjects) {
 			if (obj) obj->RenderShadow(pd3dCommandList);
 		}
@@ -1086,8 +1097,18 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 				}
 			}
 		}
+		const float fRenderDistanceSq = 1000.0f * 1000.0f;
+		XMVECTOR playerPos = XMLoadFloat3(&m_pPlayer->GetPosition());
 		for (auto& obj : m_lEnvironmentObjects) {
-			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
+
+			if (!obj) continue;
+			XMVECTOR objPos = XMLoadFloat3(&obj->GetPosition());
+			float fDistanceSq = XMVectorGetX(XMVector3LengthSq(XMVectorSubtract(playerPos, objPos)));
+
+			if (fDistanceSq <= fRenderDistanceSq)
+			{
+				obj->Render(pd3dCommandList, pCamera);
+			}
 		}
 	}
 	
