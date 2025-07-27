@@ -780,7 +780,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	int changedCount = ChangeTextureForHierarchy(
 		this,                             // 탐색 시작 객체
 		_T("Model/Textures/T_HU_M_Body_05_D.dds"), // 현재 텍스처 경로
-		_T("Model/Textures/T_HU_M_Body_02_D.dds"), // 새 텍스처 경로
+		_T("Model/Textures/T_HU_M_Body_01_D.dds"), // 새 텍스처 경로
 		0,                                         // 변경할 텍스처 슬롯 (예: 알베도)
 		pResourceManager,
 		pd3dCommandList,
@@ -791,7 +791,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	ChangeTextureForHierarchy(
 		this,                             // 탐색 시작 객체
 		_T("Model/Textures/T_HU_M_Head_05_A_D.dds"), // 현재 텍스처 경로
-		_T("Model/Textures/T_HU_M_Head_02_A_D.dds"), // 새 텍스처 경로
+		_T("Model/Textures/T_HU_M_Head_01_A_D.dds"), // 새 텍스처 경로
 		0,                                         // 변경할 텍스처 슬롯 (예: 알베도)
 		pResourceManager,
 		pd3dCommandList,

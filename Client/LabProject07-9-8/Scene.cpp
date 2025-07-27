@@ -1539,7 +1539,16 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	// 나무
 	pResourceManager->RegisterPrefab("PineTree", std::make_shared<CPineObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
-	pResourceManager->RegisterPrefab("BirchTree", std::make_shared<CBirchObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+
+	auto pBirchPrefab = std::make_shared<CBirchObject>(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	pBirchPrefab->m_bIsPrefab = true;
+
+	int materialIndexToChange = 1;
+	UINT albedoTextureSlot = 0;
+	const wchar_t* textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
+	ChangeAlbedoTexture(pBirchPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+
+	pResourceManager->RegisterPrefab("BirchTree", pBirchPrefab);
 
 	// 바위
 	pResourceManager->RegisterPrefab("RockClusterA", std::make_shared<CRockClusterAObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
