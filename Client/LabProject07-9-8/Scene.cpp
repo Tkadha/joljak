@@ -141,8 +141,8 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	}
 
 	std::vector<std::wstring> skyboxTextures = {
-	   L"Skybox/mor.dds",
-	   L"Skybox/nig.dds",
+	   L"Skybox/Morning.dds",
+	   L"Skybox/Night.dds",
 	   L"Skybox/eve.dds"
 	};
 
@@ -332,7 +332,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	}
 
 	std::vector<std::wstring> skyboxTextures = {
-	   L"Skybox/mor.dds",
+	   L"Skybox/Morning.dds",
 	   L"Skybox/nig.dds"
 	};
 
