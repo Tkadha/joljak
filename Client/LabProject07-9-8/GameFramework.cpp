@@ -759,10 +759,8 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				//	//	}
 				//	//}
 				//	break;
-				case VK_F3:
-				case VK_F4:
-					m_pCamera = m_pPlayer->ChangeCamera((DWORD)(wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
-					break;
+				
+					
 				case VK_F9:
 					ChangeSwapChainState();
 					break;
@@ -852,6 +850,9 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				break;
 			case VK_F3:
 
+				break;
+			case VK_F4:
+				m_pPlayer->PlayerAttack = 9999;
 				break;
 			}
 			break;
