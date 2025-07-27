@@ -233,4 +233,11 @@ public:	// prefab
 	void SpawnStaticObjects(const std::string& prefabName, int count, float spawnMin, float spawnMax, float scaleMin, float scaleMax,
 		std::mt19937& gen, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList,
 		int matIdx = -1, const wchar_t* texFile = nullptr);
-}	;
+
+
+private:
+	int m_nTorchLightIndex = -1; // m_pLights 배열에서 횃불이 몇 번째인지 저장
+public:
+	void ToggleTorchLight(bool bEnable);
+	void UpdateTorchPosition(const XMFLOAT3& xmf3Position);
+};

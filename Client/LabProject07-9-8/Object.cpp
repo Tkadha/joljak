@@ -611,8 +611,6 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 		m_pcbMappedOBBTransform;
 
 	if (bCanRenderCurrentObjectOBB) {
-
-
 		XMMATRIX world = XMLoadFloat4x4(&m_xmf4x4World);
 		XMMATRIX view = XMLoadFloat4x4(&pCamera->GetViewMatrix());
 		XMMATRIX proj = XMLoadFloat4x4(&pCamera->GetProjectionMatrix());
@@ -620,29 +618,22 @@ void CGameObject::RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 
 		XMStoreFloat4x4(&wvpMatrix, XMMatrixTranspose(world * view * proj));
 
-
 		memcpy(m_pcbMappedOBBTransform, &wvpMatrix, sizeof(XMFLOAT4X4));
 
 		pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbOBBTransform->GetGPUVirtualAddress());
-
 
 		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
 		pd3dCommandList->IASetVertexBuffers(0, 1, &m_OBBVertexBufferView);
 		pd3dCommandList->IASetIndexBuffer(&m_OBBIndexBufferView);
 
-
 		pd3dCommandList->DrawIndexedInstanced(24, 1, 0, 0, 0);
 	}
 
 	if (m_pSibling) {
-
 		m_pSibling->RenderOBB(pd3dCommandList, pCamera);
-
 	}
 	if (m_pChild) {
-
 		m_pChild->RenderOBB(pd3dCommandList, pCamera);
-
 	}
 }
 
@@ -1928,10 +1919,11 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 		UpdateTransform(NULL);
 
 
-		XMFLOAT4X4 gmtxGameObject;
-		XMStoreFloat4x4(&gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
-
-		pd3dCommandList->SetGraphicsRoot32BitConstants(1, 16, &gmtxGameObject, 0);
+		cbGameObjectInfo gameObjectInfo;
+		XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+		gameObjectInfo.gMaterialInfo.AmbientColor = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
+		gameObjectInfo.gMaterialInfo.DiffuseColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo, 0);
 
 
 		D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle();

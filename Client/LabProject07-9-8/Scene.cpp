@@ -86,20 +86,15 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[2].m_xmf3Position = XMFLOAT3(0.0f, 3000.0f, 0.0f);
 
 
-	m_pLights[1].m_bEnable = false;
-	{
-		m_pLights[1].m_nType = SPOT_LIGHT;
-		m_pLights[1].m_fRange = 500.0f;
-		m_pLights[1].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
-		m_pLights[1].m_xmf4Diffuse = XMFLOAT4(0.4f, 0.4f, 0.4f, 1.0f);
-		m_pLights[1].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-		m_pLights[1].m_xmf3Position = XMFLOAT3(-50.0f, 20.0f, -5.0f);
-		m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 1.0f);
-		m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-		m_pLights[1].m_fFalloff = 8.0f;
-		m_pLights[1].m_fPhi = (float)cos(XMConvertToRadians(40.0f));
-		m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
-	}
+	m_nTorchLightIndex = 1;
+	m_pLights[m_nTorchLightIndex].m_nType = 1; // 점 조명
+	m_pLights[m_nTorchLightIndex].m_bEnable = false; // 처음엔 꺼진 상태
+	m_pLights[m_nTorchLightIndex].m_fRange = 200.0f; // 빛의 최대 도달 범위
+	m_pLights[m_nTorchLightIndex].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
+	m_pLights[m_nTorchLightIndex].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.7f, 0.3f, 1.0f); // 주황색 빛
+	m_pLights[m_nTorchLightIndex].m_xmf4Specular = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
+	m_pLights[m_nTorchLightIndex].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.005f, 0.00001f);
+
 	m_pLights[3].m_bEnable = false;
 	{
 		m_pLights[3].m_nType = SPOT_LIGHT;
@@ -890,7 +885,7 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 	if (m_pWavesObject) m_pWavesObject->Animate(fTimeElapsed);
 
-	
+	UpdateLights(fTimeElapsed);
 }
 
 
@@ -1460,7 +1455,7 @@ void CScene::UpdateShadowTransform()
 void CScene::UpdateLights(float fTimeElapsed)
 {
 	// 1. 빛의 회전 각도를 업데이트합니다.
-	float rotationSpeed = 0.5f; // 속도를 약간 조절
+	float rotationSpeed = 2.5f; // 속도를 약간 조절
 	m_fLightRotationAngle += fTimeElapsed * rotationSpeed;
 	if (m_fLightRotationAngle > 360.0f) m_fLightRotationAngle -= 360.0f;
 
@@ -1696,5 +1691,19 @@ void CScene::SpawnResourceShards(const XMFLOAT3& origin, ShardType type)
 				break;
 			}
 		}
+	}
+}
+
+void CScene::ToggleTorchLight(bool bEnable)
+{
+	if (m_nTorchLightIndex >= 0) {
+		m_pLights[m_nTorchLightIndex].m_bEnable = bEnable;
+	}
+}
+
+void CScene::UpdateTorchPosition(const XMFLOAT3& xmf3Position)
+{
+	if (m_nTorchLightIndex >= 0 && m_pLights[m_nTorchLightIndex].m_bEnable) {
+		m_pLights[m_nTorchLightIndex].m_xmf3Position = XMFLOAT3(xmf3Position.x, xmf3Position.y + 20.0f, xmf3Position.z);
 	}
 }

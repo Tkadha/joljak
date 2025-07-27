@@ -216,6 +216,8 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	m_pxmf2TextureCoords0 = new XMFLOAT2[m_nVertices];
 	m_pxmf2TextureCoords1 = new XMFLOAT2[m_nVertices];
 
+	m_pxmf3Normals = new XMFLOAT3[m_nVertices];
+
 	CHeightMapImage* pHeightMapImage = (CHeightMapImage*)pContext;
 	int cxHeightMap = pHeightMapImage->GetHeightMapWidth();
 	int czHeightMap = pHeightMapImage->GetHeightMapLength();
@@ -234,6 +236,37 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 			if (fHeight > fMaxHeight) fMaxHeight = fHeight;
 		}
 	}
+
+	XMVECTOR xmf3Normal;
+	for (int i = 0, z = zStart; z < (zStart + nLength); z++)
+	{
+		for (int x = xStart; x < (xStart + nWidth); x++, i++)
+		{
+			int x_plus_1 = min(x + 1, m_nWidth - 1);
+			int x_minus_1 = max(x - 1, 0);
+			int z_plus_1 = min(z + 1, m_nLength - 1);
+			int z_minus_1 = max(z - 1, 0);
+
+			float fHeight_N = OnGetHeight(x, z_plus_1, pContext);
+			float fHeight_S = OnGetHeight(x, z_minus_1, pContext);
+			float fHeight_E = OnGetHeight(x_plus_1, z, pContext);
+			float fHeight_W = OnGetHeight(x_minus_1, z, pContext);
+
+			XMFLOAT3 xmf3Edge1 = XMFLOAT3(2.0f * m_xmf3Scale.x, fHeight_E - fHeight_W, 0.0f);
+			XMFLOAT3 xmf3Edge2 = XMFLOAT3(0.0f, fHeight_N - fHeight_S, 2.0f * m_xmf3Scale.z);
+			XMVECTOR xmvEdge1 = XMLoadFloat3(&xmf3Edge1);
+			XMVECTOR xmvEdge2 = XMLoadFloat3(&xmf3Edge2);
+			xmf3Normal = XMVector3Normalize(XMVector3Cross(xmvEdge2, xmvEdge1));
+			XMStoreFloat3(&m_pxmf3Normals[i], xmf3Normal);
+		}
+	}
+
+	// --- 계산된 노멀 데이터로 GPU 버퍼를 생성합니다 ---
+	m_pd3dNormalBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Normals, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dNormalUploadBuffer);
+	m_d3dNormalBufferView.BufferLocation = m_pd3dNormalBuffer->GetGPUVirtualAddress();
+	m_d3dNormalBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dNormalBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
 
 	m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
 
@@ -355,8 +388,8 @@ XMFLOAT4 CHeightMapGridMesh::OnGetColor(int x, int z, void* pContext)
 
 void CHeightMapGridMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
 {
-	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[4] = { m_d3dPositionBufferView, m_d3dColorBufferView, m_d3dTextureCoord0BufferView, m_d3dTextureCoord1BufferView };
-	pd3dCommandList->IASetVertexBuffers(m_nSlot, 4, pVertexBufferViews);
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[] = { m_d3dPositionBufferView, m_d3dNormalBufferView, m_d3dColorBufferView, m_d3dTextureCoord0BufferView, m_d3dTextureCoord1BufferView };
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 5, pVertexBufferViews);
 }
 
 void CHeightMapGridMesh::AddSubMesh(int xStart, int zStart, int nWidth_part, int nLength_part, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {

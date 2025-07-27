@@ -1188,7 +1188,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
 			m_pScene->octree.insert(std::move(t_obj));
 
-			gameObj->SetOBB(0.2f, 1.f, 0.2f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->SetOBB(0.2f, 2.f, 0.2f, XMFLOAT3{ 0.f,5.f,0.f });
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
@@ -1961,7 +1961,7 @@ void CGameFramework::ProcessInput()
 
 
 			// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
-			UCHAR toggleKeys[] = { 'R','1','2','3','4' /*, 다른 키들 */};
+			UCHAR toggleKeys[] = { 'R','G','1','2','3','4' /*, 다른 키들 */};
 			for (UCHAR key : toggleKeys)
 			{
 				if (pKeysBuffer[key] & 0xF0)
@@ -1975,7 +1975,13 @@ void CGameFramework::ProcessInput()
 						{
 							obbRender = toggleStates[key];
 						}
-
+						if (key == 'G')
+						{
+							static bool bTorchOn = false;
+							bTorchOn = !bTorchOn;
+							if (m_pScene) m_pScene->ToggleTorchLight(bTorchOn);
+						}
+						
 						if (key == '1')
 						{
 							m_pPlayer->EquipTool(ToolType::Sword);							
@@ -2244,8 +2250,13 @@ void CGameFramework::FrameAdvance()
 		m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 	}
 	ProcessInput();
+
+	// 횃불
+	if (m_pScene) m_pScene->UpdateTorchPosition(m_pPlayer->GetPosition());
+
 	UpdateFurnace(m_GameTimer.GetTimeElapsed());
     AnimateObjects();
+
 
 	if (m_pConstructionSystem->IsBuildMode()) {
 		m_pConstructionSystem->UpdatePreviewPosition(m_pCamera);
