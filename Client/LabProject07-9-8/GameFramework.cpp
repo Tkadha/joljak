@@ -83,21 +83,36 @@ void CGameFramework::ProcessPacket(char* packet)
 	case E_PACKET::E_P_WEAPON_CHANGE:
 	{
 		WEAPON_CHANGE_PACKET* r_packet = reinterpret_cast<WEAPON_CHANGE_PACKET*>(packet);
+		if (r_packet->uid == _MyID) break;
 		if (m_pScene->PlayerList.find(r_packet->uid) != m_pScene->PlayerList.end()) {
-			switch (r_packet->weapon_type) {
+			std::string toolname{};
+			switch (r_packet->material_type) {
 			case 1:
-				m_pScene->PlayerList[r_packet->uid]->EquipTool(ToolType::Sword);
+				toolname += "wooden_";
 				break;
 			case 2:
-				m_pScene->PlayerList[r_packet->uid]->EquipTool(ToolType::Axe);
+				toolname += "stone_";
 				break;
 			case 3:
-				m_pScene->PlayerList[r_packet->uid]->EquipTool(ToolType::Pickaxe);
-				break;
-			case 4:
-				m_pScene->PlayerList[r_packet->uid]->EquipTool(ToolType::Hammer);
+				toolname += "iron_";
 				break;
 			}
+
+			switch (r_packet->weapon_type) {
+			case 1:
+				toolname += "sword";
+				break;
+			case 2:
+				toolname += "axe";
+				break;
+			case 3:
+				toolname += "pickaxe";
+				break;
+			case 4:
+				toolname += "hammer";
+				break;
+			}
+			m_pScene->PlayerList[r_packet->uid]->PlayerEquipTool(toolname.c_str());
 		}
 	}
 	break;
@@ -1108,7 +1123,6 @@ void CGameFramework::BuildObjects()
 	m_pCamera = m_pPlayer->GetCamera();
 	m_pPlayer->SetOwningScene(m_pScene);
 
-	m_pPlayer->EquipTool(ToolType::Sword);
 
 	m_pPlayer->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 
@@ -2008,58 +2022,78 @@ void CGameFramework::ProcessInput()
 			if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
 			else m_pPlayer->keyInput(pKeysBuffer);
 
-
-			for (int i = 0; i < 5; ++i)
+			// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
+			UCHAR toggleKeys[] = { 'R','G','1','2','3','4' /*, 다른 키들 */ };
+			for (UCHAR key : toggleKeys)
 			{
-				// '1' 키부터 '5' 키까지 확인
-				if (pKeysBuffer['1' + i] & 0xF0)
+				if (pKeysBuffer[key] & 0xF0)
 				{
-					// 키가 처음 눌리는 순간에만 실행
-					if (!keyPressed['1' + i])
+					if (!keyPressed[key])
 					{
-						// [핵심 수정] 핫바 인덱스가 실제로 변경되었을 때만 장착 로직을 실행
-						if (m_SelectedHotbarIndex != i)
+						toggleStates[key] = !toggleStates[key];
+						keyPressed[key] = true;
+						// 토글된 상태에 따른 동작 수행
+						if (key == 'R')
 						{
-							m_SelectedHotbarIndex = i; // 인덱스 변경
-
-							// --- 선택된 핫바 슬롯의 아이템에 따라 도구 장착 ---
-							InventorySlot& selectedSlot = m_inventorySlots[m_SelectedHotbarIndex];
-
-							if (selectedSlot.IsEmpty())
-							{
-								m_pPlayer->EquipTool(ToolType::Sword); // 빈 슬롯은 기본 무기(검)
-							}
-							else
-							{
-								// [수정] 아이템 이름을 가져와서 '==' 연산자로 정확하게 비교합니다.
-								std::string itemName = selectedSlot.item->GetName();
-
-								if (itemName == "wooden_sword" || itemName == "stone_sword" || itemName == "iron_sword") {
-									m_pPlayer->EquipTool(ToolType::Sword);
-								}
-								else if (itemName == "wooden_axe" || itemName == "stone_axe" || itemName == "iron_axe") {
-									m_pPlayer->EquipTool(ToolType::Axe);
-								}
-								else if (itemName == "wooden_pickaxe" || itemName == "stone_pickaxe" || itemName == "iron_pickaxe") {
-									m_pPlayer->EquipTool(ToolType::Pickaxe);
-								}
-								else if (itemName == "wooden_hammer" || itemName == "stone_hammer" || itemName == "iron_hammer") {
-									m_pPlayer->EquipTool(ToolType::Hammer);
-								}
-								else {
-									// 도구가 아닌 아이템을 선택했을 경우 기본 무기(검) 장착
-									m_pPlayer->EquipTool(ToolType::Sword);
-								}
-							}
+							obbRender = toggleStates[key];
 						}
-						keyPressed['1' + i] = true;
+						if (key == '1')
+						{
+							m_pPlayer->EquipTool("iron_sword");
+						}
+						if (key == '2')
+						{
+							m_pPlayer->EquipTool("wooden_axe");
+						}
+						if (key == '3')
+						{
+							m_pPlayer->EquipTool("stone_pickaxe");
+						}
+						if (key == '4')
+						{
+							m_pPlayer->EquipTool("wooden_hammer");
+						}
+						// 다른 키에 대한 처리 추가
 					}
 				}
 				else
 				{
-					keyPressed['1' + i] = false;
+					keyPressed[key] = false;
 				}
 			}
+
+			//for (int i = 0; i < 5; ++i)
+			//{
+			//	if (pKeysBuffer['1' + i] & 0xF0)
+			//	{
+			//		if (!keyPressed['1' + i])
+			//		{
+			//			if (m_SelectedHotbarIndex != i)
+			//			{
+			//				m_SelectedHotbarIndex = i;
+			//				InventorySlot& selectedSlot = m_inventorySlots[m_SelectedHotbarIndex];
+
+			//				if (selectedSlot.IsEmpty())
+			//				{
+			//					// 빈 슬롯 선택 시 모든 도구 장착 해제
+			//					m_pPlayer->UnequipAllTools();
+			//				}
+			//				else
+			//				{
+			//					// 아이템 이름을 가져와서 EquipTool 함수에 그대로 전달
+			//					std::string itemName = selectedSlot.item->GetName();
+			//					m_pPlayer->EquipTool(itemName);
+			//				}
+			//			}
+			//			keyPressed['1' + i] = true;
+			//		}
+			//	}
+			//	else
+			//	{
+			//		keyPressed['1' + i] = false;
+			//	}
+			//}
+
 			// 카메라 모드에 따른 입력 처리 (기존 코드와 동일)
 			if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
 			{
@@ -3892,23 +3926,23 @@ void CGameFramework::CheckAndToggleFurnaceUI()
 
 void CGameFramework::LoadTools()
 {
-	// 플레이어 오브젝트를 찾아야 합니다. 씬에서 플레이어를 찾는 로직이 필요합니다.
-	// 여기서는 m_pPlayer가 플레이어 오브젝트를 가리킨다고 가정합니다.
-	CGameObject* pPlayer = m_pScene->m_pPlayer;
-	if (!pPlayer) return;
+	//// 플레이어 오브젝트를 찾아야 합니다. 씬에서 플레이어를 찾는 로직이 필요합니다.
+	//// 여기서는 m_pPlayer가 플레이어 오브젝트를 가리킨다고 가정합니다.
+	//CGameObject* pPlayer = m_pScene->m_pPlayer;
+	//if (!pPlayer) return;
 
-	// 초기값 설정
-	m_swordTransform.position = { 0.01f, 0.0f, 0.0f };
-	m_axeTransform.position = { -0.2f, 0.0f, 0.0f };
-	m_pickaxeTransform.position = { 0.5f, 0.0f, 0.0f };
-	m_hammerTransform.position = { 0.2f, 0.0f, 0.0f };
-	m_hammerTransform.rotation = { 45.0f, 0.0f, 0.0f };
+	//// 초기값 설정
+	//m_swordTransform.position = { 0.01f, 0.0f, 0.0f };
+	//m_axeTransform.position = { -0.2f, 0.0f, 0.0f };
+	//m_pickaxeTransform.position = { 0.5f, 0.0f, 0.0f };
+	//m_hammerTransform.position = { 0.2f, 0.0f, 0.0f };
+	//m_hammerTransform.rotation = { 45.0f, 0.0f, 0.0f };
 
-	// 칼 로드 및 부착
-	m_pSword = m_pPlayer->m_pSword;
-	m_pAxe = m_pPlayer->m_pAxe;
-	m_pPickaxe = m_pPlayer->m_pPickaxe;
-	m_pHammer = m_pPlayer->m_pHammer;
+	//// 칼 로드 및 부착
+	//m_pSword = m_pPlayer->m_pSword;
+	//m_pAxe = m_pPlayer->m_pAxe;
+	//m_pPickaxe = m_pPlayer->m_pPickaxe;
+	//m_pHammer = m_pPlayer->m_pHammer;
 }
 
 void CGameFramework::OnImGuiRender()

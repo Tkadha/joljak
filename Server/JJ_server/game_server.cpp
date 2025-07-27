@@ -51,7 +51,7 @@ Timer g_timer;
 std::atomic<bool> g_is_shutting_down{ false };
 std::atomic<bool> g_is_start_game{ false };
 
-static float time_accumulator = 0.0f;
+static float time_accumulator = 0.f;
 static int play_day = 0;
 
 BOOL WINAPI ConsoleHandler(DWORD dwCtrlType) {

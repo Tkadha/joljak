@@ -807,9 +807,44 @@ public:
 
 #include "NetworkManager.h"
 
+struct ToolStats
+{
+    int damageVsTree = 1;
+    int damageVsRock = 1;
+    int damageVsNpc = 1;
+};
+
+// 도구 이름(m_equippedToolName)을 키로 사용하는 데미지 정보 테이블
+const std::map<std::string, ToolStats> G_TOOL_STATS_TABLE = {
+    //               { Tree, Rock, NPC }
+    { "Sword_Wood",   { 2,    2,    5  } },
+    { "Sword_Stone",  { 3,    3,    8  } },
+    { "Sword_Metal",  { 4,    4,    12 } },
+
+    { "Axe_Wood",     { 8,    3,    4  } },
+    { "Axe_Stone",    { 12,   4,    6  } },
+    { "Axe_Metal",    { 18,   5,    9  } },
+
+    { "Pickaxe_Wood", { 3,    8,    3  } },
+    { "Pickaxe_Stone",{ 4,    12,   4  } },
+    { "Pickaxe_Metal",{ 5,    18,   6  } },
+
+    { "Hammer_Wood",  { 5,    5,    5  } },
+    { "Hammer_Stone", { 6,    6,    8  } },
+    { "Hammer_Metal", { 7,    7,    10 } }
+};
+
 void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObject)
 {
     if (!hitObject) return;
+
+    const std::string& equippedToolName = player->m_equippedToolName;
+
+    ToolStats currentToolStats; // 기본(맨손) 데미지
+    if (G_TOOL_STATS_TABLE.count(equippedToolName)) {
+        currentToolStats = G_TOOL_STATS_TABLE.at(equippedToolName);
+    }
+
   
     int shardType = 0;
     if (hitObject->m_objectType == GameObjectType::Tree) {
@@ -819,20 +854,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
             shardType = 1;
             player->m_pStateMachine->SetLastHitInfo(hitObject->GetPosition(), shardType);
             if (hp > 0) {
-                switch (player->m_eCurrentTool)
-                {
-                case ToolType::Sword:
-                    hp -= 8;
-                    break;
-                case ToolType::Axe:
-                    hp -= 10;
-                    break;
-                case ToolType::Pickaxe:
-                    hp -= 6;
-                    break;
-                default:
-                    break;
-                }
+                hp -= currentToolStats.damageVsTree; 
                 tree->setHp(hp);
             }
             
@@ -855,48 +877,11 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
             shardType = 2;
             player->m_pStateMachine->SetLastHitInfo(hitObject->GetPosition(), shardType);
             if (hp > 0) {
-                switch (player->m_eCurrentTool)
-                {
-                case ToolType::Sword:
-                    hp -= 3;
-                    break;
-                case ToolType::Axe:
-                    hp -= 5;
-                    break;
-                case ToolType::Pickaxe:
-                    hp -= 10;
-                    break;
-                default:
-                    break;
-                }
-                rock->setHp(hp);
-
-                rock->SetScale(0.9f, 0.9f, 0.9f);
-
-                CScene* pScene = player->m_pGameFramework->GetScene();
-
-                if (pScene) {
-                    XMFLOAT3 treePos = rock->GetPosition();
-
-                    XMFLOAT3 spawnOffsetLocal = XMFLOAT3(
-                        ((float)(rand() % 200) - 100.0f) * 0.1f, // X -10 ~ +10
-                        (rand() % 10) + 10.0f,                     // Y 10~19
-                        ((float)(rand() % 200) - 100.0f) * 0.1f  // Z -10 ~ +10
-                    );
-
-                    XMFLOAT3 spawnPos = Vector3::Add(treePos, spawnOffsetLocal);
-                    if (pScene->m_pTerrain) { // 지형 위에 스폰되도록 높이 보정
-                        spawnPos.y = pScene->m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + spawnOffsetLocal.y+20;
-                    }
-
-                    XMFLOAT3 ejectVelocity = XMFLOAT3(
-                        ((float)(rand() % 100) - 50.0f),
-                        ((float)(rand() % 60) + 50.0f),
-                        ((float)(rand() % 100) - 50.0f)
-                    );
-
-                    player->m_pGameFramework->AddItem("stone", 1);                   
-                    //pScene->SpawnRock(spawnPos, ejectVelocity);
+                if (hp > 0) {
+                    hp -= currentToolStats.damageVsRock;
+                    rock->setHp(hp);
+                    rock->SetScale(0.9f, 0.9f, 0.9f);
+                    player->m_pGameFramework->AddItem("stone", 1);
                 }
             }
             if (hp <= 0) {
@@ -933,23 +918,10 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         auto& nwManager = NetworkManager::GetInstance();
         OBJ_HIT_PACKET packet;
         packet.oid = npc->m_id;
-        switch (player->m_eCurrentTool)
-        {
-        case ToolType::Sword:
-            npc->Decreasehp(player->PlayerAttack*player->attackdamage);
-            packet.damage = player->PlayerAttack * player->attackdamage;
-            break;
-        case ToolType::Axe:
-            npc->Decreasehp((player->PlayerAttack-2) * player->attackdamage);
-            packet.damage = (player->PlayerAttack-2) * player->attackdamage;
-            break;
-        case ToolType::Pickaxe:
-            npc->Decreasehp((player->PlayerAttack-4)*player->attackdamage);
-            packet.damage = (player->PlayerAttack-4) * player->attackdamage;
-            break;
-        default:
-            break;
-        }
+
+        int damage = currentToolStats.damageVsNpc; 
+        npc->Decreasehp(damage * player->attackdamage);
+        packet.damage = damage * player->attackdamage;
         nwManager.PushSendQueue(packet, packet.size);
 
         npc->SetInvincible(true); // set invincible
@@ -974,23 +946,11 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         auto& nwManager = NetworkManager::GetInstance();
         OBJ_HIT_PACKET packet;
         packet.oid = npc->m_id;
-        switch (player->m_eCurrentTool)
-        {
-        case ToolType::Sword:
-            npc->Decreasehp(player->PlayerAttack * player->attackdamage);
-            packet.damage = player->PlayerAttack * player->attackdamage;
-            break;
-        case ToolType::Axe:
-            npc->Decreasehp((player->PlayerAttack - 2) * player->attackdamage);
-            packet.damage = (player->PlayerAttack - 2) * player->attackdamage;
-            break;
-        case ToolType::Pickaxe:
-            npc->Decreasehp((player->PlayerAttack - 4) * player->attackdamage);
-            packet.damage = (player->PlayerAttack - 4) * player->attackdamage;
-            break;
-        default:
-            break;
-        }
+
+        int damage = currentToolStats.damageVsNpc; 
+        npc->Decreasehp(damage * player->attackdamage);
+        packet.damage = damage * player->attackdamage;
+
         nwManager.PushSendQueue(packet, packet.size);
 
         npc->SetInvincible(true); // set invincible
@@ -1409,31 +1369,30 @@ float PlayerStateMachine::GetAnimationLength(int trackIndex) const {
 #include "GameFramework.h"
 
 PlayerStateID PlayerStateMachine::DetermineAttackState() {
-    if (!m_pOwner || !m_pOwner->m_pGameFramework) {
-        return PlayerStateID::AttackMelee; // 기본 공격 (오류 상황)
-    }
-    CScene* pScene = m_pOwner->m_pGameFramework->GetScene();
-    if (!pScene) {
-        return PlayerStateID::AttackMelee; // 기본 공격 (씬 없음)
+    if (!m_pOwner) {
+        return PlayerStateID::AttackMelee;
     }
 
-    switch (m_pOwner->m_eCurrentTool)
-    {
-    case ToolType::Sword:
+    const std::string& equippedToolName = m_pOwner->m_equippedToolName;
+
+    if (equippedToolName.empty()) {
         return PlayerStateID::AttackMelee;
-        break;
-    case ToolType::Axe:
+    }
+
+    // 3. 도구 이름에 포함된 키워드를 바탕으로 상태를 결정합니다.
+    if (equippedToolName.find("Sword") != std::string::npos) {
+        return PlayerStateID::AttackMelee;
+    }
+    else if (equippedToolName.find("Axe") != std::string::npos) {
         return PlayerStateID::AttackAxe;
-        break;
-    case ToolType::Pickaxe:
+    }
+    else if (equippedToolName.find("Pickaxe") != std::string::npos) {
         return PlayerStateID::AttackPick;
-        break;
-    case ToolType::Hammer:
-        return PlayerStateID::AttackMelee;
-        break;
-    default:
-        break;
+    }
+    else if (equippedToolName.find("Hammer") != std::string::npos) {
+        return PlayerStateID::AttackMelee; // 망치는 칼과 같은 공격 상태 사용
     }
 
+    // 도구가 아닌 아이템(음식 등)을 들고 있을 경우 기본 공격
     return PlayerStateID::AttackMelee;
 }

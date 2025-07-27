@@ -100,19 +100,25 @@ void CGameObject::Release()
 
 void CGameObject::SetChild(CGameObject* pChild, bool bReferenceUpdate)
 {
-	if (pChild)
+	if (!pChild) return; // 예외 처리
+
+	pChild->m_pParent = this;
+	if (bReferenceUpdate) pChild->AddRef();
+
+	if (!m_pChild)
 	{
-		pChild->m_pParent = this;
-		if (bReferenceUpdate) pChild->AddRef();
-	}
-	if (m_pChild)
-	{
-		if (pChild) pChild->m_pSibling = m_pChild->m_pSibling;
-		m_pChild->m_pSibling = pChild;
+		// 이 오브젝트의 첫 번째 자식일 경우
+		m_pChild = pChild;
 	}
 	else
 	{
-		m_pChild = pChild;
+		// 이미 자식이 있다면, 형제(sibling) 리스트의 맨 끝을 찾아서 연결합니다.
+		CGameObject* pSibling = m_pChild;
+		while (pSibling->m_pSibling)
+		{
+			pSibling = pSibling->m_pSibling;
+		}
+		pSibling->m_pSibling = pChild;
 	}
 }
 
@@ -757,8 +763,8 @@ void CGameObject::UpdateTransform(XMFLOAT4X4* pxmf4x4Parent)
 	m_worldOBB.Extents.y = m_localOBB.Extents.y * scale.y;
 	m_worldOBB.Extents.z = m_localOBB.Extents.z * scale.z;
 
-	if (m_pSibling) m_pSibling->UpdateTransform(pxmf4x4Parent);
 	if (m_pChild) m_pChild->UpdateTransform(&m_xmf4x4World);
+	if (m_pSibling) m_pSibling->UpdateTransform(pxmf4x4Parent);
 }
 
 void CGameObject::SetTrackAnimationSet(int nAnimationTrack, int nAnimationSet)
@@ -786,6 +792,11 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 {
 	CScene* pScene = m_pGameFramework ? m_pGameFramework->GetScene() : nullptr;
 	if (!pScene) return;
+
+	char buffer[256];
+	// 현재 오브젝트의 이름과 주소, 그리고 형제 오브젝트의 주소를 출력합니다.
+	sprintf_s(buffer, "Rendering: '%s' (this: %p), Sibling: %p\n", m_pstrFrameName, this, m_pSibling);
+	//OutputDebugStringA(buffer);
 
 	if (!isRender) return;
 
@@ -907,8 +918,8 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			}
 		}
 	}
-	if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
 	if (m_pChild) m_pChild->Render(pd3dCommandList, pCamera);
+	if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
 }
 
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, UINT nInstances, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView)
@@ -2520,54 +2531,6 @@ CStaticObject::CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	if (pInFile) fclose(pInFile);
 }
 
-void UserObject::EquipTool(ToolType type)
-{
-	if (m_pSword) m_pSword->isRender = false;
-	if (m_pAxe) m_pAxe->isRender = false;
-	if (m_pPickaxe) m_pPickaxe->isRender = false;
-	if (m_pHammer) m_pHammer->isRender = false;
-
-	// 현재 장착한 도구 정보 초기화
-	m_pEquippedTool = nullptr;
-	m_eCurrentTool = ToolType::None;
-
-	// type에 해당하는 도구만 보이게 만듬
-	switch (type)
-	{
-	case ToolType::Sword:
-		if (m_pSword) {
-			m_pSword->isRender = true;
-			m_pEquippedTool = m_pSword;
-			m_eCurrentTool = type;
-		}
-		break;
-	case ToolType::Axe:
-		if (m_pAxe) {
-			m_pAxe->isRender = true;
-			m_pEquippedTool = m_pAxe;
-			m_eCurrentTool = type;
-		}
-		break;
-	case ToolType::Pickaxe:
-		if (m_pPickaxe) {
-			m_pPickaxe->isRender = true;
-			m_pEquippedTool = m_pPickaxe;
-			m_eCurrentTool = type;
-		}
-		break;
-	case ToolType::Hammer:
-		if (m_pHammer) {
-			m_pHammer->isRender = true;
-			m_pEquippedTool = m_pHammer;
-			m_eCurrentTool = type;
-		}
-		break;
-	case ToolType::None:
-	default:
-		// 모든 도구가 꺼진 상태로 함수 종료
-		break;
-	}
-}
 UserObject::UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CLoadedModelInfo* pModel, int nAnimationTracks, CGameFramework* pGameFramework) : CGameObject(1, pGameFramework)
 {
 	CLoadedModelInfo* pUserModel = pModel;
@@ -2576,46 +2539,7 @@ UserObject::UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3d
 
 	AddObject(pd3dDevice, pd3dCommandList, "Helmet", "Model/Hair_01.bin", pGameFramework, XMFLOAT3(0, 0.1, 0), XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
 	
-	m_pSword = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Sword_A.bin", pGameFramework)->m_pModelRootObject;
-	CGameObject* handFrame = FindFrame("thumb_01_r");
-	if (handFrame)
-	{
-		m_pSword->SetPosition(0.0f, -0.15f, -0.03f);
-		m_pSword->SetRotation(0.0f, 20.0f, 0.0f);
-		handFrame->SetChild(m_pSword);
-	}
-	m_pAxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Ax_B.bin", pGameFramework)->m_pModelRootObject;
-	handFrame = FindFrame("thumb_02_r");
-	if (handFrame)
-	{
-		m_pAxe->SetPosition(0.0f, -0.15f, -0.03f);
-		m_pAxe->SetRotation(0.0f, 20.0f, 0.0f);
-		handFrame->SetChild(m_pAxe);
-	}
-	m_pPickaxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Chisel.bin", pGameFramework)->m_pModelRootObject;
-	handFrame = FindFrame("thumb_03_r");
-	if (handFrame)
-	{
-		m_pPickaxe->SetPosition(-0.03f, -0.15f, -0.03f);
-		m_pPickaxe->SetRotation(0.0f, 20.0f, 0.0f);
-		handFrame->SetChild(m_pPickaxe);
-	}
-	m_pHammer = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Hammer_A.bin", pGameFramework)->m_pModelRootObject;
-	handFrame = FindFrame("middle_01_r");
-	if (handFrame)
-	{
-		m_pHammer->SetPosition(0.01f, -0.1f, -0.06f);
-		m_pHammer->SetRotation(45.0f, -33.0f, -10.0f);
-		handFrame->SetChild(m_pHammer);
-	}
-
-	if (m_pSword) m_pSword->isRender = true;
-	if (m_pAxe) m_pAxe->isRender = false;
-	if (m_pPickaxe) m_pPickaxe->isRender = false;
-	if (m_pHammer) m_pHammer->isRender = false;
-
-	m_pEquippedTool = m_pSword;
-	m_eCurrentTool = ToolType::Sword;
+	LoadTools(pd3dDevice, pd3dCommandList, pGameFramework);
 
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pUserModel);
 }
@@ -3018,4 +2942,129 @@ void CResourceShardEffect::Animate(float fTimeElapsed)
 	SetPosition(newPos);
 
 	CGameObject::Animate(fTimeElapsed);
+}
+
+
+
+// 도구 추가
+void CGameObject::LoadTools(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework)
+{
+	struct ToolInfo {
+		std::string name;
+		std::string path;
+		std::string boneName;
+	};
+
+	std::vector<ToolInfo> toolInfos = {
+		{ "Sword_Wood", "Model/Tool/WoodenSword.bin", "thumb_01_r" },
+		{ "Sword_Stone", "Model/Tool/StoneSword.bin", "thumb_02_r" },
+		{ "Sword_Metal", "Model/Tool/MetalSword.bin", "thumb_03_r" },
+		{ "Axe_Wood", "Model/Tool/WoodenAxe.bin", "pinky_01_r" },
+		{ "Axe_Stone", "Model/Tool/StoneAxe.bin", "pinky_02_r" },
+		{ "Axe_Metal", "Model/Tool/MetalAxe.bin", "pinky_03_r" },
+		{ "Pickaxe_Wood", "Model/Tool/WoodenPickaxe.bin", "middle_01_r" },
+		{ "Pickaxe_Stone", "Model/Tool/StonePickaxe.bin", "middle_02_r" },
+		{ "Pickaxe_Metal", "Model/Tool/MetalPickaxe.bin", "middle_03_r" },
+		{ "Hammer_Wood", "Model/Tool/BuildingHammer.bin", "ring_01_r" },
+		//{ "Hammer_Stone", "Model/Tool/StoneHammer.bin", "ring_02_r" },
+		{ "Hammer_Metal", "Model/Tool/MetalHammer.bin", "ring_03_r" }
+	};
+
+	for (const auto& info : toolInfos)
+	{
+		CGameObject* pTool = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, (char*)info.path.c_str(), pGameFramework)->m_pModelRootObject;
+		if (!pTool) continue;
+
+		CGameObject* handFrame = this->FindFrame((char*)info.boneName.c_str());
+		if (handFrame) {
+			handFrame->SetChild(pTool);
+		}
+
+		m_tools[info.name] = pTool;
+		pTool->isRender = false;
+		m_toolTransforms[info.name] = ToolTransform();
+	}
+}
+
+void CGameObject::UpdateToolTransforms()
+{
+	for (auto const& [name, pTool] : m_tools)
+	{
+		if (pTool && m_toolTransforms.count(name))
+		{
+			ToolTransform& transform = m_toolTransforms[name];
+			XMMATRIX mtxScale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+			XMMATRIX mtxRotate = XMMatrixRotationRollPitchYaw(
+				XMConvertToRadians(transform.rotation.x), XMConvertToRadians(transform.rotation.y), XMConvertToRadians(transform.rotation.z));
+			XMMATRIX mtxTranslate = XMMatrixTranslation(
+				transform.position.x, transform.position.y, transform.position.z);
+			XMStoreFloat4x4(&pTool->m_xmf4x4ToParent, mtxScale * mtxRotate * mtxTranslate);
+		}
+	}
+}
+
+void CGameObject::UnequipAllTools()
+{
+	if (!m_equippedToolName.empty() && m_tools.count(m_equippedToolName)) {
+		m_tools[m_equippedToolName]->isRender = false;
+	}
+	m_equippedToolName = "";
+}
+
+void CGameObject::EquipTool(const std::string& itemName)
+{
+	static const std::map<std::string, std::string> itemNameToToolName = {
+		{"wooden_sword", "Sword_Wood"}, {"stone_sword", "Sword_Stone"}, {"iron_sword", "Sword_Metal"},
+		{"wooden_axe", "Axe_Wood"}, {"stone_axe", "Axe_Stone"}, {"iron_axe", "Axe_Metal"},
+		{"wooden_pickaxe", "Pickaxe_Wood"}, {"stone_pickaxe", "Pickaxe_Stone"}, {"iron_pickaxe", "Pickaxe_Metal"},
+		{"wooden_hammer", "Hammer_Wood"}, {"stone_hammer", "Hammer_Stone"}, {"iron_hammer", "Hammer_Metal"}
+	};
+
+	UnequipAllTools();
+
+	auto it = itemNameToToolName.find(itemName);
+	if (it != itemNameToToolName.end())
+	{
+		std::string toolToEquip = it->second;
+		if (m_tools.count(toolToEquip)) {
+			m_tools[toolToEquip]->isRender = true;
+			m_equippedToolName = toolToEquip;
+
+			auto& nwManager = NetworkManager::GetInstance();
+			WEAPON_CHANGE_PACKET p;
+			p.size = sizeof(WEAPON_CHANGE_PACKET);
+			p.type = static_cast<char>(E_PACKET::E_P_WEAPON_CHANGE);
+			if (itemName.find("wood") != std::string::npos) p.material_type = 1;
+			else if (itemName.find("stone") != std::string::npos) p.material_type = 2;
+			else if (itemName.find("iron") != std::string::npos) p.material_type = 3;
+			
+			if (itemName.find("sword") != std::string::npos) p.weapon_type = 1;
+			else if (itemName.find("pickaxe") != std::string::npos) p.weapon_type = 3;
+			else if (itemName.find("axe") != std::string::npos) p.weapon_type = 2;
+			else if (itemName.find("hammer") != std::string::npos) p.weapon_type = 4;
+			nwManager.PushSendQueue(p, p.size);
+		}
+	}
+}
+
+void CGameObject::PlayerEquipTool(const std::string& itemName)
+{
+	static const std::map<std::string, std::string> itemNameToToolName = {
+		{"wooden_sword", "Sword_Wood"}, {"stone_sword", "Sword_Stone"}, {"iron_sword", "Sword_Metal"},
+		{"wooden_axe", "Axe_Wood"}, {"stone_axe", "Axe_Stone"}, {"iron_axe", "Axe_Metal"},
+		{"wooden_pickaxe", "Pickaxe_Wood"}, {"stone_pickaxe", "Pickaxe_Stone"}, {"iron_pickaxe", "Pickaxe_Metal"},
+		{"wooden_hammer", "Hammer_Wood"}, {"stone_hammer", "Hammer_Stone"}, {"iron_hammer", "Hammer_Metal"}
+	};
+
+	UnequipAllTools();
+
+	auto it = itemNameToToolName.find(itemName);
+	if (it != itemNameToToolName.end())
+	{
+		std::string toolToEquip = it->second;
+		if (m_tools.count(toolToEquip)) {
+			m_tools[toolToEquip]->isRender = true;
+			m_equippedToolName = toolToEquip;
+		}
+	}
 }

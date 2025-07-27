@@ -19,13 +19,6 @@
 #include <chrono>
 using namespace Microsoft::WRL; // 추가
 
-
-struct ToolTransform
-{
-	XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };
-	XMFLOAT3 rotation = { 0.0f, 0.0f, 0.0f };
-};
-
 struct CraftMaterial
 {
 	std::string MaterialName; // 재료 이름
