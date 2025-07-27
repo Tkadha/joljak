@@ -2124,6 +2124,7 @@ void CGameFramework::AnimateObjects()
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 
 	
+	if (m_pScene) m_pScene->UpdateLights(fTimeElapsed);
 	if (m_pScene) m_pScene->AnimateObjects(fTimeElapsed);
 	if (m_pPlayer) m_pPlayer->Animate(fTimeElapsed);
 	
