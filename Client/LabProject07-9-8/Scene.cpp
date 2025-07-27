@@ -231,6 +231,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 	gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	gameObj->m_id = 0;
+	heilport_anthena.emplace_back(gameObj);
 	m_vGameObjects.emplace_back(gameObj);
 	{
 		NetworkManager& nw = NetworkManager::GetInstance();
@@ -260,6 +261,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 	gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	gameObj->m_id = 1;
+	heilport_anthena.emplace_back(gameObj);
 	m_vGameObjects.emplace_back(gameObj);
 
 	{
@@ -1370,6 +1372,10 @@ void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity
 
 void CScene::NewGameBuildObj()
 {
+	for (auto& obj : heilport_anthena)
+	{
+		m_vGameObjects.push_back(obj);
+	}
 	for (auto& obj : m_vAttackEffects)
 	{
 		m_vGameObjects.push_back(obj);
