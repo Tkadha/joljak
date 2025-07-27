@@ -66,6 +66,12 @@ enum class ToolType : int {
 	Hammer
 };
 
+struct ToolTransform
+{
+	XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };
+	XMFLOAT3 rotation = { 0.0f, 0.0f, 0.0f };
+};
+
 enum class ANIMATION_TYPE;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -275,6 +281,17 @@ public:
 	virtual CGameObject* Clone();
 public:
 	bool is_load = false;
+
+// 장비 추가
+public:
+		void LoadTools(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
+		void UpdateToolTransforms();
+		void EquipTool(const std::string& itemName);
+		void UnequipAllTools();
+
+	std::map<std::string, CGameObject*> m_tools;
+	std::string m_equippedToolName;
+	std::map<std::string, ToolTransform> m_toolTransforms;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

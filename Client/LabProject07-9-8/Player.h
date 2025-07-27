@@ -73,14 +73,14 @@ public:
 	bool invincibility = false;
 	std::chrono::time_point<std::chrono::system_clock> starttime; 
 
-	ToolType m_eCurrentTool;
+	/*ToolType m_eCurrentTool;
 	CGameObject* m_pEquippedTool = nullptr;
 	CGameObject* m_pSword = nullptr;
 	CGameObject* m_pAxe = nullptr;
 	CGameObject* m_pPickaxe = nullptr;
 	CGameObject* m_pHammer = nullptr;  
 
-	void EquipTool(ToolType type);
+	void EquipTool(ToolType type);*/
 
 	std::mutex pos_mu;
 
