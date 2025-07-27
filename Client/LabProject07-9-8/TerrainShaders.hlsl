@@ -175,7 +175,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
 
     float4 cTextureColor = lerp(cDetailColor, cBaseTexColor, baseTexWeight);
     
-    float shadowFactor = 0.15; 
+    float shadowFactor = 0.3; 
     if (gIsDaytime) 
     {
         shadowFactor = CalcShadowFactor(input.ShadowPosH);
