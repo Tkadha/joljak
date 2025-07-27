@@ -2376,7 +2376,25 @@ void CGameFramework::FrameAdvance()
 			m_pCamera->GenerateViewMatrix(currentPos, XMFLOAT3(5000.0f, 0.0f, 5000.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
 		}
 	}
-	
+	HitInfo lastHit = m_pPlayer->m_pStateMachine->GetAndClearLastHitInfo();
+	if (lastHit.hasHit && m_pScene)
+	{
+		XMFLOAT3 pos = m_pPlayer->GetPosition();
+		// [수정] int 값을 CScene::ShardType으로 변환하여 전달합니다.
+		CScene::ShardType typeToSpawn = CScene::ShardType::Wood; // 기본값
+		if (lastHit.shardType == 1) {
+			typeToSpawn = CScene::ShardType::Wood;
+			pos.y += 15.0f;
+			pos.z += 5.0f;
+		}
+		else if (lastHit.shardType == 2) {
+			typeToSpawn = CScene::ShardType::Rock;
+			pos = lastHit.position;
+		}
+
+		// 변환된 타입으로 파편 생성을 요청합니다.
+		m_pScene->SpawnResourceShards(pos, typeToSpawn);
+	}
 
 	//m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 #ifdef _WITH_PLAYER_TOP
