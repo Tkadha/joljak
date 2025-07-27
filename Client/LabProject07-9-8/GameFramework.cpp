@@ -424,6 +424,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 		m_pd3dSrvDescriptorHeapForImGui->GetGPUDescriptorHandleForHeapStart()
 	);
 	InitializeCraftItems();
+	InitializeBuildRecipes();
 	ItemManager::Initialize();
 	InitializeItemIcons();
 	m_imGuiLobbyBackgroundTextureId = LoadIconTexture(L"lobby.png");
@@ -2393,16 +2394,17 @@ void CGameFramework::FrameAdvance()
 	
 	///////////////////////////////////////////////////////////// 아이템 핫바
 	
-		const int HotbarCount = 5;
-		const float SlotSize = 54.0f;
-		const float SlotSpacing = 6.0f;
-		const float ExtraPadding = 18.0f;
+	ImVec2 displaySize = ImGui::GetIO().DisplaySize;
 
-		const float TotalWidth = (SlotSize * HotbarCount) + (SlotSpacing * (HotbarCount - 1));
-		const float WindowWidth = TotalWidth + ExtraPadding;
+	// --- 1. 핫바 UI (화면 왼쪽 하단) ---
+	const int HotbarCount = 5;
+	const float SlotSize = displaySize.x * 0.03f; // 화면 너비의 3%
+	const float SlotSpacing = displaySize.x * 0.005f;
+	const float WindowWidth = (SlotSize * HotbarCount) + (SlotSpacing * (HotbarCount - 1)) + 20.0f;
+	const float WindowHeight = SlotSize + 20.0f;
 
-		ImVec2 displaySize = ImGui::GetIO().DisplaySize;
-		ImVec2 hotbarPos = ImVec2(30.0f, displaySize.y - 80.0f);
+	// 위치를 화면 너비와 높이에 대한 비율로 설정
+	ImVec2 hotbarPos = ImVec2(displaySize.x * 0.02f, displaySize.y * 0.9f);
 
 		if (m_eGameState == GameState::InGame) {
 			ImGui::SetNextWindowPos(hotbarPos);
@@ -2460,12 +2462,14 @@ void CGameFramework::FrameAdvance()
 			//////////////////////////////////////////////////플레이어 UI
 
 			{
-				const float hudWidth = 300.0f;
-				const float hudHeight = 100.0f;
-				const float barWidth = 100.0f;
-				const float barHeight = 15.0f;
+				const float hudWidth = displaySize.x * 0.18f;
+				const float hudHeight = displaySize.y * 0.15f;
+				const float barWidth = displaySize.x * 0.07f;
 
-				ImVec2 hudPos = ImVec2(displaySize.x - hudWidth + 10.0f, displaySize.y - hudHeight);
+				// [추가] hudHeight를 기준으로 ProgressBar의 높이를 계산합니다.
+				const float barHeight = hudHeight * 0.15f; // 예: HUD 창 높이의 15%
+
+				ImVec2 hudPos = ImVec2(displaySize.x - hudWidth - (displaySize.x * 0.02f), displaySize.y - hudHeight - (displaySize.y * 0.01f));
 
 				ImGui::SetNextWindowPos(hudPos);
 				ImGui::SetNextWindowSize(ImVec2(hudWidth, hudHeight));
@@ -2892,10 +2896,12 @@ void CGameFramework::FrameAdvance()
 			{
 				// 이전에 선택한 것과 다른 것을 선택했다면
 				if (m_nSelectedBuildingIndex != i) {
-					m_nSelectedBuildingIndex = i;
-					m_bIsPreviewVisible = true; // 프리뷰를 보이게 설정
-					// ConstructionSystem에 선택된 프리팹 이름으로 건설 모드 진입을 알림
-					m_pConstructionSystem->EnterBuildMode(buildableItems[i].prefabKey, m_pCamera);
+					if (CheckBuildMaterials(buildableItems[i].prefabKey)) {
+						m_nSelectedBuildingIndex = i;
+						m_bIsPreviewVisible = true; // 프리뷰를 보이게 설정
+						// ConstructionSystem에 선택된 프리팹 이름으로 건설 모드 진입을 알림
+						m_pConstructionSystem->EnterBuildMode(buildableItems[i].prefabKey, m_pCamera);
+					}
 				}
 				else { // 이미 선택된 것을 다시 클릭하면 선택 해제
 					m_nSelectedBuildingIndex = -1;
@@ -2913,6 +2919,8 @@ void CGameFramework::FrameAdvance()
 		if (ImGui::Button("Install (R)"))
 		{
 			// 1. ConstructionSystem에 설치를 요청하고 복제할 원본 오브젝트를 받아옵니다.
+			const char* prefabKeyToConsume = buildableItems[m_nSelectedBuildingIndex].prefabKey;
+			ConsumeBuildMaterials(prefabKeyToConsume);
 			CGameObject* pObjectToClone = m_pConstructionSystem->ConfirmPlacement();
 			XMFLOAT3 previewPos = pObjectToClone->GetPosition();
 
@@ -3990,4 +3998,63 @@ void CGameFramework::UpdateToolTransforms()
 		);
 		XMStoreFloat4x4(&m_pHammer->m_xmf4x4ToParent, mtxScale * mtxRotate * mtxTranslate);
 	}
+}
+void CGameFramework::InitializeBuildRecipes()
+{
+	m_mapBuildRecipes["wood_wall"] = { {"wood", 4} }; // 나무 벽: 나무 4개 필요
+	m_mapBuildRecipes["furnace"] = { {"stone", 10} }; // 화로: 돌 10개 필요
+	// ... 다른 건축물 레시피도 여기에 추가 ...
+}
+
+bool CGameFramework::CheckBuildMaterials(const std::string& buildableName)
+{
+	if (m_mapBuildRecipes.find(buildableName) == m_mapBuildRecipes.end()) return false; // 레시피 없음
+
+	const auto& materials = m_mapBuildRecipes[buildableName];
+	for (const auto& mat : materials)
+	{
+		int playerQuantity = 0;
+		for (const auto& slot : m_inventorySlots)
+		{
+			if (!slot.IsEmpty() && slot.item->GetName() == mat.MaterialName)
+			{
+				playerQuantity += slot.quantity;
+			}
+		}
+		if (playerQuantity < mat.Quantity) return false; // 재료 부족
+	}
+	return true; // 재료 충분
+}
+
+void CGameFramework::ConsumeBuildMaterials(const std::string& buildableName)
+{
+	// 먼저 재료가 충분한지 다시 확인
+	
+
+	const auto& materials = m_mapBuildRecipes[buildableName];
+	for (const auto& mat : materials)
+	{
+		int remaining = mat.Quantity;
+		for (InventorySlot& slot : m_inventorySlots)
+		{
+			if (remaining > 0 && !slot.IsEmpty() && slot.item->GetName() == mat.MaterialName)
+			{
+				if (slot.quantity >= remaining)
+				{
+					slot.quantity -= remaining;
+					remaining = 0;
+				}
+				else
+				{
+					remaining -= slot.quantity;
+					slot.quantity = 0;
+				}
+
+				if (slot.quantity == 0) {
+					slot.item = nullptr; // 아이템이 없으면 슬롯 비우기
+				}
+			}
+		}
+	}
+	
 }

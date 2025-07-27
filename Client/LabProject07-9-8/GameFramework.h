@@ -54,6 +54,10 @@ enum class GameState
 	InGame,
 	Ending
 };
+struct BuildMaterial {
+	std::string MaterialName;
+	int Quantity;
+};
 
 #include <unordered_map>
 #include <queue>
@@ -130,6 +134,10 @@ public:
 	void ProcessPacket(char* packet);
 
 	void AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id);
+
+	bool CheckBuildMaterials(const std::string& buildableName);
+	void ConsumeBuildMaterials(const std::string& buildableName);
+	void InitializeBuildRecipes();
 private:
 	HINSTANCE					m_hInstance;
 	HWND						m_hWnd; 
@@ -147,6 +155,8 @@ private:
 	bool						m_bBuildMode = false; // 건축 모드 활성화 여부
 	bool						m_bIsPreviewVisible = false; // 프리뷰 오브젝트가 보이는지 여부
 	int							m_nSelectedBuildingIndex = -1; // UI에서 선택한 건축물 인덱스
+
+	std::unordered_map<std::string, std::vector<BuildMaterial>> m_mapBuildRecipes;
 
 	void CheckAndToggleFurnaceUI();
         

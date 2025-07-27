@@ -12,7 +12,7 @@ void CConstructionSystem::Init(ID3D12Device* device, ID3D12GraphicsCommandList* 
 
 void CConstructionSystem::EnterBuildMode(const std::string& prefabName, const CCamera* pCamera)
 {
-    
+   
     if (m_pPreviewObject) {
         m_pPreviewObject->isRender = false;
     }
@@ -30,6 +30,7 @@ void CConstructionSystem::EnterBuildMode(const std::string& prefabName, const CC
         return;
     }
 
+    m_sCurrentPrefabName = prefabName;
     if (pCamera) UpdatePreviewPosition(pCamera);
 }
 
