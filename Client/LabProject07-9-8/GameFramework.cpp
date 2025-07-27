@@ -844,6 +844,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				AddItem("stone", 30);
 				AddItem("iron_material", 30);
 				AddItem("coal", 30);
+				AddItem("pork", 30);
 				break;
 			case VK_F1:
 				AddItem("wooden_sword", 1);
