@@ -10,6 +10,11 @@ class CTerrainPlayer;       // 실제 플레이어 클래스 타입으로 변경 필요
 class CAnimationController;
 class IPlayerState;
 
+struct HitInfo {
+    bool hasHit = false;
+    XMFLOAT3 position;
+    int shardType = 0; // [수정] 파편 종류를 int로 저장 (0:없음, 1:나무, 2:돌)
+};
 // --- 상태 머신 클래스 ---
 class PlayerStateMachine {
 public:
@@ -28,6 +33,19 @@ public:
     float GetAnimationLength(int trackIndex) const;
 
     const PlayerInputData& GetLastInput() const { return m_LastInput; }
+
+    void SetLastHitInfo(const XMFLOAT3& position, int type) {
+        m_LastHitInfo.hasHit = true;
+        m_LastHitInfo.position = position;
+        m_LastHitInfo.shardType = type;
+    }
+
+    // [추가] GameFramework가 마지막 공격 정보를 가져가는 public 함수
+    HitInfo GetAndClearLastHitInfo() {
+        HitInfo lastHit = m_LastHitInfo; // 정보를 복사
+        m_LastHitInfo.hasHit = false;      // 정보 초기화 (중복 생성을 막기 위함)
+        return lastHit;
+    }
 
     // 공격 키 입력 시 호출
     PlayerStateID DetermineAttackState();
@@ -59,7 +77,7 @@ private:
     // 블렌딩 업데이트 처리 (내부 헬퍼 함수)
     void UpdateBlend(float deltaTime);
 
-
+    HitInfo m_LastHitInfo;
 };
 
 class CGameObject;
@@ -79,6 +97,7 @@ public:
     virtual PlayerStateID GetID() const = 0;
 
     void CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObject);
+    
 };
 
 

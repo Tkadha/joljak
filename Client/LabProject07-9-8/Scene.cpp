@@ -302,7 +302,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	}
 
 	CLoadedModelInfo* pWoodShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch_A.bin", m_pGameFramework);
-	CLoadedModelInfo* pRockShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/RockCluster_A_LOD0.bin", m_pGameFramework);
+	CLoadedModelInfo* pRockShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/RockCluster_B_LOD0.bin", m_pGameFramework);
 
 	CMesh* pWoodMesh = pWoodShardModel->m_pModelRootObject->m_pMesh;
 	CMaterial* pWoodMaterial = pWoodShardModel->m_pModelRootObject->GetMaterial(0);
@@ -454,7 +454,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	for (int i = 0; i < shardPoolSize; ++i) {
 		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pWoodMesh, pWoodMaterial);
 
-		pShard->SetScale(1.0f, 1.0f, 1.0f);
+		pShard->SetScale(2.0f, 2.0f, 2.0f);
 		m_vWoodShards.push_back(pShard);
 		m_vGameObjects.push_back(pShard);
 	}
@@ -463,7 +463,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	for (int i = 0; i < shardPoolSize; ++i) {
 		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pRockMesh, pRockMaterial);
 
-		pShard->SetScale(0.2f, 0.2f, 0.2f);
+		pShard->SetScale(0.01f, 0.01f, 0.01f);
 
 		m_vRockShards.push_back(pShard);
 		m_vGameObjects.push_back(pShard);

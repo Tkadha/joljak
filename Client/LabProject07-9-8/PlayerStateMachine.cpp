@@ -810,10 +810,14 @@ public:
 void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObject)
 {
     if (!hitObject) return;
+  
+    int shardType = 0;
     if (hitObject->m_objectType == GameObjectType::Tree) {
         auto tree = dynamic_cast<CTreeObject*>(hitObject);
         if (tree && !tree->IsFalling() && !tree->HasFallen()) {
             int hp = tree->getHp();
+            shardType = 1;
+            player->m_pStateMachine->SetLastHitInfo(hitObject->GetPosition(), shardType);
             if (hp > 0) {
                 switch (player->m_eCurrentTool)
                 {
@@ -831,6 +835,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
                 }
                 tree->setHp(hp);
             }
+            
             if (hp <= 0) {
                 tree->StartFalling(player->GetLookVector()); // 플레이어가 바라보는 방향으로 쓰러지도록
             }
@@ -847,6 +852,8 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         auto rock = dynamic_cast<CRockObject*>(hitObject);
         if (rock) {
             int hp = rock->getHp();
+            shardType = 2;
+            player->m_pStateMachine->SetLastHitInfo(hitObject->GetPosition(), shardType);
             if (hp > 0) {
                 switch (player->m_eCurrentTool)
                 {
@@ -1016,7 +1023,11 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
             hitObject->FSM_manager->SetInvincible();
         }
     }
+    
+
 }
+
+
 
 // --- PlayerStateMachine 클래스 구현 ---
 
