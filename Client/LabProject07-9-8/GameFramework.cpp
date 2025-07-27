@@ -792,6 +792,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				break;
 			case 'E':
 				CheckEscape();
+				break;
 			case 'R':
 				if (m_bBuildMode && m_pConstructionSystem) {
 					m_pConstructionSystem->RotatePreviewObject(-45.0f);
@@ -817,15 +818,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				m_pScene->SpawnResourceShards(playerPos, CScene::ShardType::Wood);
 				break;
 			case 'P':
-				if (m_eGameState != GameState::InGame) break;
-				ChangeGameState(GameState::Ending);
-				{
-					auto& nwManager = NetworkManager::GetInstance();
-					GAME_END_PACKET p;
-					p.type = static_cast<char>(E_PACKET::E_GAME_END);
-					p.size = sizeof(GAME_END_PACKET);
-					nwManager.PushSendQueue(p, p.size);
-				}
+				CheckEscape();
 				break;
 			case 'M':
 				if (m_eGameState != GameState::Ending) break;
@@ -840,6 +833,21 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					p.size = sizeof(NEW_GAME_PACKET);
 					nwManager.PushSendQueue(p, p.size);
 				}
+				break;
+			case 'Z':
+				AddItem("wood", 30);
+				AddItem("stone", 30);
+				AddItem("iron_material", 30);
+				AddItem("coal", 30);
+				break;
+			case 'X':
+				AddItem("wooden_sword", 1);
+				AddItem("wooden_axe", 1);
+				AddItem("wooden_pickaxe", 1);
+				AddItem("wooden_hammer", 1);
+				break;
+			case 'N':
+
 				break;
 			}
 			break;
@@ -2064,37 +2072,37 @@ void CGameFramework::ProcessInput()
 			//	}
 			//}
 
-			//for (int i = 0; i < 5; ++i)
-			//{
-			//	if (pKeysBuffer['1' + i] & 0xF0)
-			//	{
-			//		if (!keyPressed['1' + i])
-			//		{
-			//			if (m_SelectedHotbarIndex != i)
-			//			{
-			//				m_SelectedHotbarIndex = i;
-			//				InventorySlot& selectedSlot = m_inventorySlots[m_SelectedHotbarIndex];
+			for (int i = 0; i < 5; ++i)
+			{
+				if (pKeysBuffer['1' + i] & 0xF0)
+				{
+					if (!keyPressed['1' + i])
+					{
+						if (m_SelectedHotbarIndex != i)
+						{
+							m_SelectedHotbarIndex = i;
+							InventorySlot& selectedSlot = m_inventorySlots[m_SelectedHotbarIndex];
 
-			//				if (selectedSlot.IsEmpty())
-			//				{
-			//					// 빈 슬롯 선택 시 모든 도구 장착 해제
-			//					m_pPlayer->UnequipAllTools();
-			//				}
-			//				else
-			//				{
-			//					// 아이템 이름을 가져와서 EquipTool 함수에 그대로 전달
-			//					std::string itemName = selectedSlot.item->GetName();
-			//					m_pPlayer->EquipTool(itemName);
-			//				}
-			//			}
-			//			keyPressed['1' + i] = true;
-			//		}
-			//	}
-			//	else
-			//	{
-			//		keyPressed['1' + i] = false;
-			//	}
-			//}
+							if (selectedSlot.IsEmpty())
+							{
+								// 빈 슬롯 선택 시 모든 도구 장착 해제
+								m_pPlayer->UnequipAllTools();
+							}
+							else
+							{
+								// 아이템 이름을 가져와서 EquipTool 함수에 그대로 전달
+								std::string itemName = selectedSlot.item->GetName();
+								m_pPlayer->EquipTool(itemName);
+							}
+						}
+						keyPressed['1' + i] = true;
+					}
+				}
+				else
+				{
+					keyPressed['1' + i] = false;
+				}
+			}
 
 			// 카메라 모드에 따른 입력 처리 (기존 코드와 동일)
 			if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
