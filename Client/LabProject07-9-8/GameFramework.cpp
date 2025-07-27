@@ -2024,45 +2024,45 @@ void CGameFramework::ProcessInput()
 			if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
 			else m_pPlayer->keyInput(pKeysBuffer);
 
-			// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
-			UCHAR toggleKeys[] = { 'R','G','1','2','3','4' /*, 다른 키들 */ };
-			for (UCHAR key : toggleKeys)
-			{
-				if (pKeysBuffer[key] & 0xF0)
-				{
-					if (!keyPressed[key])
-					{
-						toggleStates[key] = !toggleStates[key];
-						keyPressed[key] = true;
-						// 토글된 상태에 따른 동작 수행
-						if (key == 'R')
-						{
-							obbRender = toggleStates[key];
-						}
-						if (key == '1')
-						{
-							m_pPlayer->EquipTool("iron_sword");
-						}
-						if (key == '2')
-						{
-							m_pPlayer->EquipTool("wooden_axe");
-						}
-						if (key == '3')
-						{
-							m_pPlayer->EquipTool("stone_pickaxe");
-						}
-						if (key == '4')
-						{
-							m_pPlayer->EquipTool("wooden_hammer");
-						}
-						// 다른 키에 대한 처리 추가
-					}
-				}
-				else
-				{
-					keyPressed[key] = false;
-				}
-			}
+			//// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
+			//UCHAR toggleKeys[] = { 'R','G','1','2','3','4' /*, 다른 키들 */ };
+			//for (UCHAR key : toggleKeys)
+			//{
+			//	if (pKeysBuffer[key] & 0xF0)
+			//	{
+			//		if (!keyPressed[key])
+			//		{
+			//			toggleStates[key] = !toggleStates[key];
+			//			keyPressed[key] = true;
+			//			// 토글된 상태에 따른 동작 수행
+			//			if (key == 'R')
+			//			{
+			//				obbRender = toggleStates[key];
+			//			}
+			//			if (key == '1')
+			//			{
+			//				m_pPlayer->EquipTool("iron_sword");
+			//			}
+			//			if (key == '2')
+			//			{
+			//				m_pPlayer->EquipTool("wooden_axe");
+			//			}
+			//			if (key == '3')
+			//			{
+			//				m_pPlayer->EquipTool("stone_pickaxe");
+			//			}
+			//			if (key == '4')
+			//			{
+			//				m_pPlayer->EquipTool("wooden_hammer");
+			//			}
+			//			// 다른 키에 대한 처리 추가
+			//		}
+			//	}
+			//	else
+			//	{
+			//		keyPressed[key] = false;
+			//	}
+			//}
 
 			//for (int i = 0; i < 5; ++i)
 			//{
@@ -3993,40 +3993,59 @@ void CGameFramework::LoadTools()
 
 void CGameFramework::OnImGuiRender()
 {
-	// 1. 원하는 기본 창 크기를 ImVec2(가로, 세로) 형태로 정의합니다.
-	ImVec2 toolWindowSize = ImVec2(2000, 1000); 
-
-	// 2. 다음에 생성될 창의 크기를 미리 설정합니다.
-	// ImGuiCond_FirstUseEver 플래그는 프로그램 첫 실행 시에만 이 크기를 강제하고,
-	// 그 이후에는 사용자가 직접 조절한 창 크기를 기억해서 사용하게 해주는 유용한 옵션입니다.
-	ImGui::SetNextWindowSize(toolWindowSize, ImGuiCond_FirstUseEver);
-
-	ImGui::Begin("Tool Transform Editor");
-
-	if (ImGui::CollapsingHeader("Sword"))
+	// 플레이어가 존재하면, 플레이어의 도구 위치 에디터 UI를 그리도록 호출합니다.
+	if (m_pScene && m_pScene->m_pPlayer)
 	{
-		ImGui::DragFloat3("Position##Sword", &m_swordTransform.position.x, 0.01f);
-		ImGui::DragFloat3("Rotation##Sword", &m_swordTransform.rotation.x, 1.0f);
+		m_pScene->m_pPlayer->RenderToolEditorImGui();
 	}
-	if (ImGui::CollapsingHeader("Axe"))
+
+	// 모든 도구를 테스트할 수 있는 "Toolbox" 창
+	ImGui::Begin("Toolbox");
+
+	// 안전을 위해 플레이어 포인터가 유효한지 확인합니다.
+	if (m_pScene && m_pScene->m_pPlayer)
 	{
-		ImGui::DragFloat3("Position##Axe", &m_axeTransform.position.x, 0.01f);
-		ImGui::DragFloat3("Rotation##Axe", &m_axeTransform.rotation.x, 1.0f);
-	}
-	if (ImGui::CollapsingHeader("Pickaxe"))
-	{
-		ImGui::DragFloat3("Position##Pickaxe", &m_pickaxeTransform.position.x, 0.01f);
-		ImGui::DragFloat3("Rotation##Pickaxe", &m_pickaxeTransform.rotation.x, 1.0f);
-	}
-	if (ImGui::CollapsingHeader("Hammer"))
-	{
-		ImGui::DragFloat3("Position##Hammer", &m_hammerTransform.position.x, 0.01f);
-		ImGui::DragFloat3("Rotation##Hammer", &m_hammerTransform.rotation.x, 1.0f);
+		// 장착 해제 버튼
+		if (ImGui::Button("Unequip All", ImVec2(-1, 0))) // 너비를 창에 꽉 채움
+		{
+			m_pScene->m_pPlayer->UnequipAllTools();
+		}
+
+		ImGui::Separator(); // 구분선
+
+		// --- Swords ---
+		ImGui::Text("Swords");
+		if (ImGui::Button("Wood##Sword")) { m_pScene->m_pPlayer->EquipTool("wooden_sword"); } ImGui::SameLine();
+		if (ImGui::Button("Stone##Sword")) { m_pScene->m_pPlayer->EquipTool("stone_sword"); } ImGui::SameLine();
+		if (ImGui::Button("Iron##Sword")) { m_pScene->m_pPlayer->EquipTool("iron_sword"); }
+
+		// --- Axes ---
+		ImGui::Text("Axes");
+		if (ImGui::Button("Wood##Axe")) { m_pScene->m_pPlayer->EquipTool("wooden_axe"); } ImGui::SameLine();
+		if (ImGui::Button("Stone##Axe")) { m_pScene->m_pPlayer->EquipTool("stone_axe"); } ImGui::SameLine();
+		if (ImGui::Button("Iron##Axe")) { m_pScene->m_pPlayer->EquipTool("iron_axe"); }
+
+		// --- Pickaxes ---
+		ImGui::Text("Pickaxes");
+		if (ImGui::Button("Wood##Pickaxe")) { m_pScene->m_pPlayer->EquipTool("wooden_pickaxe"); } ImGui::SameLine();
+		if (ImGui::Button("Stone##Pickaxe")) { m_pScene->m_pPlayer->EquipTool("stone_pickaxe"); } ImGui::SameLine();
+		if (ImGui::Button("Iron##Pickaxe")) { m_pScene->m_pPlayer->EquipTool("iron_pickaxe"); }
+
+		// --- Hammers ---
+		ImGui::Text("Hammers");
+		if (ImGui::Button("Wood##Hammer")) { m_pScene->m_pPlayer->EquipTool("wooden_hammer"); } ImGui::SameLine();
+		if (ImGui::Button("Stone##Hammer")) { m_pScene->m_pPlayer->EquipTool("stone_hammer"); } ImGui::SameLine();
+		if (ImGui::Button("Iron##Hammer")) { m_pScene->m_pPlayer->EquipTool("iron_hammer"); }
 	}
 
 	ImGui::End();
-}
 
+	// 전체 UI 스케일 조절 창 (기존과 동일)
+	ImGui::Begin("UI Settings");
+	ImGuiIO& io = ImGui::GetIO();
+	ImGui::DragFloat("UI Scale", &io.FontGlobalScale, 0.05f, 0.5f, 4.0f);
+	ImGui::End();
+}
 void CGameFramework::UpdateToolTransforms()
 {
 	XMMATRIX mtxScale, mtxRotate, mtxTranslate;

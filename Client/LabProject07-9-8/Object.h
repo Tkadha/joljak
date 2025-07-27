@@ -291,6 +291,8 @@ public:
 		void PlayerEquipTool(const std::string& itemName);
 		void UnequipAllTools();
 
+		void RenderToolEditorImGui(); // 도구 에디터 ImGui 창을 그리는 함수
+
 	std::map<std::string, CGameObject*> m_tools;
 	std::string m_equippedToolName;
 	std::map<std::string, ToolTransform> m_toolTransforms;
