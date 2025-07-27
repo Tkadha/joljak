@@ -996,6 +996,12 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
                     player->Playerhp += player->Maxhp - player->Playerhp;
                 else
                     player->Playerhp += 20;
+                CHANGE_STAT_PACKET p;
+                p.stat = E_STAT::HP;
+                p.value = player->Playerhp;
+                p.size = sizeof(CHANGE_STAT_PACKET);
+                p.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+                nwManager.PushSendQueue(p, p.size);
             }
             if (player->Playerxp >= player->Totalxp) {
                 player->PlayerLevel++;
