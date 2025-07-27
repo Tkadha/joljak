@@ -78,6 +78,9 @@ void CGameFramework::ProcessPacket(char* packet)
 		m_pPlayer->Totalxp = 20;
 		m_pPlayer->attackdamage = 1;
 		m_pPlayer->killheal = false;
+		for (auto& p : m_pScene->PlayerList) {
+			p.second->UnequipAllTools();
+		}
 	}
 	break;
 	case E_PACKET::E_P_RESPAWN:{
