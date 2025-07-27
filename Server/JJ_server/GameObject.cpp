@@ -132,6 +132,13 @@ void GameObject::MoveForward(float fDistance)
 				break;
 			}
 		}
+		for (auto& st_obj : GameObject::ConstructObjects) {
+			if (testOBBX.Intersects(st_obj->world_obb))
+			{
+				test_move.x = GetPosition().x;
+				break;
+			}
+		}
 	}
 	test_move.z = xmf3TargetPosition.z;
 	BoundingOrientedBox testOBBZ;
@@ -160,6 +167,13 @@ void GameObject::MoveForward(float fDistance)
 			if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
 			auto t = GameObject::gameObjects[o_obj->u_id]->GetType();
 			if (testOBBZ.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
+			{
+				test_move.z = GetPosition().z;
+				break;
+			}
+		}
+		for (auto& st_obj : GameObject::ConstructObjects) {
+			if (testOBBX.Intersects(st_obj->world_obb))
 			{
 				test_move.z = GetPosition().z;
 				break;
@@ -221,6 +235,16 @@ void GameObject::Rotate(float fPitch, float fYaw, float fRoll)
 		{
 			XMVECTOR myCenter = XMLoadFloat3(&GetPosition());
 			XMVECTOR otherCenter = XMLoadFloat3(&other_obj->world_obb.Center);
+			XMVECTOR pushDir = XMVector3Normalize(XMVectorSubtract(myCenter, otherCenter));
+			totalPushOutVector = XMVectorAdd(totalPushOutVector, pushDir);
+			collisionCount++;
+		}
+	}
+	for (auto& st_obj : GameObject::ConstructObjects) {
+		if (testOBB.Intersects(st_obj->world_obb))
+		{
+			XMVECTOR myCenter = XMLoadFloat3(&GetPosition());
+			XMVECTOR otherCenter = XMLoadFloat3(&st_obj->world_obb.Center);
 			XMVECTOR pushDir = XMVector3Normalize(XMVectorSubtract(myCenter, otherCenter));
 			totalPushOutVector = XMVectorAdd(totalPushOutVector, pushDir);
 			collisionCount++;
