@@ -1174,9 +1174,10 @@ std::vector<CGameObject*> CTerrainPlayer::FindObjectHitByAttack() {
 	if (!pScene) return hitObjects;
 
 	BoundingOrientedBox weaponOBB;
-	if (weaponType == WeaponType::Sword) weaponOBB = m_pSword->m_worldOBB;
-	else if (weaponType == WeaponType::Axe) weaponOBB = m_pAxe->m_worldOBB;
-	else if (weaponType == WeaponType::Pick) weaponOBB = m_pPick->m_worldOBB;
+	if (m_eCurrentTool == ToolType::Sword) weaponOBB = m_pSword->m_worldOBB;
+	else if (m_eCurrentTool == ToolType::Axe) weaponOBB = m_pAxe->m_worldOBB;
+	else if (m_eCurrentTool == ToolType::Pickaxe) weaponOBB = m_pPickaxe->m_worldOBB;
+	else if (m_eCurrentTool == ToolType::Hammer) weaponOBB = m_pHammer->m_worldOBB;
 
 	for (const auto& obj : pScene->m_vGameObjects) {
 		if (obj->m_id == -1 || !obj->isRender) continue;
