@@ -781,7 +781,6 @@ void CGameObject::Animate(float fTimeElapsed)
 {
 	OnPrepareRender();
 
-
 	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 
 	if (m_pSibling) m_pSibling->Animate(fTimeElapsed);
@@ -792,12 +791,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 {
 	CScene* pScene = m_pGameFramework ? m_pGameFramework->GetScene() : nullptr;
 	if (!pScene) return;
-
-	char buffer[256];
-	// 현재 오브젝트의 이름과 주소, 그리고 형제 오브젝트의 주소를 출력합니다.
-	sprintf_s(buffer, "Rendering: '%s' (this: %p), Sibling: %p\n", m_pstrFrameName, this, m_pSibling);
-	//OutputDebugStringA(buffer);
-
+	
 	if (!isRender) return;
 
 
@@ -2953,21 +2947,23 @@ void CGameObject::LoadTools(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		std::string name;
 		std::string path;
 		std::string boneName;
+		XMFLOAT3 position;      // 기본 위치
+		XMFLOAT3 rotation;      // 기본 회전
 	};
 
+
 	std::vector<ToolInfo> toolInfos = {
-		{ "Sword_Wood", "Model/Tool/WoodenSword.bin", "thumb_01_r" },
-		{ "Sword_Stone", "Model/Tool/StoneSword.bin", "thumb_02_r" },
-		{ "Sword_Metal", "Model/Tool/MetalSword.bin", "thumb_03_r" },
-		{ "Axe_Wood", "Model/Tool/WoodenAxe.bin", "pinky_01_r" },
-		{ "Axe_Stone", "Model/Tool/StoneAxe.bin", "pinky_02_r" },
-		{ "Axe_Metal", "Model/Tool/MetalAxe.bin", "pinky_03_r" },
-		{ "Pickaxe_Wood", "Model/Tool/WoodenPickaxe.bin", "middle_01_r" },
-		{ "Pickaxe_Stone", "Model/Tool/StonePickaxe.bin", "middle_02_r" },
-		{ "Pickaxe_Metal", "Model/Tool/MetalPickaxe.bin", "middle_03_r" },
-		{ "Hammer_Wood", "Model/Tool/BuildingHammer.bin", "ring_01_r" },
-		//{ "Hammer_Stone", "Model/Tool/StoneHammer.bin", "ring_02_r" },
-		{ "Hammer_Metal", "Model/Tool/MetalHammer.bin", "ring_03_r" }
+		{ "Sword_Wood",   "Model/Tool/WoodenSword.bin",   "middle_01_r", {-0.01f, -0.11f, -0.07f}, {27.0f, -57.0f, -56.0f} },
+		{ "Sword_Stone",  "Model/Tool/StoneSword.bin",    "middle_02_r", {-0.01f, -0.11f, -0.07f}, {28.0f, -57.0f, -56.0f} },
+		{ "Sword_Metal",  "Model/Tool/MetalSword.bin",    "middle_03_r", {-0.03f, -0.13f, -0.15f}, {67.0f, 0.0f, 0.0f} },
+		{ "Axe_Wood",     "Model/Tool/WoodenAxe.bin",     "thumb_01_r", {0.05f, -0.21f, -0.01f}, {9.0f, 94.0f, -7.0f} },
+		{ "Axe_Stone",    "Model/Tool/StoneAxe.bin",      "thumb_02_r", {0.04f, -0.21f, -0.03f}, {-11.0f, 94.0f, -7.0f} },
+		{ "Axe_Metal",    "Model/Tool/MetalAxe.bin",      "thumb_03_r", {0.04f, -0.21f, -0.03f}, {-11.0f, 94.0f, -7.0f} },
+		{ "Pickaxe_Wood", "Model/Tool/WoodenPickaxe.bin", "ring_01_r", {0.05f, -0.07f, -0.17f}, {-84.0f, 180.0f, 0.0f} },
+		{ "Pickaxe_Stone","Model/Tool/StonePickaxe.bin",  "ring_02_r", {0.0f, -0.04f, -0.14f}, {30.0f, -90.0f, -93.0f} },
+		{ "Pickaxe_Metal","Model/Tool/MetalPickaxe.bin",  "ring_03_r", {0.0f, -0.05f, -0.21f}, {0.0f, 90.0f, 93.0f} },
+		{ "Hammer_Wood",  "Model/Tool/BuildingHammer.bin","hand_r", {0.1f, -0.1f, -0.12f}, {27.0f, 78.0f, 63.0f} },
+		{ "Hammer_Metal", "Model/Tool/MetalHammer.bin",   "Weapon_R", {0.01f, -0.06f, -0.18f}, {73.0f, 0.0f, 0.0f} }
 	};
 
 	for (const auto& info : toolInfos)
@@ -2982,8 +2978,10 @@ void CGameObject::LoadTools(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 		m_tools[info.name] = pTool;
 		pTool->isRender = false;
-		m_toolTransforms[info.name] = ToolTransform();
+		m_toolTransforms[info.name].position = info.position;
+		m_toolTransforms[info.name].rotation = info.rotation;
 	}
+	UpdateToolTransforms();
 }
 
 void CGameObject::UpdateToolTransforms()
@@ -3031,4 +3029,23 @@ void CGameObject::EquipTool(const std::string& itemName)
 			m_equippedToolName = toolToEquip;
 		}
 	}
+}
+
+void CGameObject::RenderToolEditorImGui()
+{
+	ImGui::Begin("Tool Transform Editor");
+
+	for (auto& pair : m_toolTransforms)
+	{
+		if (ImGui::CollapsingHeader(pair.first.c_str()))
+		{
+			std::string posLabel = "Position##" + pair.first;
+			std::string rotLabel = "Rotation##" + pair.first;
+
+			ImGui::DragFloat3(posLabel.c_str(), &pair.second.position.x, 0.01f);
+			ImGui::DragFloat3(rotLabel.c_str(), &pair.second.rotation.x, 1.0f);
+		}
+	}
+
+	ImGui::End();
 }
