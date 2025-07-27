@@ -36,8 +36,7 @@ public:
         if (input.WalkLeft) return PlayerStateID::WalkLeft;
         if (input.WalkRight) return PlayerStateID::WalkRight;
         // 기타 입력 (공격, 점프 등)
-        if (input.Attack)  //return PlayerStateID::AttackMelee;
-            return stateMachine->DetermineAttackState();
+        if (input.Attack) return stateMachine->DetermineAttackState();
         if (input.Jump) return PlayerStateID::JumpStart;
         if (input.Interact) { 
         }
@@ -99,7 +98,7 @@ public:
         if (input.Run && input.MoveForward && !input.WalkLeft && !input.WalkRight && !input.MoveBackward) {
             return PlayerStateID::RunForward;
         }
-        if (input.Attack) return PlayerStateID::AttackMelee;
+        if (input.Attack) return stateMachine->DetermineAttackState();
         if (input.Jump) return PlayerStateID::JumpStart;
         if (input.Interact) { /* 상호작용 체크 */ }
 
@@ -166,7 +165,7 @@ public:
             return PlayerStateID::RunBackward; // RunBackward 상태로 전환 요청
         }
 
-        if (input.Attack) return PlayerStateID::AttackMelee;
+        if (input.Attack) return stateMachine->DetermineAttackState();
         if (input.Jump) return PlayerStateID::JumpStart;
         if (input.Interact) { /* 상호작용 체크 */ }
 
@@ -230,7 +229,7 @@ public:
             return PlayerStateID::RunLeft; 
         }
 
-        if (input.Attack) return PlayerStateID::AttackMelee;
+        if (input.Attack) return stateMachine->DetermineAttackState();
         if (input.Jump) return PlayerStateID::JumpStart;
         if (input.Interact) { /* 상호작용 체크 */ }
 
@@ -294,7 +293,7 @@ public:
             return PlayerStateID::RunRight;
         }
 
-        if (input.Attack) return PlayerStateID::AttackMelee;
+        if (input.Attack) return stateMachine->DetermineAttackState();
         if (input.Jump) return PlayerStateID::JumpStart;
         if (input.Interact) { /* 상호작용 체크 */ }
 
@@ -337,8 +336,8 @@ public:
         player->SetVelocity(targetVel);
 
         // 다른 상태로 전환 체크
-        if (input.Attack) return PlayerStateID::AttackMelee; // 달리는 중 공격 가능?
-        if (input.Jump) return PlayerStateID::JumpStart;   // 달리는 중 점프 가능?
+        if (input.Attack) return stateMachine->DetermineAttackState();
+        if (input.Jump) return PlayerStateID::JumpStart;
         if (input.Interact) { /* 상호작용 체크 */ }
 
         return PlayerStateID::RunForward;
@@ -377,7 +376,7 @@ public:
         player->SetVelocity(targetVel);
 
         // --- 다른 상태로 전환 체크 ---
-        if (input.Attack) return PlayerStateID::AttackMelee;
+        if (input.Attack) return stateMachine->DetermineAttackState();
         if (input.Jump) return PlayerStateID::JumpStart;
         if (input.Interact) { /* 상호작용 체크 */ }
 
@@ -414,7 +413,7 @@ public:
         targetVel.y = currentVel.y;
         player->SetVelocity(targetVel);
 
-        if (input.Attack) return PlayerStateID::AttackMelee;
+        if (input.Attack) return stateMachine->DetermineAttackState();
         if (input.Jump) return PlayerStateID::JumpStart;
         if (input.Interact) { /* 상호작용 체크 */ }
 
@@ -453,7 +452,7 @@ public:
         player->SetVelocity(targetVel);
 
         // 다른 상태로 전환 체크
-        if (input.Attack) return PlayerStateID::AttackMelee;
+        if (input.Attack) return stateMachine->DetermineAttackState();
         if (input.Jump) return PlayerStateID::JumpStart;
         if (input.Interact) { /* 상호작용 체크 */ }
 
@@ -538,9 +537,9 @@ public:
         float animLength = stateMachine->GetAnimationLength(m_nAnimTrack);
 
         if (!m_bHasAppliedHit && currentPosition >= animLength * 0.66f) {
-            m_bHasAppliedHit = true; // 판정은 한 번
 
             std::vector<CGameObject*> hitObjects = player->FindObjectHitByAttack();
+            m_bHasAppliedHit = true; 
 
             if (!hitObjects.empty()) {
                 for (CGameObject* hitObject : hitObjects) {
@@ -802,7 +801,6 @@ public:
 
     void Exit(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
         std::cout << "Exiting HitReaction State\n";
-        // 필요시 입력 제한 해제 등
     }
 };
 
@@ -834,7 +832,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
                 tree->setHp(hp);
             }
             if (hp <= 0) {
-                tree->StartFalling(player->GetLookVector()); // 플레이어가 바라보는 방향으로 쓰러지도록 (또는 다른 방향)
+                tree->StartFalling(player->GetLookVector()); // 플레이어가 바라보는 방향으로 쓰러지도록
             }
 #ifdef ONLINE
             auto& nwManager = NetworkManager::GetInstance();
