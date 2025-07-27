@@ -401,8 +401,14 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		if(r_packet->hit_obj_id < 0) return; // Àß¸øµÈ id
 		auto o_type = GameObject::gameObjects[r_packet->hit_obj_id]->GetType();
 		client->Playerhp -= GameObject::gameObjects[r_packet->hit_obj_id]->_atk;
-		if (client->Playerhp.load() < 0) client->Playerhp.store(0);
-
+		if (client->Playerhp.load() < 0) {
+			client->RespawnPlayer();
+			PLAYER_RESPAWN_PACKET p;
+			p.size = sizeof(PLAYER_RESPAWN_PACKET);
+			p.type = static_cast<char>(E_PACKET::E_P_RESPAWN);
+			client->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&p));
+			client->BroadCastPosPacket();
+		}
 		CHANGE_STAT_PACKET s_packet;
 		s_packet.size = sizeof(CHANGE_STAT_PACKET);
 		s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
@@ -737,7 +743,7 @@ void event_thread()
 						time_accumulator = 0;
 						std::cout << "Build obj" << std::endl;
 					}
-					break;
+						break;
 					default:
 						break;
 					}

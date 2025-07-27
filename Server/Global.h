@@ -32,6 +32,9 @@ enum class E_PACKET
 	E_GAME_END = 22,
 	E_GAME_NEW = 23,
 
+	E_P_RESPAWN = 24,
+
+
 	E_DB_REGISTER = 100,
 	E_DB_LOGIN = 101,
 	E_DB_SUCCESS_FAIL = 102,
@@ -384,13 +387,21 @@ public:
 		size = sizeof(GAME_END_PACKET);
 	}
 };
-
 class NEW_GAME_PACKET :public PACKET
 {
 public:
 	NEW_GAME_PACKET() {
 		type = static_cast<char>(E_PACKET::E_GAME_NEW);
 		size = sizeof(NEW_GAME_PACKET);
+	}
+};
+
+class PLAYER_RESPAWN_PACKET : public PACKET
+{
+public:
+	PLAYER_RESPAWN_PACKET() {
+		type = static_cast<char>(E_PACKET::E_P_RESPAWN);
+		size = sizeof(PLAYER_RESPAWN_PACKET);
 	}
 };
 

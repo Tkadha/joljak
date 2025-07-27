@@ -74,6 +74,10 @@ void CGameFramework::ProcessPacket(char* packet)
 		m_pPlayer->Totalxp = 20;
 	}
 	break;
+	case E_PACKET::E_P_RESPAWN:{
+		// 인벤토리 초기화
+	}
+	break;
 	case E_PACKET::E_P_POSITION:
 	{
 		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);

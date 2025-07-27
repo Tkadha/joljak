@@ -37,7 +37,8 @@ public:
 
 		return type == OBJECT_TYPE::OB_TREE || type == OBJECT_TYPE::OB_STONE ||
 			type == OBJECT_TYPE::OB_COW || type == OBJECT_TYPE::OB_PIG ||
-			type == OBJECT_TYPE::ST_FURNACE || type == OBJECT_TYPE::ST_WOODWALL;
+			type == OBJECT_TYPE::ST_FURNACE || type == OBJECT_TYPE::ST_WOODWALL || 
+			type == OBJECT_TYPE::OB_GOLEM;
 	}
 
 public:
