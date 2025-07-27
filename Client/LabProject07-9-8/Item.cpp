@@ -46,6 +46,8 @@ void ItemManager::Initialize()
     m_Items.push_back(std::make_shared<Item>(id++, std::string("pork")));
     m_Items.push_back(std::make_shared<Item>(id++, std::string("grill_pork")));
 
+    m_Items.push_back(std::make_shared<Item>(id++, std::string("ruby")));
+
 
 
 

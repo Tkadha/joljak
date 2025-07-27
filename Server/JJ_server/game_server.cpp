@@ -1262,7 +1262,7 @@ void BuildObject()
 		obj->SetPosition(9000, Terrain::terrain->GetHeight(9000, 6000), 6000);
 		obj->SetScale(40.f, 40.f, 40.f);
 		obj->SetID(obj_id++);
-		obj->_hp = 400;
+		obj->_hp = 20;
 		obj->_atk = 50;
 		obj->SetType(OBJECT_TYPE::OB_GOLEM);
 		obj->SetAnimationType(ANIMATION_TYPE::IDLE);

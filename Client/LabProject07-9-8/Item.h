@@ -21,7 +21,7 @@ public:
 private:
     int m_ID;
     std::string m_Name;
-    ImTextureID m_iconHandle = (ImTextureID)nullptr; // 아이콘 핸들 추가
+    ImTextureID m_iconHandle = (ImTextureID)nullptr; // ?�이�??�들 추�?
 };
 
 class ItemManager

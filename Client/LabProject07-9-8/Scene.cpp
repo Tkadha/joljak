@@ -1657,9 +1657,10 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	pResourceManager->RegisterPrefab("GroundPoppies", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Poppies.bin", m_pGameFramework));
 
 	// 탈출장치?
-	pResourceManager->RegisterPrefab("Anthena", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Anthena/Props_Roof_Antenna.bin", m_pGameFramework));
 	pResourceManager->RegisterPrefab("Helipad", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Anthena/Props_Roof_Helipad.bin", m_pGameFramework));
-	
+	auto pAntennaPrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Anthena/Props_Roof_Antenna.bin", m_pGameFramework);
+	pAntennaPrefab->m_objectType = GameObjectType::Antenna; // 타입 지정
+	pResourceManager->RegisterPrefab("Anthena", pAntennaPrefab);
 	// 몬스터
 	CLoadedModelInfo* pLoadedModel = nullptr;
 
