@@ -410,7 +410,7 @@ public:
 class WEAPON_CHANGE_PACKET : public PACKET {
 public:
 	char weapon_type;	// 1 sword 2 axe 3 pickaxe 4 hammer
-	char material_type; // 1 stone 
+	char material_type; // 1 wood 2 stone 3 iron 
 	unsigned long long uid;
 	WEAPON_CHANGE_PACKET() {
 		uid = 0;

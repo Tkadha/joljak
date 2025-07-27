@@ -3029,6 +3029,42 @@ void CGameObject::EquipTool(const std::string& itemName)
 		if (m_tools.count(toolToEquip)) {
 			m_tools[toolToEquip]->isRender = true;
 			m_equippedToolName = toolToEquip;
+
+			auto& nwManager = NetworkManager::GetInstance();
+			WEAPON_CHANGE_PACKET p;
+			p.size = sizeof(WEAPON_CHANGE_PACKET);
+			p.type = static_cast<char>(E_PACKET::E_P_WEAPON_CHANGE);
+			if (itemName.find("wood") != std::string::npos) p.material_type = 1;
+			else if (itemName.find("stone") != std::string::npos) p.material_type = 2;
+			else if (itemName.find("iron") != std::string::npos) p.material_type = 3;
+			
+			if (itemName.find("sword") != std::string::npos) p.weapon_type = 1;
+			else if (itemName.find("pickaxe") != std::string::npos) p.weapon_type = 3;
+			else if (itemName.find("axe") != std::string::npos) p.weapon_type = 2;
+			else if (itemName.find("hammer") != std::string::npos) p.weapon_type = 4;
+			nwManager.PushSendQueue(p, p.size);
+		}
+	}
+}
+
+void CGameObject::PlayerEquipTool(const std::string& itemName)
+{
+	static const std::map<std::string, std::string> itemNameToToolName = {
+		{"wooden_sword", "Sword_Wood"}, {"stone_sword", "Sword_Stone"}, {"iron_sword", "Sword_Metal"},
+		{"wooden_axe", "Axe_Wood"}, {"stone_axe", "Axe_Stone"}, {"iron_axe", "Axe_Metal"},
+		{"wooden_pickaxe", "Pickaxe_Wood"}, {"stone_pickaxe", "Pickaxe_Stone"}, {"iron_pickaxe", "Pickaxe_Metal"},
+		{"wooden_hammer", "Hammer_Wood"}, {"stone_hammer", "Hammer_Stone"}, {"iron_hammer", "Hammer_Metal"}
+	};
+
+	UnequipAllTools();
+
+	auto it = itemNameToToolName.find(itemName);
+	if (it != itemNameToToolName.end())
+	{
+		std::string toolToEquip = it->second;
+		if (m_tools.count(toolToEquip)) {
+			m_tools[toolToEquip]->isRender = true;
+			m_equippedToolName = toolToEquip;
 		}
 	}
 }

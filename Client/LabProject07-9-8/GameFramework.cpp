@@ -83,21 +83,36 @@ void CGameFramework::ProcessPacket(char* packet)
 	case E_PACKET::E_P_WEAPON_CHANGE:
 	{
 		WEAPON_CHANGE_PACKET* r_packet = reinterpret_cast<WEAPON_CHANGE_PACKET*>(packet);
+		if (r_packet->uid == _MyID) break;
 		if (m_pScene->PlayerList.find(r_packet->uid) != m_pScene->PlayerList.end()) {
-			switch (r_packet->weapon_type) {
-			/*case 1:
-				m_pScene->PlayerList[r_packet->uid]->EquipTool(ToolType::Sword);
+			std::string toolname{};
+			switch (r_packet->material_type) {
+			case 1:
+				toolname += "wooden_";
 				break;
 			case 2:
-				m_pScene->PlayerList[r_packet->uid]->EquipTool(ToolType::Axe);
+				toolname += "stone_";
 				break;
 			case 3:
-				m_pScene->PlayerList[r_packet->uid]->EquipTool(ToolType::Pickaxe);
+				toolname += "iron_";
+				break;
+			}
+
+			switch (r_packet->weapon_type) {
+			case 1:
+				toolname += "sword";
+				break;
+			case 2:
+				toolname += "axe";
+				break;
+			case 3:
+				toolname += "pickaxe";
 				break;
 			case 4:
-				m_pScene->PlayerList[r_packet->uid]->EquipTool(ToolType::Hammer);
-				break;*/
+				toolname += "hammer";
+				break;
 			}
+			m_pScene->PlayerList[r_packet->uid]->PlayerEquipTool(toolname.c_str());
 		}
 	}
 	break;
@@ -2047,37 +2062,37 @@ void CGameFramework::ProcessInput()
 				}
 			}
 
-			for (int i = 0; i < 5; ++i)
-			{
-				if (pKeysBuffer['1' + i] & 0xF0)
-				{
-					if (!keyPressed['1' + i])
-					{
-						if (m_SelectedHotbarIndex != i)
-						{
-							m_SelectedHotbarIndex = i;
-							InventorySlot& selectedSlot = m_inventorySlots[m_SelectedHotbarIndex];
+			//for (int i = 0; i < 5; ++i)
+			//{
+			//	if (pKeysBuffer['1' + i] & 0xF0)
+			//	{
+			//		if (!keyPressed['1' + i])
+			//		{
+			//			if (m_SelectedHotbarIndex != i)
+			//			{
+			//				m_SelectedHotbarIndex = i;
+			//				InventorySlot& selectedSlot = m_inventorySlots[m_SelectedHotbarIndex];
 
-							if (selectedSlot.IsEmpty())
-							{
-								// 빈 슬롯 선택 시 모든 도구 장착 해제
-								m_pPlayer->UnequipAllTools();
-							}
-							else
-							{
-								// 아이템 이름을 가져와서 EquipTool 함수에 그대로 전달
-								std::string itemName = selectedSlot.item->GetName();
-								m_pPlayer->EquipTool(itemName);
-							}
-						}
-						keyPressed['1' + i] = true;
-					}
-				}
-				else
-				{
-					keyPressed['1' + i] = false;
-				}
-			}
+			//				if (selectedSlot.IsEmpty())
+			//				{
+			//					// 빈 슬롯 선택 시 모든 도구 장착 해제
+			//					m_pPlayer->UnequipAllTools();
+			//				}
+			//				else
+			//				{
+			//					// 아이템 이름을 가져와서 EquipTool 함수에 그대로 전달
+			//					std::string itemName = selectedSlot.item->GetName();
+			//					m_pPlayer->EquipTool(itemName);
+			//				}
+			//			}
+			//			keyPressed['1' + i] = true;
+			//		}
+			//	}
+			//	else
+			//	{
+			//		keyPressed['1' + i] = false;
+			//	}
+			//}
 
 			// 카메라 모드에 따른 입력 처리 (기존 코드와 동일)
 			if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)

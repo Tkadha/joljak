@@ -287,6 +287,7 @@ public:
 		void LoadTools(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 		void UpdateToolTransforms();
 		void EquipTool(const std::string& itemName);
+		void PlayerEquipTool(const std::string& itemName);
 		void UnequipAllTools();
 
 	std::map<std::string, CGameObject*> m_tools;
@@ -381,7 +382,6 @@ public:
 	CGameObject* m_pPickaxe = nullptr;
 	CGameObject* m_pHammer = nullptr;
 
-	void EquipTool(ToolType type);
 
 	UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CLoadedModelInfo* pModel, int nAnimationTracks, CGameFramework* pGameFramework);
 	virtual ~UserObject();
