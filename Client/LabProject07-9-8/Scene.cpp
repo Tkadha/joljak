@@ -9,6 +9,7 @@
 #include "NonAtkState.h"
 #include "AtkState.h"
 #include "WaveObject.h"
+#include "NetworkManager.h"
 
 #define MIN_HEIGHT                  1055.f      
 
@@ -229,7 +230,27 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	gameObj->SetScale(10.0f, 10.0f, 10.0f);
 	gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 	gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+	gameObj->m_id = 0;
 	m_vGameObjects.emplace_back(gameObj);
+	{
+		NetworkManager& nw = NetworkManager::GetInstance();
+		OBJ_OBB_PACKET p;
+		auto& obb = gameObj->GetOBB();
+		p.Center.x = obb.Center.x;
+		p.Center.y = obb.Center.y;
+		p.Center.z = obb.Center.z;
+		p.Extents.x = obb.Extents.x;
+		p.Extents.y = obb.Extents.y;
+		p.Extents.z = obb.Extents.z;
+		p.Orientation.x = obb.Orientation.x;
+		p.Orientation.y = obb.Orientation.y;
+		p.Orientation.z = obb.Orientation.z;
+		p.Orientation.w = obb.Orientation.w;
+		p.oid = 0;
+		p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+		p.size = sizeof(OBJ_OBB_PACKET);
+		nw.PushSendQueue(p, p.size);
+	}
 
 	prefab = pResourceManager->GetPrefab("Anthena");
 	z = 8500;
@@ -238,8 +259,28 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	gameObj->SetScale(10.0f, 10.0f, 10.0f);
 	gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
 	gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+	gameObj->m_id = 1;
 	m_vGameObjects.emplace_back(gameObj);
 
+	{
+		NetworkManager& nw = NetworkManager::GetInstance();
+		OBJ_OBB_PACKET p;
+		auto& obb = gameObj->GetOBB();
+		p.Center.x = obb.Center.x;
+		p.Center.y = obb.Center.y;
+		p.Center.z = obb.Center.z;
+		p.Extents.x = obb.Extents.x;
+		p.Extents.y = obb.Extents.y;
+		p.Extents.z = obb.Extents.z;
+		p.Orientation.x = obb.Orientation.x;
+		p.Orientation.y = obb.Orientation.y;
+		p.Orientation.z = obb.Orientation.z;
+		p.Orientation.w = obb.Orientation.w;
+		p.oid = 1;
+		p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+		p.size = sizeof(OBJ_OBB_PACKET);
+		nw.PushSendQueue(p, p.size);
+	}
 	/////////////////////////////////////////이펙트 오브젝트
 	const int effectPoolSize = 100;
 	for (int i = 0; i < effectPoolSize; ++i)

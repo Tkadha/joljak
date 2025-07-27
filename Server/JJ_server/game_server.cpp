@@ -1025,6 +1025,31 @@ void BuildObject()
 	float objectMinSize = 15, objectMaxSize = 20;
 
 	int obj_id = 0;
+	{
+		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		obj->SetPosition(8000.f, Terrain::terrain->GetHeight(8000.f, 8450.f), 8450.f);
+		obj->SetScale(10.f, 10.f, 10.f);
+		obj->SetID(obj_id++);
+		obj->SetType(OBJECT_TYPE::ST_HELIPAD);
+		obj->SetAnimationType(ANIMATION_TYPE::UNKNOWN);
+		GameObject::gameObjects.push_back(obj);
+
+		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
+		Octree::GameObjectOctree.insert(std::move(t_obj));
+	}
+	{
+		shared_ptr<GameObject> obj = make_shared<GameObject>();
+		obj->SetPosition(8000.f, Terrain::terrain->GetHeight(8000.f, 8500.f), 8500.f);
+		obj->SetScale(10.f, 10.f, 10.f);
+		obj->SetID(obj_id++);
+		obj->SetType(OBJECT_TYPE::ST_ANTHENA);
+		obj->SetAnimationType(ANIMATION_TYPE::UNKNOWN);
+		GameObject::gameObjects.push_back(obj);
+
+		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
+		Octree::GameObjectOctree.insert(std::move(t_obj));
+	}
+
 	int TreeCount = 700;
 	for (int i = 0; i < TreeCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
