@@ -235,13 +235,13 @@ void NonAtkNPCRunAwayState::Execute(std::shared_ptr<GameObject> npc)
 		{
 		case 0:
 			// 전진
-			npc->MoveForward(0.6f);
+			npc->MoveForward(0.45f);
 			break;
 		case 1:
 			// 회전하면서 전진
 			if (rotate_type == 0) npc->Rotate(0.f, -1.0f, 0.f);
 			else if (rotate_type == 1) npc->Rotate(0.f, 1.0f, 0.f);
-			npc->MoveForward(0.45f);
+			npc->MoveForward(0.3f);
 			break;
 		}
 	}
