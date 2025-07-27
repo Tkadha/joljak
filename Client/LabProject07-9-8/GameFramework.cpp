@@ -849,7 +849,13 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				AddItem("wooden_hammer", 1);
 				break;
 			case VK_F3:
-
+			{
+				auto& nwManager = NetworkManager::GetInstance();
+				CHANGE_TIME_PACKET p;
+				p.type = static_cast<char>(E_PACKET::E_CHANGE_TIME);
+				p.size = sizeof(CHANGE_TIME_PACKET);
+				nwManager.PushSendQueue(p, p.size);
+			}
 				break;
 			case VK_F4:
 				m_pPlayer->PlayerAttack = 9999;

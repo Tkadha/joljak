@@ -32,6 +32,8 @@ enum class E_PACKET
 	E_GAME_END = 22,
 	E_GAME_NEW = 23,
 
+	E_CHANGE_TIME = 24,
+
 	E_P_RESPAWN = 24,
 	E_P_WEAPON_CHANGE = 25,
 
@@ -418,6 +420,14 @@ public:
 		material_type = -1;
 		type = static_cast<char>(E_PACKET::E_P_WEAPON_CHANGE);
 		size = sizeof(WEAPON_CHANGE_PACKET);
+	}
+};
+
+class CHANGE_TIME_PACKET :public PACKET {
+public:
+	CHANGE_TIME_PACKET() {
+		type = static_cast<char>(E_PACKET::E_CHANGE_TIME);
+		size = sizeof(CHANGE_TIME_PACKET);
 	}
 };
 

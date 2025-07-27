@@ -283,6 +283,26 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
+	case E_PACKET::E_CHANGE_TIME:
+	{
+		XMVECTOR xmvBaseLightDirection = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
+		XMMATRIX xmmtxLightRotate = XMMatrixRotationZ(XMConvertToRadians(time_accumulator));
+		XMVECTOR xmvCurrentLightDirection = XMVector3TransformNormal(xmvBaseLightDirection, xmmtxLightRotate);
+
+		if (XMVectorGetY(xmvCurrentLightDirection) < 0.0f) // ºûÀÌ ¾Æ·¡¸¦ ÇâÇÏ¸é ³·
+		{
+			time_accumulator = 180.f;
+		}
+		else // ºûÀÌ À§¸¦ ÇâÇÏ¸é ¹ã
+		{
+			time_accumulator = 0.f;
+		}
+		for (auto& cl : PlayerClient::PlayerClients) {
+			if (cl.second->state != PC_INGAME) continue;
+			cl.second->SendTimePacket(time_accumulator);
+		}
+	}
+		break;
 	case E_PACKET::E_P_WEAPON_CHANGE: 
 	{
 		WEAPON_CHANGE_PACKET* r_packet = reinterpret_cast<WEAPON_CHANGE_PACKET*>(packet);
@@ -1026,7 +1046,7 @@ void BuildObject()
 {
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	float spawnmin = 500, spawnmax = 12000;
+	float spawnmin = 500, spawnmax = 10000;
 	float objectMinSize = 15, objectMaxSize = 20;
 
 	int obj_id = 0;
