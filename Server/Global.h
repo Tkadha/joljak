@@ -33,7 +33,7 @@ enum class E_PACKET
 	E_GAME_NEW = 23,
 
 	E_P_RESPAWN = 24,
-
+	E_P_WEAPON_CHANGE = 25,
 
 	E_DB_REGISTER = 100,
 	E_DB_LOGIN = 101,
@@ -402,6 +402,20 @@ public:
 	PLAYER_RESPAWN_PACKET() {
 		type = static_cast<char>(E_PACKET::E_P_RESPAWN);
 		size = sizeof(PLAYER_RESPAWN_PACKET);
+	}
+};
+
+class WEAPON_CHANGE_PACKET : public PACKET {
+public:
+	char weapon_type;	// 1 sword 2 axe 3 pickaxe 4 hammer
+	char material_type; // 1 stone 
+	unsigned long long uid;
+	WEAPON_CHANGE_PACKET() {
+		uid = 0;
+		weapon_type = -1;
+		material_type = -1;
+		type = static_cast<char>(E_PACKET::E_P_WEAPON_CHANGE);
+		size = sizeof(WEAPON_CHANGE_PACKET);
 	}
 };
 

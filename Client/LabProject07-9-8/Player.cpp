@@ -666,6 +666,7 @@ void CPlayer::EquipTool(ToolType type)
 	m_pEquippedTool = nullptr;
 	m_eCurrentTool = ToolType::None;
 
+	char weapon_t = -1;
 	// type에 해당하는 도구만 보이게 만듬
 	switch (type)
 	{
@@ -673,7 +674,8 @@ void CPlayer::EquipTool(ToolType type)
 		if (m_pSword) {
 			m_pSword->isRender = true;
 			m_pEquippedTool = m_pSword;   
-			m_eCurrentTool = type;        
+			m_eCurrentTool = type;  
+			weapon_t = 1;
 		}
 		break;
 	case ToolType::Axe:
@@ -681,6 +683,7 @@ void CPlayer::EquipTool(ToolType type)
 			m_pAxe->isRender = true;
 			m_pEquippedTool = m_pAxe;
 			m_eCurrentTool = type;
+			weapon_t = 2;
 		}
 		break;
 	case ToolType::Pickaxe:
@@ -688,6 +691,7 @@ void CPlayer::EquipTool(ToolType type)
 			m_pPickaxe->isRender = true;
 			m_pEquippedTool = m_pPickaxe;
 			m_eCurrentTool = type;
+			weapon_t = 3;
 		}
 		break;
 	case ToolType::Hammer:
@@ -695,6 +699,7 @@ void CPlayer::EquipTool(ToolType type)
 			m_pHammer->isRender = true;
 			m_pEquippedTool = m_pHammer;
 			m_eCurrentTool = type;
+			weapon_t = 4;
 		}
 		break;
 	case ToolType::None:
@@ -702,6 +707,14 @@ void CPlayer::EquipTool(ToolType type)
 		// 모든 도구가 꺼진 상태로 함수 종료
 		break;
 	}
+
+	auto& nwManager = NetworkManager::GetInstance();
+	WEAPON_CHANGE_PACKET p;
+	p.weapon_type = weapon_t;
+	p.material_type = 1; // stone
+	p.type = static_cast<char>(E_PACKET::E_P_WEAPON_CHANGE);
+	p.size = sizeof(WEAPON_CHANGE_PACKET);
+	nwManager.PushSendQueue(p, p.size);
 }
 
 CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, void *pContext, CGameFramework* pGameFramework) : CPlayer(pGameFramework)

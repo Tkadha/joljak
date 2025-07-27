@@ -621,6 +621,17 @@ void PlayerClient::BroadCastInputPacket()
     }
 }
 
+void PlayerClient::BroadCastWeaponPacket(WEAPON_CHANGE_PACKET p)
+{
+    WEAPON_CHANGE_PACKET s_packet = p;
+    s_packet.uid = m_id;
+    for (auto& cl : PlayerClient::PlayerClients) {
+        if (cl.second->state != PC_INGAME) continue;
+        if (cl.second->m_id == m_id) continue; // 나 자신은 제외한다.
+        cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+    }
+}
+
 void PlayerClient::BroadCastHitPacket(PlayerInput pi)
 {
     INPUT_PACKET s_packet;

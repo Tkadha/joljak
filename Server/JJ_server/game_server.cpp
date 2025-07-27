@@ -278,6 +278,12 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
+	case E_PACKET::E_P_WEAPON_CHANGE: 
+	{
+		WEAPON_CHANGE_PACKET* r_packet = reinterpret_cast<WEAPON_CHANGE_PACKET*>(packet);
+		client->BroadCastWeaponPacket(*r_packet);
+	}
+	break;
 	case E_PACKET::E_O_SETOBB:
 	{
 		OBJ_OBB_PACKET* r_packet = reinterpret_cast<OBJ_OBB_PACKET*>(packet);

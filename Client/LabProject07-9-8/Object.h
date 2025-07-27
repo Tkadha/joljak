@@ -58,6 +58,13 @@ enum class GameObjectType : int {
 	Furnace
 
 };
+enum class ToolType : int {
+	None,
+	Sword,
+	Axe,
+	Pickaxe,
+	Hammer
+};
 
 enum class ANIMATION_TYPE;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -349,6 +356,15 @@ class UserObject : public CGameObject
 {
 public:
 	int on_track = 0;
+
+	ToolType m_eCurrentTool;
+	CGameObject* m_pEquippedTool = nullptr;
+	CGameObject* m_pSword = nullptr;
+	CGameObject* m_pAxe = nullptr;
+	CGameObject* m_pPickaxe = nullptr;
+	CGameObject* m_pHammer = nullptr;
+
+	void EquipTool(ToolType type);
 
 	UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CLoadedModelInfo* pModel, int nAnimationTracks, CGameFramework* pGameFramework);
 	virtual ~UserObject();

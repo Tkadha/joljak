@@ -179,6 +179,7 @@ public:
 	void BroadCastPosPacket();
 	void BroadCastRotatePacket();
 	void BroadCastInputPacket();
+	void BroadCastWeaponPacket(WEAPON_CHANGE_PACKET);
 	void BroadCastHitPacket(PlayerInput pi);
 	void SendHpPacket(int,int);
 	void SendInvinciblePacket(int, bool);

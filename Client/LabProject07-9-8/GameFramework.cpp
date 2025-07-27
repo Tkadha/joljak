@@ -78,6 +78,27 @@ void CGameFramework::ProcessPacket(char* packet)
 		// 인벤토리 초기화
 	}
 	break;
+	case E_PACKET::E_P_WEAPON_CHANGE:
+	{
+		WEAPON_CHANGE_PACKET* r_packet = reinterpret_cast<WEAPON_CHANGE_PACKET*>(packet);
+		if (m_pScene->PlayerList.find(r_packet->uid) != m_pScene->PlayerList.end()) {
+			switch (r_packet->weapon_type) {
+			case 1:
+				m_pScene->PlayerList[r_packet->uid]->EquipTool(ToolType::Sword);
+				break;
+			case 2:
+				m_pScene->PlayerList[r_packet->uid]->EquipTool(ToolType::Axe);
+				break;
+			case 3:
+				m_pScene->PlayerList[r_packet->uid]->EquipTool(ToolType::Pickaxe);
+				break;
+			case 4:
+				m_pScene->PlayerList[r_packet->uid]->EquipTool(ToolType::Hammer);
+				break;
+			}
+		}
+	}
+	break;
 	case E_PACKET::E_P_POSITION:
 	{
 		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
@@ -1924,6 +1945,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 			m_pScene->m_vConstructionObjects.push_back(gameObj);
 		}
+		break;
 		default:
 			break;
 		}
