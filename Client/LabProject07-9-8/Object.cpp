@@ -2598,10 +2598,11 @@ void UserObject::ChangeAnimation(PlayerInput inputData)
 	else if (inputData.MoveBackward) on_track = 2;
 	else if (inputData.WalkLeft) on_track = 3;
 	else if (inputData.WalkRight) on_track = 4;
-	else if (inputData.Jump) {}
+	else if (inputData.Jump) on_track = 9;
+	else if (inputData.Hit) on_track = 15;
 	else if (inputData.Interact) {}
 	else on_track = 0;
-
+	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->SetTrackPosition(on_track, 0.f);
 	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->SetTrackEnable(on_track, true);
 }
 

@@ -416,6 +416,10 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		s_packet.value = client->Playerhp.load();
 		client->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 
+		// 피격 애니메이션 전송
+		PlayerInput pi;
+		pi.Hit = true;
+		client->BroadCastHitPacket(pi);
 		client->SetEffect(o_type);
 	}
 	break;

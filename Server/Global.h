@@ -101,7 +101,7 @@ struct PlayerInput {
 	char Interact = false; // 예: E키
 	char Run = false; // 예: Shift 키
 	// 필요시 다른 키나 마우스 입력 추가
-
+	char Hit = false;
 	void clear()
 	{
 		MoveForward = false;

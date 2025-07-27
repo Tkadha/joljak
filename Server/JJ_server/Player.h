@@ -179,6 +179,7 @@ public:
 	void BroadCastPosPacket();
 	void BroadCastRotatePacket();
 	void BroadCastInputPacket();
+	void BroadCastHitPacket(PlayerInput pi);
 	void SendHpPacket(int,int);
 	void SendInvinciblePacket(int, bool);
 	void SendAddPacket(shared_ptr<GameObject>);

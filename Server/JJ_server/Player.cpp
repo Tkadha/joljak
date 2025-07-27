@@ -207,7 +207,7 @@ void PlayerClient::Update_test(float deltaTime)
         }
         else if (currentInput.Jump && isGrounded) {
             m_currentState = ServerPlayerState::Jumping;
-            m_Velocity.y = 150.0f; // 점프 초기 속도
+            m_Velocity.y = 100.0f; // 점프 초기 속도
         }
         else if (isGrounded && m_currentState == ServerPlayerState::Falling) { // 착지
             m_currentState = ServerPlayerState::Idle; // 착지하면 Idle
@@ -613,6 +613,20 @@ void PlayerClient::BroadCastInputPacket()
     s_packet.size = sizeof(INPUT_PACKET);
     s_packet.type = static_cast<char>(E_PACKET::E_P_INPUT);
     s_packet.inputData = m_lastReceivedInput;
+    s_packet.uid = m_id;
+    for (auto& cl : PlayerClient::PlayerClients) {
+        if (cl.second->state != PC_INGAME) continue;
+        if (cl.second->m_id == m_id) continue; // 나 자신은 제외한다.
+        cl.second->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+    }
+}
+
+void PlayerClient::BroadCastHitPacket(PlayerInput pi)
+{
+    INPUT_PACKET s_packet;
+    s_packet.size = sizeof(INPUT_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_P_INPUT);
+    s_packet.inputData = pi;
     s_packet.uid = m_id;
     for (auto& cl : PlayerClient::PlayerClients) {
         if (cl.second->state != PC_INGAME) continue;

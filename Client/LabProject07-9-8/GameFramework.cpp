@@ -2199,7 +2199,7 @@ void CGameFramework::FrameAdvance()
 			case E_PACKET::E_P_LOGIN:
 			{
 				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/Player.bin", this);
-				int animate_count = 15;
+				int animate_count = 16;
 				m_pScene->PlayerList[log.ID] = std::make_unique<UserObject>(m_pd3dDevice, m_pd3dUploadCommandList, pUserModel, animate_count, this);
 				m_pScene->PlayerList[log.ID]->m_objectType = GameObjectType::Player;
 				m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
