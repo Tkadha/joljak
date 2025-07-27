@@ -44,6 +44,7 @@ void GameObject::MoveForward(float fDistance)
 		auto& other_obj = GameObject::gameObjects[other_info->u_id];
 		if (!other_obj || !other_obj->is_alive) continue;
 		if (other_obj->Gethp() <= 0) continue;
+		if (!other_obj->IsRenderObj()) continue;
 		if (this->GetType() == OBJECT_TYPE::OB_BAT)
 		{
 			if (other_obj->GetType() != OBJECT_TYPE::OB_TREE) continue;
@@ -118,6 +119,7 @@ void GameObject::MoveForward(float fDistance)
 		for (auto& o_obj : oresults) {
 			if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
 			if (GameObject::gameObjects[o_obj->u_id]->Gethp() <= 0) continue;
+			if (!GameObject::gameObjects[o_obj->u_id]->IsRenderObj()) continue;
 			if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
 			auto t = GameObject::gameObjects[o_obj->u_id]->GetType();
 			if (this->GetType() == OBJECT_TYPE::OB_BAT)
@@ -154,6 +156,7 @@ void GameObject::MoveForward(float fDistance)
 		for (auto& o_obj : oresults) {
 			if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
 			if (GameObject::gameObjects[o_obj->u_id]->Gethp() <= 0) continue;
+			if (!GameObject::gameObjects[o_obj->u_id]->IsRenderObj()) continue;
 			if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
 			auto t = GameObject::gameObjects[o_obj->u_id]->GetType();
 			if (testOBBZ.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
@@ -209,6 +212,7 @@ void GameObject::Rotate(float fPitch, float fYaw, float fRoll)
 	for (auto& o_obj : oresults) {
 		auto& other_obj = GameObject::gameObjects[o_obj->u_id];
 		if (!other_obj || !other_obj->is_alive || other_obj->Gethp() <= 0) continue;
+		if (!other_obj->IsRenderObj()) continue;
 		if (this->GetType() == OBJECT_TYPE::OB_BAT)
 		{
 			if (other_obj->GetType() != OBJECT_TYPE::OB_TREE) continue;

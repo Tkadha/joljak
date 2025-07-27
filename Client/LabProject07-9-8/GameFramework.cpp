@@ -55,6 +55,25 @@ void CGameFramework::ProcessPacket(char* packet)
 		ChangeGameState(GameState::Ending);
 	}
 	break;
+	case E_PACKET::E_GAME_NEW: {
+		ChangeGameState(GameState::Lobby);
+		m_pScene->ClearObj();
+		m_pScene->NewGameBuildObj();
+		m_pPlayer->PlayerHunger = 100.0f;
+		m_pPlayer->PlayerThirst = 100.0f;
+		m_pPlayer->PlayerLevel = 1;
+		m_pPlayer->Playerhp = 300;
+		m_pPlayer->Maxhp = 300;
+		m_pPlayer->Playerstamina = 150;
+		m_pPlayer->Maxstamina = 150;
+		m_pPlayer->StatPoint = 5;
+		m_pPlayer->PlayerAttack = 10;
+		m_pPlayer->PlayerSpeed = 10.0f;
+		m_pPlayer->PlayerSpeedLevel = 0;
+		m_pPlayer->Playerxp = 0;
+		m_pPlayer->Totalxp = 20;
+	}
+	break;
 	case E_PACKET::E_P_POSITION:
 	{
 		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
@@ -1373,7 +1392,6 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			m_pScene->octree.insert(std::move(t_obj));
 
 			gameObj->SetOBB(1.f, 0.8f, 1.2f, XMFLOAT3{ 0.f,1.f,-1.f });
-			gameObj->m_localOBB.Center.y += 30.0f;
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 
 			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
@@ -2127,6 +2145,7 @@ void CGameFramework::AnimateObjects()
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 
 	
+	if (m_pScene) m_pScene->UpdateLights(fTimeElapsed);
 	if (m_pScene) m_pScene->AnimateObjects(fTimeElapsed);
 	if (m_pPlayer) m_pPlayer->Animate(fTimeElapsed);
 	

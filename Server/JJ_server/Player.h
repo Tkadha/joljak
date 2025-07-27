@@ -157,6 +157,14 @@ public:
 		m_direction = 0;
 		m_currentState = ServerPlayerState::Idle;
 		m_pPlayerUpdatedContext = NULL;
+
+		Playerhp = 300;
+		Maxhp = 300;
+		Playerstamina = 150;
+		Maxstamina = 150;
+		PlayerHunger = 100.0f;
+		PlayerThirst = 100.0f;
+		Speed_stat = 0;
 	}
 public:
 	void BroadCastPosPacket();
@@ -172,5 +180,6 @@ public:
 	void SendTimePacket(float);
 	void SendStartGamePacket();
 	void SendEndGamePacket();
+	void SendNewGamePacket();
 };
 

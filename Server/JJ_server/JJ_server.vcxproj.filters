@@ -24,11 +24,11 @@
     <Filter Include="Timer">
       <UniqueIdentifier>{97084971-20ad-48c3-93a6-5e6898f4f49b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Terrain">
-      <UniqueIdentifier>{a3049cb0-73fc-4568-b50f-cba8018a4b19}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Event">
       <UniqueIdentifier>{93554441-4fa6-4e11-a6b7-55a839fb745c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Timer\Terrain">
+      <UniqueIdentifier>{a3049cb0-73fc-4568-b50f-cba8018a4b19}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -66,7 +66,7 @@
       <Filter>Timer</Filter>
     </ClCompile>
     <ClCompile Include="Terrain.cpp">
-      <Filter>Terrain</Filter>
+      <Filter>Timer\Terrain</Filter>
     </ClCompile>
     <ClCompile Include="Event.cpp">
       <Filter>Event</Filter>
@@ -110,7 +110,7 @@
       <Filter>Timer</Filter>
     </ClInclude>
     <ClInclude Include="Terrain.h">
-      <Filter>Terrain</Filter>
+      <Filter>Timer\Terrain</Filter>
     </ClInclude>
     <ClInclude Include="..\Global.h">
       <Filter>헤더 파일</Filter>

@@ -18,6 +18,10 @@
 #include <random>
 #include <algorithm>
 
+
+extern std::atomic_bool g_is_night;
+
+
 using namespace std;
 using namespace DirectX;
 using namespace DirectX::PackedVector;

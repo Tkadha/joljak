@@ -935,11 +935,20 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			std::lock_guard<std::mutex> lock(m_Mutex);
 
 			for (auto& obj : m_vGameObjects) {
-				//if (obj) obj->Animate(m_fElapsedTime);
-				if (obj->isRender) obj->RenderShadow(pd3dCommandList);
+				if (obj->m_objectType != GameObjectType::Toad && obj->m_objectType != GameObjectType::Wasp &&
+					obj->m_objectType != GameObjectType::Wolf && obj->m_objectType != GameObjectType::Bat &&
+					obj->m_objectType != GameObjectType::Snake && obj->m_objectType != GameObjectType::Turtle &&
+					obj->m_objectType != GameObjectType::Raptor && obj->m_objectType != GameObjectType::Snail && 
+					obj->m_objectType != GameObjectType::Spider)
+				{
+					if (obj->isRender) obj->RenderShadow(pd3dCommandList);
+				}
 			}
 		}
 		for (auto& obj : m_lEnvironmentObjects) {
+			if (obj) obj->RenderShadow(pd3dCommandList);
+		}
+		for (auto& obj : m_vConstructionObjects) {
 			if (obj) obj->RenderShadow(pd3dCommandList);
 		}
 
@@ -1001,8 +1010,20 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
 		for (auto& obj : m_vGameObjects) {
-			if (obj) obj->Animate(m_fElapsedTime);
-			if (obj->isRender && obj->is_load) obj->Render(pd3dCommandList, pCamera);
+			if (obj->m_objectType != GameObjectType::Toad && obj->m_objectType != GameObjectType::Wasp &&
+				obj->m_objectType != GameObjectType::Wolf && obj->m_objectType != GameObjectType::Bat &&
+				obj->m_objectType != GameObjectType::Snake && obj->m_objectType != GameObjectType::Turtle &&
+				obj->m_objectType != GameObjectType::Raptor && obj->m_objectType != GameObjectType::Snail &&
+				obj->m_objectType != GameObjectType::Spider) {
+				if (obj) obj->Animate(m_fElapsedTime);
+				if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
+			}
+			else {
+				if (!IsDaytime()) {
+					if (obj) obj->Animate(m_fElapsedTime);
+					if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
+				}
+			}
 		}
 		for (auto& obj : m_lEnvironmentObjects) {
 			if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
@@ -1460,7 +1481,7 @@ void CScene::UpdateShadowTransform()
 void CScene::UpdateLights(float fTimeElapsed)
 {
 	// 1. 빛의 회전 각도를 업데이트합니다.
-	float rotationSpeed = 0.5f; // 속도를 약간 조절
+	float rotationSpeed = 0.75f; // 속도를 약간 조절
 	m_fLightRotationAngle += fTimeElapsed * rotationSpeed;
 	if (m_fLightRotationAngle > 360.0f) m_fLightRotationAngle -= 360.0f;
 

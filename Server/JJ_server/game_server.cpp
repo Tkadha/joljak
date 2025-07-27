@@ -126,7 +126,7 @@ void worker_thread()
 				{
 					if (g_is_start_game) {
 						auto obj = GameObject::gameObjects[p_read_over->obj_id];
-						if (obj) {
+						if (obj && obj->IsRenderObj()) {
 							obj->FSMUpdate();
 						}
 					}
@@ -469,7 +469,13 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 	break;
 	case E_PACKET::E_GAME_NEW:
 	{
-		if (!g_is_start_game.load()) {		
+		if (!g_is_start_game.load()) {	
+
+			for (auto& cl : PlayerClient::PlayerClients)
+			{
+				auto& player = cl.second;
+				player->SendNewGamePacket();
+			}
 			for (auto& cl : PlayerClient::PlayerClients)
 			{
 				auto& player = cl.second;
@@ -522,6 +528,10 @@ void event_thread()
 					}
 					break;
 					case EVENT_TYPE::E_P_REGENERATE_HP: {
+						if (!g_is_start_game.load()) {
+							EVENT::add_timer(ev, 1500);
+							break;
+						}
 						auto uid = ev.player_id;
 						for (auto it : PlayerClient::PlayerClients) {
 							if (it.second->m_id != uid) continue;
@@ -551,6 +561,10 @@ void event_thread()
 					}
 						break;
 					case EVENT_TYPE::E_P_REGENERATE_STAMINA: {
+						if (!g_is_start_game.load()) {
+							EVENT::add_timer(ev, 750);
+							break;
+						}
 						auto uid = ev.player_id;
 						for (auto it : PlayerClient::PlayerClients) {
 							if (it.second->m_id != uid) continue;
@@ -579,6 +593,10 @@ void event_thread()
 					}
 						break;
 					case EVENT_TYPE::E_P_CONSUME_HUNGER: {
+						if (!g_is_start_game.load()) {
+							EVENT::add_timer(ev, 5000);
+							break;
+						}
 						auto uid = ev.player_id;
 						for (auto it : PlayerClient::PlayerClients) {
 							if (it.second->m_id != uid) continue;
@@ -608,6 +626,10 @@ void event_thread()
 					}
 						break;
 					case EVENT_TYPE::E_P_CONSUME_THIRST: {
+						if (!g_is_start_game.load()) {
+							EVENT::add_timer(ev, 4000);
+							break;
+						}
 						auto uid = ev.player_id;
 						for (auto it : PlayerClient::PlayerClients) {
 							if (it.second->m_id != uid) continue;
@@ -632,12 +654,13 @@ void event_thread()
 									break;
 								}
 							}
-							EVENT::add_timer(ev, 2500); // 2.5초마다 갈증 소모
+							EVENT::add_timer(ev, 4000); // 4초마다 갈증 소모
 							break;
 						}
 					}
 						break;
 					case EVENT_TYPE::E_P_BLEEDING: {
+						if (!g_is_start_game.load()) break;
 						if (ev.end_time < std::chrono::system_clock::now()) break;
 						auto uid = ev.player_id;
 						for (auto it : PlayerClient::PlayerClients) {
@@ -668,6 +691,7 @@ void event_thread()
 					}
 						break;
 					case EVENT_TYPE::E_P_POISON: {
+						if (!g_is_start_game.load()) break;						
 						if (ev.end_time < std::chrono::system_clock::now()) break;
 						auto uid = ev.player_id;
 						for (auto it : PlayerClient::PlayerClients) {
@@ -766,7 +790,7 @@ int main(int argc, char* argv[])
 			g_timer.Tick(120.f);
 			if (!g_is_start_game) continue;
 			float deltaTime = g_timer.GetTimeElapsed(); // Use Tick same deltaTime
-			float time_speed = 0.5f;
+			float time_speed = 0.75f;
 			time_accumulator += deltaTime * time_speed;
 			if (time_accumulator > 360.0f) {
 				time_accumulator -= 360.0f;
@@ -774,6 +798,22 @@ int main(int argc, char* argv[])
 				for (auto& cl : PlayerClient::PlayerClients) {
 					if (cl.second->state != PC_INGAME) continue;
 					cl.second->SendTimePacket(time_accumulator);
+				}
+			}
+			XMVECTOR xmvBaseLightDirection = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
+			XMMATRIX xmmtxLightRotate = XMMatrixRotationZ(XMConvertToRadians(time_accumulator));
+			XMVECTOR xmvCurrentLightDirection = XMVector3TransformNormal(xmvBaseLightDirection, xmmtxLightRotate);
+
+			if (XMVectorGetY(xmvCurrentLightDirection) < 0.0f) // 빛이 아래를 향하면 낮
+			{
+				if (g_is_night.load()) {
+					g_is_night.store(false);
+				}
+			}
+			else // 빛이 위를 향하면 밤
+			{
+				if (!g_is_night.load()) {
+					g_is_night.store(true);
 				}
 			}
 			for (auto& obj : GameObject::gameObjects) {
@@ -942,7 +982,7 @@ void ProcessAccept()
 			ev.e_type = EVENT_TYPE::E_P_CONSUME_HUNGER;
 			EVENT::add_timer(ev, 5000); // 5초마다 허기 소모
 			ev.e_type = EVENT_TYPE::E_P_CONSUME_THIRST;
-			EVENT::add_timer(ev, 2500); // 2.5초마다 갈증 소모
+			EVENT::add_timer(ev, 4000); // 4초마다 갈증 소모
 		}
 
 		// 계속해서 소켓 받기를 해야 하므로 리슨소켓도 overlapped I/O를 걸자.
@@ -972,7 +1012,6 @@ void BuildObject()
 	int TreeCount = 700;
 	for (int i = 0; i < TreeCount; ++i) {
 		shared_ptr<GameObject> obj = make_shared<GameObject>();
-
 		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
 		while (Terrain::terrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
 			randompos = genRandom::generateRandomXZ(gen, spawnmin, spawnmax, spawnmin, spawnmax);
@@ -1213,6 +1252,8 @@ void ReleaseObject()
 	Octree::GameObjectOctree.clear();
 	//Octree::PlayerOctree.clear();
 }
+
+
 void CloseServer()
 {
 	cout << "서버의 모든 리소스를 정리하고 종료합니다." << endl;

@@ -349,7 +349,7 @@ void PlayerClient::Update_test(float deltaTime)
             // 비활성/죽은 객체 제외 (기존 코드와 동일)
             auto& other_obj = GameObject::gameObjects[o_obj->u_id];
             if (!other_obj || !other_obj->is_alive || other_obj->Gethp() <= 0) continue;
-
+            if (!other_obj->IsRenderObj()) continue;
             if (myCurrentOBB.Intersects(other_obj->world_obb))
             {
                 XMVECTOR myCenter = XMLoadFloat3(&m_Position);
@@ -431,6 +431,7 @@ void PlayerClient::Update_test(float deltaTime)
             if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
             if (GameObject::gameObjects[o_obj->u_id]->_hp <= 0) continue;
             if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
+            if (!GameObject::gameObjects[o_obj->u_id]->IsRenderObj()) continue;
             if (testOBBX.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
             {
                 moving_pos.x = m_Position.x;
@@ -472,6 +473,7 @@ void PlayerClient::Update_test(float deltaTime)
         for (auto& o_obj : oresults) {
             if (GameObject::gameObjects[o_obj->u_id]->GetID() < 0) continue;
             if (GameObject::gameObjects[o_obj->u_id]->_hp <= 0) continue;
+            if (!GameObject::gameObjects[o_obj->u_id]->IsRenderObj()) continue;
             if (false == GameObject::gameObjects[o_obj->u_id]->is_alive) continue;
             if (testOBBZ.Intersects(GameObject::gameObjects[o_obj->u_id]->world_obb))
             {
@@ -756,4 +758,13 @@ void PlayerClient::SendEndGamePacket()
     s_packet.size = sizeof(GAME_END_PACKET);
     s_packet.type = static_cast<char>(E_PACKET::E_GAME_END);
     tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+}
+
+void PlayerClient::SendNewGamePacket()
+{
+    NEW_GAME_PACKET s_packet;
+    s_packet.size = sizeof(NEW_GAME_PACKET);
+    s_packet.type = static_cast<char>(E_PACKET::E_GAME_NEW);
+    tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
+
 }
