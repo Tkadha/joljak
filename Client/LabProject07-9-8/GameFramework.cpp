@@ -2231,7 +2231,7 @@ void CGameFramework::FrameAdvance()
 					m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController->SetTrackEnable(j, false);
 				}
 				m_pScene->PlayerList[log.ID]->on_track = 0;
-				m_pScene->PlayerList[log.ID]->SetPosition(XMFLOAT3{ 1500.f,m_pScene->m_pTerrain->GetHeight(1500,1500) ,1500.f });
+				m_pScene->PlayerList[log.ID]->SetPosition(XMFLOAT3{ 8000.f,m_pScene->m_pTerrain->GetHeight(8000.f,8000.f) ,8000.f });
 				m_pScene->PlayerList[log.ID]->SetScale(10.0f, 10.0f, 10.0f);
 				m_pScene->PlayerList[log.ID]->SetTerraindata(m_pScene->m_pTerrain);
 				if (m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController) m_pScene->PlayerList[log.ID]->PropagateAnimController(m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController);
@@ -3242,9 +3242,10 @@ void CGameFramework::FrameAdvance()
 		ImGui::Text("Player List");
 		ImGui::Separator();
 		// (예시) 실제로는 네트워크에서 받은 플레이어 목록을 여기에 표시합니다.
-		for (const auto& playerName : m_vTestPlayerNames)
-		{
-			ImGui::Text(playerName.c_str());
+		int player_count = 1 + m_pScene->PlayerList.size();
+		for (int i = 0; i < player_count; ++i) {
+			std::string s = "Player" + std::to_string(i + 1);
+			ImGui::Text(s.c_str());
 		}
 		ImGui::End();
 
