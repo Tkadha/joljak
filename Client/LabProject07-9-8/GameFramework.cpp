@@ -57,6 +57,10 @@ void CGameFramework::ProcessPacket(char* packet)
 	break;
 	case E_PACKET::E_GAME_NEW: {
 		ChangeGameState(GameState::Lobby);
+		for (auto& slot : m_inventorySlots) {
+			slot.item = nullptr;
+			slot.quantity = 0;
+		}
 		m_pScene->ClearObj();
 		m_pScene->NewGameBuildObj();
 		m_pPlayer->PlayerHunger = 100.0f;
