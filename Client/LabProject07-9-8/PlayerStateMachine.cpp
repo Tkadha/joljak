@@ -481,7 +481,7 @@ public:
         m_bHasAppliedHit = false;
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f });
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
-        PlayWavSound(_T("Sound/sword.wav"));
+        PlayWavSound(_T("Sound/heavy_sword.wav"));
     }
 
     PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
@@ -919,7 +919,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         OBJ_HIT_PACKET packet;
         packet.oid = npc->m_id;
 
-        int damage = currentToolStats.damageVsNpc + (int)player->PlayerAttack / 5;
+        int damage = currentToolStats.damageVsNpc + (int)player->PlayerAttack / 2;
         npc->Decreasehp(damage);
         packet.damage = damage;
         nwManager.PushSendQueue(packet, packet.size);
