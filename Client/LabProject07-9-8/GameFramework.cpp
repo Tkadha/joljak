@@ -59,6 +59,19 @@ void CGameFramework::ProcessPacket(char* packet)
 		ChangeGameState(GameState::Lobby);
 		m_pScene->ClearObj();
 		m_pScene->NewGameBuildObj();
+		m_pPlayer->PlayerHunger = 100.0f;
+		m_pPlayer->PlayerThirst = 100.0f;
+		m_pPlayer->PlayerLevel = 1;
+		m_pPlayer->Playerhp = 300;
+		m_pPlayer->Maxhp = 300;
+		m_pPlayer->Playerstamina = 150;
+		m_pPlayer->Maxstamina = 150;
+		m_pPlayer->StatPoint = 5;
+		m_pPlayer->PlayerAttack = 10;
+		m_pPlayer->PlayerSpeed = 10.0f;
+		m_pPlayer->PlayerSpeedLevel = 0;
+		m_pPlayer->Playerxp = 0;
+		m_pPlayer->Totalxp = 20;
 	}
 	break;
 	case E_PACKET::E_P_POSITION:
