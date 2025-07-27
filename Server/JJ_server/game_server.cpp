@@ -455,43 +455,44 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 	break;
 	case E_PACKET::E_GAME_END:
 	{
-		for (auto& cl : PlayerClient::PlayerClients) {
-			if (cl.second->state != PC_INGAME) continue;
-			cl.second->SendEndGamePacket();
+		if (g_is_start_game.load()) {
+			for (auto& cl : PlayerClient::PlayerClients) {
+				if (cl.second->state != PC_INGAME) continue;
+				cl.second->SendEndGamePacket();
+			}
+			std::cout << "end game" << std::endl;
+			g_is_start_game.store(false);
+			EVENT ev{ EVENT_TYPE::E_REBUILD_OBJ,0,-1 };
+			EVENT::add_timer(ev, 1000);
 		}
-		std::cout << "end game" << std::endl;
-		g_is_start_game.store(false);
 	}
 	break;
 	case E_PACKET::E_GAME_NEW:
 	{
-		ReleaseObject();
-		std::cout << "Release all obj" << std::endl;
-		BuildObject();
-		time_accumulator = 0;
-		std::cout << "Build obj" << std::endl;
-		for (auto& cl : PlayerClient::PlayerClients)
-		{
-			auto& player = cl.second;
-			cl.second->ResetState();
-			std::vector<tree_obj*> results; // 시야 범위 내 객체 찾기
-			tree_obj p_obj{ -1,player->GetPosition() };
-			Octree::GameObjectOctree.query(p_obj, oct_distance, results);
-			std::unordered_set<int> new_vl;
-			for (auto& obj : results) new_vl.insert(obj->u_id);
-			for (auto& obj : results) {
-				if (GameObject::gameObjects[obj->u_id]->is_alive == false) continue;
-				if (GameObject::gameObjects[obj->u_id]->Gethp() <= 0) continue;
-				player->SendAddPacket(GameObject::gameObjects[obj->u_id]);
-			}
-			for (auto& obj : GameObject::ConstructObjects) {
-				player->SendStructPacket(obj);
-			}
-			player->vl_mu.lock();
-			player->viewlist = new_vl;
-			player->vl_mu.unlock();
+		if (!g_is_start_game.load()) {		
+			for (auto& cl : PlayerClient::PlayerClients)
+			{
+				auto& player = cl.second;
+				cl.second->ResetState();
+				std::vector<tree_obj*> results; // 시야 범위 내 객체 찾기
+				tree_obj p_obj{ -1,player->GetPosition() };
+				Octree::GameObjectOctree.query(p_obj, oct_distance, results);
+				std::unordered_set<int> new_vl;
+				for (auto& obj : results) new_vl.insert(obj->u_id);
+				for (auto& obj : results) {
+					if (GameObject::gameObjects[obj->u_id]->is_alive == false) continue;
+					if (GameObject::gameObjects[obj->u_id]->Gethp() <= 0) continue;
+					player->SendAddPacket(GameObject::gameObjects[obj->u_id]);
+				}
+				for (auto& obj : GameObject::ConstructObjects) {
+					player->SendStructPacket(obj);
+				}
+				player->vl_mu.lock();
+				player->viewlist = new_vl;
+				player->vl_mu.unlock();
 
-			player->SendTimePacket(time_accumulator);
+				player->SendTimePacket(time_accumulator);
+			}
 		}
 	}
 	break;
@@ -702,7 +703,17 @@ void event_thread()
 						}
 						g_is_start_game.store(false);
 					}
-						break;					
+						break;
+					case EVENT_TYPE::E_REBUILD_OBJ:
+					{
+						g_is_start_game.store(false);
+						ReleaseObject();
+						std::cout << "Release all obj" << std::endl;
+						BuildObject();
+						time_accumulator = 0;
+						std::cout << "Build obj" << std::endl;
+					}
+					break;
 					default:
 						break;
 					}
@@ -1185,6 +1196,14 @@ void BuildObject()
 		auto t_obj = std::make_unique<tree_obj>(obj->GetID(), obj->GetPosition());
 		Octree::GameObjectOctree.insert(std::move(t_obj));
 
+	}
+
+	for (auto& obj : GameObject::gameObjects) {
+		auto it = OBB_Manager::obb_list.find(obj->GetType());
+		if (it != OBB_Manager::obb_list.end()) {
+			obj->local_obb = *it->second;
+			obj->UpdateTransform();
+		}
 	}
 }
 void ReleaseObject()

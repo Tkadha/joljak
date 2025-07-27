@@ -51,6 +51,10 @@ void CGameFramework::ProcessPacket(char* packet)
 		ChangeGameState(GameState::InGame);
 	}
 	break;
+	case E_PACKET::E_GAME_END: {
+		ChangeGameState(GameState::Ending);
+	}
+	break;
 	case E_PACKET::E_P_POSITION:
 	{
 		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
