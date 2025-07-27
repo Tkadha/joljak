@@ -838,19 +838,19 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					nwManager.PushSendQueue(p, p.size);
 				}
 				break;
-			case 'Z':
+			case VK_F2:
 				AddItem("wood", 30);
 				AddItem("stone", 30);
 				AddItem("iron_material", 30);
 				AddItem("coal", 30);
 				break;
-			case 'X':
+			case VK_F1:
 				AddItem("wooden_sword", 1);
 				AddItem("wooden_axe", 1);
 				AddItem("wooden_pickaxe", 1);
 				AddItem("wooden_hammer", 1);
 				break;
-			case 'N':
+			case VK_F3:
 
 				break;
 			}
@@ -3913,7 +3913,7 @@ void CGameFramework::CheckAndToggleFurnaceUI()
 {
 	if (!m_pPlayer || !m_pScene) return;
 
-	const float interactionDistance = 100.0f;
+	const float interactionDistance = 20.0f;
 	XMFLOAT3 playerPos = m_pPlayer->GetPosition();
 
 	for (auto& pConstructionObj : m_pScene->m_vConstructionObjects)
