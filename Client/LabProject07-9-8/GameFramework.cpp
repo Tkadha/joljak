@@ -1913,53 +1913,55 @@ void CGameFramework::ProcessInput()
 			else m_pPlayer->keyInput(pKeysBuffer);
 
 
-			// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
-			UCHAR toggleKeys[] = { 'R','1','2','3' /*, 다른 키들 */ };
-			for (UCHAR key : toggleKeys)
+			for (int i = 0; i < 5; ++i)
 			{
-				if (pKeysBuffer[key] & 0xF0)
+				// '1' 키부터 '5' 키까지 확인
+				if (pKeysBuffer['1' + i] & 0xF0)
 				{
-					if (!keyPressed[key])
+					// 키가 처음 눌리는 순간에만 실행
+					if (!keyPressed['1' + i])
 					{
-						toggleStates[key] = !toggleStates[key];
-						keyPressed[key] = true;
-						// 토글된 상태에 따른 동작 수행
-						if (key == 'R')
+						// [핵심 수정] 핫바 인덱스가 실제로 변경되었을 때만 장착 로직을 실행
+						if (m_SelectedHotbarIndex != i)
 						{
-							obbRender = toggleStates[key];
-						}
+							m_SelectedHotbarIndex = i; // 인덱스 변경
 
-						if (key == '1')
-						{
-							m_pPlayer->EquipTool(ToolType::Sword);							
+							// --- 선택된 핫바 슬롯의 아이템에 따라 도구 장착 ---
+							InventorySlot& selectedSlot = m_inventorySlots[m_SelectedHotbarIndex];
+
+							if (selectedSlot.IsEmpty())
+							{
+								m_pPlayer->EquipTool(ToolType::Sword); // 빈 슬롯은 기본 무기(검)
+							}
+							else
+							{
+								// [수정] 아이템 이름을 가져와서 '==' 연산자로 정확하게 비교합니다.
+								std::string itemName = selectedSlot.item->GetName();
+
+								if (itemName == "wooden_sword" || itemName == "stone_sword" || itemName == "iron_sword") {
+									m_pPlayer->EquipTool(ToolType::Sword);
+								}
+								else if (itemName == "wooden_axe" || itemName == "stone_axe" || itemName == "iron_axe") {
+									m_pPlayer->EquipTool(ToolType::Axe);
+								}
+								else if (itemName == "wooden_pickaxe" || itemName == "stone_pickaxe" || itemName == "iron_pickaxe") {
+									m_pPlayer->EquipTool(ToolType::Pickaxe);
+								}
+								else if (itemName == "wooden_hammer" || itemName == "stone_hammer" || itemName == "iron_hammer") {
+									m_pPlayer->EquipTool(ToolType::Hammer);
+								}
+								else {
+									// 도구가 아닌 아이템을 선택했을 경우 기본 무기(검) 장착
+									m_pPlayer->EquipTool(ToolType::Sword);
+								}
+							}
 						}
-						if (key == '2')
-						{
-							m_pPlayer->EquipTool(ToolType::Axe);
-						}
-						if (key == '3')
-						{
-							m_pPlayer->EquipTool(ToolType::Pickaxe);
-						}
-						if (key == '4')
-						{
-							m_pPlayer->EquipTool(ToolType::Hammer);
-						}
-						// 다른 키에 대한 처리 추가
+						keyPressed['1' + i] = true;
 					}
 				}
 				else
 				{
-					keyPressed[key] = false;
-				}
-			}
-
-			for (int i = 0; i < 5; ++i)
-			{
-				if (GetAsyncKeyState('1' + i) & 0x8000)
-				{
-					m_SelectedHotbarIndex = i;
-					break;
+					keyPressed['1' + i] = false;
 				}
 			}
 			// 카메라 모드에 따른 입력 처리 (기존 코드와 동일)
@@ -2451,35 +2453,34 @@ void CGameFramework::FrameAdvance()
 			for (int i = 0; i < m_inventorySlots.size(); ++i)
 			{
 				ImGui::PushID(i);
-
-				bool isClicked = false;
-
 				ImVec2 pos = ImGui::GetCursorScreenPos();
-				ImGui::Button(" ", ImVec2(slotSize, slotSize)); // 버튼만 깔아줌 (배경 유지용)
-
 				if (!m_inventorySlots[i].IsEmpty())
 				{
-					// 아이콘 출력
 					Item* item = m_inventorySlots[i].item.get();
 					ImTextureID icon = item->GetIconHandle();
-					if (icon)
+
+					// [수정] ImageButton의 올바른 사용법
+					// 1번째 인자: 버튼의 고유 ID (문자열)
+					// 2번째 인자: 이미지 텍스처 ID
+					// 3번째 인자: 버튼 크기
+					if (ImGui::ImageButton(std::to_string(i).c_str(), icon, ImVec2(slotSize, slotSize)))
 					{
-						ImGui::GetWindowDrawList()->AddImage(
-							icon,
-							pos,
-							ImVec2(pos.x + slotSize, pos.y + slotSize)
-						);
+						// 클릭 시 로직 (아래 IsItemClicked 블록으로 이동)
 					}
 
-					// 수량 텍스트 표시
-					ImVec2 min = pos;
-					ImVec2 max = ImVec2(pos.x + slotSize, pos.y + slotSize);
-					ImVec2 textPos = ImVec2(min.x + 2, max.y - 18);
-					ImGui::GetWindowDrawList()->AddText(
-						textPos,
-						IM_COL32_WHITE,
-						std::to_string(m_inventorySlots[i].quantity).c_str()
-					);
+					// 수량 텍스트를 버튼 바로 위에 그립니다.
+					ImVec2 min = ImGui::GetItemRectMin(); // 방금 그려진 ImageButton의 위치를 가져옴
+					float font_size = ImGui::GetFontSize();
+					ImVec2 textPos = ImVec2(min.x + 5, min.y + slotSize - font_size - 5);
+					ImGui::GetWindowDrawList()->AddText(textPos, IM_COL32_WHITE, std::to_string(m_inventorySlots[i].quantity).c_str());
+				}
+				else
+				{
+					// 빈 슬롯은 일반 버튼으로 표시
+					if (ImGui::Button(" ", ImVec2(slotSize, slotSize)))
+					{
+						// 클릭 시 로직 (아래 IsItemClicked 블록으로 이동)
+					}
 				}
 
 				// ✅ 선택 테두리 강조

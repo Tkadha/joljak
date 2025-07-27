@@ -734,9 +734,9 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 
 	AddObject(pd3dDevice, pd3dCommandList, "Helmet", "Model/Hair_01.bin", pGameFramework, XMFLOAT3(0, 0.1, 0));
 
-	m_pSword = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Ax_B.bin", pGameFramework)->m_pModelRootObject;
+	m_pSword = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Sword_A.bin", pGameFramework)->m_pModelRootObject;
 	m_pSword->isRender = true;
-	m_pAxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Sword_A.bin", pGameFramework)->m_pModelRootObject;
+	m_pAxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Ax_B.bin", pGameFramework)->m_pModelRootObject;
 	m_pAxe->isRender = false;
 	m_pPickaxe = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Tool/Chisel.bin", pGameFramework)->m_pModelRootObject;
 	m_pPickaxe->isRender = false;
