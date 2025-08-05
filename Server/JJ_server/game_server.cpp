@@ -929,6 +929,12 @@ void ProcessAccept()
 			cout << "Client joined. There are " << PlayerClient::PlayerClients.size() << " connections.\n";
 			cout <<" Client id: "<< remoteClient->m_id << endl;
 
+			XMFLOAT3 p_pos;
+			p_pos.x = 8000.f + static_cast<float>(rand() % 150);
+			p_pos.z = 8000.f + static_cast<float>(rand() % 150);
+			p_pos.y = Terrain::terrain->GetHeight(p_pos.x, p_pos.z);
+			remoteClient->respawn_postion = p_pos;
+			remoteClient->SetPosition(p_pos);
 
 			LOGIN_PACKET s_packet;
 			s_packet.size = sizeof(LOGIN_PACKET);

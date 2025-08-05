@@ -435,7 +435,7 @@ int BossAttackState::Sp_atk_counter = 0;
 void BossAttackState::Enter(std::shared_ptr<GameObject> npc)
 {
 	starttime = std::chrono::system_clock::now();
-	duration_time = 1.5f * 1000; // 1초간
+	duration_time = 1.5f * 1000; // 1.5초간 
 	Sp_atk_counter++;
 	if (Sp_atk_counter > 5) {
 		Sp_atk_counter = 0;

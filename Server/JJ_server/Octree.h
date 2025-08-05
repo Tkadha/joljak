@@ -51,7 +51,7 @@ public:
 
     Octree(const XMFLOAT3& min, const XMFLOAT3& max, int depth = 0)
         : minBound(min), maxBound(max), depth(depth) {
-        maxObjects = 1500 * (depth + 1);
+        maxObjects = 300 * (depth + 1);
         objects.reserve(maxObjects);
     }
     ~Octree();

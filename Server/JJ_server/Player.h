@@ -25,6 +25,8 @@ public:
 
 	BoundingOrientedBox local_obb;
 	BoundingOrientedBox world_obb;
+
+	XMFLOAT3					respawn_postion	= XMFLOAT3(0.f, 0.f, 0.f);
 private:
 
 	XMFLOAT3					m_Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -142,13 +144,12 @@ public:
 
 	void ResetState()
 	{
-		m_Position = XMFLOAT3(8000.f, 0.0f, 8000.f);	// 테스트용 임의 지정
+		m_Position = respawn_postion;
 		m_Right = XMFLOAT3(1.0f, 0.0f, 0.0f);
 		m_Up = XMFLOAT3(0.0f, 1.0f, 0.0f);
 		m_Look = XMFLOAT3(0.0f, 0.0f, 1.0f);
 		m_Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
-		m_Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		m_Gravity = XMFLOAT3(0.0f, -250.0f, 0.0f);
 		m_fMaxVelocityXZ = 100.f;
 		m_fMaxVelocityY = 400.0f;
