@@ -290,7 +290,7 @@ void PlayerClient::Update_test(float deltaTime)
 
     // 이동 및 충돌 처리
     //XMFLOAT3 deltaPos = Vector3::ScalarProduct(m_Velocity, deltaTime);
-    XMFLOAT3 deltaVel = Vector3::ScalarProduct(m_Velocity, 0.75f);
+    XMFLOAT3 deltaVel = Vector3::ScalarProduct(m_Velocity, 0.35f);
 
     if (Speed_stat > 0) {
         deltaVel.x *= (1.f + 0.03f * Speed_stat);
@@ -300,15 +300,15 @@ void PlayerClient::Update_test(float deltaTime)
     // 런닝 판정
     if (m_currentState == ServerPlayerState::Running)
     {
-        deltaVel.x *= 1.5f;
-        deltaVel.z *= 1.5f;
+        deltaVel.x *= 1.6f;
+        deltaVel.z *= 1.6f;
 
     }
     // 슬로우 효과 확인
     if (b_slow)
     {
-        deltaVel.x /= 1.75f;
-        deltaVel.z /= 1.75f;
+        deltaVel.x /= 1.6f;
+        deltaVel.z /= 1.6f;
     }
 
     // 밀림 처리

@@ -943,6 +943,16 @@ void ProcessAccept()
 			// 내 정보 보내기
 			remoteClient->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 
+			POSITION_PACKET s_pospacket;
+			s_pospacket.size = sizeof(POSITION_PACKET);
+			s_pospacket.type = static_cast<char>(E_PACKET::E_P_POSITION);
+			s_pospacket.uid = remoteClient->m_id;
+			auto& pos = remoteClient->GetPosition();
+			s_pospacket.position.x = pos.x;
+			s_pospacket.position.y = pos.y;
+			s_pospacket.position.z = pos.z;
+
+			remoteClient->tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_pospacket));
 
 			// 나에게 접속중인 플레이어 정보 보내기
 			for (auto& cl : PlayerClient::PlayerClients) {
