@@ -139,15 +139,12 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
 {     
     float4 splatWeights = gtxtTerrainSplatMap.Sample(gssWrap, input.uv0);
     
-    // 월드 좌표를 기반으로 노이즈 값 계산
     float noiseScale = 0.9f;
     float blendNoise = SimpleNoise(input.positionW.xz * noiseScale);
 
-    // ★★★ 2. 서로 다른 스케일과 오프셋으로 UV 좌표를 계산 ★★★
     float2 tiled_uv1 = input.uv1 * 100.0f;
     float2 tiled_uv2 = (input.uv1 * 57.0f) + 0.3f; // << 다른 스케일과 오프셋을 줍니다.
 
-    // 3. 서로 다른 UV로 각 디테일 텍스처를 샘플링합니다.
     float4 cDirt1 = gtxtDirt01.Sample(gssWrap, tiled_uv1);
     float4 cDirt2 = gtxtDirt02.Sample(gssWrap, tiled_uv2); // 다른 UV 사용
     float4 cGrass1 = gtxtGrass01.Sample(gssWrap, tiled_uv1);
@@ -155,21 +152,17 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     float4 cRock1 = gtxtRock01.Sample(gssWrap, tiled_uv1);
     float4 cRock2 = gtxtRock02.Sample(gssWrap, tiled_uv2); // 다른 UV 사용
 
-    // ★★★ 4. 부드러운 노이즈 값을 이용해 섞습니다. ★★★
     float4 cMixedDirt = lerp(cDirt1, cDirt2, blendNoise);
     float4 cMixedGrass = lerp(cGrass1, cGrass2, blendNoise);
     float4 cMixedRock = lerp(cRock1, cRock2, blendNoise);
     
-    // 3. 스플랫 맵의 RGBA 채널 값을 가중치로 사용하여 디테일 텍스처들을 혼합합니다.
     float4 cDetailColor = splatWeights.r * cMixedDirt +
                           splatWeights.g * cMixedGrass +
                           splatWeights.b * cMixedRock;
     
-    // 남은 가중치는 풀로 채움
     float baseWeight = 1.0f - saturate(splatWeights.r + splatWeights.g + splatWeights.b);
     cDetailColor += baseWeight * cMixedGrass;
     
-    // 멀리 있는 지형은 저해상도 베이스 텍스처와 섞기
     float distanceToEye = distance(input.positionW, gvCameraPosition.xyz);
     float baseTexWeight = saturate((distanceToEye - 4000.0f) / 1000.0f); // 4000~5000 거리
     float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);

@@ -24,7 +24,7 @@ struct MaterialInfo
 // --- 공통 상수 버퍼 ---
 
 // 카메라 정보 (모든 VS에서 사용될 가능성 높음)
-cbuffer cbCameraInfo : register(b1)
+cbuffer cbCameraInfo : register(b0)
 {
     matrix gmtxView; // 뷰 행렬
     matrix gmtxProjection; // 투영 행렬

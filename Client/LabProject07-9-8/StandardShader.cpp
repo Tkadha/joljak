@@ -4,7 +4,6 @@ CStandardShader::CStandardShader() {}
 CStandardShader::~CStandardShader() {}
 
 D3D12_INPUT_LAYOUT_DESC CStandardShader::CreateInputLayout() {
-	// ... (기존 Standard Input Layout 코드) ...
 	UINT nInputElementDescs = 5;
 	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };

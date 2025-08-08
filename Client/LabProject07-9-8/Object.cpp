@@ -1914,17 +1914,19 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pCamera->GetCameraConstantBuffer()->GetGPUVirtualAddress());
 		}
 
-		pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
 
 		UpdateTransform(NULL);
 
-
 		cbGameObjectInfo gameObjectInfo;
 		XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
-		gameObjectInfo.gMaterialInfo.AmbientColor = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-		gameObjectInfo.gMaterialInfo.DiffuseColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		gameObjectInfo.gMaterialInfo.DiffuseColor = pMaterial->m_xmf4AlbedoColor;
 		pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo, 0);
 
+
+		ID3D12Resource* pLightBuffer = pScene->GetLightsConstantBuffer();
+		if (pLightBuffer) {
+			pd3dCommandList->SetGraphicsRootConstantBufferView(2, pLightBuffer->GetGPUVirtualAddress());
+		}
 
 		D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle();
 		if (textureTableHandle.ptr != 0) {
@@ -1932,10 +1934,7 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 			pd3dCommandList->SetGraphicsRootDescriptorTable(3, textureTableHandle);
 		}
 
-		ID3D12Resource* pLightBuffer = pScene->GetLightsConstantBuffer();
-		if (pLightBuffer) {
-			pd3dCommandList->SetGraphicsRootConstantBufferView(2, pLightBuffer->GetGPUVirtualAddress());
-		}
+		pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
 
 		m_pMesh->Render(pd3dCommandList, 0);
 
