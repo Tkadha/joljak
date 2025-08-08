@@ -1867,6 +1867,10 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	
 	CMaterial* pTerrainMaterial = new CMaterial(8, pGameFramework);
 
+	pTerrainMaterial->m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	pTerrainMaterial->m_xmf4AmbientColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 주변광 반사율
+	pTerrainMaterial->m_xmf4SpecularColor = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f); // 반사광 색상
+	pTerrainMaterial->m_fGlossiness = 30.0f; // 광택도 (반짝이는 정도)
 
 	std::shared_ptr<CTexture> pTerrainBaseTexture = pResourceManager->GetTexture(L"Terrain/DemoTerrain3.dds", pd3dCommandList);
 
@@ -1930,13 +1934,27 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 		pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
 
+		// 셰이더로 보낼 게임 객체 정보 구조체 준비
+		cbGameObjectInfo gameObjectInfo;
+
+		// 1. 월드 변환 행렬 설정
 		UpdateTransform(NULL);
+		XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
 
+		// 2. 재질 정보 설정 (기본값으로 흰색을 사용하거나 실제 머티리얼 값 사용)
+		gameObjectInfo.gMaterialInfo.AmbientColor = pMaterial->m_xmf4AmbientColor;
+		gameObjectInfo.gMaterialInfo.DiffuseColor = pMaterial->m_xmf4AlbedoColor;
+		gameObjectInfo.gMaterialInfo.SpecularColor = pMaterial->m_xmf4SpecularColor;
+		gameObjectInfo.gMaterialInfo.EmissiveColor = pMaterial->m_xmf4EmissiveColor;
+		gameObjectInfo.gMaterialInfo.Glossiness = pMaterial->m_fGlossiness;
+		// ... 기타 재질 속성들 ...
 
-		XMFLOAT4X4 gmtxGameObject;
-		XMStoreFloat4x4(&gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+		// 3. 텍스처 마스크 설정 (터레인은 2개의 텍스처를 사용)
+		gameObjectInfo.gnTexturesMask = MATERIAL_ALBEDO_MAP | MATERIAL_DETAIL_ALBEDO_MAP;
 
-		pd3dCommandList->SetGraphicsRoot32BitConstants(1, 16, &gmtxGameObject, 0);
+		// 4. 전체 구조체를 상수 버퍼 레지스터(b2)에 바인딩
+		pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo, 0);
+
 
 
 		D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle();

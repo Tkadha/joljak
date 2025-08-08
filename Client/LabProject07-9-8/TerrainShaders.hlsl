@@ -30,6 +30,7 @@ struct VS_TERRAIN_INPUT
     float4 color : COLOR; // 정점 색상 (라이팅 등)
     float2 uv0 : TEXCOORD0; // Base 텍스처 UV
     float2 uv1 : TEXCOORD1; // Detail 텍스처 UV
+    float3 normal : NORMAL;
 };
 
 struct VS_TERRAIN_OUTPUT
@@ -40,6 +41,7 @@ struct VS_TERRAIN_OUTPUT
     float2 uv0 : TEXCOORD0;
     float2 uv1 : TEXCOORD1;
     float4 ShadowPosH : TEXCOORD2;
+    float3 normalW : NORMAL0;
 };
 
 // --- Vertex Shader ---
@@ -57,6 +59,8 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
     
     // 3. 그림자 공간으로 변환
     output.ShadowPosH = mul(worldPos_H, gmtxShadowTransform);
+    
+    output.normalW = input.normal;
     
     output.color = input.color;
     output.uv0 = input.uv0;
@@ -135,64 +139,96 @@ float SimpleNoise(float2 p)
 
 // --- Pixel Shader ---
 float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
-{     
+{
+    // 1. 텍스처 색상을 계산합니다 (이전과 동일).
     float4 splatWeights = gtxtTerrainSplatMap.Sample(gssWrap, input.uv0);
-    
-    // 월드 좌표를 기반으로 노이즈 값 계산
+
     float noiseScale = 0.9f;
     float blendNoise = SimpleNoise(input.positionW.xz * noiseScale);
 
-    // ★★★ 2. 서로 다른 스케일과 오프셋으로 UV 좌표를 계산 ★★★
     float2 tiled_uv1 = input.uv1 * 100.0f;
-    float2 tiled_uv2 = (input.uv1 * 57.0f) + 0.3f; // << 다른 스케일과 오프셋을 줍니다.
+    float2 tiled_uv2 = (input.uv1 * 57.0f) + 0.3f;
 
-    // 3. 서로 다른 UV로 각 디테일 텍스처를 샘플링합니다.
     float4 cDirt1 = gtxtDirt01.Sample(gssWrap, tiled_uv1);
-    float4 cDirt2 = gtxtDirt02.Sample(gssWrap, tiled_uv2); // 다른 UV 사용
+    float4 cDirt2 = gtxtDirt02.Sample(gssWrap, tiled_uv2);
     float4 cGrass1 = gtxtGrass01.Sample(gssWrap, tiled_uv1);
-    float4 cGrass2 = gtxtGrass02.Sample(gssWrap, tiled_uv2); // 다른 UV 사용
+    float4 cGrass2 = gtxtGrass02.Sample(gssWrap, tiled_uv2);
     float4 cRock1 = gtxtRock01.Sample(gssWrap, tiled_uv1);
-    float4 cRock2 = gtxtRock02.Sample(gssWrap, tiled_uv2); // 다른 UV 사용
+    float4 cRock2 = gtxtRock02.Sample(gssWrap, tiled_uv2);
 
-    // ★★★ 4. 부드러운 노이즈 값을 이용해 섞습니다. ★★★
     float4 cMixedDirt = lerp(cDirt1, cDirt2, blendNoise);
     float4 cMixedGrass = lerp(cGrass1, cGrass2, blendNoise);
     float4 cMixedRock = lerp(cRock1, cRock2, blendNoise);
-    
-    // 3. 스플랫 맵의 RGBA 채널 값을 가중치로 사용하여 디테일 텍스처들을 혼합합니다.
+
     float4 cDetailColor = splatWeights.r * cMixedDirt +
                           splatWeights.g * cMixedGrass +
                           splatWeights.b * cMixedRock;
-    
-    // 남은 가중치는 풀로 채움
+
     float baseWeight = 1.0f - saturate(splatWeights.r + splatWeights.g + splatWeights.b);
     cDetailColor += baseWeight * cMixedGrass;
-    
-    // 멀리 있는 지형은 저해상도 베이스 텍스처와 섞기
+
     float distanceToEye = distance(input.positionW, gvCameraPosition.xyz);
     float baseTexWeight = saturate((distanceToEye - 4000.0f) / 1000.0f); // 4000~5000 거리
     float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
 
     float4 cTextureColor = lerp(cDetailColor, cBaseTexColor, baseTexWeight);
-    
-    float shadowFactor = 0.3; 
-    if (gIsDaytime) 
+
+
+    // 2. 그림자 계수를 계산합니다.
+    float shadowFactor = 0.3;
+    if (gIsDaytime)
     {
         shadowFactor = CalcShadowFactor(input.ShadowPosH);
     }
     
-// 최종 조명 계산 (input.color는 미리 계산된 빛, 여기에 그림자를 적용)
-    float3 totalLight = gcGlobalAmbientLight.rgb + (shadowFactor * input.color.rgb);
+    // 3. 조명을 올바르게 분리하여 계산합니다.
+    float3 vNormal = normalize(input.normalW);
+    float3 vToCamera = normalize(gvCameraPosition.xyz - input.positionW);
 
-    // 최종 색상 결정
+    // 3-1. 그림자와 상관없는 모든 '주변광'의 합을 계산합니다.
+    float3 totalAmbientLight = gcGlobalAmbientLight.rgb;
+    for (int i = 0; i < gnLights; ++i)
+    {
+        if (gLights[i].m_bEnable)
+        {
+            totalAmbientLight += gLights[i].m_cAmbient.rgb;
+        }
+    }
+
+    // 3-2. 그림자의 영향을 받는 '직접광'(확산광+반사광)의 합을 계산합니다.
+    float3 totalDirectLight = float3(0.0f, 0.0f, 0.0f);
+    for (int i = 0; i < gnLights; i++)
+    {
+        if (gLights[i].m_bEnable)
+        {
+            // Lighting() 함수를 직접 사용하는 대신, 각 광원 타입에 맞춰 직접광만 계산
+            // (Light.hlsl의 코드를 참고하여 Diffuse와 Specular 부분만 가져옴)
+            if (gLights[i].m_nType == DIRECTIONAL_LIGHT)
+            {
+                float3 vToLight = -gLights[i].m_vDirection;
+                float fDiffuseFactor = saturate(dot(vToLight, vNormal));
+                float fSpecularFactor = 0.0f;
+                if (fDiffuseFactor > 0.0f)
+                {
+                    float3 vHalf = normalize(vToCamera + vToLight);
+                    float fPower = gMaterialInfo.Glossiness * 100.0f + 1.0f;
+                    fSpecularFactor = (fPower > 1.0f) ? pow(saturate(dot(vHalf, vNormal)), fPower) : 0.0f;
+                }
+                totalDirectLight += gLights[i].m_cDiffuse.rgb * fDiffuseFactor * gMaterialInfo.DiffuseColor.rgb;
+                totalDirectLight += gLights[i].m_cSpecular.rgb * fSpecularFactor * gMaterialInfo.SpecularColor.rgb;
+            }
+            // (필요시 POINT_LIGHT, SPOT_LIGHT에 대한 직접광 계산도 추가)
+        }
+    }
+
+    // 4. 최종 빛의 색상을 조합합니다.
+    // 최종 빛 = 총 주변광 + (그림자 계수 * 총 직접광)
+    float3 totalLight = totalAmbientLight + (shadowFactor * totalDirectLight);
+    
+    // 5. 최종 픽셀 색상을 결정합니다.
     float3 finalColor = cTextureColor.rgb * totalLight;
-    
-    //안개
-    //float distToEye = distance(input.positionW, gvCameraPosition.xyz);        
-    //float fogFactor = saturate((gFogStart + gFogRange - distToEye) / gFogRange);    
-    //float normalizedDistance = saturate(distToEye / (gFogStart + gFogRange));
-    
-    
+
+    // 6. 안개 효과를 적용합니다.
     if (gIsDaytime)
     {
         float distToEye = distance(input.positionW, gvCameraPosition.xyz);

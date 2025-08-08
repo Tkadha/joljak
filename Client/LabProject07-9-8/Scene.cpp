@@ -66,23 +66,24 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights = new LIGHT[m_nLights];
 	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
 
-	m_xmf4GlobalAmbient = XMFLOAT4(0.05f, 0.05f, 0.05f, 1.0f);
+	m_xmf4GlobalAmbient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
 
-	m_pLights[0].m_bEnable = false;
+	m_pLights[0].m_bEnable = false; // 시작할 때는 꺼진 상태
 	m_pLights[0].m_nType = POINT_LIGHT;
-	m_pLights[0].m_fRange = 300.0f;
-	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
-	m_pLights[0].m_xmf3Position = XMFLOAT3(230.0f, 330.0f, 480.0f);
-	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+	m_pLights[0].m_fRange = 250.0f; // 횃불이 비추는 범위
+	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.1f, 0.05f, 0.0f, 1.0f);   // 약한 주황색 주변광
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.7f, 0.3f, 1.0f);    // 밝은 주황/노란색 불빛
+	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);   // 반사광도 따뜻한 색으로
+	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);         // 위치는 매 프레임 업데이트될 예정
+	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.005f, 0.0001f); // 빛 감쇠 효과 (값이 클수록 빨리 어두워짐)
+
 
 	
 	m_pLights[2].m_bEnable = true;
 	m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f); 
-	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.75f, 0.7f, 1.0f); 
-	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f); 
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.05f, 0.05f, 0.05f, 1.0f);
+	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
 	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.5f, -0.707f, 0.5f);
 	m_pLights[2].m_xmf3Position = XMFLOAT3(0.0f, 3000.0f, 0.0f);
 
@@ -964,6 +965,16 @@ void CScene::AnimateObjects(float fTimeElapsed)
 	{
 		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
+	}
+
+	if (m_pPlayer && m_pLights)
+	{
+		XMFLOAT3 playerPosition = m_pPlayer->GetPosition();
+
+		// 빛이 플레이어 머리 약간 위에서 비추도록 y 좌표를 조정합니다.
+		playerPosition.y += 20.0f;
+
+		m_pLights[0].m_xmf3Position = playerPosition;
 	}
 
 	if (m_pWavesObject) m_pWavesObject->Animate(fTimeElapsed);
