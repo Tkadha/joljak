@@ -1151,14 +1151,6 @@ void CGameFramework::BuildObjects()
 
 	m_pPlayer->SetOBB(0.35f, 0.9f, 0.2f, XMFLOAT3{ 0.f,10.f,0.f });
 
-	XMFLOAT3 position = XMFLOAT3(0.0f, 1.0f, 0.0f);
-	XMFLOAT3 size = XMFLOAT3(0.35f, 0.9f, 0.2f);
-	XMFLOAT4 rotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	//m_pPlayer->SetOBB(position, size, rotation);
-	m_pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
-
-	//LoadTools();
-
 #ifdef ONLINE
 	NetworkManager& nw = NetworkManager::GetInstance();
 	OBJ_OBB_PACKET p;
@@ -1178,6 +1170,14 @@ void CGameFramework::BuildObjects()
 	p.size = sizeof(OBJ_OBB_PACKET);
 	nw.PushSendQueue(p, p.size);
 #endif
+	XMFLOAT3 position = XMFLOAT3(0.0f, 1.0f, 0.0f);
+	XMFLOAT3 size = XMFLOAT3(0.35f, 0.9f, 0.2f);
+	XMFLOAT4 rotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	m_pPlayer->SetOBB(position, size, rotation);
+	m_pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+
+	//LoadTools();
+
 
 	struct DebugVertex
 	{
