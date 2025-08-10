@@ -1003,6 +1003,9 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		// 렌더 타겟을 그림자 맵으로 설정
 		m_pShadowMap->SetRenderTarget(pd3dCommandList);
 
+		ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() };
+		pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
 		// 그림자 생성을 위한 전용 셰이더 설정
 		CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Shadow");
 		pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
@@ -1236,22 +1239,22 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 
 
-	//{
-	//	// --- 그림자 맵 디버그 출력 ---
-	//	CShader* pDebugShader = pShaderManager->GetShader("Debug");
-	//	pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
-	//	pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
+	{
+		//// --- 그림자 맵 디버그 출력 ---
+		//CShader* pDebugShader = pShaderManager->GetShader("Debug");
+		//pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
+		//pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
 
-	//	// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
-	//	pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
+		//// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
+		//pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
 
 
-	//	// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
-	//	pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
-	//	pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
-	//	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	//	pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
-	//}
+		//// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
+		//pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
+		//pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
+		//pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		//pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+	}
 }
 
 

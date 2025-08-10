@@ -931,6 +931,15 @@ void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
     ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
     if (!pScene || !pShaderManager) return;
 
+	// 메쉬가 없으면 자식/형제 객체로 넘어감
+	if (!m_pMesh)
+	{
+		if (m_pSibling) m_pSibling->RenderShadow(pd3dCommandList);
+		if (m_pChild) m_pChild->RenderShadow(pd3dCommandList);
+		return;
+	}
+
+
     // 렌더링할 재질과 메시가 있는지 먼저 확인합니다.
     CMaterial* pPrimaryMaterial = GetMaterial(0);
 
@@ -966,9 +975,22 @@ void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 			pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
 			pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
 
-			XMFLOAT4X4 gmtxGameObject;
-			XMStoreFloat4x4(&gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
-			pd3dCommandList->SetGraphicsRoot32BitConstants(1, 16, &gmtxGameObject, 0);
+			cbGameObjectInfo gameObjectInfo;
+			XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+
+			gameObjectInfo.gnTexturesMask = 0;
+			if (pPrimaryMaterial->GetTexture(0)) 
+			{
+				gameObjectInfo.gnTexturesMask |= MATERIAL_ALBEDO_MAP;
+			}
+
+			pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo, 0);
+
+			D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pPrimaryMaterial->GetTextureTableGpuHandle();
+			if (textureTableHandle.ptr != 0)
+			{
+				pd3dCommandList->SetGraphicsRootDescriptorTable(2, textureTableHandle);
+			}
 		}
 
 
