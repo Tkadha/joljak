@@ -953,10 +953,35 @@ void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 
 			CSkinnedMesh* pSkinnedMesh = dynamic_cast<CSkinnedMesh*>(m_pMesh);
 			if (pSkinnedMesh) {
-				pd3dCommandList->SetGraphicsRootConstantBufferView(5, pSkinnedMesh->m_pd3dcbBindPoseBoneOffsets->GetGPUVirtualAddress());
-				CAnimationController* pController = m_pSkinnedAnimationController ? m_pSkinnedAnimationController : m_pSharedAnimController;
-				if (pController && pController->m_ppd3dcbSkinningBoneTransforms[0]) {
-					pd3dCommandList->SetGraphicsRootConstantBufferView(6, pController->m_ppd3dcbSkinningBoneTransforms[0]->GetGPUVirtualAddress());
+				ID3D12Resource* pOffsetBuffer = pSkinnedMesh->m_pd3dcbBindPoseBoneOffsets;
+				if (pOffsetBuffer) {
+					pd3dCommandList->SetGraphicsRootConstantBufferView(5, pOffsetBuffer->GetGPUVirtualAddress());
+				}
+
+
+				CAnimationController* pControllerToUse = nullptr;
+				if (this->m_pSkinnedAnimationController) {
+					// 오브젝트가 직접 컨트롤러를 소유한 경우
+					pControllerToUse = this->m_pSkinnedAnimationController;
+				}
+				else if (this->m_pSharedAnimController) {
+					// 오브젝트가 부모로부터 컨트롤러를 공유받은 경우 (무기, 장비)
+					pControllerToUse = this->m_pSharedAnimController;
+				}
+				if (pControllerToUse)
+				{
+					// 현재 메쉬가 컨트롤러의 몇 번째 메쉬인지 인덱스를 찾음
+					int nSkinnedMeshIndex = -1;
+					for (int i = 0; i < pControllerToUse->m_nSkinnedMeshes; ++i) {
+						if (pControllerToUse->m_ppSkinnedMeshes[i] == pSkinnedMesh) {
+							nSkinnedMeshIndex = i;
+							break;
+						}
+					}
+
+					if (nSkinnedMeshIndex != -1 && pControllerToUse->m_ppd3dcbSkinningBoneTransforms[nSkinnedMeshIndex]) {
+						pd3dCommandList->SetGraphicsRootConstantBufferView(6, pControllerToUse->m_ppd3dcbSkinningBoneTransforms[nSkinnedMeshIndex]->GetGPUVirtualAddress());
+					}
 				}
 			}
 		}
