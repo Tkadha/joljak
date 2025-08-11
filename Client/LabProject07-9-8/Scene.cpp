@@ -70,12 +70,12 @@ void CScene::BuildDefaultLightsAndMaterials()
 
 	m_pLights[0].m_bEnable = false; // 시작할 때는 꺼진 상태
 	m_pLights[0].m_nType = POINT_LIGHT;
-	m_pLights[0].m_fRange = 250.0f; // 횃불이 비추는 범위
+	m_pLights[0].m_fRange = 5000.0f; // 횃불이 비추는 범위
 	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.1f, 0.05f, 0.0f, 1.0f);		// 약한 주황색 주변광
 	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.7f, 0.3f, 1.0f);		// 밝은 주황/노란색 불빛
-	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);		// 반사광도 따뜻한 색으로
-	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);			// 위치는 플레이어 위치로
-	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.04f, 0.002f);		// 빛 감쇠 효과 (값이 클수록 빨리 어두워짐)
+	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);		
+	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);			
+	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.02f, 0.001f);
 
 
 	

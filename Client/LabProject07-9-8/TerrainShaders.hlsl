@@ -173,38 +173,30 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
 
     float4 cTextureColor = lerp(cDetailColor, cBaseTexColor, baseTexWeight);
 
-
-    // 2. 그림자 계수를 계산합니다.
+    
     float shadowFactor = 0.3;
     if (gIsDaytime)
     {
         shadowFactor = CalcShadowFactor(input.ShadowPosH);
     }
     
-    // 3. 조명을 올바르게 분리하여 계산합니다.
+    
+    // 조명 계산
     float3 vNormal = normalize(input.normalW);
     float3 vToCamera = normalize(gvCameraPosition.xyz - input.positionW);
-
-    // 3-1. 그림자와 상관없는 모든 '주변광'의 합을 계산합니다.
-    float3 totalAmbientLight = gcGlobalAmbientLight.rgb;
-    for (int i = 0; i < gnLights; ++i)
-    {
-        if (gLights[i].m_bEnable)
-        {
-            totalAmbientLight += gLights[i].m_cAmbient.rgb;
-        }
-    }
-
-    // 3-2. 그림자의 영향을 받는 '직접광'(확산광+반사광)의 합을 계산합니다.
-    float3 totalDirectLight = float3(0.0f, 0.0f, 0.0f);
+    
+    float3 finalLightColor = gcGlobalAmbientLight.rgb * gMaterialInfo.AmbientColor.rgb;
+	
+    float3 directLightColor = float3(0.0f, 0.0f, 0.0f);
+    
     for (int i = 0; i < gnLights; i++)
     {
         if (gLights[i].m_bEnable)
         {
-            // Lighting() 함수를 직접 사용하는 대신, 각 광원 타입에 맞춰 직접광만 계산
-            // (Light.hlsl의 코드를 참고하여 Diffuse와 Specular 부분만 가져옴)
             if (gLights[i].m_nType == DIRECTIONAL_LIGHT)
             {
+                finalLightColor += gLights[i].m_cAmbient.rgb * gMaterialInfo.AmbientColor.rgb;
+				
                 float3 vToLight = -gLights[i].m_vDirection;
                 float fDiffuseFactor = saturate(dot(vToLight, vNormal));
                 float fSpecularFactor = 0.0f;
@@ -214,21 +206,45 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
                     float fPower = gMaterialInfo.Glossiness * 100.0f + 1.0f;
                     fSpecularFactor = (fPower > 1.0f) ? pow(saturate(dot(vHalf, vNormal)), fPower) : 0.0f;
                 }
-                totalDirectLight += gLights[i].m_cDiffuse.rgb * fDiffuseFactor * gMaterialInfo.DiffuseColor.rgb;
-                totalDirectLight += gLights[i].m_cSpecular.rgb * fSpecularFactor * gMaterialInfo.SpecularColor.rgb;
+                directLightColor += gLights[i].m_cDiffuse.rgb * fDiffuseFactor * gMaterialInfo.DiffuseColor.rgb;
+                directLightColor += gLights[i].m_cSpecular.rgb * fSpecularFactor * gMaterialInfo.SpecularColor.rgb;
             }
-            // (필요시 POINT_LIGHT, SPOT_LIGHT에 대한 직접광 계산도 추가)
+            // 횃불
+            else if (gLights[i].m_nType == POINT_LIGHT) 
+            {
+                float3 vToLight = gLights[i].m_vPosition - input.positionW;
+                float fDistance = length(vToLight);
+                
+                if (fDistance <= gLights[i].m_fRange)
+                {
+                    float fAttenuationFactor = saturate(1.0f / dot(gLights[i].m_vAttenuation, float3(1.0f, fDistance, fDistance * fDistance)));
+                    
+                    finalLightColor += gLights[i].m_cAmbient.rgb * gMaterialInfo.AmbientColor.rgb * fAttenuationFactor;
+					
+                    vToLight /= fDistance; 
+                    float fDiffuseFactor = saturate(dot(vToLight, vNormal));
+                    float fSpecularFactor = 0.0f;
+                    if (fDiffuseFactor > 0.0f)
+                    {
+                        float3 vHalf = normalize(vToCamera + vToLight);
+                        float fPower = gMaterialInfo.Glossiness * 100.0f + 1.0f;
+                        fSpecularFactor = (fPower > 1.0f) ? pow(saturate(dot(vHalf, vNormal)), fPower) : 0.0f;
+                    }
+					
+                    float3 pointDirectLight = (gLights[i].m_cDiffuse.rgb * fDiffuseFactor * gMaterialInfo.DiffuseColor.rgb);
+                    pointDirectLight += (gLights[i].m_cSpecular.rgb * fSpecularFactor * gMaterialInfo.SpecularColor.rgb);
+					
+                    directLightColor += pointDirectLight * fAttenuationFactor;
+                }
+            }
         }
     }
-
-    // 4. 최종 빛의 색상을 조합합니다.
-    // 최종 빛 = 총 주변광 + (그림자 계수 * 총 직접광)
-    float3 totalLight = totalAmbientLight + (shadowFactor * totalDirectLight);
     
-    // 5. 최종 픽셀 색상을 결정합니다.
-    float3 finalColor = cTextureColor.rgb * totalLight;
+    finalLightColor += shadowFactor * directLightColor;
+	
+    float3 finalColor = cTextureColor.rgb * finalLightColor;
 
-    // 6. 안개 효과를 적용합니다.
+    // 안개
     if (gIsDaytime)
     {
         float distToEye = distance(input.positionW, gvCameraPosition.xyz);
