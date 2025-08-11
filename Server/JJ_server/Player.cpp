@@ -292,6 +292,11 @@ void PlayerClient::Update_test(float deltaTime)
     //XMFLOAT3 deltaPos = Vector3::ScalarProduct(m_Velocity, deltaTime);
     XMFLOAT3 deltaVel = Vector3::ScalarProduct(m_Velocity, 0.35f);
 
+    if (currentInput.WalkLeft || currentInput.WalkRight) {
+        deltaVel.x /= 1.3f;
+        deltaVel.z /= 1.3f;
+    }
+
     if (Speed_stat > 0) {
         deltaVel.x *= (1.f + 0.03f * Speed_stat);
         deltaVel.z *= (1.f + 0.03f * Speed_stat);
