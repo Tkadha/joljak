@@ -1006,10 +1006,6 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() };
 		pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
-		// 그림자 생성을 위한 전용 셰이더 설정
-		CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Shadow");
-		pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
-		pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
 
 		// --- 빛 카메라 상수 버퍼 업데이트 및 바인딩 ---
 		XMMATRIX view = XMLoadFloat4x4(&mLightView);
@@ -1019,10 +1015,20 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4Projection, XMMatrixTranspose(proj));
 
 
-		pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbLightCamera->GetGPUVirtualAddress());
+		//pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbLightCamera->GetGPUVirtualAddress());
 
 
-		// 기존 Render 함수를 호출하되, Shadow 셰이더는 재질/조명 정보를 무시할 것임
+		//CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Skinned_Shaodw");
+		//pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
+		//pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
+
+
+
+		// 그림자 생성을 위한 전용 셰이더 설정
+		CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Shadow");
+		pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
+		pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
+
 		{
 			std::lock_guard<std::mutex> lock(m_Mutex);
 

@@ -956,6 +956,8 @@ void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 			pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
 			pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
 
+			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pScene->m_pd3dcbLightCamera->GetGPUVirtualAddress());
+
 			cbGameObjectInfo gameObjectInfo;
 			XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
 			pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo, 0);
@@ -974,6 +976,8 @@ void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 			CShader* pShadowShader = pShaderManager->GetShader("Shadow");
 			pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
 			pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
+
+			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pScene->m_pd3dcbLightCamera->GetGPUVirtualAddress());
 
 			cbGameObjectInfo gameObjectInfo;
 			XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));

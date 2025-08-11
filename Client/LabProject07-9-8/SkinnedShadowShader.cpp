@@ -22,7 +22,7 @@ D3D12_SHADER_BYTECODE CSkinnedShadowShader::CreatePixelShader()
 D3D12_RASTERIZER_DESC CSkinnedShadowShader::CreateRasterizerState()
 {
     D3D12_RASTERIZER_DESC d3dRasterizerDesc = CShader::CreateRasterizerState();
-    d3dRasterizerDesc.DepthBias = 10000;
+    d3dRasterizerDesc.DepthBias = 1000;
     d3dRasterizerDesc.SlopeScaledDepthBias = 1.5f;
     return d3dRasterizerDesc;
 }
@@ -55,6 +55,19 @@ void CSkinnedShadowShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12Graphics
 
     // 5. PSO를 딱 한 번만 생성합니다.
     HRESULT hResult = pd3dDevice->CreateGraphicsPipelineState(&m_d3dPipelineStateDesc, __uuidof(ID3D12PipelineState), (void**)&m_pd3dPipelineState);
+
+    if (FAILED(hResult))
+    {
+        // wstringstream을 사용하기 위해 <sstream> 헤더가 필요할 수 있습니다.
+        // stdafx.h에 추가하는 것을 권장합니다.
+        std::wstringstream wss;
+        wss << L"[SkinnedShadowShader] FAILED to create PSO! HRESULT: 0x" << std::hex << hResult << L"\n";
+        OutputDebugStringW(wss.str().c_str());
+    }
+    else
+    {
+        OutputDebugStringW(L"[SkinnedShadowShader] Successfully created PSO.\n");
+    }
 
     // 사용이 끝난 임시 리소스들을 정리합니다.
     if (m_pd3dVertexShaderBlob) m_pd3dVertexShaderBlob->Release();
