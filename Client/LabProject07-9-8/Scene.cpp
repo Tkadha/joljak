@@ -66,23 +66,25 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights = new LIGHT[m_nLights];
 	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
 
-	m_xmf4GlobalAmbient = XMFLOAT4(0.05f, 0.05f, 0.05f, 1.0f);
+	m_xmf4GlobalAmbient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
 
-	m_pLights[0].m_bEnable = false;
+	m_pLights[0].m_bEnable = false; // 시작할 때는 꺼진 상태
 	m_pLights[0].m_nType = POINT_LIGHT;
-	m_pLights[0].m_fRange = 300.0f;
-	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
-	m_pLights[0].m_xmf3Position = XMFLOAT3(230.0f, 330.0f, 480.0f);
-	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
-
+	m_pLights[0].m_fRange = 450.0f; // 횃불이 비추는 범위
+	//m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.1f, 0.05f, 0.0f, 1.0f);		// 약한 주황색 주변광
+	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.2f, 0.1f, 0.05f, 1.0f);
+	//m_pLights[0].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.7f, 0.3f, 1.0f);		// 밝은 주황/노란색 불빛
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.6f, 0.1f, 1.0f);
+	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);		
+	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.0007f, 0.00017f);
+	
 	
 	m_pLights[2].m_bEnable = true;
 	m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f); 
-	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.75f, 0.7f, 1.0f); 
-	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f); 
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.05f, 0.05f, 0.05f, 1.0f);
+	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
 	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.5f, -0.707f, 0.5f);
 	m_pLights[2].m_xmf3Position = XMFLOAT3(0.0f, 3000.0f, 0.0f);
 
@@ -980,6 +982,16 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
 
+	if (m_pPlayer && m_pLights)
+	{
+		XMFLOAT3 playerPosition = m_pPlayer->GetPosition();
+
+		// 빛이 플레이어 머리 약간 위에서 비추도록 y 좌표를 조정합니다.
+		playerPosition.y += 50.0f;
+
+		m_pLights[0].m_xmf3Position = playerPosition;
+	}
+
 	if (m_pWavesObject) m_pWavesObject->Animate(fTimeElapsed);
 
 	
@@ -1006,10 +1018,9 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		// 렌더 타겟을 그림자 맵으로 설정
 		m_pShadowMap->SetRenderTarget(pd3dCommandList);
 
-		// 그림자 생성을 위한 전용 셰이더 설정
-		CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Shadow");
-		pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
-		pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
+		ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() };
+		pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
 
 		// --- 빛 카메라 상수 버퍼 업데이트 및 바인딩 ---
 		XMMATRIX view = XMLoadFloat4x4(&mLightView);
@@ -1019,10 +1030,20 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4Projection, XMMatrixTranspose(proj));
 
 
-		pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbLightCamera->GetGPUVirtualAddress());
+		//pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbLightCamera->GetGPUVirtualAddress());
 
 
-		// 기존 Render 함수를 호출하되, Shadow 셰이더는 재질/조명 정보를 무시할 것임
+		//CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Skinned_Shaodw");
+		//pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
+		//pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
+
+
+
+		// 그림자 생성을 위한 전용 셰이더 설정
+		CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Shadow");
+		pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
+		pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
+
 		{
 			std::lock_guard<std::mutex> lock(m_Mutex);
 
@@ -1239,22 +1260,22 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 
 
-	//{
-	//	// --- 그림자 맵 디버그 출력 ---
-	//	CShader* pDebugShader = pShaderManager->GetShader("Debug");
-	//	pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
-	//	pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
+	{
+		//// --- 그림자 맵 디버그 출력 ---
+		//CShader* pDebugShader = pShaderManager->GetShader("Debug");
+		//pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
+		//pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
 
-	//	// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
-	//	pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
+		//// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
+		//pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
 
 
-	//	// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
-	//	pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
-	//	pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
-	//	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	//	pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
-	//}
+		//// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
+		//pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
+		//pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
+		//pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		//pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+	}
 }
 
 

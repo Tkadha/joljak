@@ -947,6 +947,15 @@ void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
     ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
     if (!pScene || !pShaderManager) return;
 
+	// 메쉬가 없으면 자식/형제 객체로 넘어감
+	if (!m_pMesh)
+	{
+		if (m_pSibling) m_pSibling->RenderShadow(pd3dCommandList);
+		if (m_pChild) m_pChild->RenderShadow(pd3dCommandList);
+		return;
+	}
+
+
     // 렌더링할 재질과 메시가 있는지 먼저 확인합니다.
     CMaterial* pPrimaryMaterial = GetMaterial(0);
 
@@ -962,6 +971,8 @@ void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 			CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Skinned_Shadow");
 			pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
 			pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
+
+			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pScene->m_pd3dcbLightCamera->GetGPUVirtualAddress());
 
 			cbGameObjectInfo gameObjectInfo;
 			XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
@@ -982,9 +993,24 @@ void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 			pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
 			pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
 
-			XMFLOAT4X4 gmtxGameObject;
-			XMStoreFloat4x4(&gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
-			pd3dCommandList->SetGraphicsRoot32BitConstants(1, 16, &gmtxGameObject, 0);
+			pd3dCommandList->SetGraphicsRootConstantBufferView(0, pScene->m_pd3dcbLightCamera->GetGPUVirtualAddress());
+
+			cbGameObjectInfo gameObjectInfo;
+			XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+
+			gameObjectInfo.gnTexturesMask = 0;
+			if (pPrimaryMaterial->GetTexture(0)) 
+			{
+				gameObjectInfo.gnTexturesMask |= MATERIAL_ALBEDO_MAP;
+			}
+
+			pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo, 0);
+
+			D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pPrimaryMaterial->GetTextureTableGpuHandle();
+			if (textureTableHandle.ptr != 0)
+			{
+				pd3dCommandList->SetGraphicsRootDescriptorTable(2, textureTableHandle);
+			}
 		}
 
 
@@ -1883,6 +1909,10 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	
 	CMaterial* pTerrainMaterial = new CMaterial(8, pGameFramework);
 
+	pTerrainMaterial->m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	pTerrainMaterial->m_xmf4AmbientColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 주변광 반사율
+	pTerrainMaterial->m_xmf4SpecularColor = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f); // 반사광 색상
+	pTerrainMaterial->m_fGlossiness = 30.0f; // 광택도 (반짝이는 정도)
 
 	std::shared_ptr<CTexture> pTerrainBaseTexture = pResourceManager->GetTexture(L"Terrain/DemoTerrain3.dds", pd3dCommandList);
 
@@ -1946,13 +1976,27 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 		pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
 
+		// 셰이더로 보낼 게임 객체 정보 구조체 준비
+		cbGameObjectInfo gameObjectInfo;
+
+		// 1. 월드 변환 행렬 설정
 		UpdateTransform(NULL);
+		XMStoreFloat4x4(&gameObjectInfo.gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
 
+		// 2. 재질 정보 설정 (기본값으로 흰색을 사용하거나 실제 머티리얼 값 사용)
+		gameObjectInfo.gMaterialInfo.AmbientColor = pMaterial->m_xmf4AmbientColor;
+		gameObjectInfo.gMaterialInfo.DiffuseColor = pMaterial->m_xmf4AlbedoColor;
+		gameObjectInfo.gMaterialInfo.SpecularColor = pMaterial->m_xmf4SpecularColor;
+		gameObjectInfo.gMaterialInfo.EmissiveColor = pMaterial->m_xmf4EmissiveColor;
+		gameObjectInfo.gMaterialInfo.Glossiness = pMaterial->m_fGlossiness;
+		// ... 기타 재질 속성들 ...
 
-		XMFLOAT4X4 gmtxGameObject;
-		XMStoreFloat4x4(&gmtxGameObject, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+		// 3. 텍스처 마스크 설정 (터레인은 2개의 텍스처를 사용)
+		gameObjectInfo.gnTexturesMask = MATERIAL_ALBEDO_MAP | MATERIAL_DETAIL_ALBEDO_MAP;
 
-		pd3dCommandList->SetGraphicsRoot32BitConstants(1, 16, &gmtxGameObject, 0);
+		// 4. 전체 구조체를 상수 버퍼 레지스터(b2)에 바인딩
+		pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo, 0);
+
 
 
 		D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle();
@@ -3039,7 +3083,7 @@ void CGameObject::LoadTools(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 	std::vector<ToolInfo> toolInfos = {
 		{ "Sword_Wood",   "Model/Tool/WoodenSword.bin",   "middle_01_r", {-0.01f, -0.11f, -0.07f}, {27.0f, -57.0f, -56.0f} },
-		{ "Sword_Stone",  "Model/Tool/StoneSword.bin",    "middle_02_r", {-0.01f, -0.11f, -0.07f}, {28.0f, -57.0f, -56.0f} },
+		{ "Sword_Stone",  "Model/Tool/Torch.bin",    "middle_02_r", {-0.01f, -0.11f, -0.07f}, {28.0f, -57.0f, -56.0f} },
 		{ "Sword_Metal",  "Model/Tool/MetalSword.bin",    "middle_03_r", {-0.03f, -0.13f, -0.15f}, {67.0f, 0.0f, 0.0f} },
 		{ "Axe_Wood",     "Model/Tool/WoodenAxe.bin",     "thumb_01_r", {0.05f, -0.21f, -0.01f}, {9.0f, 94.0f, -7.0f} },
 		{ "Axe_Stone",    "Model/Tool/StoneAxe.bin",      "thumb_02_r", {0.04f, -0.21f, -0.03f}, {-11.0f, 94.0f, -7.0f} },
@@ -3048,7 +3092,8 @@ void CGameObject::LoadTools(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		{ "Pickaxe_Stone","Model/Tool/StonePickaxe.bin",  "ring_02_r", {0.0f, -0.04f, -0.14f}, {30.0f, -90.0f, -93.0f} },
 		{ "Pickaxe_Metal","Model/Tool/MetalPickaxe.bin",  "ring_03_r", {0.0f, -0.05f, -0.21f}, {0.0f, 90.0f, 93.0f} },
 		{ "Hammer_Wood",  "Model/Tool/BuildingHammer.bin","hand_r", {0.1f, -0.1f, -0.12f}, {27.0f, 78.0f, 63.0f} },
-		{ "Hammer_Metal", "Model/Tool/MetalHammer.bin",   "Weapon_R", {0.01f, -0.06f, -0.18f}, {73.0f, 0.0f, 0.0f} }
+		{ "Hammer_Metal", "Model/Tool/MetalHammer.bin",   "Weapon_R", {0.01f, -0.06f, -0.18f}, {73.0f, 0.0f, 0.0f} },
+		{ "Torch", "Model/Tool/Torch.bin",   "hand_l", {0.01f, -0.06f, -0.18f}, {73.0f, 0.0f, 0.0f} }
 	};
 
 	for (const auto& info : toolInfos)
