@@ -222,7 +222,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	SpawnStaticObjects("ElephantEarA", 1000, 500, 9500, 5, 10, gen, pd3dDevice, pd3dCommandList);
 	SpawnStaticObjects("ElephantEarB", 1000, 500, 9500, 5, 10, gen, pd3dDevice, pd3dCommandList);
 	SpawnStaticObjects("GrassTall", 1000, 500, 9500, 7, 12, gen, pd3dDevice, pd3dCommandList);
-	SpawnStaticObjects("Sphere", 1000, 500, 9500, 7, 12, gen, pd3dDevice, pd3dCommandList);
+	//SpawnStaticObjects("Sphere", 1000, 500, 9500, 7, 12, gen, pd3dDevice, pd3dCommandList);
 
 	/*
 	pResourceManager->RegisterPrefab("BushA", std::make_shared<CBushAObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
@@ -358,6 +358,10 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 
 	const int bloodPoolSize = 30;
 	for (int i = 0; i < bloodPoolSize; ++i) {
+
+		//ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
+		//std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab("Sphere");
+		//CGameObject* pBlood = prefab->Clone();
 		auto* pBlood = new CBloodEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
 		m_vBloodEffects.push_back(pBlood);
 		m_vGameObjects.push_back(pBlood); // 렌더링을 위해 메인 목록에도 추가
@@ -1768,7 +1772,7 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 
 
-	auto pballPrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Tool/Sphere.bin", m_pGameFramework);
+	/*auto pballPrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Tool/Sphere.bin", m_pGameFramework);
 	pballPrefab->m_bIsPrefab = true;
 
 	int materialIndexToChange = 0;
@@ -1776,7 +1780,7 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	const wchar_t* textureFile = L"Model/Textures/red.dds";
 	ChangeAlbedoTexture(pballPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
 
-	pResourceManager->RegisterPrefab("Sphere", pballPrefab);
+	pResourceManager->RegisterPrefab("Sphere", pballPrefab);*/
 
 	// 나무
 	pResourceManager->RegisterPrefab("PineTree", std::make_shared<CPineObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
@@ -1784,9 +1788,9 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	auto pBirchPrefab = std::make_shared<CBirchObject>(pd3dDevice, pd3dCommandList, m_pGameFramework);
 	pBirchPrefab->m_bIsPrefab = true;
 
-	 materialIndexToChange = 1;
-	 albedoTextureSlot = 0;
-	textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
+	int materialIndexToChange = 1;
+	UINT albedoTextureSlot = 0;
+	const wchar_t*  textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
 	ChangeAlbedoTexture(pBirchPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
 
 	pResourceManager->RegisterPrefab("BirchTree", pBirchPrefab);

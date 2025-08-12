@@ -3015,19 +3015,15 @@ CBloodEffectObject::CBloodEffectObject(ID3D12Device* device, ID3D12GraphicsComma
 {
 	// 혈흔 모양을 표현할 간단한 모델을 로드합니다. (예: 작은 구체나 평면 모델)
 	// 여기서는 테스트를 위해 돌멩이 모델을 쓰되, 색상을 바꿔서 구분하겠습니다.
-	CLoadedModelInfo* pEffectModel = CGameObject::LoadGeometryAndAnimationFromFile(device, cmdList, "Model/RockCluster_A_LOD0.bin", framework);
+	CLoadedModelInfo* pEffectModel = CGameObject::LoadGeometryAndAnimationFromFile(device, cmdList, "Model/Tool/Sphere.bin", framework);
 
-	if (pEffectModel && pEffectModel->m_pModelRootObject) {
-		SetMesh(pEffectModel->m_pModelRootObject->m_pMesh);
-		if (pEffectModel->m_pModelRootObject->m_nMaterials > 0) {
-			SetMaterial(0, pEffectModel->m_pModelRootObject->m_ppMaterials[0]);
+	int materialIndexToChange = 0;
+	UINT albedoTextureSlot = 0;
+	const wchar_t* textureFile = L"Model/Textures/red.dds";
+	ChangeAlbedoTexture(pEffectModel->m_pModelRootObject, materialIndexToChange, albedoTextureSlot, textureFile, m_pGameFramework->GetResourceManager(), cmdList, device);
 
-			// [핵심 수정] Albedo(반사광) 대신 Emissive(방출광) 색상을 빨갛게 설정합니다.
-			m_ppMaterials[0]->m_xmf4EmissiveColor = XMFLOAT4(0.8f, 0.1f, 0.1f, 1.0f);
-			m_ppMaterials[0]->m_xmf4AlbedoColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // 반사는 없도록
-		}
-		delete pEffectModel;
-	}
+	SetChild(pEffectModel->m_pModelRootObject);
+
 	isRender = false;
 }
 
