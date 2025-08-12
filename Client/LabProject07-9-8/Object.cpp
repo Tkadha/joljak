@@ -289,7 +289,6 @@ void CGameObject::Check_attack()
 	}
 
 
-
 	if (m_objectType == GameObjectType::Golem && m_anitype == 13) {
 
 		m_pScene->SpawnAttackEffect(GetPosition(), 20, 100.0f);
@@ -298,7 +297,7 @@ void CGameObject::Check_attack()
 		float distance = Vector3::Length(Vector3::Subtract(GetPosition(), pPlayerInfo->GetPosition()));
 		float height_distance = std::abs(GetPosition().y - pPlayerInfo->GetPosition().y);
 
-		if (distance <= 300.0f && height_distance <= 10.0f) {
+		if (distance <= 300.0f && height_distance <= 1.0f) {
 			ProcessPlayerHit(pPlayerInfo);
 		}
 	}
