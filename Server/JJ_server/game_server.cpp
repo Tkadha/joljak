@@ -164,7 +164,7 @@ void worker_thread()
 						int stamina = Client->Playerstamina.load();
 						if (stamina > 0 && Client->GetCurrentState() == ServerPlayerState::Running) {
 							Client->stamina_counter++;
-							if (Client->stamina_counter > 15) {
+							if (Client->stamina_counter > 20) {
 								int desiredstamina = stamina - 1;
 								if (desiredstamina < 0) {
 									desiredstamina = 0;
