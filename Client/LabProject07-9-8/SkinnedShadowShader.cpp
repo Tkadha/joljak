@@ -22,8 +22,8 @@ D3D12_SHADER_BYTECODE CSkinnedShadowShader::CreatePixelShader()
 D3D12_RASTERIZER_DESC CSkinnedShadowShader::CreateRasterizerState()
 {
     D3D12_RASTERIZER_DESC d3dRasterizerDesc = CShader::CreateRasterizerState();
-    d3dRasterizerDesc.DepthBias = 0;
-    d3dRasterizerDesc.SlopeScaledDepthBias = 1.0f;
+    d3dRasterizerDesc.DepthBias = 1000;
+    d3dRasterizerDesc.SlopeScaledDepthBias = 2.0f;
     return d3dRasterizerDesc;
 }
 
