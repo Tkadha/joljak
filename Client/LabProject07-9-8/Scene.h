@@ -127,6 +127,9 @@ public:
 	CWavesObject* m_pWavesObject = nullptr;
 	//이펙트 오브젝트
 	std::vector<CAttackEffectObject*> m_vAttackEffects;
+	std::vector<CBloodEffectObject*> m_vBloodEffects;
+
+
 	enum class ShardType { Wood, Rock };
 	void SpawnResourceShards(const XMFLOAT3& origin, ShardType type);
 
@@ -178,8 +181,9 @@ public:
 
 	void SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 	void SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
-	//void SpawnRockShardEffect(const XMFLOAT3& origin);
-	//void SpawnRockShardEffectAtPlayer();
+	void SpawnGolemPunchEffect(const XMFLOAT3& origin, const XMFLOAT3& direction);
+	void SpawnBloodEffect(const XMFLOAT3& position);
+
 	void NewGameBuildObj();
 	void ClearObj();
 private:

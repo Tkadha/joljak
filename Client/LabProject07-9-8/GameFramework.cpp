@@ -819,9 +819,18 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				}
 				break;
 			case 'U':
-				XMFLOAT3 playerPos = m_pPlayer->GetPosition();
-				playerPos.y += 15.0f;
-				m_pScene->SpawnResourceShards(playerPos, CScene::ShardType::Wood);
+				if (m_pScene && m_pPlayer)
+				{
+					// 1. 플레이어의 상체 높이와 정면 위치를 계산합니다.
+					XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+					playerPos.y += 15.0f; // 상체 높이
+
+					XMFLOAT3 lookVector = m_pPlayer->GetLookVector();
+					XMFLOAT3 spawnOrigin = Vector3::Add(playerPos, Vector3::ScalarProduct(lookVector, 10.0f)); // 플레이어 정면 50 유닛 앞에서 생성
+
+					// 2. Scene에 파편 생성을 요청합니다.
+					m_pScene->SpawnGolemPunchEffect(spawnOrigin, lookVector);
+				}
 				break;
 			case 'P':
 				CheckEscape();
@@ -839,6 +848,17 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					p.size = sizeof(NEW_GAME_PACKET);
 					nwManager.PushSendQueue(p, p.size);
 				}
+				break;
+			case 'V':
+				if (m_pScene && m_pPlayer)
+				{
+					// 플레이어의 현재 위치를 가져옵니다.
+					XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+
+					// Scene의 혈흔 생성 함수를 호출합니다.
+					m_pScene->SpawnBloodEffect(playerPos);
+				}
+				break;
 				break;
 			case VK_F2:
 				AddItem("wood", 30);

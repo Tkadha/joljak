@@ -302,6 +302,17 @@ void CGameObject::Check_attack()
 		}
 	}
 	else {
+		if (m_objectType == GameObjectType::Golem&&m_anitype == 11) { // 왼손
+			XMFLOAT3 bosspos = GetPosition();
+			bosspos.y += 15.0f;
+			m_pScene->SpawnGolemPunchEffect(bosspos, GetLook());
+		}
+		else if (m_objectType == GameObjectType::Golem && m_anitype == 12) { //오른손
+			XMFLOAT3 bosspos = GetPosition();
+			bosspos.y += 35.0f;
+			
+			m_pScene->SpawnGolemPunchEffect(bosspos, GetLook());
+		}
 		float distance = Vector3::Length(Vector3::Subtract(GetPosition(), pPlayerInfo->GetPosition()));
 		if (distance <= 100.0f && m_pScene->CollisionCheck(this, pPlayerInfo)) {
 			ProcessPlayerHit(pPlayerInfo);
@@ -2940,11 +2951,73 @@ void CResourceShardEffect::Animate(float fTimeElapsed)
 	XMFLOAT3 shift = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed);
 
 	// [핵심 수정] 계산된 이동량을 증폭시킵니다.
-	const float speedMultiplier = 0.1f; // 속도를 5배로 증폭 (이 값을 조절)
+	const float speedMultiplier = 0.5f; // 속도를 5배로 증폭 (이 값을 조절)
 	shift = Vector3::ScalarProduct(shift, speedMultiplier);
 
 	XMFLOAT3 newPos = Vector3::Add(currentPos, shift);
 
+	SetPosition(newPos);
+
+	CGameObject::Animate(fTimeElapsed);
+}
+
+
+
+CBloodEffectObject::CBloodEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework)
+	: CGameObject(1, framework)
+{
+	// 혈흔 모양을 표현할 간단한 모델을 로드합니다. (예: 작은 구체나 평면 모델)
+	// 여기서는 테스트를 위해 돌멩이 모델을 쓰되, 색상을 바꿔서 구분하겠습니다.
+	CLoadedModelInfo* pEffectModel = CGameObject::LoadGeometryAndAnimationFromFile(device, cmdList, "Model/RockCluster_A_LOD0.bin", framework);
+
+	if (pEffectModel && pEffectModel->m_pModelRootObject) {
+		SetMesh(pEffectModel->m_pModelRootObject->m_pMesh);
+		if (pEffectModel->m_pModelRootObject->m_nMaterials > 0) {
+			SetMaterial(0, pEffectModel->m_pModelRootObject->m_ppMaterials[0]);
+
+			// [핵심 수정] Albedo(반사광) 대신 Emissive(방출광) 색상을 빨갛게 설정합니다.
+			m_ppMaterials[0]->m_xmf4EmissiveColor = XMFLOAT4(0.8f, 0.1f, 0.1f, 1.0f);
+			m_ppMaterials[0]->m_xmf4AlbedoColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // 반사는 없도록
+		}
+		delete pEffectModel;
+	}
+	isRender = false;
+}
+
+void CBloodEffectObject::Activate(const XMFLOAT3& position, const XMFLOAT3& velocity, float lifeTime)
+{
+	m_xmf4x4ToParent = Matrix4x4::Identity();
+	SetPosition(position);
+	SetScale(0.5f, 0.5f, 0.5f);
+
+	m_xmf3Velocity = velocity; // 초기 속도 설정
+	m_fLifeTime = lifeTime;
+	m_fElapsedTime = 0.0f;
+	m_bIsActive = true;
+	isRender = true;
+}
+
+void CBloodEffectObject::Animate(float fTimeElapsed)
+{
+	if (!m_bIsActive) return;
+
+	m_fElapsedTime += fTimeElapsed;
+	if (m_fElapsedTime >= m_fLifeTime) {
+		m_bIsActive = false;
+		isRender = false;
+		return;
+	}
+
+	// 중력을 적용하고 위치를 이동시킵니다.
+	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Gravity, fTimeElapsed));
+
+	XMFLOAT3 currentPos = GetPosition();
+	XMFLOAT3 shift = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed);
+
+	const float speedMultiplier = 1.0f; // 속도를 15배로 증폭 (이 값을 조절)
+	shift = Vector3::ScalarProduct(shift, speedMultiplier);
+
+	XMFLOAT3 newPos = Vector3::Add(currentPos, shift);
 	SetPosition(newPos);
 
 	CGameObject::Animate(fTimeElapsed);
