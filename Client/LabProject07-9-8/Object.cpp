@@ -262,6 +262,19 @@ void CGameObject::Check_attack()
 	}
 
 	if (!IsInActiveFrame(startRatio, endRatio)) return;
+
+	if (m_objectType == GameObjectType::Golem && m_anitype == 11) { // 왼손
+		XMFLOAT3 bosspos = GetPosition();
+		bosspos.y += 15.0f;
+		m_pScene->SpawnGolemPunchEffect(bosspos, GetLook());
+	}
+	else if (m_objectType == GameObjectType::Golem && m_anitype == 12) { //오른손
+		XMFLOAT3 bosspos = GetPosition();
+		bosspos.y += 35.0f;
+
+		m_pScene->SpawnGolemPunchEffect(bosspos, GetLook());
+	}
+
 	// if attack animation
 	// check hit player
 	CPlayer* pPlayerInfo = m_pScene->GetPlayerInfo();
@@ -302,17 +315,7 @@ void CGameObject::Check_attack()
 		}
 	}
 	else {
-		if (m_objectType == GameObjectType::Golem&&m_anitype == 11) { // 왼손
-			XMFLOAT3 bosspos = GetPosition();
-			bosspos.y += 15.0f;
-			m_pScene->SpawnGolemPunchEffect(bosspos, GetLook());
-		}
-		else if (m_objectType == GameObjectType::Golem && m_anitype == 12) { //오른손
-			XMFLOAT3 bosspos = GetPosition();
-			bosspos.y += 35.0f;
-			
-			m_pScene->SpawnGolemPunchEffect(bosspos, GetLook());
-		}
+		
 		float distance = Vector3::Length(Vector3::Subtract(GetPosition(), pPlayerInfo->GetPosition()));
 		if (distance <= 100.0f && m_pScene->CollisionCheck(this, pPlayerInfo)) {
 			ProcessPlayerHit(pPlayerInfo);
