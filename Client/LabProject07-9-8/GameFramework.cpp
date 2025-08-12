@@ -843,7 +843,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			case 'G': 
 				if (m_pScene && m_pScene->m_pLights)
 				{
-					m_pScene->m_pLights[0].m_bEnable = !m_pScene->m_pLights[0].m_bEnable;
+					m_pScene->m_pLights[0].m_bEnable = (m_pScene->m_pLights[0].m_bEnable == 0) ? 1 : 0;
 				}
 				break;
 			case VK_F2:

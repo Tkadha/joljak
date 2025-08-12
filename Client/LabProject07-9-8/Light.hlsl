@@ -28,7 +28,7 @@ struct LIGHT
 	float 					m_fTheta; //cos(m_fTheta)
 	float3					m_vAttenuation;
 	float					m_fPhi; //cos(m_fPhi)
-	bool					m_bEnable;
+	int					    m_bEnable;
 	int 					m_nType;
 	float					m_fRange;
 	float					padding;

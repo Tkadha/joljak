@@ -54,9 +54,10 @@ void PS(VS_OUT pin)
 {
     if (gnTexturesMask & MATERIAL_ALBEDO_MAP)
     {
-        float4 cAlbedoColor = gtxtAlbedoTexture.Sample(gssWrap, pin.uv);
+        float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+        cAlbedoColor = gtxtAlbedoTexture.Sample(gssWrap, pin.uv);
         
-        clip(cAlbedoColor.a - 0.000000000000000001f);
+        clip(cAlbedoColor.a - 0.000000000000000000000000000000000000012f);
     }
     
 }

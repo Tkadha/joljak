@@ -35,7 +35,7 @@ struct LIGHT
 	float 								m_fTheta; //cos(m_fTheta)
 	XMFLOAT3							m_xmf3Attenuation;
 	float								m_fPhi; //cos(m_fPhi)
-	bool								m_bEnable;
+	int									m_bEnable;
 	int									m_nType;
 	float								m_fRange;
 	float								padding;

@@ -70,14 +70,15 @@ void CScene::BuildDefaultLightsAndMaterials()
 
 	m_pLights[0].m_bEnable = false; // 시작할 때는 꺼진 상태
 	m_pLights[0].m_nType = POINT_LIGHT;
-	m_pLights[0].m_fRange = 5000.0f; // 횃불이 비추는 범위
-	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.1f, 0.05f, 0.0f, 1.0f);		// 약한 주황색 주변광
-	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.7f, 0.3f, 1.0f);		// 밝은 주황/노란색 불빛
+	m_pLights[0].m_fRange = 450.0f; // 횃불이 비추는 범위
+	//m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.1f, 0.05f, 0.0f, 1.0f);		// 약한 주황색 주변광
+	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.2f, 0.1f, 0.05f, 1.0f);
+	//m_pLights[0].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.7f, 0.3f, 1.0f);		// 밝은 주황/노란색 불빛
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.6f, 0.1f, 1.0f);
 	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);		
-	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);			
-	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.02f, 0.001f);
-
-
+	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.0007f, 0.00017f);
+	
 	
 	m_pLights[2].m_bEnable = true;
 	m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
@@ -972,7 +973,7 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		XMFLOAT3 playerPosition = m_pPlayer->GetPosition();
 
 		// 빛이 플레이어 머리 약간 위에서 비추도록 y 좌표를 조정합니다.
-		playerPosition.y += 20.0f;
+		playerPosition.y += 50.0f;
 
 		m_pLights[0].m_xmf3Position = playerPosition;
 	}

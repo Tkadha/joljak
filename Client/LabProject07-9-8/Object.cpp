@@ -3005,7 +3005,7 @@ void CGameObject::LoadTools(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 	std::vector<ToolInfo> toolInfos = {
 		{ "Sword_Wood",   "Model/Tool/WoodenSword.bin",   "middle_01_r", {-0.01f, -0.11f, -0.07f}, {27.0f, -57.0f, -56.0f} },
-		{ "Sword_Stone",  "Model/Tool/StoneSword.bin",    "middle_02_r", {-0.01f, -0.11f, -0.07f}, {28.0f, -57.0f, -56.0f} },
+		{ "Sword_Stone",  "Model/Tool/Torch.bin",    "middle_02_r", {-0.01f, -0.11f, -0.07f}, {28.0f, -57.0f, -56.0f} },
 		{ "Sword_Metal",  "Model/Tool/MetalSword.bin",    "middle_03_r", {-0.03f, -0.13f, -0.15f}, {67.0f, 0.0f, 0.0f} },
 		{ "Axe_Wood",     "Model/Tool/WoodenAxe.bin",     "thumb_01_r", {0.05f, -0.21f, -0.01f}, {9.0f, 94.0f, -7.0f} },
 		{ "Axe_Stone",    "Model/Tool/StoneAxe.bin",      "thumb_02_r", {0.04f, -0.21f, -0.03f}, {-11.0f, 94.0f, -7.0f} },
@@ -3014,7 +3014,8 @@ void CGameObject::LoadTools(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		{ "Pickaxe_Stone","Model/Tool/StonePickaxe.bin",  "ring_02_r", {0.0f, -0.04f, -0.14f}, {30.0f, -90.0f, -93.0f} },
 		{ "Pickaxe_Metal","Model/Tool/MetalPickaxe.bin",  "ring_03_r", {0.0f, -0.05f, -0.21f}, {0.0f, 90.0f, 93.0f} },
 		{ "Hammer_Wood",  "Model/Tool/BuildingHammer.bin","hand_r", {0.1f, -0.1f, -0.12f}, {27.0f, 78.0f, 63.0f} },
-		{ "Hammer_Metal", "Model/Tool/MetalHammer.bin",   "Weapon_R", {0.01f, -0.06f, -0.18f}, {73.0f, 0.0f, 0.0f} }
+		{ "Hammer_Metal", "Model/Tool/MetalHammer.bin",   "Weapon_R", {0.01f, -0.06f, -0.18f}, {73.0f, 0.0f, 0.0f} },
+		{ "Torch", "Model/Tool/Torch.bin",   "hand_l", {0.01f, -0.06f, -0.18f}, {73.0f, 0.0f, 0.0f} }
 	};
 
 	for (const auto& info : toolInfos)
