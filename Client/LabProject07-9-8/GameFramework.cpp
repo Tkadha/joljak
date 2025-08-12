@@ -888,7 +888,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			}
 				break;
 			case VK_F4:
-				m_pPlayer->PlayerAttack = 9999;
+				m_pPlayer->PlayerAttack = 50;
 				break;
 			}
 			break;
