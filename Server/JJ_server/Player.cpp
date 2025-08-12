@@ -290,8 +290,8 @@ void PlayerClient::Update_test(float deltaTime)
 
     // 이동 및 충돌 처리
     //XMFLOAT3 deltaPos = Vector3::ScalarProduct(m_Velocity, deltaTime);
-    //XMFLOAT3 deltaVel = Vector3::ScalarProduct(m_Velocity, 0.35f);
-    XMFLOAT3 deltaVel = Vector3::ScalarProduct(m_Velocity, 0.55f); // test용 이속 증가
+    XMFLOAT3 deltaVel = Vector3::ScalarProduct(m_Velocity, 0.35f);
+   // XMFLOAT3 deltaVel = Vector3::ScalarProduct(m_Velocity, 0.55f); // test용 이속 증가
 
     if (currentInput.WalkLeft || currentInput.WalkRight) {
         deltaVel.x /= 1.3f;

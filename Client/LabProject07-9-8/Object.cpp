@@ -440,6 +440,12 @@ void CGameObject::ChangeAnimation(ANIMATION_TYPE type)
 		case ANIMATION_TYPE::SPECIAL_ATTACK:
 			m_anitype = 13;
 			break;
+		case ANIMATION_TYPE::GROUND_SPELL_START:
+			m_anitype = 14;
+			break;
+		case ANIMATION_TYPE::GROUND_SPELL_END:
+			m_anitype = 15;
+			break;
 		}
 		break;
 	default:

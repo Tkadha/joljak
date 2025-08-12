@@ -570,7 +570,7 @@ void AtkNPCGlobalState::Execute(std::shared_ptr<GameObject> npc)
 		auto nowtime = std::chrono::system_clock::now();
 		auto exectime = nowtime - starttime;
 		auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
-		if (exec_ms > 1.5f * 1000) {
+		if (exec_ms > sustainment_time) {
 			is_invincible = false;
 			std::vector<tree_obj*> results;
 			tree_obj n_obj{ npc->GetID(),npc->GetPosition() };

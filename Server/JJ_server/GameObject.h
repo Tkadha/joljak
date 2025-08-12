@@ -126,9 +126,9 @@ public:
 		lock_guard<mutex> lock(FSM_mutex);
 		if (FSM_manager) FSM_manager->ChangeState(newstate);
 	}
-	void SetInvincible() {
+	void SetInvincible(long long time = 1500.f) {
 		lock_guard<mutex> lock(FSM_mutex);
-		if (FSM_manager) FSM_manager->SetInvincible();
+		if (FSM_manager) FSM_manager->SetInvincible(time);
 	}
 	bool GetInvincible() const {
 		lock_guard<mutex> lock(FSM_mutex);

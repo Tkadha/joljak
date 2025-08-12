@@ -1894,6 +1894,8 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
 				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[12].SetAnimationType(ANIMATION_TYPE_ONCE);
 				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[13].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[14].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[15].SetAnimationType(ANIMATION_TYPE_ONCE);
 			}
 			gameObj->m_pSkinnedAnimationController->SetAnimationSpeed(0.5f);
 			gameObj->SetOwningScene(m_pScene);

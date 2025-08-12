@@ -38,8 +38,8 @@ public:
 
 	std::shared_ptr<FSMState<entity_type>> GetCurrentState()  const { 
 		return Currentstate; }
-	void SetInvincible() { 
-		Globalstate->SetInvincible(); }
+	void SetInvincible(long long time = 1500.f) { 
+		Globalstate->SetInvincible(time); }
 	bool GetInvincible() const { 
 		return Globalstate->GetInvincible(); }
 	void SetAtkDelay() { 

@@ -557,7 +557,7 @@ void BossGlobalState::Execute(std::shared_ptr<GameObject> npc)
 		auto nowtime = std::chrono::system_clock::now();
 		auto exectime = nowtime - starttime;
 		auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
-		if (exec_ms > 1.5f * 1000) {
+		if (exec_ms > sustainment_time) {
 			is_invincible = false;
 			std::vector<tree_obj*> results;
 			tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
@@ -583,5 +583,87 @@ void BossGlobalState::Execute(std::shared_ptr<GameObject> npc)
 }
 
 void BossGlobalState::Exit(std::shared_ptr<GameObject> npc)
+{
+}
+
+
+
+void BossSpecialAttackStartState::Enter(std::shared_ptr<GameObject> npc)
+{
+	npc->SetAnimationType(ANIMATION_TYPE::GROUND_SPELL_START);
+	starttime = std::chrono::system_clock::now();
+	duration_time = 2.666f * 1000;
+	std::vector<tree_obj*> results;
+	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
+	Octree::PlayerOctree.query(n_obj, oct_distance, results);
+	for (auto& p_obj : results) {
+		std::lock_guard<std::mutex> lock(g_clients_mutex);
+		for (auto& cl : PlayerClient::PlayerClients) {
+			if (cl.second->m_id != p_obj->u_id) continue;
+			cl.second->SendAnimationPacket(npc);
+		}
+	}
+}
+
+void BossSpecialAttackStartState::Execute(std::shared_ptr<GameObject> npc)
+{
+	endtime = std::chrono::system_clock::now();
+	auto exectime = endtime - starttime;
+	auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
+	if (exec_ms > duration_time) {
+		npc->FSM_manager->ChangeState(std::make_shared<BossSpecialAttackEndState>());
+		return;
+	}
+
+	//Octree::GameObjectOctree.update(npc->GetID(), npc->GetPosition());
+	//
+	//std::vector<tree_obj*> results;
+	//tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
+	//Octree::PlayerOctree.query(n_obj, oct_distance, results);
+	//for (auto& p_obj : results) {
+	//	std::lock_guard<std::mutex> lock(g_clients_mutex);
+	//	for (auto& cl : PlayerClient::PlayerClients) {
+	//		if (cl.second->state != PC_INGAME)continue;
+	//		if (cl.second->m_id != p_obj->u_id) continue;
+	//		cl.second->SendMovePacket(npc);
+	//	}
+	//}
+}
+
+void BossSpecialAttackStartState::Exit(std::shared_ptr<GameObject> npc)
+{
+}
+
+
+
+void BossSpecialAttackEndState::Enter(std::shared_ptr<GameObject> npc)
+{
+	npc->SetAnimationType(ANIMATION_TYPE::GROUND_SPELL_END);
+	starttime = std::chrono::system_clock::now();
+	duration_time = 2.666f * 1000;
+	std::vector<tree_obj*> results;
+	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
+	Octree::PlayerOctree.query(n_obj, oct_distance, results);
+	for (auto& p_obj : results) {
+		std::lock_guard<std::mutex> lock(g_clients_mutex);
+		for (auto& cl : PlayerClient::PlayerClients) {
+			if (cl.second->m_id != p_obj->u_id) continue;
+			cl.second->SendAnimationPacket(npc);
+		}
+	}
+}
+
+void BossSpecialAttackEndState::Execute(std::shared_ptr<GameObject> npc)
+{
+	endtime = std::chrono::system_clock::now();
+	auto exectime = endtime - starttime;
+	auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
+	if (exec_ms > duration_time) {
+		npc->FSM_manager->ChangeState(std::make_shared<BossStandingState>());
+		return;
+	}
+}
+
+void BossSpecialAttackEndState::Exit(std::shared_ptr<GameObject> npc)
 {
 }

@@ -391,24 +391,29 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 		}
 		else if (obj->GetType() == OBJECT_TYPE::OB_GOLEM) {
 			if (obj->FSM_manager) {
-				obj->SetInvincible();
 				auto bosshp = obj->Gethp();
 				if (bosshp <= 0) {
+					obj->SetInvincible();
 					obj->ChangeState(std::make_shared<BossDieState>());
 				}
+				else if (bosshp <= (obj->_fMaxHp / 2) && !obj->_bUsedSpecialAttack) {
+					obj->SetInvincible(5.332f * 1000);
+					obj->_bUsedSpecialAttack = true; // 플래그를 true로 설정
+					obj->ChangeState(std::make_shared<BossSpecialAttackStartState>()); // 별도의 특수 공격 상태
+				}
 				else if (bosshp <= obj->_fMaxHp * 0.33f && !obj->_bTriggered33Percent) {
+					obj->SetInvincible();
 					obj->_bTriggered33Percent = true; // 플래그를 true로 설정해 다시는 실행되지 않도록 함
 					obj->ChangeState(std::make_shared<BossHitState>());
 				}
 				// 3. 체력 66% 이하로 '처음' 떨어졌을 때
 				else if (bosshp <= obj->_fMaxHp * 0.66f && !obj->_bTriggered66Percent) {
+					obj->SetInvincible();
 					obj->_bTriggered66Percent = true; // 플래그를 true로 설정
 					obj->ChangeState(std::make_shared<BossHitState>());
 				}
-				else if (bosshp <= (obj->_fMaxHp / 2) && !obj->_bUsedSpecialAttack) {
-					obj->_bUsedSpecialAttack = true; // 플래그를 true로 설정
-					//obj->ChangeState(std::make_shared<BossSpecialAttackState>()); // 별도의 특수 공격 상태
-				}
+				else
+					obj->SetInvincible();
 			}
 		}
 		else {
