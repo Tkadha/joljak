@@ -423,7 +423,7 @@ void CGameObject::ChangeAnimation(ANIMATION_TYPE type)
 			m_anitype = 0;
 			break;
 		case ANIMATION_TYPE::WALK:
-			m_anitype = 1;
+			m_anitype = 2;
 			break;
 		case ANIMATION_TYPE::RUN:
 			m_anitype = 6;

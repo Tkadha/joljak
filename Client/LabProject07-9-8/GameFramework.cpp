@@ -1877,7 +1877,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 		break;
 		case OBJECT_TYPE::OB_GOLEM:
 		{
-			int animate_count = 15;
+			int animate_count = 17;
 			CLoadedModelInfo* pGolemModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/ForestGolem_Rd.bin", this);
 			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pGolemModel, animate_count, this);
 			gameObj->m_objectType = GameObjectType::Golem;

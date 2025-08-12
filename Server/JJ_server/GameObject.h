@@ -155,5 +155,11 @@ public:
 public:
 	BoundingOrientedBox local_obb;
 	BoundingOrientedBox world_obb;
+
+public:
+	float _fMaxHp; // 최대 체력 (계산을 위해 필요)
+	bool _bTriggered66Percent = false; // 66% 체력 구간 통과 여부 플래그
+	bool _bTriggered33Percent = false; // 33% 체력 구간 통과 여부 플래그
+	bool _bUsedSpecialAttack = false;
 };
 
