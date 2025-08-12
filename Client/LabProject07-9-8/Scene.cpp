@@ -353,6 +353,12 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	if (pWoodShardModel) delete pWoodShardModel;
 	if (pRockShardModel) delete pRockShardModel;
 
+	const int bloodPoolSize = 30;
+	for (int i = 0; i < bloodPoolSize; ++i) {
+		auto* pBlood = new CBloodEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		m_vBloodEffects.push_back(pBlood);
+		m_vGameObjects.push_back(pBlood); // 렌더링을 위해 메인 목록에도 추가
+	}
 	/////////////////////////////////////////
 	
 
@@ -458,6 +464,14 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		
 		m_vGameObjects.push_back(pEffect);
 	}
+
+	const int bloodPoolSize = 30;
+	for (int i = 0; i < bloodPoolSize; ++i) {
+		auto* pBlood = new CBloodEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		m_vBloodEffects.push_back(pBlood);
+		m_vGameObjects.push_back(pBlood); // 렌더링을 위해 메인 목록에도 추가
+	}
+
 
 	CLoadedModelInfo* pWoodShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch_A.bin", m_pGameFramework);
 	CLoadedModelInfo* pRockShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/RockCluster_A_LOD0.bin", m_pGameFramework);
@@ -1406,6 +1420,75 @@ void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity
 	m_listRockObjects.emplace_back(newBranch);
 	//auto t_obj = std::make_unique<newBranch>(tree_obj_count++, gameObj->m_worldOBB.Center);
 	//octree.insert(std::move(t_obj));
+}
+
+void CScene::SpawnGolemPunchEffect(const XMFLOAT3& origin, const XMFLOAT3& direction)
+{
+	std::vector<CResourceShardEffect*>& shardPool = m_vRockShards;
+
+	// 한 번에 생성할 파편 개수
+	int numShardsToSpawn = 5 + (rand() % 4); // 5~8개
+
+	for (int i = 0; i < numShardsToSpawn; ++i)
+	{
+		for (auto& pShard : shardPool)
+		{
+			if (!pShard->isRender)
+			{
+				// [수정] 1. 주 방향 벡터를 가져옵니다.
+				XMVECTOR vDirection = XMLoadFloat3(&direction);
+
+				// [수정] 2. 아주 작은 랜덤 벡터를 만들어 살짝 방향을 틉니다.
+				//    이 값들이 작을수록 파편이 더 앞으로 집중됩니다.
+				XMVECTOR vRandomOffset = XMVectorSet(
+					((float)(rand() % 100) - 50.0f) * 0.005f, // X: -0.25 ~ +0.25
+					((float)(rand() % 100) - 50.0f) * 0.005f, // Y: -0.25 ~ +0.25
+					((float)(rand() % 100) - 50.0f) * 0.005f, // Z: -0.25 ~ +0.25
+					0.0f
+				);
+
+				// 3. 원래 방향에 랜덤 벡터를 더하고 정규화하여 최종 방향을 결정합니다.
+				vDirection = XMVector3Normalize(vDirection + vRandomOffset);
+
+				// 4. 최종 발사 속도를 계산합니다. (속도는 그대로 빠르게 유지)
+				float launchSpeed = 4000.0f + (rand() % 2000);
+				XMFLOAT3 velocity;
+				XMStoreFloat3(&velocity, vDirection * launchSpeed);
+
+				pShard->Activate(origin, velocity);
+				break;
+			}
+		}
+	}
+}
+
+void CScene::SpawnBloodEffect(const XMFLOAT3& position)
+{
+	int numEffects = 5 + (rand() % 5); // 5~9개
+
+	for (int i = 0; i < numEffects; ++i)
+	{
+		for (auto& pBlood : m_vBloodEffects) {
+			if (!pBlood->isRender) {
+				// [수정 1] 플레이어의 상체 높이를 기준으로 한 위치에서 생성합니다.
+				// 좌우(X,Z)로 너무 크게 벗어나지 않도록 오프셋을 줄입니다.
+				XMFLOAT3 spawnPos = position;
+				spawnPos.y += 15.0f; // 가슴 높이 정도
+				spawnPos.x += ((float)(rand() % 20) - 10.0f); // -10 ~ +10
+				spawnPos.z += ((float)(rand() % 20) - 10.0f); // -10 ~ +10
+
+				// [수정 2] 위로만 솟구치는게 아니라 사방으로 퍼져나가도록 초기 속도를 변경합니다.
+				XMFLOAT3 velocity = XMFLOAT3(
+					((float)(rand() % 800) - 400.0f), // X: -400 ~ +400
+					((float)(rand() % 400) - 100.0f), // Y: -100 ~ +300 (아래로도 튀도록)
+					((float)(rand() % 800) - 400.0f)  // Z: -400 ~ +400
+				);
+
+				pBlood->Activate(spawnPos, velocity);
+				break;
+			}
+		}
+	}
 }
 
 void CScene::NewGameBuildObj()

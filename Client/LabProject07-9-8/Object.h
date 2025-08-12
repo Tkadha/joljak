@@ -690,3 +690,22 @@ private:
 	XMFLOAT3 m_xmf3Velocity = { 0,0,0 };
 	XMFLOAT3 m_xmf3Gravity = { 0, -9800.0f, 0 }; // 중력
 };
+
+class CBloodEffectObject : public CGameObject
+{
+public:
+	CBloodEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework);
+	virtual ~CBloodEffectObject() {}
+
+	// Activate 함수는 위치와 수명만 받습니다.
+	void Activate(const XMFLOAT3& position, const XMFLOAT3& velocity, float lifeTime = 0.8f);
+	virtual void Animate(float fTimeElapsed) override;
+
+private:
+	bool     m_bIsActive = false;
+	float    m_fLifeTime = 0.4f;
+	float    m_fElapsedTime = 0.0f;
+
+	XMFLOAT3 m_xmf3Velocity = { 0,0,0 };
+	XMFLOAT3 m_xmf3Gravity = { 0, -3500.0f, 0 }; // 혈흔에 맞는 중력값
+};
