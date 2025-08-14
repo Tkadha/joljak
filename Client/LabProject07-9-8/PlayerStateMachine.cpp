@@ -7,6 +7,7 @@
 #include <algorithm>  // std::min, std::max 등 사용
 #include "GameFramework.h"
 #include "Object.h"
+#include "SoundManager.h"
 
 // --- 구체적인 상태 클래스 구현 ---
 
@@ -481,7 +482,10 @@ public:
         m_bHasAppliedHit = false;
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f });
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
-        PlayWavSound(_T("Sound/heavy_sword.wav"));
+        SoundManager::GetInstance().Play(L"Sound/heavy_sword.wav");
+        SoundManager::GetInstance().Play(L"Sound/axe.wav");
+        //PlayWavSound(_T("Sound/heavy_sword.wav"));
+        //PlayWavSound(_T("Sound/axe.wav"));
     }
 
     PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {

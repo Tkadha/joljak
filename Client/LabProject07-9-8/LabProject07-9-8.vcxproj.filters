@@ -93,6 +93,9 @@
     <Filter Include="소스 파일\Shader\SkinnedShadowShader">
       <UniqueIdentifier>{4be8ab15-1733-4b15-a029-0fe7ab4678a2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Sound">
+      <UniqueIdentifier>{0735b70c-a1a7-4986-be8b-70d8ef4ca9b5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConstructionSystem.cpp" />
@@ -238,6 +241,9 @@
     </ClCompile>
     <ClCompile Include="SkinnedShadowShader.cpp">
       <Filter>소스 파일\Shader\SkinnedShadowShader</Filter>
+    </ClCompile>
+    <ClCompile Include="SoundManager.cpp">
+      <Filter>소스 파일\Sound</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -389,6 +395,9 @@
     <ClInclude Include="SkinnedShadowShader.h">
       <Filter>소스 파일\Shader\SkinnedShadowShader</Filter>
     </ClInclude>
+    <ClInclude Include="SoundManager.h">
+      <Filter>소스 파일\Sound</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LabProject07-9-8.rc" />
@@ -438,5 +447,6 @@
     <FxCompile Include="Debug.hlsl">
       <Filter>소스 파일\Shader\DebugShader</Filter>
     </FxCompile>
+    <FxCompile Include="Skinned_Shadow.hlsl" />
   </ItemGroup>
 </Project>
