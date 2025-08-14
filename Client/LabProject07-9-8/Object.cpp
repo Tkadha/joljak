@@ -212,6 +212,11 @@ bool CGameObject::IsInActiveFrame(float startRatio, float endRatio)
 void CGameObject::Check_attack()
 {
 	bool isAttackAnim = false;
+	int num{ 0 };
+	if (m_anitype == 14) {
+		isAttackAnim = true;
+		num++;
+	}
 	switch (m_objectType)
 	{
 	case GameObjectType::Spider:
@@ -274,7 +279,10 @@ void CGameObject::Check_attack()
 
 		m_pScene->SpawnGolemPunchEffect(bosspos, GetLook());
 	}
-
+	else if (m_objectType == GameObjectType::Golem && m_anitype == 14) {
+		XMFLOAT3 bosspos = GetPosition();
+		m_pScene->SpawnVortexEffect(bosspos);
+	}
 	// if attack animation
 	// check hit player
 	CPlayer* pPlayerInfo = m_pScene->GetPlayerInfo();
@@ -313,10 +321,6 @@ void CGameObject::Check_attack()
 		if (distance <= 300.0f && height_distance <= 1.0f) {
 			ProcessPlayerHit(pPlayerInfo);
 		}
-	}
-	if (m_objectType == GameObjectType::Golem && m_anitype == 14) {
-		XMFLOAT3 bosspos = GetPosition();
-		m_pScene->SpawnVortexEffect(bosspos);
 	}
 	else {
 		

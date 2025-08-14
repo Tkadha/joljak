@@ -614,20 +614,19 @@ void BossSpecialAttackStartState::Execute(std::shared_ptr<GameObject> npc)
 		npc->FSM_manager->ChangeState(std::make_shared<BossSpecialAttackEndState>());
 		return;
 	}
+	npc->MoveForward(0.f);
 
-	//Octree::GameObjectOctree.update(npc->GetID(), npc->GetPosition());
-	//
-	//std::vector<tree_obj*> results;
-	//tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
-	//Octree::PlayerOctree.query(n_obj, oct_distance, results);
-	//for (auto& p_obj : results) {
-	//	std::lock_guard<std::mutex> lock(g_clients_mutex);
-	//	for (auto& cl : PlayerClient::PlayerClients) {
-	//		if (cl.second->state != PC_INGAME)continue;
-	//		if (cl.second->m_id != p_obj->u_id) continue;
-	//		cl.second->SendMovePacket(npc);
-	//	}
-	//}
+	std::vector<tree_obj*> results;
+	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
+	Octree::PlayerOctree.query(n_obj, oct_distance, results);
+	for (auto& p_obj : results) {
+		std::lock_guard<std::mutex> lock(g_clients_mutex);
+		for (auto& cl : PlayerClient::PlayerClients) {
+			if (cl.second->state != PC_INGAME)continue;
+			if (cl.second->m_id != p_obj->u_id) continue;
+			cl.second->SendMovePacket(npc);
+		}
+	}
 }
 
 void BossSpecialAttackStartState::Exit(std::shared_ptr<GameObject> npc)
@@ -661,6 +660,20 @@ void BossSpecialAttackEndState::Execute(std::shared_ptr<GameObject> npc)
 	if (exec_ms > duration_time) {
 		npc->FSM_manager->ChangeState(std::make_shared<BossStandingState>());
 		return;
+	}
+
+	npc->MoveForward(0.f);
+
+	std::vector<tree_obj*> results;
+	tree_obj n_obj{ npc->GetID(),npc->GetPosition() };
+	Octree::PlayerOctree.query(n_obj, oct_distance, results);
+	for (auto& p_obj : results) {
+		std::lock_guard<std::mutex> lock(g_clients_mutex);
+		for (auto& cl : PlayerClient::PlayerClients) {
+			if (cl.second->state != PC_INGAME)continue;
+			if (cl.second->m_id != p_obj->u_id) continue;
+			cl.second->SendMovePacket(npc);
+		}
 	}
 }
 
