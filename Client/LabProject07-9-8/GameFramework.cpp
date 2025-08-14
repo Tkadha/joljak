@@ -213,6 +213,7 @@ void CGameFramework::ProcessPacket(char* packet)
 			foundObj->SetUp(XMFLOAT3(recv_p->up.x, recv_p->up.y, recv_p->up.z));
 			foundObj->SetRight(XMFLOAT3(recv_p->right.x, recv_p->right.y, recv_p->right.z));
 			foundObj->SetPosition(recv_p->position.x, recv_p->position.y, recv_p->position.z);
+			foundObj->Sethp(recv_p->hp);
 			m_pScene->m_vGameObjects.emplace_back(*it);
 		}
 		else {
@@ -223,7 +224,8 @@ void CGameFramework::ProcessPacket(char* packet)
 			OBJECT_TYPE o_type = recv_p->o_type;
 			ANIMATION_TYPE a_type = recv_p->a_type;
 			int id = recv_p->id;
-			m_logQueue.push(log_inout{ E_PACKET::E_O_ADD,0,right,up,look,position,o_type,a_type,id });
+			int hp = recv_p->hp;
+			m_logQueue.push(log_inout{ E_PACKET::E_O_ADD,0,right,up,look,position,o_type,a_type,id,hp });
 		}
 	}
 	break;
@@ -1266,7 +1268,7 @@ void CGameFramework::ReleaseObjects()
 
 
 
-void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id)
+void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id, int hp)
 {
 	if (m_pScene)
 	{
@@ -1400,7 +1402,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
-
+			gameObj->hp = hp;
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
 
@@ -1473,6 +1475,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1548,6 +1551,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1623,6 +1627,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1698,6 +1703,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1773,6 +1779,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1848,6 +1855,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1927,6 +1935,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -2342,14 +2351,14 @@ void CGameFramework::FrameAdvance()
 					[log](CGameObject* obj) { return obj && obj->m_id == log.id; });
 
 				if (it == m_pScene->m_vGameObjects.end() && it2 == m_pScene->m_listGameObjects.end()) {
-					AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id);
+					AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id, log.hp);
 				}
 			}
 				break;
 			case E_PACKET::E_STRUCT_OBJ:
 			{
 				std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
-				AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id);
+				AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id, log.hp);
 			}
 			break;
 			default:
