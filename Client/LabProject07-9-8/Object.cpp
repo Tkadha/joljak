@@ -314,6 +314,10 @@ void CGameObject::Check_attack()
 			ProcessPlayerHit(pPlayerInfo);
 		}
 	}
+	if (m_objectType == GameObjectType::Golem && m_anitype == 14) {
+		XMFLOAT3 bosspos = GetPosition();
+		m_pScene->SpawnVortexEffect(bosspos);
+	}
 	else {
 		
 		float distance = Vector3::Length(Vector3::Subtract(GetPosition(), pPlayerInfo->GetPosition()));
@@ -3057,7 +3061,7 @@ void CBloodEffectObject::Animate(float fTimeElapsed)
 	XMFLOAT3 currentPos = GetPosition();
 	XMFLOAT3 shift = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed);
 
-	const float speedMultiplier = 1.0f; // 속도를 15배로 증폭 (이 값을 조절)
+	const float speedMultiplier = 0.4f; // 속도를 15배로 증폭 (이 값을 조절)
 	shift = Vector3::ScalarProduct(shift, speedMultiplier);
 
 	XMFLOAT3 newPos = Vector3::Add(currentPos, shift);
@@ -3066,7 +3070,68 @@ void CBloodEffectObject::Animate(float fTimeElapsed)
 	CGameObject::Animate(fTimeElapsed);
 }
 
+CVortexEffectObject::CVortexEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework)
+	: CGameObject(1, framework)
+{
+	// 소용돌이에 사용할 돌 파편 모델을 로드합니다.
+	CLoadedModelInfo* pShardModel = CGameObject::LoadGeometryAndAnimationFromFile(device, cmdList, "Model/RockCluster_B_LOD0.bin", framework);
+	if (pShardModel && pShardModel->m_pModelRootObject) {
+		SetMesh(pShardModel->m_pModelRootObject->m_pMesh);
+		if (pShardModel->m_pModelRootObject->m_nMaterials > 0)
+			SetMaterial(0, pShardModel->m_pModelRootObject->m_ppMaterials[0]);
+		delete pShardModel;
+	}
+	
+	isRender = false;
+}
 
+void CVortexEffectObject::Activate(const XMFLOAT3& centerPos, float rotationRadius, float layerHeight, float startAngle, float speed)
+{
+	m_xmf4x4ToParent = Matrix4x4::Identity();
+	SetScale(5.0f, 5.0f, 5.0f); // 크기 설정은 여기에 유지하거나 필요에 따라 값을 조절합니다.
+
+	m_xmf3CenterPosition = centerPos;
+	// m_fCurrentRadius = startRadius; // <- 제거
+	m_fRotationRadius = rotationRadius; // [추가] 고정 반경 저장
+	m_fLayerHeight = layerHeight;       // [추가] 층 높이 저장
+	m_fCurrentAngle = startAngle;
+	m_fRotationSpeed = speed;
+
+	m_fElapsedTime = 0.0f;
+	m_bIsActive = true;
+	isRender = true;
+}
+
+void CVortexEffectObject::Animate(float fTimeElapsed)
+{
+	if (!m_bIsActive) return;
+
+	m_fElapsedTime += fTimeElapsed;
+	if (m_fElapsedTime > m_fLifeTime) {
+		m_bIsActive = false;
+		isRender = false;
+		return;
+	}
+
+	// 1. 각도를 시간에 따라 증가시켜 회전시킵니다. (기존 로직 유지)
+	m_fCurrentAngle += m_fRotationSpeed * fTimeElapsed;
+
+	// 2. 반지름을 줄이는 로직을 제거합니다.
+	// m_fCurrentRadius -= 50.0f * fTimeElapsed; // <- 제거
+
+	// 3. 새로운 위치를 계산합니다.
+	float rad = XMConvertToRadians(m_fCurrentAngle);
+	XMFLOAT3 newPos;
+	// X, Z 위치는 고정된 m_fRotationRadius를 사용합니다.
+	newPos.x = m_xmf3CenterPosition.x + cos(rad) * m_fRotationRadius;
+	newPos.z = m_xmf3CenterPosition.z + sin(rad) * m_fRotationRadius;
+	// Y 위치는 위로 올라가는 대신, 지정된 m_fLayerHeight를 사용합니다.
+	newPos.y = m_xmf3CenterPosition.y + m_fLayerHeight;
+
+	SetPosition(newPos);
+
+	CGameObject::Animate(fTimeElapsed);
+}
 
 // 도구 추가
 void CGameObject::LoadTools(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework)

@@ -821,15 +821,11 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			case 'U':
 				if (m_pScene && m_pPlayer)
 				{
-					// 1. 플레이어의 상체 높이와 정면 위치를 계산합니다.
+					// 플레이어의 현재 위치를 가져옵니다.
 					XMFLOAT3 playerPos = m_pPlayer->GetPosition();
-					playerPos.y += 15.0f; // 상체 높이
 
-					XMFLOAT3 lookVector = m_pPlayer->GetLookVector();
-					XMFLOAT3 spawnOrigin = Vector3::Add(playerPos, Vector3::ScalarProduct(lookVector, 10.0f)); // 플레이어 정면 50 유닛 앞에서 생성
-
-					// 2. Scene에 파편 생성을 요청합니다.
-					m_pScene->SpawnGolemPunchEffect(spawnOrigin, lookVector);
+					// Scene의 소용돌이 생성 함수를 호출합니다.
+					m_pScene->SpawnVortexEffect(playerPos);
 				}
 				break;
 			case 'P':

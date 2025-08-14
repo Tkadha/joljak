@@ -367,7 +367,13 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 		m_vGameObjects.push_back(pBlood); // 렌더링을 위해 메인 목록에도 추가
 	}
 	/////////////////////////////////////////
-	
+	const int vortexPoolSize = 50; // 소용돌이에 사용할 파편 수
+	for (int i = 0; i < vortexPoolSize; ++i) {
+		auto* pVortex = new CVortexEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		//pVortex->SetScale(1.0f, 1.0f, 1.0f);
+		m_vVortexEffects.push_back(pVortex);
+		m_vGameObjects.push_back(pVortex);
+	}
 
 	// 생성할 건축물 목록 (프리팹 이름과 동일해야 함)
 	std::vector<std::string> buildableItems = { "wood_wall","furnace" /*, "wood_floor", ... */ };
@@ -1490,7 +1496,7 @@ void CScene::SpawnGolemPunchEffect(const XMFLOAT3& origin, const XMFLOAT3& direc
 
 void CScene::SpawnBloodEffect(const XMFLOAT3& position)
 {
-	int numEffects = 5 + (rand() % 5); // 5~9개
+	int numEffects = 8 + (rand() % 5); // 5~9개
 
 	for (int i = 0; i < numEffects; ++i)
 	{
@@ -1505,14 +1511,53 @@ void CScene::SpawnBloodEffect(const XMFLOAT3& position)
 
 				// [수정 2] 위로만 솟구치는게 아니라 사방으로 퍼져나가도록 초기 속도를 변경합니다.
 				XMFLOAT3 velocity = XMFLOAT3(
-					((float)(rand() % 800) - 400.0f), // X: -400 ~ +400
-					((float)(rand() % 400) - 100.0f), // Y: -100 ~ +300 (아래로도 튀도록)
-					((float)(rand() % 800) - 400.0f)  // Z: -400 ~ +400
+					((float)(rand() % 200) - 100.0f), // X: -100 ~ +100
+					((float)(rand() % 200) - 50.0f),  // Y: -50 ~ +150 (거의 위로 튀지 않음)
+					((float)(rand() % 200) - 100.0f)  // Z: -100 ~ +100
 				);
 
 				pBlood->Activate(spawnPos, velocity);
 				break;
 			}
+		}
+	}
+}
+
+void CScene::SpawnVortexEffect(const XMFLOAT3& centerPosition)
+{
+	// --- 층별 설정 정의 ---
+	const int numLayers = 3; // 총 층의 개수
+	const int particlesPerLayer = 20; // 층당 파티클 개수
+
+	// 각 층의 속성 (높이, 반경, 속도)
+	float layerHeights[] = { 20.0f, 60.0f, 100.0f };
+	float layerRadii[] = { 100.0f, 100.0f, 100.0f };
+	float layerSpeeds[] = { 90.0f, -110.0f, 130.0f }; // 속도를 음수로 주면 반대로 회전
+
+	int particlePoolIndex = 0; // 전체 파티클 풀을 순회하기 위한 인덱스
+
+	// --- 층별로 파티클 생성 ---
+	for (int i = 0; i < numLayers; ++i) // 3개의 층을 순회
+	{
+		for (int j = 0; j < particlesPerLayer; ++j) // 각 층마다 20개의 파티클 생성
+		{
+			// 사용 가능한 파티클을 풀에서 찾기
+			if (particlePoolIndex >= m_vVortexEffects.size()) break; // 풀이 부족하면 중단
+
+			CVortexEffectObject* pVortex = m_vVortexEffects[particlePoolIndex++];
+			if (pVortex->isRender) continue; // 이미 사용 중이면 건너뛰기
+
+			// 파티클마다 시작 각도를 다르게 주어 원형으로 배치
+			float startAngle = (360.0f / particlesPerLayer) * j;
+
+			// 현재 층(i)의 설정값으로 Activate 함수 호출
+			pVortex->Activate(
+				centerPosition,
+				layerRadii[i],   // i번째 층의 반경
+				layerHeights[i], // i번째 층의 높이
+				startAngle,
+				layerSpeeds[i]   // i번째 층의 속도
+			);
 		}
 	}
 }
@@ -1771,17 +1816,17 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
 
 
-
-	/*auto pballPrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Tool/Sphere.bin", m_pGameFramework);
+	/*
+	auto pballPrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Tool/Sphere.bin", m_pGameFramework);
 	pballPrefab->m_bIsPrefab = true;
 
 	int materialIndexToChange = 0;
 	UINT albedoTextureSlot = 0;
-	const wchar_t* textureFile = L"Model/Textures/red.dds";
-	ChangeAlbedoTexture(pballPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+	const wchar_t* textureFile2 = L"Model/Textures/red.dds";
+	ChangeAlbedoTexture(pballPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile2, pResourceManager, pd3dCommandList, pd3dDevice);
 
-	pResourceManager->RegisterPrefab("Sphere", pballPrefab);*/
-
+	pResourceManager->RegisterPrefab("Sphere", pballPrefab);
+	*/
 	// 나무
 	pResourceManager->RegisterPrefab("PineTree", std::make_shared<CPineObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
 
