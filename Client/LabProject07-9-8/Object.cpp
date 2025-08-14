@@ -212,11 +212,6 @@ bool CGameObject::IsInActiveFrame(float startRatio, float endRatio)
 void CGameObject::Check_attack()
 {
 	bool isAttackAnim = false;
-	int num{ 0 };
-	if (m_anitype == 14) {
-		isAttackAnim = true;
-		num++;
-	}
 	switch (m_objectType)
 	{
 	case GameObjectType::Spider:
