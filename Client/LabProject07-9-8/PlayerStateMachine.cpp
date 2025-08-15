@@ -482,10 +482,7 @@ public:
         m_bHasAppliedHit = false;
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f });
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
-        SoundManager::GetInstance().Play(L"Sound/heavy_sword.wav");
-        SoundManager::GetInstance().Play(L"Sound/axe.wav");
-        //PlayWavSound(_T("Sound/heavy_sword.wav"));
-        //PlayWavSound(_T("Sound/axe.wav"));
+        SoundManager::GetInstance().Play(L"Sound/Player/sword.wav");
     }
 
     PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
@@ -533,7 +530,8 @@ public:
         m_bHasAppliedHit = false;
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); 
-        PlayWavSound(_T("Sound/axe.wav"));
+        SoundManager::GetInstance().Play(L"Sound/Player/axe.wav");
+
     }
 
     PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
@@ -582,7 +580,8 @@ public:
         m_bHasAppliedHit = false;
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK; 
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); 
-        PlayWavSound(_T("Sound/pickaxe.wav"));
+        SoundManager::GetInstance().Play(L"Sound/Player/pickaxe.wav");
+
     }
 
     PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
