@@ -184,6 +184,7 @@
     <ClCompile Include="SkinnedShader.cpp" />
     <ClCompile Include="SkinnedShadowShader.cpp" />
     <ClCompile Include="SkyBoxShader.cpp" />
+    <ClCompile Include="SoundManager.cpp" />
     <ClCompile Include="StandardShader.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="TerrainShader.cpp" />
@@ -242,6 +243,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="SkyBoxShader.h" />
+    <ClInclude Include="SoundManager.h" />
     <ClInclude Include="StandardShader.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="TerrainShader.h" />

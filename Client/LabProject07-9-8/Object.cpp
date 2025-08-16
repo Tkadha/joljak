@@ -8,6 +8,7 @@
 #include "Scene.h"
 #include "GameFramework.h"
 #include "NetworkManager.h"
+#include "SoundManager.h"
 #include <algorithm>
 
 
@@ -160,6 +161,9 @@ void CGameObject::ProcessPlayerHit(CPlayer* pPlayerInfo)
 
 	auto obj = dynamic_cast<CMonsterObject*>(this);
 	if (!obj) return;
+
+	SoundManager::GetInstance().Play(L"Sound/Player/hit.wav");
+	SoundManager::GetInstance().Play(L"Sound/Player/hit_voice.wav");
 
 	pPlayerInfo->DecreaseHp(obj->GetAtk());
 	pPlayerInfo->SetInvincibility();
@@ -327,10 +331,103 @@ void CGameObject::Check_attack()
 
 }
 
+void PlayAnimationSound(GameObjectType obj_type, ANIMATION_TYPE ani_type)
+{
+	switch (obj_type) {
+	case GameObjectType::Spider:
+		switch (ani_type) {
+		case ANIMATION_TYPE::HIT:
+			SoundManager::GetInstance().Play(L"Sound/Spider/hurt.wav");
+		break;
+		case ANIMATION_TYPE::DIE:
+			SoundManager::GetInstance().Play(L"Sound/Spider/death.wav");
+		break;
+		}
+		break;
+	case GameObjectType::Bat:
+		switch (ani_type) {
+		case ANIMATION_TYPE::HIT:
+			SoundManager::GetInstance().Play(L"Sound/bat/hurt.wav");
+			break;
+		case ANIMATION_TYPE::DIE:
+			SoundManager::GetInstance().Play(L"Sound/bat/death.wav");
+			break;
+		}
+		break;
+	case GameObjectType::Pig:
+		switch (ani_type) {
+		case ANIMATION_TYPE::RUN:
+			SoundManager::GetInstance().Play(L"Sound/pig/hurt.wav");
+			break;
+		case ANIMATION_TYPE::DIE:
+			SoundManager::GetInstance().Play(L"Sound/pig/death.wav");
+			break;
+		}
+		break;
+	case GameObjectType::Raptor:
+		switch (ani_type) {
+		case ANIMATION_TYPE::HIT:
+			SoundManager::GetInstance().Play(L"Sound/Raptor/hurt.wav");
+			break;
+		case ANIMATION_TYPE::DIE:
+			SoundManager::GetInstance().Play(L"Sound/Raptor/death.wav");
+			break;
+		}
+		break;
+	case GameObjectType::Wolf:
+		switch (ani_type) {
+		case ANIMATION_TYPE::HIT:
+			SoundManager::GetInstance().Play(L"Sound/wolf/hurt.wav");
+			break;
+		case ANIMATION_TYPE::DIE:
+			SoundManager::GetInstance().Play(L"Sound/wolf/death.wav");
+			break;
+		}
+		break;
+	case GameObjectType::Cow:
+		switch (ani_type) {
+		case ANIMATION_TYPE::RUN:
+			SoundManager::GetInstance().Play(L"Sound/cow/hurt.wav");
+			break;
+		case ANIMATION_TYPE::DIE:
+			SoundManager::GetInstance().Play(L"Sound/cow/death.wav");
+			break;
+		}
+		break;
+	case GameObjectType::Toad:
+		switch (ani_type) {
+		case ANIMATION_TYPE::HIT:
+			SoundManager::GetInstance().Play(L"Sound/Toad/hurt.wav");
+			break;
+		case ANIMATION_TYPE::DIE:
+			SoundManager::GetInstance().Play(L"Sound/Toad/death.wav");
+			break;
+		}
+		break;
+	case GameObjectType::Golem:
+		switch (ani_type) {
+		case ANIMATION_TYPE::HIT:
+			SoundManager::GetInstance().Play(L"Sound/Golem/hurt.wav");
+			break;
+		case ANIMATION_TYPE::DIE:
+			SoundManager::GetInstance().Play(L"Sound/Golem/death.wav");
+			break;
+		case ANIMATION_TYPE::GROUND_SPELL_START:
+			SoundManager::GetInstance().Play(L"Sound/Golem/Charging.wav");
+			break;
+		case ANIMATION_TYPE::GROUND_SPELL_END:
+			SoundManager::GetInstance().Play(L"Sound/Golem/Special_Attack.wav");
+			break;
+		}
+		break;
+	}
+}
+
 void CGameObject::ChangeAnimation(ANIMATION_TYPE type)
 {
 	m_pSkinnedAnimationController->SetTrackEnable(m_anitype, false);
 
+	PlayAnimationSound(m_objectType, type);
 	switch (m_objectType)
 	{
 	case GameObjectType::Spider:
