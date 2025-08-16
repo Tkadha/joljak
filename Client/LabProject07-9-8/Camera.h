@@ -12,6 +12,7 @@ struct VS_CB_CAMERA_INFO
 	XMFLOAT4X4                        m_xmf4x4View;
 	XMFLOAT4X4                        m_xmf4x4Projection;
 	XMFLOAT4X4  m_xmf4x4ShadowTransform;
+	XMFLOAT4X4  m_xmf4x4TorchShadowTransform;
 
 	XMFLOAT3                        m_xmf3Position;
 	float        m_fCameraPadding;

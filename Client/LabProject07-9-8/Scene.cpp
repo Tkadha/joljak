@@ -78,6 +78,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);		
 	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
 	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.0007f, 0.00017f);
+	m_pLights[0].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 	
 	
 	m_pLights[2].m_bEnable = true;
@@ -185,20 +186,34 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	// 1. 그림자 맵 객체 생성
 	m_pShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 4096 * 2, 4096 * 2);
 
-	// 2. SRV 핸들 할당: Framework의 AllocateSrvDescriptors 함수를 사용합니다.
 	D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE gpuSrvHandle;
 	m_pGameFramework->AllocateSrvDescriptors(1, cpuSrvHandle, gpuSrvHandle);
 
-	// 3. DSV 핸들 가져오기: 방금 Framework에 만든 그림자용 DSV 힙의 시작 핸들을 가져옵니다.
 	D3D12_CPU_DESCRIPTOR_HANDLE cpuDsvHandle = m_pGameFramework->GetShadowDsvHeap()->GetCPUDescriptorHandleForHeapStart();
 
-	// 4. ShadowMap에 모든 핸들을 전달하여 최종 리소스 생성
 	m_pShadowMap->BuildDescriptors(
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuSrvHandle),
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(gpuSrvHandle),
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuDsvHandle)
 	);
+
+
+	// 1. 횃불용 그림자 맵 객체를 생성합니다.
+	m_pTorchShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 1024, 1024);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandleForTorch; 
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuSrvHandleForTorch; 
+	m_pGameFramework->AllocateSrvDescriptors(1, cpuSrvHandleForTorch, gpuSrvHandleForTorch); 
+
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuDsvHandleForTorch = m_pGameFramework->GetShadowDsvHeap()->GetCPUDescriptorHandleForHeapStart(); 
+	cpuDsvHandleForTorch.ptr += m_pGameFramework->GetDsvDescriptorIncrementSize();
+
+	m_pTorchShadowMap->BuildDescriptors( 
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuSrvHandleForTorch), 
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(gpuSrvHandleForTorch), 
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuDsvHandleForTorch) 
+	); 
 
 	std::random_device rd;
 	std::mt19937 gen(rd());
@@ -990,11 +1005,10 @@ void CScene::AnimateObjects(float fTimeElapsed)
 	if (m_pPlayer && m_pLights)
 	{
 		XMFLOAT3 playerPosition = m_pPlayer->GetPosition();
-
-		// 빛이 플레이어 머리 약간 위에서 비추도록 y 좌표를 조정합니다.
 		playerPosition.y += 50.0f;
 
 		m_pLights[0].m_xmf3Position = playerPosition;
+		m_pLights[0].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
 
 	if (m_pWavesObject) m_pWavesObject->Animate(fTimeElapsed);
@@ -1018,7 +1032,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// =================================================================
 	// Pass 1: 그림자 맵 생성
 	// =================================================================
-	if(IsDaytime())
+	//if(IsDaytime())
 	{
 		// 렌더 타겟을 그림자 맵으로 설정
 		m_pShadowMap->SetRenderTarget(pd3dCommandList);
@@ -1035,19 +1049,9 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4Projection, XMMatrixTranspose(proj));
 
 
-		//pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbLightCamera->GetGPUVirtualAddress());
-
-
 		//CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Skinned_Shaodw");
 		//pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
 		//pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
-
-
-
-		// 그림자 생성을 위한 전용 셰이더 설정
-		CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Shadow");
-		pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
-		pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
 
 		{
 			std::lock_guard<std::mutex> lock(m_Mutex);
@@ -1092,6 +1096,70 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		// 1. 그림자 맵 리소스를 픽셀 셰이더에서 읽을 수 있는 상태로 변경
 		m_pShadowMap->TransitionToReadable(pd3dCommandList);
 	}
+
+	// =================================================================
+   // Pass 1.5: 횃불 그림자 맵 생성
+   // =================================================================
+	LIGHT* pTorchLight = &m_pLights[0]; 
+	if (pTorchLight->m_bEnable)
+	{
+		// 1. 렌더 타겟을 "횃불용" 섀도우 맵으로 설정합니다.
+		m_pTorchShadowMap->SetRenderTarget(pd3dCommandList);
+
+		// 2. "횃불의 시점"에서 바라보는 View/Projection 행렬을 계산합니다.
+		UpdateTorchShadowTransform(pTorchLight);
+
+		// 3. 계산된 행렬을 빛 카메라 상수 버퍼(b0)에 업데이트합니다.
+		XMMATRIX view = XMLoadFloat4x4(&mLightView);
+		XMMATRIX proj = XMLoadFloat4x4(&mLightProj);
+		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4View, XMMatrixTranspose(view));
+		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4Projection, XMMatrixTranspose(proj));
+
+		//pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbLightCamera->GetGPUVirtualAddress());
+
+		{
+			std::lock_guard<std::mutex> lock(m_Mutex);
+
+			for (auto& obj : m_vGameObjects) {
+				if (obj->m_objectType != GameObjectType::Toad && obj->m_objectType != GameObjectType::Wasp &&
+					obj->m_objectType != GameObjectType::Wolf && obj->m_objectType != GameObjectType::Bat &&
+					obj->m_objectType != GameObjectType::Snake && obj->m_objectType != GameObjectType::Turtle &&
+					obj->m_objectType != GameObjectType::Raptor && obj->m_objectType != GameObjectType::Snail &&
+					obj->m_objectType != GameObjectType::Spider)
+				{
+					if (obj->isRender) obj->RenderShadow(pd3dCommandList);
+				}
+			}
+		}
+		const float fRenderDistanceSq = 800.0f * 800.0f;
+		XMVECTOR playerPos = XMLoadFloat3(&m_pPlayer->GetPosition());
+		for (auto& obj : m_lEnvironmentObjects) {
+
+			if (!obj) continue;
+			XMVECTOR objPos = XMLoadFloat3(&obj->GetPosition());
+			float fDistanceSq = XMVectorGetX(XMVector3LengthSq(XMVectorSubtract(playerPos, objPos)));
+
+			if (fDistanceSq <= fRenderDistanceSq)
+			{
+				obj->RenderShadow(pd3dCommandList);
+			}
+		}
+
+		for (auto& obj : m_vConstructionObjects) {
+			if (obj) obj->RenderShadow(pd3dCommandList);
+		}
+
+		if (m_pPlayer) m_pPlayer->RenderShadow(pd3dCommandList);
+
+		for (auto& p : PlayerList) {
+			if (p.second->isRender) p.second->RenderShadow(pd3dCommandList);
+		}
+
+		if (m_pTerrain) m_pTerrain->RenderShadow(pd3dCommandList);
+		// 5. 횃불 섀도우 맵을 읽기 가능한 상태로 전환합니다.
+		m_pTorchShadowMap->TransitionToReadable(pd3dCommandList);
+	}
+
 
 	// 2. 렌더 타겟을 다시 화면(메인 백버퍼)과 메인 깊이 버퍼로 설정
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pGameFramework->GetCurrentRtvCPUDescriptorHandle();
@@ -1266,20 +1334,20 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 
 	{
-		//// --- 그림자 맵 디버그 출력 ---
-		//CShader* pDebugShader = pShaderManager->GetShader("Debug");
-		//pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
-		//pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
+		// --- 그림자 맵 디버그 출력 ---
+		CShader* pDebugShader = pShaderManager->GetShader("Debug");
+		pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
+		pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
 
-		//// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
-		//pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
+		// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
+		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTorchShadowMap->Srv());
 
 
-		//// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
-		//pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
-		//pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
-		//pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		//pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+		// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
+		pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
+		pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
+		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 	}
 }
 
@@ -1687,6 +1755,66 @@ void CScene::UpdateShadowTransform()
 	XMStoreFloat4x4(&mLightView, view);
 	XMStoreFloat4x4(&mLightProj, proj);
 	XMStoreFloat4x4(&mShadowTransform, S);
+}
+
+void CScene::UpdateTorchShadowTransform(LIGHT* pTorchLight)
+{
+	if (!pTorchLight) return;
+
+	XMVECTOR lightPos = XMLoadFloat3(&pTorchLight->m_xmf3Position); 
+	XMVECTOR lightDir = XMLoadFloat3(&pTorchLight->m_xmf3Direction); 
+
+	XMVECTOR targetPos = lightPos + lightDir; 
+	XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); 
+	XMMATRIX view = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
+
+	float fovAngleY = 120.0f; 
+	float aspectRatio = 1.0f;
+	float nearZ = 1.0f; 
+	float farZ = 50000; // 횃불의 최대 범위
+	XMMATRIX proj = XMMatrixPerspectiveFovLH(XMConvertToRadians(fovAngleY), aspectRatio, nearZ, farZ);
+
+	{
+		// 1. XMMATRIX를 출력이 가능한 XMFLOAT4X4 구조체로 변환합니다.
+		XMFLOAT4X4 viewMatrix, projMatrix;
+		XMStoreFloat4x4(&viewMatrix, view);
+		XMStoreFloat4x4(&projMatrix, proj);
+
+		// 2. 문자열을 담을 버퍼를 준비합니다.
+		char buffer[512];
+
+		// 3. 뷰 행렬의 내용을 문자열로 만들어 출력합니다.
+		sprintf_s(buffer, 512, "--- Torch View Matrix ---\n"
+			"[%8.3f, %8.3f, %8.3f, %8.3f]\n"
+			"[%8.3f, %8.3f, %8.3f, %8.3f]\n"
+			"[%8.3f, %8.3f, %8.3f, %8.3f]\n"
+			"[%8.3f, %8.3f, %8.3f, %8.3f]\n",
+			viewMatrix._11, viewMatrix._12, viewMatrix._13, viewMatrix._14,
+			viewMatrix._21, viewMatrix._22, viewMatrix._23, viewMatrix._24,
+			viewMatrix._31, viewMatrix._32, viewMatrix._33, viewMatrix._34,
+			viewMatrix._41, viewMatrix._42, viewMatrix._43, viewMatrix._44);
+		OutputDebugStringA(buffer);
+
+		// 4. 투영 행렬의 내용을 문자열로 만들어 출력합니다.
+		sprintf_s(buffer, 512, "--- Torch Projection Matrix ---\n"
+			"[%8.3f, %8.3f, %8.3f, %8.3f]\n"
+			"[%8.3f, %8.3f, %8.3f, %8.3f]\n"
+			"[%8.3f, %8.3f, %8.3f, %8.3f]\n"
+			"[%8.3f, %8.3f, %8.3f, %8.3f]\n\n",
+			projMatrix._11, projMatrix._12, projMatrix._13, projMatrix._14,
+			projMatrix._21, projMatrix._22, projMatrix._23, projMatrix._24,
+			projMatrix._31, projMatrix._32, projMatrix._33, projMatrix._34,
+			projMatrix._41, projMatrix._42, projMatrix._43, projMatrix._44);
+		OutputDebugStringA(buffer);
+	}
+
+	XMMATRIX T(0.5f, 0.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f);
+	XMMATRIX S = view * proj * T;
+
+	XMStoreFloat4x4(&mLightView, view);
+	XMStoreFloat4x4(&mLightProj, proj);
+
+	XMStoreFloat4x4(&mTorchShadowTransform, S);
 }
 
 

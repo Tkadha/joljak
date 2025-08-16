@@ -32,7 +32,7 @@ ID3D12RootSignature* CStandardShader::CreateRootSignature(ID3D12Device* pd3dDevi
 {
 	CD3DX12_DESCRIPTOR_RANGE pd3dDescriptorRanges[2];
 	pd3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 7, 6, 0); // t6-t12: Albedo, Specular, Normal µî
-	pd3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3, 0); // t3: Shadow Map
+	pd3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 3, 0); // t3: Shadow Map
 
 	CD3DX12_ROOT_PARAMETER pd3dRootParameters[5];
 	pd3dRootParameters[0].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL); // b1: Camera

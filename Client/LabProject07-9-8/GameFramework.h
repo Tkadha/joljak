@@ -190,6 +190,7 @@ private:
 	ComPtr<ID3D12DescriptorHeap>	m_pd3dCbvSrvDescriptorHeap;
 	UINT							m_nCbvSrvDescriptorIncrementSize;
 	UINT							m_nRtvDescriptorIncrementSize;
+	UINT							m_nDsvDescriptorIncrementSize;
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dCbvCpuHandleStart;
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dCbvGpuHandleStart;
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCpuHandleStart;
@@ -317,5 +318,8 @@ public:
 	void LoadTools();              // 도구 로딩을 위한 함수
 	void OnImGuiRender();          // ImGui UI를 그리는 함수
 	void UpdateToolTransforms();   // ImGui 값으로 도구 위치를 업데이트하는 함수
+
+
+	UINT GetDsvDescriptorIncrementSize() const { return m_nDsvDescriptorIncrementSize; }
 };
 
