@@ -226,7 +226,7 @@ float4 ComputeLight(MaterialInfo material, LIGHT light, float3 posW, float3 norm
             cIllumination += light.m_cSpecular * material.SpecularColor * specularFactor;
         }
 
-        // 거리 감쇠(Attenuation) 적용
+        // 거리 감쇠 적용
         float attenuation = 1.0f / dot(light.m_vAttenuation, float3(1.0f, distance, distance * distance));
         cIllumination *= attenuation;
     }

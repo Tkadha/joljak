@@ -130,6 +130,7 @@ public:
 	void SetProjectionMatrix(const XMFLOAT4X4& xmf4x4Projection) { m_xmf4x4Projection = xmf4x4Projection; }
 
 	void UpdateShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4ShadowTransform);
+	void UpdateTorchShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4ShadowTransform);
 	void GetFrustumCorners(XMFLOAT3* pCorners) const;
 
 };

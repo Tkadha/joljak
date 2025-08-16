@@ -131,7 +131,6 @@ float4 Lighting(MaterialInfo material, float3 posW, float3 normalW,
 {
     float4 finalIllumination = float4(0.0f, 0.0f, 0.0f, 0.0f);
     
-    // gnLights는 cbLights에 있어야 하지만, 일단 전역으로 가정
     for (int i = 0; i < gnLights; ++i)
     {
         if (!gLights[i].m_bEnable)

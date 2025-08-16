@@ -140,18 +140,7 @@ float SimpleNoise(float2 p)
 
 // --- Pixel Shader ---
 float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
-{
-    float shadowFactor = 1.0;
-    LIGHT torchLight = gLights[0]; // 횃불이 0번 조명이라고 가정
-
-    if (torchLight.m_bEnable)
-    {
-        float4 torchShadowPosH = mul(float4(input.positionW, 1.0f), gmtxTorchShadowTransform);
-        shadowFactor = CalcShadowFactor(torchShadowPosH, gTorchShadowMap);
-    }
-    
-    // 계산된 shadowFactor 값을 흑백으로 화면에 바로 출력합니다.
-    return float4(shadowFactor, shadowFactor, shadowFactor, 1.0f);
+{    
     
     // 1. 텍스처 색상을 계산합니다 (이전과 동일).
     float4 splatWeights = gtxtTerrainSplatMap.Sample(gssWrap, input.uv0);

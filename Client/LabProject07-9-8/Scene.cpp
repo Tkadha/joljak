@@ -77,7 +77,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.6f, 0.1f, 1.0f);
 	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);		
 	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.0007f, 0.00017f);
+	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.07f, 0.017f);
 	m_pLights[0].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 	
 	
@@ -1108,6 +1108,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 		// 2. "횃불의 시점"에서 바라보는 View/Projection 행렬을 계산합니다.
 		UpdateTorchShadowTransform(pTorchLight);
+		pCamera->UpdateTorchShadowTransform(mTorchShadowTransform);
 
 		// 3. 계산된 행렬을 빛 카메라 상수 버퍼(b0)에 업데이트합니다.
 		XMMATRIX view = XMLoadFloat4x4(&mLightView);
@@ -1759,61 +1760,30 @@ void CScene::UpdateShadowTransform()
 
 void CScene::UpdateTorchShadowTransform(LIGHT* pTorchLight)
 {
-	if (!pTorchLight) return;
+	if (!pTorchLight || !m_pPlayer) return;
 
-	XMVECTOR lightPos = XMLoadFloat3(&pTorchLight->m_xmf3Position); 
-	XMVECTOR lightDir = XMLoadFloat3(&pTorchLight->m_xmf3Direction); 
+	XMFLOAT3 playerPos = m_pPlayer->GetPosition();
 
-	XMVECTOR targetPos = lightPos + lightDir; 
-	XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); 
+	XMVECTOR lightPos = XMVectorSet(playerPos.x, playerPos.y + 50.0f, playerPos.z, 1.0f);
+	XMVECTOR targetPos = XMLoadFloat3(&playerPos);
+
+	XMVECTOR lightUp = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f); // 월드의 Z축
+
 	XMMATRIX view = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
 
-	float fovAngleY = 120.0f; 
+	float fovAngleY = 90.0f;
 	float aspectRatio = 1.0f;
-	float nearZ = 1.0f; 
-	float farZ = 50000; // 횃불의 최대 범위
+	float nearZ = 1.0f;
+	float farZ = pTorchLight->m_fRange; // 빛의 최대 범위
 	XMMATRIX proj = XMMatrixPerspectiveFovLH(XMConvertToRadians(fovAngleY), aspectRatio, nearZ, farZ);
 
-	{
-		// 1. XMMATRIX를 출력이 가능한 XMFLOAT4X4 구조체로 변환합니다.
-		XMFLOAT4X4 viewMatrix, projMatrix;
-		XMStoreFloat4x4(&viewMatrix, view);
-		XMStoreFloat4x4(&projMatrix, proj);
-
-		// 2. 문자열을 담을 버퍼를 준비합니다.
-		char buffer[512];
-
-		// 3. 뷰 행렬의 내용을 문자열로 만들어 출력합니다.
-		sprintf_s(buffer, 512, "--- Torch View Matrix ---\n"
-			"[%8.3f, %8.3f, %8.3f, %8.3f]\n"
-			"[%8.3f, %8.3f, %8.3f, %8.3f]\n"
-			"[%8.3f, %8.3f, %8.3f, %8.3f]\n"
-			"[%8.3f, %8.3f, %8.3f, %8.3f]\n",
-			viewMatrix._11, viewMatrix._12, viewMatrix._13, viewMatrix._14,
-			viewMatrix._21, viewMatrix._22, viewMatrix._23, viewMatrix._24,
-			viewMatrix._31, viewMatrix._32, viewMatrix._33, viewMatrix._34,
-			viewMatrix._41, viewMatrix._42, viewMatrix._43, viewMatrix._44);
-		OutputDebugStringA(buffer);
-
-		// 4. 투영 행렬의 내용을 문자열로 만들어 출력합니다.
-		sprintf_s(buffer, 512, "--- Torch Projection Matrix ---\n"
-			"[%8.3f, %8.3f, %8.3f, %8.3f]\n"
-			"[%8.3f, %8.3f, %8.3f, %8.3f]\n"
-			"[%8.3f, %8.3f, %8.3f, %8.3f]\n"
-			"[%8.3f, %8.3f, %8.3f, %8.3f]\n\n",
-			projMatrix._11, projMatrix._12, projMatrix._13, projMatrix._14,
-			projMatrix._21, projMatrix._22, projMatrix._23, projMatrix._24,
-			projMatrix._31, projMatrix._32, projMatrix._33, projMatrix._34,
-			projMatrix._41, projMatrix._42, projMatrix._43, projMatrix._44);
-		OutputDebugStringA(buffer);
-	}
-
+	// 3. 최종 그림자 변환 행렬을 계산하여 저장합니다.
 	XMMATRIX T(0.5f, 0.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f);
 	XMMATRIX S = view * proj * T;
 
+	// 계산된 행렬들을 저장합니다.
 	XMStoreFloat4x4(&mLightView, view);
 	XMStoreFloat4x4(&mLightProj, proj);
-
 	XMStoreFloat4x4(&mTorchShadowTransform, S);
 }
 
