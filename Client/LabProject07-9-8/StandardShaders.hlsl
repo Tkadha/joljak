@@ -15,6 +15,7 @@ cbuffer cbGameObjectInfo : register(b2)
 
 // --- 텍스처 (Standard, Skinned, Instancing 에서 사용) ---
 Texture2D gShadowMap : register(t3);
+Texture2D gTorchShadowMap : register(t4);
 Texture2D gtxtAlbedoTexture : register(t6);
 Texture2D gtxtSpecularTexture : register(t7);
 Texture2D gtxtNormalTexture : register(t8);
@@ -77,7 +78,6 @@ float CalcShadowFactor(float4 shadowPosH)
     
     return percentLit / 9.0f;
 }
-
 
 // --- Vertex Shader ---
 VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
@@ -196,24 +196,11 @@ float4 PSStandard3(VS_STANDARD_OUTPUT input) : SV_TARGET
     {
         normalW = normalize(input.normalW);
     }
-    float4 cIlluminationColor = Lighting(gMaterialInfo, input.positionW, normalW);
     
+    float4 cIlluminationColor = Lighting(gMaterialInfo, input.positionW, normalW, gShadowMap, gTorchShadowMap);
 
-     // 1. 그림자 계수 계산
-    float shadowFactor = 0.5; // 기본값은 그림자 없음
-    if (gIsDaytime)
-    {
-        shadowFactor = CalcShadowFactor(input.ShadowPosH);
-    }
-    
-    // 1. 최종 조명 색상을 먼저 계산합니다.
-    //    (주변광 + 그림자가 적용된 직사광)
-    float3 totalLight = gMaterialInfo.AmbientColor.rgb + (shadowFactor * cIlluminationColor.rgb);
-
-    // 2. 계산된 최종 조명 색상에 물체의 표면 색상(알베도 텍스처)을 곱합니다.
+    float3 totalLight = gMaterialInfo.AmbientColor.rgb + cIlluminationColor.rgb;
     float3 finalColor = totalLight * cAlbedoColor.rgb;
-    
-    //finalColor += shadowFactor * (cIlluminationColor.rgb); // 직사광 (그림자 적용)
     
     // 4. 안개 적용
     

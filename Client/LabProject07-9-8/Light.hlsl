@@ -182,3 +182,54 @@ float4 Lighting(MaterialInfo material, float3 vPosition, float3 vNormal)
     //return float4(0.8f, 0.8f, 0.8f, 1.0f); // 또는 임의의 밝은 회색 반환
 }
 
+
+
+float4 ComputeLight(MaterialInfo material, LIGHT light, float3 posW, float3 normalW)
+{
+    float4 cIllumination = float4(0.0f, 0.0f, 0.0f, 0.0f);
+
+    if (light.m_nType == DIRECTIONAL_LIGHT) 
+    {
+        float3 lightVec = -light.m_vDirection;
+
+        float diffuseFactor = saturate(dot(normalW, lightVec));
+        cIllumination += light.m_cDiffuse * material.DiffuseColor * diffuseFactor;
+
+        if (diffuseFactor > 0.0f)
+        {
+            float3 toEye = normalize(gvCameraPosition.xyz - posW);
+            float3 halfVec = normalize(lightVec + toEye);
+            float specularFactor = pow(saturate(dot(normalW, halfVec)), material.SpecularColor.a * 255.0f);
+            cIllumination += light.m_cSpecular * material.SpecularColor * specularFactor;
+        }
+    }
+    else if (light.m_nType == POINT_LIGHT) // 1: 점 조명 (횃불)
+    {
+        float3 lightVec = light.m_vPosition - posW;
+        float distance = length(lightVec);
+        
+        if (distance > light.m_fRange)
+            return float4(0.0f, 0.0f, 0.0f, 0.0f);
+          
+        lightVec /= distance; // 정규화
+
+        // 확산광(Diffuse) 계산
+        float diffuseFactor = saturate(dot(normalW, lightVec));
+        cIllumination += light.m_cDiffuse * material.DiffuseColor * diffuseFactor;
+
+        // 반사광(Specular) 계산
+        if (diffuseFactor > 0.0f)
+        {
+            float3 toEye = normalize(gvCameraPosition.xyz - posW);
+            float3 halfVec = normalize(lightVec + toEye);
+            float specularFactor = pow(saturate(dot(normalW, halfVec)), material.SpecularColor.a * 255.0f);
+            cIllumination += light.m_cSpecular * material.SpecularColor * specularFactor;
+        }
+
+        // 거리 감쇠 적용
+        float attenuation = 1.0f / dot(light.m_vAttenuation, float3(1.0f, distance, distance * distance));
+        cIllumination *= attenuation;
+    }
+
+    return cIllumination;
+}

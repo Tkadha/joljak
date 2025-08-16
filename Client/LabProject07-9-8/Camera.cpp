@@ -432,15 +432,26 @@ void CThirdPersonCamera::Rotate(float pitchDelta, float yawDelta, float rollDelt
 	// }
 }
 
+
+
+
 void CCamera::UpdateShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4ShadowTransform)
 {
-	// m_pcbMappedCamera는 UpdateShaderVariables에서 이미 매핑되어 있다고 가정합니다.
 	if (m_pcbMappedCamera)
 	{
-		// VS_CB_CAMERA_INFO 구조체에 있는 m_xmf4x4ShadowTransform 멤버에 값을 복사합니다.
 		XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4ShadowTransform, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4ShadowTransform)));
 	}
 }
+
+void CCamera::UpdateTorchShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4ShadowTransform)
+{
+	if (m_pcbMappedCamera)
+	{
+		XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4TorchShadowTransform, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4ShadowTransform)));
+		//m_pcbMappedCamera->m_xmf4x4TorchShadowTransform = xmf4x4ShadowTransform;
+	}
+}
+
 void CCamera::GetFrustumCorners(XMFLOAT3* pCorners) const
 {
 	// 1. FOV를 이용해 Near/Far 평면의 높이와 너비를 계산합니다.

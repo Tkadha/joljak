@@ -16,7 +16,7 @@
 
 void PlayWavSound(const _TCHAR* soundPath)
 {
-    PlaySound(soundPath, NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
+    PlaySoundW(soundPath, NULL, SND_ASYNC | SND_FILENAME | SND_NODEFAULT);
 }
 
 

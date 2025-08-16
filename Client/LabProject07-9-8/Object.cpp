@@ -860,6 +860,14 @@ void CGameObject::UpdateTransform(XMFLOAT4X4* pxmf4x4Parent)
 	m_xmf4x4World = (pxmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4ToParent, *pxmf4x4Parent) : m_xmf4x4ToParent;
 
 
+	XMVECTOR vRight = XMLoadFloat3((XMFLOAT3*)&m_xmf4x4World._11);
+	XMVECTOR vUp = XMLoadFloat3((XMFLOAT3*)&m_xmf4x4World._21);
+	XMVECTOR vLook = XMLoadFloat3((XMFLOAT3*)&m_xmf4x4World._31);
+
+	XMStoreFloat3(&m_xmf3Right, XMVector3Normalize(vRight));
+	XMStoreFloat3(&m_xmf3Up, XMVector3Normalize(vUp));
+	XMStoreFloat3(&m_xmf3Forward, XMVector3Normalize(vLook));
+
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
 
 
