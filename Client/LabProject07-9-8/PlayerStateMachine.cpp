@@ -863,6 +863,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
             
             if (hp <= 0) {
                 tree->StartFalling(player->GetLookVector()); // 플레이어가 바라보는 방향으로 쓰러지도록
+                SoundManager::GetInstance().Play(L"Sound/Tree/Falling.wav");
             }
 #ifdef ONLINE
             auto& nwManager = NetworkManager::GetInstance();
