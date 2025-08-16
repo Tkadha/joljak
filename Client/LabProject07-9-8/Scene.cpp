@@ -987,6 +987,59 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		}
 	}
 	*/
+
+	bool bIsVortexActive = false;
+	XMFLOAT3 vortexCenter = XMFLOAT3(0.f, 0.f, 0.f);
+
+	// 현재 활성화된 소용돌이가 있는지, 있다면 중심점이 어디인지 찾습니다.
+	for (const auto& pVortex : m_vVortexEffects)
+	{
+		if (pVortex && pVortex->isRender)
+		{
+			bIsVortexActive = true;
+			vortexCenter = pVortex->GetPosition(); // 활성화된 파티클 아무거나 하나로 중심점을 설정
+			break;
+		}
+	}
+
+	// 소용돌이가 활성화 상태이고 플레이어가 존재한다면 대미지 계산을 시작합니다.
+	if (bIsVortexActive && m_pPlayer)
+	{
+		// 대미지 범위 설정 (SpawnVortexEffect에서 설정한 가장 큰 값 기준)
+		const float fDamageRadius = 250.0f;
+		const float fDamageHeight = 100.0f;
+		const float fDamageInterval = 0.5f; // 0.5초마다 대미지
+		const int nDamageAmount = 5;       // 1회당 대미지 양
+
+		XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+
+		// 1. 수평 거리 계산 (Y축 무시)
+		float fDistanceXZ = sqrt(pow(playerPos.x - vortexCenter.x, 2) + pow(playerPos.z - vortexCenter.z, 2));
+
+		// 2. 수직 거리 계산
+		float fDistanceY = abs(playerPos.y - vortexCenter.y);
+
+		// 3. 플레이어가 대미지 범위(원통) 안에 있는지 확인
+		if (fDistanceXZ <= fDamageRadius && fDistanceY <= fDamageHeight)
+		{
+			m_fVortexDamageTimer += fTimeElapsed;
+			if (m_fVortexDamageTimer >= fDamageInterval)
+			{
+				m_pPlayer->DecreaseHp(nDamageAmount);
+
+				// 서버와 체력 동기화를 위한 패킷 전송
+				auto& nwManager = NetworkManager::GetInstance();
+				SET_HP_HIT_OBJ_PACKET p;
+				p.hit_obj_id = m_pPlayer->m_id; 
+				p.hp = m_pPlayer->getHp();
+				p.size = sizeof(SET_HP_HIT_OBJ_PACKET);
+				p.type = static_cast<char>(E_PACKET::E_P_SETHP);
+				nwManager.PushSendQueue(p, p.size);
+
+				m_fVortexDamageTimer = 0.0f; // 타이머 초기화
+			}
+		}
+	}
 	if (m_pLights)
 	{
 		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();

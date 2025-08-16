@@ -193,6 +193,7 @@ private:
 	std::vector<CResourceShardEffect*> m_vRockShards;
 	std::vector<CVortexEffectObject*> m_vVortexEffects;
 
+	float m_fVortexDamageTimer = 0.0f;
 public:	// 그림자
 	bool IsDaytime() const { return m_bIsDaytime; }
 

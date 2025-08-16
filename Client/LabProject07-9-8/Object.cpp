@@ -274,7 +274,7 @@ void CGameObject::Check_attack()
 
 		m_pScene->SpawnGolemPunchEffect(bosspos, GetLook());
 	}
-	else if (m_objectType == GameObjectType::Golem && m_anitype == 14) {
+	else if (m_objectType == GameObjectType::Golem && m_anitype == 15) {
 		XMFLOAT3 bosspos = GetPosition();
 		m_pScene->SpawnVortexEffect(bosspos);
 	}
