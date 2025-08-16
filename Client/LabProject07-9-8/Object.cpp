@@ -162,6 +162,9 @@ void CGameObject::ProcessPlayerHit(CPlayer* pPlayerInfo)
 	auto obj = dynamic_cast<CMonsterObject*>(this);
 	if (!obj) return;
 
+	SoundManager::GetInstance().Play(L"Sound/Player/hit.wav");
+	SoundManager::GetInstance().Play(L"Sound/Player/hit_voice.wav");
+
 	pPlayerInfo->DecreaseHp(obj->GetAtk());
 	pPlayerInfo->SetInvincibility();
 
@@ -406,6 +409,12 @@ void PlayAnimationSound(GameObjectType obj_type, ANIMATION_TYPE ani_type)
 		case ANIMATION_TYPE::DIE:
 			SoundManager::GetInstance().Play(L"Sound/Golem/death.wav");
 			break;
+		case ANIMATION_TYPE::GROUND_SPELL_START:
+			SoundManager::GetInstance().Play(L"Sound/Golem/Charging.wav");
+			break;
+		case ANIMATION_TYPE::GROUND_SPELL_END:
+			SoundManager::GetInstance().Play(L"Sound/Golem/Special_Attack.wav");
+			break;
 		}
 		break;
 	}
@@ -415,9 +424,7 @@ void CGameObject::ChangeAnimation(ANIMATION_TYPE type)
 {
 	m_pSkinnedAnimationController->SetTrackEnable(m_anitype, false);
 
-	if (ANIMATION_TYPE::HIT == type || ANIMATION_TYPE::RUN == type || ANIMATION_TYPE::DIE == type) {
-		PlayAnimationSound(m_objectType, type);
-	}
+	PlayAnimationSound(m_objectType, type);
 	switch (m_objectType)
 	{
 	case GameObjectType::Spider:
