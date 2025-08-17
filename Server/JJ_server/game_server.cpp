@@ -556,6 +556,8 @@ void ProcessPacket(shared_ptr<PlayerClient>& client, char* packet)
 				player->vl_mu.unlock();
 
 				player->SendTimePacket(time_accumulator);
+
+				player->BroadCastPosPacket();
 			}
 		}
 	}
