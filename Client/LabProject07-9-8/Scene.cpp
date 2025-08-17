@@ -190,22 +190,25 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuDsvHandle)
 	);
 
+	m_vTorchShadowMaps.resize(MAX_PLAYER_LIGHTS);
+	for (int i = 0; i < MAX_PLAYER_LIGHTS; ++i)
+	{
+		// 1. i번째 횃불 그림자 맵 객체 생성
+		m_vTorchShadowMaps[i] = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 1024, 1024);
 
-	// 1. 횃불용 그림자 맵 객체를 생성합니다.
-	m_pTorchShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 1024, 1024);
+		D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandleForTorch;
+		D3D12_GPU_DESCRIPTOR_HANDLE gpuSrvHandleForTorch;
+		m_pGameFramework->AllocateSrvDescriptors(1, cpuSrvHandleForTorch, gpuSrvHandleForTorch);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandleForTorch; 
-	D3D12_GPU_DESCRIPTOR_HANDLE gpuSrvHandleForTorch; 
-	m_pGameFramework->AllocateSrvDescriptors(1, cpuSrvHandleForTorch, gpuSrvHandleForTorch); 
+		D3D12_CPU_DESCRIPTOR_HANDLE cpuDsvHandleForTorch = m_pGameFramework->GetShadowDsvHeap()->GetCPUDescriptorHandleForHeapStart();
+		cpuDsvHandleForTorch.ptr += m_pGameFramework->GetDsvDescriptorIncrementSize();
 
-	D3D12_CPU_DESCRIPTOR_HANDLE cpuDsvHandleForTorch = m_pGameFramework->GetShadowDsvHeap()->GetCPUDescriptorHandleForHeapStart(); 
-	cpuDsvHandleForTorch.ptr += m_pGameFramework->GetDsvDescriptorIncrementSize();
-
-	m_pTorchShadowMap->BuildDescriptors( 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuSrvHandleForTorch), 
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(gpuSrvHandleForTorch), 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuDsvHandleForTorch) 
-	); 
+		m_vTorchShadowMaps[i]->BuildDescriptors(
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuSrvHandleForTorch),
+			CD3DX12_GPU_DESCRIPTOR_HANDLE(gpuSrvHandleForTorch),
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuDsvHandleForTorch)
+		);
+	}
 
 	std::random_device rd;
 	std::mt19937 gen(rd());
@@ -1017,7 +1020,11 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	assert(pShaderManager != nullptr && "ShaderManager is not available!");
 
 	if (m_pShadowMap) { m_pShadowMap->Clean(pd3dCommandList); }
-	if (m_pTorchShadowMap)	{ m_pTorchShadowMap->Clean(pd3dCommandList); }
+
+	for (int i = 0; i < MAX_PLAYER_LIGHTS; ++i) {
+		if (m_vTorchShadowMaps[i]) { m_vTorchShadowMaps[i]->Clean(pd3dCommandList); }
+
+	}
 
 	//UpdateShadowTransform(m_pPlayer->GetPosition()); // 빛의 위치/방향에 따라 ShadowTransform 행렬 계산
 	UpdateShadowTransform(m_pPlayer->GetPosition());
@@ -1094,67 +1101,59 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// =================================================================
    // Pass 1.5: 횃불 그림자 맵 생성
    // =================================================================
-	LIGHT* pTorchLight = &m_pLights[1]; 
-	if (pTorchLight->m_bEnable)
+	for (int i = 0; i < MAX_PLAYER_LIGHTS; ++i)
 	{
-		// 1. 렌더 타겟을 "횃불용" 섀도우 맵으로 설정합니다.
-		m_pTorchShadowMap->SetRenderTarget(pd3dCommandList);
-
-		// 2. "횃불의 시점"에서 바라보는 View/Projection 행렬을 계산합니다.
-		UpdateTorchShadowTransform(pTorchLight);
-		pCamera->UpdateTorchShadowTransform(mTorchShadowTransform);
-
-		// 3. 계산된 행렬을 빛 카메라 상수 버퍼(b0)에 업데이트합니다.
-		XMMATRIX view = XMLoadFloat4x4(&mLightView);
-		XMMATRIX proj = XMLoadFloat4x4(&mLightProj);
-		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4View, XMMatrixTranspose(view));
-		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4Projection, XMMatrixTranspose(proj));
-
-		//pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbLightCamera->GetGPUVirtualAddress());
-
+		LIGHT* pTorchLight = &m_pLights[i + 1]; // 1, 2, 3번 조명을 횃불로 사용
+		if (pTorchLight->m_bEnable)
 		{
-			std::lock_guard<std::mutex> lock(m_Mutex);
+			m_vTorchShadowMaps[i]->SetRenderTarget(pd3dCommandList);
 
-			for (auto& obj : m_vGameObjects) {
-				/*if (obj->m_objectType != GameObjectType::Toad && obj->m_objectType != GameObjectType::Wasp &&
-					obj->m_objectType != GameObjectType::Wolf && obj->m_objectType != GameObjectType::Bat &&
-					obj->m_objectType != GameObjectType::Snake && obj->m_objectType != GameObjectType::Turtle &&
-					obj->m_objectType != GameObjectType::Raptor && obj->m_objectType != GameObjectType::Snail &&
-					obj->m_objectType != GameObjectType::Spider)*/
-				{
+			UpdateTorchShadowTransform(pTorchLight, i);
+			pCamera->UpdateTorchShadowTransform(mTorchShadowTransform);
+
+			XMMATRIX view = XMLoadFloat4x4(&mLightView);
+			XMMATRIX proj = XMLoadFloat4x4(&mLightProj);
+			XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4View, XMMatrixTranspose(view));
+			XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4Projection, XMMatrixTranspose(proj));
+
+
+			{
+				std::lock_guard<std::mutex> lock(m_Mutex);
+
+				for (auto& obj : m_vGameObjects) {				
 					if (obj->isRender) obj->RenderShadow(pd3dCommandList);
 				}
 			}
-		}
-		const float fRenderDistanceSq = 800.0f * 800.0f;
-		XMVECTOR playerPos = XMLoadFloat3(&m_pPlayer->GetPosition());
-		for (auto& obj : m_lEnvironmentObjects) {
+			const float fRenderDistanceSq = 800.0f * 800.0f;
+			XMVECTOR playerPos = XMLoadFloat3(&m_pPlayer->GetPosition());
+			for (auto& obj : m_lEnvironmentObjects) {
 
-			if (!obj) continue;
-			XMVECTOR objPos = XMLoadFloat3(&obj->GetPosition());
-			float fDistanceSq = XMVectorGetX(XMVector3LengthSq(XMVectorSubtract(playerPos, objPos)));
+				if (!obj) continue;
+				XMVECTOR objPos = XMLoadFloat3(&obj->GetPosition());
+				float fDistanceSq = XMVectorGetX(XMVector3LengthSq(XMVectorSubtract(playerPos, objPos)));
 
-			if (fDistanceSq <= fRenderDistanceSq)
-			{
-				obj->RenderShadow(pd3dCommandList);
+				if (fDistanceSq <= fRenderDistanceSq)
+				{
+					obj->RenderShadow(pd3dCommandList);
+				}
 			}
+
+			for (auto& obj : m_vConstructionObjects) {
+				if (obj) obj->RenderShadow(pd3dCommandList);
+			}
+
+			if (m_pPlayer) m_pPlayer->RenderShadow(pd3dCommandList);
+
+			for (auto& p : PlayerList) {
+				if (p.second->isRender) p.second->RenderShadow(pd3dCommandList);
+			}
+
+			if (m_pTerrain) m_pTerrain->RenderShadow(pd3dCommandList);
+
+			m_vTorchShadowMaps[i]->TransitionToReadable(pd3dCommandList);
 		}
 
-		for (auto& obj : m_vConstructionObjects) {
-			if (obj) obj->RenderShadow(pd3dCommandList);
-		}
-
-		if (m_pPlayer) m_pPlayer->RenderShadow(pd3dCommandList);
-
-		for (auto& p : PlayerList) {
-			if (p.second->isRender) p.second->RenderShadow(pd3dCommandList);
-		}
-
-		if (m_pTerrain) m_pTerrain->RenderShadow(pd3dCommandList);
-		// 5. 횃불 섀도우 맵을 읽기 가능한 상태로 전환합니다.
-		m_pTorchShadowMap->TransitionToReadable(pd3dCommandList);
 	}
-
 
 	// 2. 렌더 타겟을 다시 화면(메인 백버퍼)과 메인 깊이 버퍼로 설정
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pGameFramework->GetCurrentRtvCPUDescriptorHandle();

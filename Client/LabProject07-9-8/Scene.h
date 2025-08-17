@@ -20,6 +20,8 @@
 #define SPOT_LIGHT						2
 #define DIRECTIONAL_LIGHT				3
 
+#define MAX_PLAYER_LIGHTS 3
+
 class CGameFramework;
 
 class CWavesObject;
@@ -195,7 +197,7 @@ public:	// 그림자
 	bool IsDaytime() const { return m_bIsDaytime; }
 
 	std::unique_ptr<ShadowMap> m_pShadowMap;
-	std::unique_ptr<ShadowMap> m_pTorchShadowMap;
+	std::vector<std::unique_ptr<ShadowMap>> m_vTorchShadowMaps;
 
 	DirectX::BoundingSphere mSceneBounds;
 
