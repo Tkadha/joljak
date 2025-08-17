@@ -18,9 +18,9 @@ SoundManager::SoundManager()
 SoundManager::~SoundManager()
 {
     // 프로그램 종료 시 혹시나 남아있는 사운드가 있다면 모두 닫습니다.
-    for (auto const& [deviceID, alias] : m_deviceMap)
+    for (auto const& [deviceID, instance] : m_deviceMap)
     {
-        std::wstring command = L"close " + alias;
+        std::wstring command = L"close " + instance.alias;
         mciSendString(command.c_str(), NULL, 0, NULL);
     }
     m_deviceMap.clear();
@@ -34,6 +34,11 @@ void SoundManager::Init(HWND hWnd)
 
 void SoundManager::Play(const std::wstring& soundPath)
 {
+    if (soundPath == L"Sound/Golem/Stamp land.wav" && IsPlaying(L"Sound/Golem/Stamp land.wav"))
+    {
+        return;
+    }
+
     // 1. 고유한 별칭 생성 (예: "snd_0", "snd_1", ...)
     std::wstring alias = L"snd_" + std::to_wstring(m_aliasCounter++);
 
@@ -55,7 +60,10 @@ void SoundManager::Play(const std::wstring& soundPath)
     }
 
     // 4. 장치 ID와 별칭을 맵에 저장 (나중에 닫을 때 사용)
-    m_deviceMap[deviceID] = alias;
+    SoundInstance newInstance;
+    newInstance.alias = alias;
+    newInstance.path = soundPath; // 파일 경로도 함께 저장!
+    m_deviceMap[deviceID] = newInstance;
 
     // 5. "play" 명령에 "notify" 옵션을 추가하여 재생 요청
     command = L"play " + alias + L" notify";
@@ -73,7 +81,7 @@ void SoundManager::HandleMciNotify(WPARAM wParam, LPARAM lParam)
         auto it = m_deviceMap.find(deviceID);
         if (it != m_deviceMap.end())
         {
-            std::wstring alias = it->second; // 맵에서 별칭을 가져옴
+            std::wstring alias = it->second.alias; // 맵에서 별칭을 가져옴
 
             // "close" 명령으로 장치를 닫아 리소스 해제
             std::wstring command = L"close " + alias;
@@ -83,4 +91,21 @@ void SoundManager::HandleMciNotify(WPARAM wParam, LPARAM lParam)
             m_deviceMap.erase(it);
         }
     }
+}
+
+bool SoundManager::IsPlaying(const std::wstring& soundPath) const
+{
+    // m_deviceMap에 저장된 모든 재생 중인 사운드를 순회합니다.
+    for (auto const& [deviceID, instanceInfo] : m_deviceMap)
+    {
+        // 저장된 경로(instanceInfo.path)와 찾으려는 경로(soundPath)가 일치하는지 확인
+        if (instanceInfo.path == soundPath)
+        {
+            // 일치하는 것을 찾았으므로 true를 반환하고 함수를 종료합니다.
+            return true;
+        }
+    }
+
+    // 루프를 모두 돌았는데도 찾지 못했다면, 재생 중이 아니므로 false를 반환합니다.
+    return false;
 }

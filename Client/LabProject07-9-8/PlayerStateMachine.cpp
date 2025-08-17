@@ -863,7 +863,6 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
             
             if (hp <= 0) {
                 tree->StartFalling(player->GetLookVector()); // 플레이어가 바라보는 방향으로 쓰러지도록
-                SoundManager::GetInstance().Play(L"Sound/Tree/Falling.wav");
             }
 #ifdef ONLINE
             auto& nwManager = NetworkManager::GetInstance();
@@ -880,6 +879,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
             int hp = rock->getHp();
             shardType = 2;
             player->m_pStateMachine->SetLastHitInfo(hitObject->GetPosition(), shardType);
+            SoundManager::GetInstance().Play(L"Sound/Stone/Breaking Stone.wav");
             if (hp > 0) {
                 if (hp > 0) {
                     hp -= currentToolStats.damageVsRock + (int)player->PlayerAttack / 10;

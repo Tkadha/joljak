@@ -2520,126 +2520,126 @@ void CGameFramework::FrameAdvance()
 	// 위치를 화면 너비와 높이에 대한 비율로 설정
 	ImVec2 hotbarPos = ImVec2(displaySize.x * 0.02f, displaySize.y * 0.9f);
 
-		if (m_eGameState == GameState::InGame) {
-			ImGui::SetNextWindowPos(hotbarPos);
-			ImGui::SetNextWindowSize(ImVec2(WindowWidth, 65));
-			ImGui::Begin("Hotbar", nullptr,
+	if (m_eGameState == GameState::InGame) {
+		ImGui::SetNextWindowPos(hotbarPos);
+		ImGui::SetNextWindowSize(ImVec2(WindowWidth, 65));
+		ImGui::Begin("Hotbar", nullptr,
+			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoBackground);
+
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+
+		for (int i = 0; i < HotbarCount; ++i)
+		{
+			if (i > 0) ImGui::SameLine();
+
+			ImGui::PushID(i);
+
+			if (i == m_SelectedHotbarIndex)
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 1.0f, 0.0f, 0.5f)); // 노란색 반투명
+
+			if (!m_inventorySlots[i].IsEmpty())
+			{
+				// 버튼 먼저 생성 (테두리 유지)
+				ImVec2 pos = ImGui::GetCursorScreenPos();
+				ImGui::Button(" ", ImVec2(SlotSize, SlotSize));
+
+				// 버튼 위에 아이콘을 따로 그리기
+				ImTextureID icon = m_inventorySlots[i].item->GetIconHandle();
+				if (icon)
+				{
+					ImGui::GetWindowDrawList()->AddImage(
+						icon,
+						pos,
+						ImVec2(pos.x + SlotSize, pos.y + SlotSize)
+					);
+				}
+			}
+			else
+			{
+				ImGui::Button(" ", ImVec2(SlotSize, SlotSize)); // 빈 슬롯은 그냥 테두리만
+			}
+			if (i == m_SelectedHotbarIndex)
+				ImGui::PopStyleColor();
+
+			ImGui::PopID();
+		}
+
+
+		ImGui::PopStyleVar();
+		ImGui::End();
+
+
+
+
+		//////////////////////////////////////////////////플레이어 UI
+
+		{
+			const float hudWidth = displaySize.x * 0.18f;
+			const float hudHeight = displaySize.y * 0.15f;
+			const float barWidth = displaySize.x * 0.07f;
+
+			// [추가] hudHeight를 기준으로 ProgressBar의 높이를 계산합니다.
+			const float barHeight = hudHeight * 0.15f; // 예: HUD 창 높이의 15%
+
+			ImVec2 hudPos = ImVec2(displaySize.x - hudWidth - (displaySize.x * 0.02f), displaySize.y - hudHeight - (displaySize.y * 0.01f));
+
+			ImGui::SetNextWindowPos(hudPos);
+			ImGui::SetNextWindowSize(ImVec2(hudWidth, hudHeight));
+			ImGui::Begin("StatusBars", nullptr,
 				ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
 				ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
-				ImGuiWindowFlags_NoBackground);
-
-			ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
-
-			for (int i = 0; i < HotbarCount; ++i)
-			{
-				if (i > 0) ImGui::SameLine();
-
-				ImGui::PushID(i);
-
-				if (i == m_SelectedHotbarIndex)
-					ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 1.0f, 0.0f, 0.5f)); // 노란색 반투명
-
-				if (!m_inventorySlots[i].IsEmpty())
-				{
-					// 버튼 먼저 생성 (테두리 유지)
-					ImVec2 pos = ImGui::GetCursorScreenPos();
-					ImGui::Button(" ", ImVec2(SlotSize, SlotSize));
-
-					// 버튼 위에 아이콘을 따로 그리기
-					ImTextureID icon = m_inventorySlots[i].item->GetIconHandle();
-					if (icon)
-					{
-						ImGui::GetWindowDrawList()->AddImage(
-							icon,
-							pos,
-							ImVec2(pos.x + SlotSize, pos.y + SlotSize)
-						);
-					}
-				}
-				else
-				{
-					ImGui::Button(" ", ImVec2(SlotSize, SlotSize)); // 빈 슬롯은 그냥 테두리만
-				}
-				if (i == m_SelectedHotbarIndex)
-					ImGui::PopStyleColor();
-
-				ImGui::PopID();
-			}
+				ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoCollapse);
 
 
-			ImGui::PopStyleVar();
+			ImGui::BeginGroup();
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Hp"); // 체력 
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+			ImGui::ProgressBar(
+				(float)m_pPlayer->Playerhp / (float)m_pPlayer->Maxhp,
+				ImVec2(barWidth, barHeight),
+				std::to_string(m_pPlayer->Playerhp).c_str()
+			);
+			ImGui::PopStyleColor();
+			ImGui::EndGroup();
+
+			ImGui::SameLine(0.0f, 50.0f);
+			ImGui::BeginGroup();
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Stamina"); // 스태미너
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.5f, 1.0f, 1.0f));
+			ImGui::ProgressBar(
+				(float)m_pPlayer->Playerstamina / (float)m_pPlayer->Maxstamina,
+				ImVec2(barWidth, barHeight),
+				std::to_string(m_pPlayer->Playerstamina).c_str()
+			);
+			ImGui::PopStyleColor();
+			ImGui::EndGroup();
+
+
+			ImGui::BeginGroup();
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Hunger"); // 허기
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
+			ImGui::ProgressBar(m_pPlayer->PlayerHunger / 100.f, ImVec2(barWidth, barHeight));
+			ImGui::PopStyleColor();
+			ImGui::EndGroup();
+
+			ImGui::SameLine(0.0f, 50.0f);
+
+			ImGui::BeginGroup();
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Thirst"); // 갈증
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 0.2f, 1.0f, 1.0f));
+			ImGui::ProgressBar(m_pPlayer->PlayerThirst / 100.f, ImVec2(barWidth, barHeight));
+			ImGui::PopStyleColor();
+			ImGui::EndGroup();
+
 			ImGui::End();
-
-
-
-
-			//////////////////////////////////////////////////플레이어 UI
-
-			{
-				const float hudWidth = displaySize.x * 0.18f;
-				const float hudHeight = displaySize.y * 0.15f;
-				const float barWidth = displaySize.x * 0.07f;
-
-				// [추가] hudHeight를 기준으로 ProgressBar의 높이를 계산합니다.
-				const float barHeight = hudHeight * 0.15f; // 예: HUD 창 높이의 15%
-
-				ImVec2 hudPos = ImVec2(displaySize.x - hudWidth - (displaySize.x * 0.02f), displaySize.y - hudHeight - (displaySize.y * 0.01f));
-
-				ImGui::SetNextWindowPos(hudPos);
-				ImGui::SetNextWindowSize(ImVec2(hudWidth, hudHeight));
-				ImGui::Begin("StatusBars", nullptr,
-					ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-					ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
-					ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoCollapse);
-
-
-				ImGui::BeginGroup();
-				ImGui::AlignTextToFramePadding();
-				ImGui::Text("Hp"); // 체력 
-				ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-				ImGui::ProgressBar(
-					(float)m_pPlayer->Playerhp / (float)m_pPlayer->Maxhp,
-					ImVec2(barWidth, barHeight),
-					std::to_string(m_pPlayer->Playerhp).c_str()
-				);
-				ImGui::PopStyleColor();
-				ImGui::EndGroup();
-
-				ImGui::SameLine(0.0f, 50.0f);
-				ImGui::BeginGroup();
-				ImGui::AlignTextToFramePadding();
-				ImGui::Text("Stamina"); // 스태미너
-				ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.5f, 1.0f, 1.0f));
-				ImGui::ProgressBar(
-					(float)m_pPlayer->Playerstamina / (float)m_pPlayer->Maxstamina,
-					ImVec2(barWidth, barHeight),
-					std::to_string(m_pPlayer->Playerstamina).c_str()
-				);
-				ImGui::PopStyleColor();
-				ImGui::EndGroup();
-
-
-				ImGui::BeginGroup();
-				ImGui::AlignTextToFramePadding();
-				ImGui::Text("Hunger"); // 허기
-				ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
-				ImGui::ProgressBar(m_pPlayer->PlayerHunger / 100.f, ImVec2(barWidth, barHeight));
-				ImGui::PopStyleColor();
-				ImGui::EndGroup();
-
-				ImGui::SameLine(0.0f, 50.0f);
-
-				ImGui::BeginGroup();
-				ImGui::AlignTextToFramePadding();
-				ImGui::Text("Thirst"); // 갈증
-				ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 0.2f, 1.0f, 1.0f));
-				ImGui::ProgressBar(m_pPlayer->PlayerThirst / 100.f, ImVec2(barWidth, barHeight));
-				ImGui::PopStyleColor();
-				ImGui::EndGroup();
-
-				ImGui::End();
-			}
 		}
+	}
 	//////////////////////////////////////////////////////// 인벤토리
 	if (ShowInventory)
 	{

@@ -313,7 +313,7 @@ void CGameObject::Check_attack()
 
 		m_pScene->SpawnAttackEffect(GetPosition(), 20, 100.0f);
 		m_pScene->SpawnAttackEffect(GetPosition(), 20, 200.0f);
-
+		SoundManager::GetInstance().Play(L"Sound/Golem/Stamp land.wav");
 		float distance = Vector3::Length(Vector3::Subtract(GetPosition(), pPlayerInfo->GetPosition()));
 		float height_distance = std::abs(GetPosition().y - pPlayerInfo->GetPosition().y);
 
@@ -416,7 +416,10 @@ void PlayAnimationSound(GameObjectType obj_type, ANIMATION_TYPE ani_type)
 			SoundManager::GetInstance().Play(L"Sound/Golem/Charging.wav");
 			break;
 		case ANIMATION_TYPE::GROUND_SPELL_END:
-			SoundManager::GetInstance().Play(L"Sound/Golem/Special_Attack.wav");
+			SoundManager::GetInstance().Play(L"Sound/Golem/Special_Attack2.wav");
+			break;
+		case ANIMATION_TYPE::ATTACK:
+			SoundManager::GetInstance().Play(L"Sound/Golem/Attack1.wav");
 			break;
 		}
 		break;
@@ -2385,7 +2388,7 @@ void CTreeObject::StartFalling(const XMFLOAT3& hitDirection) {
 	}
 	m_xmf3FallingAxis = Vector3::Normalize(m_xmf3FallingAxis);
 
-
+	SoundManager::GetInstance().Play(L"Sound/Tree/Falling.wav");
 }
 
 void CTreeObject::Animate(float fTimeElapsed) {

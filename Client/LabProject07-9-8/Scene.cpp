@@ -10,7 +10,7 @@
 #include "AtkState.h"
 #include "WaveObject.h"
 #include "NetworkManager.h"
-
+#include "SoundManager.h"
 #define MIN_HEIGHT                  1055.f      
 
 bool ChangeAlbedoTexture(
@@ -1041,7 +1041,7 @@ void CScene::AnimateObjects(float fTimeElapsed)
 			if (m_fVortexDamageTimer >= fDamageInterval)
 			{
 				m_pPlayer->DecreaseHp(nDamageAmount);
-
+				SoundManager::GetInstance().Play(L"Sound/Player/hit.wav");
 				// 서버와 체력 동기화를 위한 패킷 전송
 				auto& nwManager = NetworkManager::GetInstance();
 				SET_HP_HIT_OBJ_PACKET p;
