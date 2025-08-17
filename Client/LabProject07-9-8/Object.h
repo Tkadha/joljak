@@ -385,6 +385,7 @@ public:
 	CGameObject* m_pPickaxe = nullptr;
 	CGameObject* m_pHammer = nullptr;
 
+	int torchIndex = -1;
 
 	UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CLoadedModelInfo* pModel, int nAnimationTracks, CGameFramework* pGameFramework);
 	virtual ~UserObject();

@@ -88,13 +88,13 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 
 	// 플레이어2
-	m_pLights[2].m_bEnable = true; // 시작할 때는 꺼진 상태
+	m_pLights[2].m_bEnable = false; // 시작할 때는 꺼진 상태
 	m_pLights[2].m_nType = POINT_LIGHT;
 	m_pLights[2].m_fRange = 450.0f; // 횃불이 비추는 범위
-	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.2f, 0.1f, 0.05f, 1.0f);
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.8f, 0.4f, 0.2f, 1.0f);
 	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.6f, 0.1f, 1.0f);
 	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);
-	m_pLights[2].m_xmf3Position = XMFLOAT3(8000.0f, 1200.0f, 8000.0f);
+	m_pLights[2].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
 	m_pLights[2].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.0007f, 0.00017f);
 	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 
@@ -102,7 +102,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[3].m_bEnable = false; // 시작할 때는 꺼진 상태
 	m_pLights[3].m_nType = POINT_LIGHT;
 	m_pLights[3].m_fRange = 450.0f; // 횃불이 비추는 범위
-	m_pLights[3].m_xmf4Ambient = XMFLOAT4(0.2f, 0.1f, 0.05f, 1.0f);
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.8f, 0.4f, 0.2f, 1.0f);
 	m_pLights[3].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.6f, 0.1f, 1.0f);
 	m_pLights[3].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);
 	m_pLights[3].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -1328,22 +1328,22 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 
 
-	{
-		// --- 그림자 맵 디버그 출력 ---
-		CShader* pDebugShader = pShaderManager->GetShader("Debug");
-		pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
-		pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
+	//{
+	//	// --- 그림자 맵 디버그 출력 ---
+	//	CShader* pDebugShader = pShaderManager->GetShader("Debug");
+	//	pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
+	//	pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
 
-		// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
-		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTorchShadowMap->Srv());
+	//	// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
+	//	pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTorchShadowMap->Srv());
 
 
-		// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
-		pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
-		pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
-		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
-	}
+	//	// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
+	//	pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
+	//	pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
+	//	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//	pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+	//}
 }
 
 
