@@ -262,7 +262,7 @@ public:
 
 
 public:
-	int hp{ 20 };
+	int hp{ 100 };
 	int level = 0;
 	int atk = 5;
 
@@ -385,6 +385,7 @@ public:
 	CGameObject* m_pPickaxe = nullptr;
 	CGameObject* m_pHammer = nullptr;
 
+	int torchIndex = -1;
 
 	UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CLoadedModelInfo* pModel, int nAnimationTracks, CGameFramework* pGameFramework);
 	virtual ~UserObject();
@@ -694,18 +695,42 @@ private:
 class CBloodEffectObject : public CGameObject
 {
 public:
-	CBloodEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework);
+	CBloodEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework, CMesh* pSharedMesh, CMaterial* pSharedMaterial);
 	virtual ~CBloodEffectObject() {}
 
+	
 	// Activate 함수는 위치와 수명만 받습니다.
-	void Activate(const XMFLOAT3& position, const XMFLOAT3& velocity, float lifeTime = 0.8f);
+	void Activate(const XMFLOAT3& position, const XMFLOAT3& velocity, float lifeTime = 0.4f);
 	virtual void Animate(float fTimeElapsed) override;
 
 private:
 	bool     m_bIsActive = false;
-	float    m_fLifeTime = 0.4f;
+	float    m_fLifeTime = 0.1f;
 	float    m_fElapsedTime = 0.0f;
 
 	XMFLOAT3 m_xmf3Velocity = { 0,0,0 };
 	XMFLOAT3 m_xmf3Gravity = { 0, -3500.0f, 0 }; // 혈흔에 맞는 중력값
+};
+
+class CVortexEffectObject : public CGameObject
+{
+public:
+	CVortexEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework);
+	virtual ~CVortexEffectObject() {}
+
+	void Activate(const XMFLOAT3& centerPos, float rotationRadius, float layerHeight, float startAngle, float speed);
+	virtual void Animate(float fTimeElapsed) override;
+
+private:
+	bool     m_bIsActive = false;
+	float    m_fLifeTime = 4.0f;    
+	float    m_fElapsedTime = 0.0f;
+
+	
+	XMFLOAT3 m_xmf3CenterPosition;
+	float    m_fRotationRadius;    
+	float    m_fLayerHeight; 
+	float    m_fCurrentRadius;     
+	float    m_fCurrentAngle;      
+	float    m_fRotationSpeed;     
 };

@@ -70,6 +70,7 @@ struct log_inout {
 	OBJECT_TYPE o_type;
 	ANIMATION_TYPE a_type;
 	int id;
+	int hp;
 };
 
 class CGameFramework
@@ -126,7 +127,7 @@ public:
 	void NerworkThread();
 	void ProcessPacket(char* packet);
 
-	void AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id);
+	void AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id, int hp);
 
 	bool CheckBuildMaterials(const std::string& buildableName);
 	void ConsumeBuildMaterials(const std::string& buildableName);

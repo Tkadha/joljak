@@ -10,7 +10,7 @@
 #include "AtkState.h"
 #include "WaveObject.h"
 #include "NetworkManager.h"
-
+#include "SoundManager.h"
 #define MIN_HEIGHT                  1055.f      
 
 bool ChangeAlbedoTexture(
@@ -88,13 +88,13 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 
 	// 플레이어2
-	m_pLights[2].m_bEnable = true; // 시작할 때는 꺼진 상태
+	m_pLights[2].m_bEnable = false; // 시작할 때는 꺼진 상태
 	m_pLights[2].m_nType = POINT_LIGHT;
 	m_pLights[2].m_fRange = 450.0f; // 횃불이 비추는 범위
-	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.2f, 0.1f, 0.05f, 1.0f);
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.8f, 0.4f, 0.2f, 1.0f);
 	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.6f, 0.1f, 1.0f);
 	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);
-	m_pLights[2].m_xmf3Position = XMFLOAT3(8000.0f, 1200.0f, 8000.0f);
+	m_pLights[2].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
 	m_pLights[2].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.0007f, 0.00017f);
 	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 
@@ -102,7 +102,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[3].m_bEnable = false; // 시작할 때는 꺼진 상태
 	m_pLights[3].m_nType = POINT_LIGHT;
 	m_pLights[3].m_fRange = 450.0f; // 횃불이 비추는 범위
-	m_pLights[3].m_xmf4Ambient = XMFLOAT4(0.2f, 0.1f, 0.05f, 1.0f);
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.8f, 0.4f, 0.2f, 1.0f);
 	m_pLights[3].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.6f, 0.1f, 1.0f);
 	m_pLights[3].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);
 	m_pLights[3].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -391,17 +391,33 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	if (pRockShardModel) delete pRockShardModel;
 
 	const int bloodPoolSize = 30;
-	for (int i = 0; i < bloodPoolSize; ++i) {
+	//pResourceManager = m_pGameFramework->GetResourceManager();
 
-		//ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
-		//std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab("Sphere");
-		//CGameObject* pBlood = prefab->Clone();
-		auto* pBlood = new CBloodEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		m_vBloodEffects.push_back(pBlood);
-		m_vGameObjects.push_back(pBlood); // 렌더링을 위해 메인 목록에도 추가
+	// 1. LoadPrefabs에서 등록한 프리팹을 가져옵니다.
+	std::shared_ptr<CGameObject> bloodPrefab = pResourceManager->GetPrefab("BloodEffectPrefab");
+
+	if (bloodPrefab && bloodPrefab->m_pChild)
+	{
+		// 2. 프리팹의 자식(실제 모델)으로부터 메쉬와 머티리얼을 가져옵니다.
+		CMesh* pSharedBloodMesh = bloodPrefab->m_pChild->m_pMesh;
+		CMaterial* pSharedBloodMaterial = bloodPrefab->m_pChild->GetMaterial(0);
+
+		for (int i = 0; i < bloodPoolSize; ++i)
+		{
+			// 3. 공유 리소스를 생성자에 전달하여 CBloodEffectObject를 생성합니다.
+			auto* pBlood = new CBloodEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework, pSharedBloodMesh, pSharedBloodMaterial);
+			m_vBloodEffects.push_back(pBlood);
+			m_vGameObjects.push_back(pBlood);
+		}
 	}
 	/////////////////////////////////////////
-	
+	const int vortexPoolSize = 50; // 소용돌이에 사용할 파편 수
+	for (int i = 0; i < vortexPoolSize; ++i) {
+		auto* pVortex = new CVortexEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		//pVortex->SetScale(1.0f, 1.0f, 1.0f);
+		m_vVortexEffects.push_back(pVortex);
+		m_vGameObjects.push_back(pVortex);
+	}
 
 	// 생성할 건축물 목록 (프리팹 이름과 동일해야 함)
 	std::vector<std::string> buildableItems = { "wood_wall","furnace" /*, "wood_floor", ... */ };
@@ -506,12 +522,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		m_vGameObjects.push_back(pEffect);
 	}
 
-	const int bloodPoolSize = 30;
-	for (int i = 0; i < bloodPoolSize; ++i) {
-		auto* pBlood = new CBloodEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		m_vBloodEffects.push_back(pBlood);
-		m_vGameObjects.push_back(pBlood); // 렌더링을 위해 메인 목록에도 추가
-	}
+	
 
 
 	CLoadedModelInfo* pWoodShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch_A.bin", m_pGameFramework);
@@ -1015,6 +1026,59 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		}
 	}
 	*/
+
+	bool bIsVortexActive = false;
+	XMFLOAT3 vortexCenter = XMFLOAT3(0.f, 0.f, 0.f);
+
+	// 현재 활성화된 소용돌이가 있는지, 있다면 중심점이 어디인지 찾습니다.
+	for (const auto& pVortex : m_vVortexEffects)
+	{
+		if (pVortex && pVortex->isRender)
+		{
+			bIsVortexActive = true;
+			vortexCenter = pVortex->GetPosition(); // 활성화된 파티클 아무거나 하나로 중심점을 설정
+			break;
+		}
+	}
+
+	// 소용돌이가 활성화 상태이고 플레이어가 존재한다면 대미지 계산을 시작합니다.
+	if (bIsVortexActive && m_pPlayer)
+	{
+		// 대미지 범위 설정 (SpawnVortexEffect에서 설정한 가장 큰 값 기준)
+		const float fDamageRadius = 250.0f;
+		const float fDamageHeight = 100.0f;
+		const float fDamageInterval = 0.5f; // 0.5초마다 대미지
+		const int nDamageAmount = 5;       // 1회당 대미지 양
+
+		XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+
+		// 1. 수평 거리 계산 (Y축 무시)
+		float fDistanceXZ = sqrt(pow(playerPos.x - vortexCenter.x, 2) + pow(playerPos.z - vortexCenter.z, 2));
+
+		// 2. 수직 거리 계산
+		float fDistanceY = abs(playerPos.y - vortexCenter.y);
+
+		// 3. 플레이어가 대미지 범위(원통) 안에 있는지 확인
+		if (fDistanceXZ <= fDamageRadius && fDistanceY <= fDamageHeight)
+		{
+			m_fVortexDamageTimer += fTimeElapsed;
+			if (m_fVortexDamageTimer >= fDamageInterval)
+			{
+				m_pPlayer->DecreaseHp(nDamageAmount);
+				SoundManager::GetInstance().Play(L"Sound/Player/hit.wav");
+				// 서버와 체력 동기화를 위한 패킷 전송
+				auto& nwManager = NetworkManager::GetInstance();
+				SET_HP_HIT_OBJ_PACKET p;
+				p.hit_obj_id = m_pPlayer->m_id; 
+				p.hp = m_pPlayer->getHp();
+				p.size = sizeof(SET_HP_HIT_OBJ_PACKET);
+				p.type = static_cast<char>(E_PACKET::E_P_SETHP);
+				nwManager.PushSendQueue(p, p.size);
+
+				m_fVortexDamageTimer = 0.0f; // 타이머 초기화
+			}
+		}
+	}
 	if (m_pLights)
 	{
 		m_pLights[0].m_xmf3Position = m_pPlayer->GetPosition();
@@ -1351,22 +1415,22 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 
 
-	{
-		// --- 그림자 맵 디버그 출력 ---
-		CShader* pDebugShader = pShaderManager->GetShader("Debug");
-		pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
-		pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
+	//{
+	//	// --- 그림자 맵 디버그 출력 ---
+	//	CShader* pDebugShader = pShaderManager->GetShader("Debug");
+	//	pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
+	//	pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
 
 		// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
 		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_vTorchShadowMaps[0]->Srv());
 
 
-		// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
-		pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
-		pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
-		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
-	}
+	//	// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
+	//	pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
+	//	pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
+	//	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//	pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+	//}
 }
 
 
@@ -1574,9 +1638,9 @@ void CScene::SpawnGolemPunchEffect(const XMFLOAT3& origin, const XMFLOAT3& direc
 	}
 }
 
-void CScene::SpawnBloodEffect(const XMFLOAT3& position)
+void CScene::SpawnBloodEffect(const XMFLOAT3& position,float x, float y, float z)
 {
-	int numEffects = 5 + (rand() % 5); // 5~9개
+	int numEffects = 20 + (rand() % 5); // 8~9개
 
 	for (int i = 0; i < numEffects; ++i)
 	{
@@ -1585,20 +1649,60 @@ void CScene::SpawnBloodEffect(const XMFLOAT3& position)
 				// [수정 1] 플레이어의 상체 높이를 기준으로 한 위치에서 생성합니다.
 				// 좌우(X,Z)로 너무 크게 벗어나지 않도록 오프셋을 줄입니다.
 				XMFLOAT3 spawnPos = position;
-				spawnPos.y += 15.0f; // 가슴 높이 정도
-				spawnPos.x += ((float)(rand() % 20) - 10.0f); // -10 ~ +10
-				spawnPos.z += ((float)(rand() % 20) - 10.0f); // -10 ~ +10
+				spawnPos.x += x;
+				spawnPos.y = spawnPos.y +15 +y;
+				spawnPos.z += z;// 가슴 높이 정도
+				
 
 				// [수정 2] 위로만 솟구치는게 아니라 사방으로 퍼져나가도록 초기 속도를 변경합니다.
 				XMFLOAT3 velocity = XMFLOAT3(
-					((float)(rand() % 800) - 400.0f), // X: -400 ~ +400
-					((float)(rand() % 400) - 100.0f), // Y: -100 ~ +300 (아래로도 튀도록)
-					((float)(rand() % 800) - 400.0f)  // Z: -400 ~ +400
+					((float)(rand() % 100) - 50.0f), // X: -100 ~ +100
+					((float)(rand() % 100) - 50.0f),  // Y: -50 ~ +150 (거의 위로 튀지 않음)
+					((float)(rand() % 100) - 50.0f)  // Z: -100 ~ +100
 				);
 
 				pBlood->Activate(spawnPos, velocity);
 				break;
 			}
+		}
+	}
+}
+
+void CScene::SpawnVortexEffect(const XMFLOAT3& centerPosition)
+{
+	// --- 층별 설정 정의 ---
+	const int numLayers = 3; // 총 층의 개수
+	const int particlesPerLayer = 20; // 층당 파티클 개수
+
+	// 각 층의 속성 (높이, 반경, 속도)
+	float layerHeights[] = { 20.0f, 60.0f, 100.0f };
+	float layerRadii[] = { 100.0f, 100.0f, 100.0f };
+	float layerSpeeds[] = { 90.0f, -110.0f, 130.0f }; // 속도를 음수로 주면 반대로 회전
+
+	int particlePoolIndex = 0; // 전체 파티클 풀을 순회하기 위한 인덱스
+
+	// --- 층별로 파티클 생성 ---
+	for (int i = 0; i < numLayers; ++i) // 3개의 층을 순회
+	{
+		for (int j = 0; j < particlesPerLayer; ++j) // 각 층마다 20개의 파티클 생성
+		{
+			// 사용 가능한 파티클을 풀에서 찾기
+			if (particlePoolIndex >= m_vVortexEffects.size()) break; // 풀이 부족하면 중단
+
+			CVortexEffectObject* pVortex = m_vVortexEffects[particlePoolIndex++];
+			if (pVortex->isRender) continue; // 이미 사용 중이면 건너뛰기
+
+			// 파티클마다 시작 각도를 다르게 주어 원형으로 배치
+			float startAngle = (360.0f / particlesPerLayer) * j;
+
+			// 현재 층(i)의 설정값으로 Activate 함수 호출
+			pVortex->Activate(
+				centerPosition,
+				layerRadii[i],   // i번째 층의 반경
+				layerHeights[i], // i번째 층의 높이
+				startAngle,
+				layerSpeeds[i]   // i번째 층의 속도
+			);
 		}
 	}
 }
@@ -1912,25 +2016,25 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
 
 
-
-	/*auto pballPrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Tool/Sphere.bin", m_pGameFramework);
-	pballPrefab->m_bIsPrefab = true;
+	
+	auto pBloodPrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Tool/Sphere.bin", m_pGameFramework);
+	pBloodPrefab->m_bIsPrefab = true;
 
 	int materialIndexToChange = 0;
 	UINT albedoTextureSlot = 0;
-	const wchar_t* textureFile = L"Model/Textures/red.dds";
-	ChangeAlbedoTexture(pballPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+	const wchar_t* textureFile2 = L"Model/Textures/red.dds";
+	ChangeAlbedoTexture(pBloodPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile2, pResourceManager, pd3dCommandList, pd3dDevice);
 
-	pResourceManager->RegisterPrefab("Sphere", pballPrefab);*/
-
+	pResourceManager->RegisterPrefab("BloodEffectPrefab", pBloodPrefab);
+	
 	// 나무
 	pResourceManager->RegisterPrefab("PineTree", std::make_shared<CPineObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
 
 	auto pBirchPrefab = std::make_shared<CBirchObject>(pd3dDevice, pd3dCommandList, m_pGameFramework);
 	pBirchPrefab->m_bIsPrefab = true;
 
-	int materialIndexToChange = 1;
-	UINT albedoTextureSlot = 0;
+	materialIndexToChange = 1;
+	albedoTextureSlot = 0;
 	const wchar_t*  textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
 	ChangeAlbedoTexture(pBirchPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
 

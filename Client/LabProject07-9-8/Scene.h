@@ -184,7 +184,8 @@ public:
 	void SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 	void SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 	void SpawnGolemPunchEffect(const XMFLOAT3& origin, const XMFLOAT3& direction);
-	void SpawnBloodEffect(const XMFLOAT3& position);
+	void SpawnBloodEffect(const XMFLOAT3& position,float x, float y, float z);
+	void SpawnVortexEffect(const XMFLOAT3& centerPosition);
 
 	void NewGameBuildObj();
 	void ClearObj();
@@ -192,7 +193,9 @@ private:
 	bool m_bIsDaytime = true;
 	std::vector<CResourceShardEffect*> m_vWoodShards;
 	std::vector<CResourceShardEffect*> m_vRockShards;
+	std::vector<CVortexEffectObject*> m_vVortexEffects;
 
+	float m_fVortexDamageTimer = 0.0f;
 public:	// 그림자
 	bool IsDaytime() const { return m_bIsDaytime; }
 

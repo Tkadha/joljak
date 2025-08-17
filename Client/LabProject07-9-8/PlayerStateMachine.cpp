@@ -7,6 +7,7 @@
 #include <algorithm>  // std::min, std::max 등 사용
 #include "GameFramework.h"
 #include "Object.h"
+#include "SoundManager.h"
 
 // --- 구체적인 상태 클래스 구현 ---
 
@@ -481,7 +482,7 @@ public:
         m_bHasAppliedHit = false;
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f });
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
-        PlayWavSound(_T("Sound/heavy_sword.wav"));
+        SoundManager::GetInstance().Play(L"Sound/Player/sword.wav");
     }
 
     PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
@@ -529,7 +530,8 @@ public:
         m_bHasAppliedHit = false;
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); 
-        PlayWavSound(_T("Sound/axe.wav"));
+        SoundManager::GetInstance().Play(L"Sound/Player/axe.wav");
+
     }
 
     PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
@@ -578,7 +580,8 @@ public:
         m_bHasAppliedHit = false;
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK; 
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); 
-        PlayWavSound(_T("Sound/pickaxe.wav"));
+        SoundManager::GetInstance().Play(L"Sound/Player/pickaxe.wav");
+
     }
 
     PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
@@ -860,6 +863,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
             
             if (hp <= 0) {
                 tree->StartFalling(player->GetLookVector()); // 플레이어가 바라보는 방향으로 쓰러지도록
+                SoundManager::GetInstance().Play(L"Sound/Tree/Falling.wav");
             }
 #ifdef ONLINE
             auto& nwManager = NetworkManager::GetInstance();
@@ -876,6 +880,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
             int hp = rock->getHp();
             shardType = 2;
             player->m_pStateMachine->SetLastHitInfo(hitObject->GetPosition(), shardType);
+            SoundManager::GetInstance().Play(L"Sound/Stone/Breaking Stone.wav");
             if (hp > 0) {
                 if (hp > 0) {
                     hp -= currentToolStats.damageVsRock + (int)player->PlayerAttack / 10;
@@ -923,6 +928,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         npc->Decreasehp(damage);
         packet.damage = damage;
         nwManager.PushSendQueue(packet, packet.size);
+        player->m_pStateMachine->SetObjectHitInfo(hitObject->GetPosition(),0,0,0);
 
         npc->SetInvincible(true); // set invincible
         if (npc->Gethp() <= 0) {
@@ -952,7 +958,12 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         packet.damage = damage;
 
         nwManager.PushSendQueue(packet, packet.size);
-
+        if (hitObject->m_objectType == GameObjectType::Golem) {
+            player->m_pStateMachine->SetObjectHitInfo(hitObject->GetPosition(),0,15,0);
+        }
+        else {
+            player->m_pStateMachine->SetObjectHitInfo(hitObject->GetPosition(),0,0,0);
+        }
         npc->SetInvincible(true); // set invincible
         if (npc->Gethp() <= 0) {
             player->Playerxp += 20;

@@ -693,6 +693,7 @@ void PlayerClient::SendAddPacket(shared_ptr<GameObject> obj)
     s_packet.o_type = obj->GetType();
     s_packet.a_type = obj->GetAnimationType();
     s_packet.id = obj->GetID();
+    s_packet.hp = obj->Gethp();
     tcpConnection.SendOverlapped(reinterpret_cast<char*>(&s_packet));
 }
 

@@ -8,6 +8,7 @@
 #include "Scene.h"
 #include "GameFramework.h"
 #include "NetworkManager.h"
+#include "SoundManager.h"
 #include <algorithm>
 
 
@@ -161,6 +162,9 @@ void CGameObject::ProcessPlayerHit(CPlayer* pPlayerInfo)
 	auto obj = dynamic_cast<CMonsterObject*>(this);
 	if (!obj) return;
 
+	SoundManager::GetInstance().Play(L"Sound/Player/hit.wav");
+	SoundManager::GetInstance().Play(L"Sound/Player/hit_voice.wav");
+
 	pPlayerInfo->DecreaseHp(obj->GetAtk());
 	pPlayerInfo->SetInvincibility();
 
@@ -274,7 +278,10 @@ void CGameObject::Check_attack()
 
 		m_pScene->SpawnGolemPunchEffect(bosspos, GetLook());
 	}
-
+	else if (m_objectType == GameObjectType::Golem && m_anitype == 15) {
+		XMFLOAT3 bosspos = GetPosition();
+		m_pScene->SpawnVortexEffect(bosspos);
+	}
 	// if attack animation
 	// check hit player
 	CPlayer* pPlayerInfo = m_pScene->GetPlayerInfo();
@@ -306,7 +313,7 @@ void CGameObject::Check_attack()
 
 		m_pScene->SpawnAttackEffect(GetPosition(), 20, 100.0f);
 		m_pScene->SpawnAttackEffect(GetPosition(), 20, 200.0f);
-
+		SoundManager::GetInstance().Play(L"Sound/Golem/Stamp land.wav");
 		float distance = Vector3::Length(Vector3::Subtract(GetPosition(), pPlayerInfo->GetPosition()));
 		float height_distance = std::abs(GetPosition().y - pPlayerInfo->GetPosition().y);
 
@@ -324,10 +331,106 @@ void CGameObject::Check_attack()
 
 }
 
+void PlayAnimationSound(GameObjectType obj_type, ANIMATION_TYPE ani_type)
+{
+	switch (obj_type) {
+	case GameObjectType::Spider:
+		switch (ani_type) {
+		case ANIMATION_TYPE::HIT:
+			SoundManager::GetInstance().Play(L"Sound/Spider/hurt.wav");
+		break;
+		case ANIMATION_TYPE::DIE:
+			SoundManager::GetInstance().Play(L"Sound/Spider/death.wav");
+		break;
+		}
+		break;
+	case GameObjectType::Bat:
+		switch (ani_type) {
+		case ANIMATION_TYPE::HIT:
+			SoundManager::GetInstance().Play(L"Sound/bat/hurt.wav");
+			break;
+		case ANIMATION_TYPE::DIE:
+			SoundManager::GetInstance().Play(L"Sound/bat/death.wav");
+			break;
+		}
+		break;
+	case GameObjectType::Pig:
+		switch (ani_type) {
+		case ANIMATION_TYPE::RUN:
+			SoundManager::GetInstance().Play(L"Sound/pig/hurt.wav");
+			break;
+		case ANIMATION_TYPE::DIE:
+			SoundManager::GetInstance().Play(L"Sound/pig/death.wav");
+			break;
+		}
+		break;
+	case GameObjectType::Raptor:
+		switch (ani_type) {
+		case ANIMATION_TYPE::HIT:
+			SoundManager::GetInstance().Play(L"Sound/Raptor/hurt.wav");
+			break;
+		case ANIMATION_TYPE::DIE:
+			SoundManager::GetInstance().Play(L"Sound/Raptor/death.wav");
+			break;
+		}
+		break;
+	case GameObjectType::Wolf:
+		switch (ani_type) {
+		case ANIMATION_TYPE::HIT:
+			SoundManager::GetInstance().Play(L"Sound/wolf/hurt.wav");
+			break;
+		case ANIMATION_TYPE::DIE:
+			SoundManager::GetInstance().Play(L"Sound/wolf/death.wav");
+			break;
+		}
+		break;
+	case GameObjectType::Cow:
+		switch (ani_type) {
+		case ANIMATION_TYPE::RUN:
+			SoundManager::GetInstance().Play(L"Sound/cow/hurt.wav");
+			break;
+		case ANIMATION_TYPE::DIE:
+			SoundManager::GetInstance().Play(L"Sound/cow/death.wav");
+			break;
+		}
+		break;
+	case GameObjectType::Toad:
+		switch (ani_type) {
+		case ANIMATION_TYPE::HIT:
+			SoundManager::GetInstance().Play(L"Sound/Toad/hurt.wav");
+			break;
+		case ANIMATION_TYPE::DIE:
+			SoundManager::GetInstance().Play(L"Sound/Toad/death.wav");
+			break;
+		}
+		break;
+	case GameObjectType::Golem:
+		switch (ani_type) {
+		case ANIMATION_TYPE::HIT:
+			SoundManager::GetInstance().Play(L"Sound/Golem/hurt.wav");
+			break;
+		case ANIMATION_TYPE::DIE:
+			SoundManager::GetInstance().Play(L"Sound/Golem/death.wav");
+			break;
+		case ANIMATION_TYPE::GROUND_SPELL_START:
+			SoundManager::GetInstance().Play(L"Sound/Golem/Charging.wav");
+			break;
+		case ANIMATION_TYPE::GROUND_SPELL_END:
+			SoundManager::GetInstance().Play(L"Sound/Golem/Special_Attack2.wav");
+			break;
+		case ANIMATION_TYPE::ATTACK:
+			SoundManager::GetInstance().Play(L"Sound/Golem/Attack1.wav");
+			break;
+		}
+		break;
+	}
+}
+
 void CGameObject::ChangeAnimation(ANIMATION_TYPE type)
 {
 	m_pSkinnedAnimationController->SetTrackEnable(m_anitype, false);
 
+	PlayAnimationSound(m_objectType, type);
 	switch (m_objectType)
 	{
 	case GameObjectType::Spider:
@@ -2293,7 +2396,7 @@ void CTreeObject::StartFalling(const XMFLOAT3& hitDirection) {
 	}
 	m_xmf3FallingAxis = Vector3::Normalize(m_xmf3FallingAxis);
 
-
+	SoundManager::GetInstance().Play(L"Sound/Tree/Falling.wav");
 }
 
 void CTreeObject::Animate(float fTimeElapsed) {
@@ -3026,28 +3129,21 @@ void CResourceShardEffect::Animate(float fTimeElapsed)
 
 
 
-CBloodEffectObject::CBloodEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework)
+CBloodEffectObject::CBloodEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework, CMesh* pSharedMesh, CMaterial* pSharedMaterial)
 	: CGameObject(1, framework)
 {
-	// 혈흔 모양을 표현할 간단한 모델을 로드합니다. (예: 작은 구체나 평면 모델)
-	// 여기서는 테스트를 위해 돌멩이 모델을 쓰되, 색상을 바꿔서 구분하겠습니다.
-	CLoadedModelInfo* pEffectModel = CGameObject::LoadGeometryAndAnimationFromFile(device, cmdList, "Model/Tool/Sphere.bin", framework);
-
-	int materialIndexToChange = 0;
-	UINT albedoTextureSlot = 0;
-	const wchar_t* textureFile = L"Model/Textures/red.dds";
-	ChangeAlbedoTexture(pEffectModel->m_pModelRootObject, materialIndexToChange, albedoTextureSlot, textureFile, m_pGameFramework->GetResourceManager(), cmdList, device);
-
-	SetChild(pEffectModel->m_pModelRootObject);
+	if (pSharedMesh) SetMesh(pSharedMesh);
+	if (pSharedMaterial) SetMaterial(0, pSharedMaterial);
 
 	isRender = false;
 }
+
 
 void CBloodEffectObject::Activate(const XMFLOAT3& position, const XMFLOAT3& velocity, float lifeTime)
 {
 	m_xmf4x4ToParent = Matrix4x4::Identity();
 	SetPosition(position);
-	SetScale(0.5f, 0.5f, 0.5f);
+	SetScale(0.4f, 0.4f, 0.4f);
 
 	m_xmf3Velocity = velocity; // 초기 속도 설정
 	m_fLifeTime = lifeTime;
@@ -3073,7 +3169,7 @@ void CBloodEffectObject::Animate(float fTimeElapsed)
 	XMFLOAT3 currentPos = GetPosition();
 	XMFLOAT3 shift = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed);
 
-	const float speedMultiplier = 1.0f; // 속도를 15배로 증폭 (이 값을 조절)
+	const float speedMultiplier = 0.2f; // 속도를 15배로 증폭 (이 값을 조절)
 	shift = Vector3::ScalarProduct(shift, speedMultiplier);
 
 	XMFLOAT3 newPos = Vector3::Add(currentPos, shift);
@@ -3082,7 +3178,68 @@ void CBloodEffectObject::Animate(float fTimeElapsed)
 	CGameObject::Animate(fTimeElapsed);
 }
 
+CVortexEffectObject::CVortexEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework)
+	: CGameObject(1, framework)
+{
+	// 소용돌이에 사용할 돌 파편 모델을 로드합니다.
+	CLoadedModelInfo* pShardModel = CGameObject::LoadGeometryAndAnimationFromFile(device, cmdList, "Model/RockCluster_B_LOD0.bin", framework);
+	if (pShardModel && pShardModel->m_pModelRootObject) {
+		SetMesh(pShardModel->m_pModelRootObject->m_pMesh);
+		if (pShardModel->m_pModelRootObject->m_nMaterials > 0)
+			SetMaterial(0, pShardModel->m_pModelRootObject->m_ppMaterials[0]);
+		delete pShardModel;
+	}
+	
+	isRender = false;
+}
 
+void CVortexEffectObject::Activate(const XMFLOAT3& centerPos, float rotationRadius, float layerHeight, float startAngle, float speed)
+{
+	m_xmf4x4ToParent = Matrix4x4::Identity();
+	SetScale(5.0f, 5.0f, 5.0f); // 크기 설정은 여기에 유지하거나 필요에 따라 값을 조절합니다.
+
+	m_xmf3CenterPosition = centerPos;
+	// m_fCurrentRadius = startRadius; // <- 제거
+	m_fRotationRadius = rotationRadius; // [추가] 고정 반경 저장
+	m_fLayerHeight = layerHeight;       // [추가] 층 높이 저장
+	m_fCurrentAngle = startAngle;
+	m_fRotationSpeed = speed;
+
+	m_fElapsedTime = 0.0f;
+	m_bIsActive = true;
+	isRender = true;
+}
+
+void CVortexEffectObject::Animate(float fTimeElapsed)
+{
+	if (!m_bIsActive) return;
+
+	m_fElapsedTime += fTimeElapsed;
+	if (m_fElapsedTime > m_fLifeTime) {
+		m_bIsActive = false;
+		isRender = false;
+		return;
+	}
+
+	// 1. 각도를 시간에 따라 증가시켜 회전시킵니다. (기존 로직 유지)
+	m_fCurrentAngle += m_fRotationSpeed * fTimeElapsed;
+
+	// 2. 반지름을 줄이는 로직을 제거합니다.
+	// m_fCurrentRadius -= 50.0f * fTimeElapsed; // <- 제거
+
+	// 3. 새로운 위치를 계산합니다.
+	float rad = XMConvertToRadians(m_fCurrentAngle);
+	XMFLOAT3 newPos;
+	// X, Z 위치는 고정된 m_fRotationRadius를 사용합니다.
+	newPos.x = m_xmf3CenterPosition.x + cos(rad) * m_fRotationRadius;
+	newPos.z = m_xmf3CenterPosition.z + sin(rad) * m_fRotationRadius;
+	// Y 위치는 위로 올라가는 대신, 지정된 m_fLayerHeight를 사용합니다.
+	newPos.y = m_xmf3CenterPosition.y + m_fLayerHeight;
+
+	SetPosition(newPos);
+
+	CGameObject::Animate(fTimeElapsed);
+}
 
 // 도구 추가
 void CGameObject::LoadTools(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework)
@@ -3098,7 +3255,7 @@ void CGameObject::LoadTools(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 	std::vector<ToolInfo> toolInfos = {
 		{ "Sword_Wood",   "Model/Tool/WoodenSword.bin",   "middle_01_r", {-0.01f, -0.11f, -0.07f}, {27.0f, -57.0f, -56.0f} },
-		{ "Sword_Stone",  "Model/Tool/Torch.bin",    "middle_02_r", {-0.01f, -0.11f, -0.07f}, {28.0f, -57.0f, -56.0f} },
+		{ "Sword_Stone",  "Model/Tool/StoneSword.bin",    "middle_02_r", {-0.01f, -0.11f, -0.07f}, {28.0f, -57.0f, -56.0f} },
 		{ "Sword_Metal",  "Model/Tool/MetalSword.bin",    "middle_03_r", {-0.03f, -0.13f, -0.15f}, {67.0f, 0.0f, 0.0f} },
 		{ "Axe_Wood",     "Model/Tool/WoodenAxe.bin",     "thumb_01_r", {0.05f, -0.21f, -0.01f}, {9.0f, 94.0f, -7.0f} },
 		{ "Axe_Stone",    "Model/Tool/StoneAxe.bin",      "thumb_02_r", {0.04f, -0.21f, -0.03f}, {-11.0f, 94.0f, -7.0f} },
@@ -3107,7 +3264,7 @@ void CGameObject::LoadTools(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		{ "Pickaxe_Stone","Model/Tool/StonePickaxe.bin",  "ring_02_r", {0.0f, -0.04f, -0.14f}, {30.0f, -90.0f, -93.0f} },
 		{ "Pickaxe_Metal","Model/Tool/MetalPickaxe.bin",  "ring_03_r", {0.0f, -0.05f, -0.21f}, {0.0f, 90.0f, 93.0f} },
 		{ "Hammer_Wood",  "Model/Tool/BuildingHammer.bin","hand_r", {0.1f, -0.1f, -0.12f}, {27.0f, 78.0f, 63.0f} },
-		{ "Hammer_Metal", "Model/Tool/MetalHammer.bin",   "Weapon_R", {0.01f, -0.06f, -0.18f}, {73.0f, 0.0f, 0.0f} },
+		{ "Hammer_Metal", "Model/Tool/Torch.bin",   "Weapon_R", {0.01f, -0.06f, -0.18f}, {73.0f, 0.0f, 0.0f} },
 		{ "Torch", "Model/Tool/Torch.bin",   "hand_l", {0.01f, -0.06f, -0.18f}, {73.0f, 0.0f, 0.0f} }
 	};
 

@@ -121,6 +121,14 @@ void CGameFramework::ProcessPacket(char* packet)
 				break;
 			}
 			m_pScene->PlayerList[r_packet->uid]->PlayerEquipTool(toolname.c_str());
+
+			if (toolname == "iron_hammer") {
+				m_pScene->m_pLights[m_pScene->PlayerList[r_packet->uid]->torchIndex].m_bEnable = true;
+			}
+			else {
+				m_pScene->m_pLights[m_pScene->PlayerList[r_packet->uid]->torchIndex].m_bEnable = false;
+			}
+
 		}
 	}
 	break;
@@ -136,6 +144,7 @@ void CGameFramework::ProcessPacket(char* packet)
 		
 		else if (m_pScene->PlayerList.find(recv_p->uid) != m_pScene->PlayerList.end()) {
 			m_pScene->PlayerList[recv_p->uid]->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z });
+			m_pScene->m_pLights[m_pScene->PlayerList[recv_p->uid]->torchIndex].m_xmf3Position = XMFLOAT3{ recv_p->position.x, recv_p->position.y + 50.0f, recv_p->position.z };
 		}
 	}
 	break;
@@ -213,6 +222,7 @@ void CGameFramework::ProcessPacket(char* packet)
 			foundObj->SetUp(XMFLOAT3(recv_p->up.x, recv_p->up.y, recv_p->up.z));
 			foundObj->SetRight(XMFLOAT3(recv_p->right.x, recv_p->right.y, recv_p->right.z));
 			foundObj->SetPosition(recv_p->position.x, recv_p->position.y, recv_p->position.z);
+			foundObj->Sethp(recv_p->hp);
 			m_pScene->m_vGameObjects.emplace_back(*it);
 		}
 		else {
@@ -223,7 +233,8 @@ void CGameFramework::ProcessPacket(char* packet)
 			OBJECT_TYPE o_type = recv_p->o_type;
 			ANIMATION_TYPE a_type = recv_p->a_type;
 			int id = recv_p->id;
-			m_logQueue.push(log_inout{ E_PACKET::E_O_ADD,0,right,up,look,position,o_type,a_type,id });
+			int hp = recv_p->hp;
+			m_logQueue.push(log_inout{ E_PACKET::E_O_ADD,0,right,up,look,position,o_type,a_type,id,hp });
 		}
 	}
 	break;
@@ -823,15 +834,11 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			case 'U':
 				if (m_pScene && m_pPlayer)
 				{
-					// 1. 플레이어의 상체 높이와 정면 위치를 계산합니다.
+					// 플레이어의 현재 위치를 가져옵니다.
 					XMFLOAT3 playerPos = m_pPlayer->GetPosition();
-					playerPos.y += 15.0f; // 상체 높이
 
-					XMFLOAT3 lookVector = m_pPlayer->GetLookVector();
-					XMFLOAT3 spawnOrigin = Vector3::Add(playerPos, Vector3::ScalarProduct(lookVector, 10.0f)); // 플레이어 정면 50 유닛 앞에서 생성
-
-					// 2. Scene에 파편 생성을 요청합니다.
-					m_pScene->SpawnGolemPunchEffect(spawnOrigin, lookVector);
+					// Scene의 소용돌이 생성 함수를 호출합니다.
+					m_pScene->SpawnVortexEffect(playerPos);
 				}
 				break;
 			case 'P':
@@ -852,14 +859,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				}
 				break;
 			case 'V':
-				if (m_pScene && m_pPlayer)
-				{
-					// 플레이어의 현재 위치를 가져옵니다.
-					XMFLOAT3 playerPos = m_pPlayer->GetPosition();
-
-					// Scene의 혈흔 생성 함수를 호출합니다.
-					m_pScene->SpawnBloodEffect(playerPos);
-				}
+				
 				break;
 				break;
 			case 'G': 
@@ -879,6 +879,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				AddItem("stone_sword", 1);
 				AddItem("stone_axe", 1);
 				AddItem("stone_pickaxe", 1);
+				AddItem("iron_hammer", 1);
 				break;
 			case VK_F3:
 			{
@@ -1272,7 +1273,7 @@ void CGameFramework::ReleaseObjects()
 
 
 
-void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id)
+void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id, int hp)
 {
 	if (m_pScene)
 	{
@@ -1406,7 +1407,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
-
+			gameObj->hp = hp;
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
 
@@ -1479,6 +1480,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1554,6 +1556,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1629,6 +1632,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1704,6 +1708,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1779,6 +1784,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1854,6 +1860,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1933,6 +1940,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -2016,6 +2024,22 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 			m_pScene->m_vConstructionObjects.push_back(gameObj);
+
+			for (int i = 4; i < m_pScene->m_nLights; ++i) // 4번부터 화로 조명
+			{
+				// 꺼져있는 조명을 찾으면
+				if (!m_pScene->m_pLights[i].m_bEnable)
+				{
+					m_pScene->m_pLights[i].m_bEnable = true;
+
+					auto& f4x4 = gameObj->m_xmf4x4ToParent;
+					f4x4._42 += 20.0f;
+					m_pScene->m_pLights[i].m_xmf3Position.x = f4x4._41;
+					m_pScene->m_pLights[i].m_xmf3Position.y = f4x4._42;
+					m_pScene->m_pLights[i].m_xmf3Position.z = f4x4._43;
+					break;
+				}
+			}
 		}
 		break;
 		default:
@@ -2326,6 +2350,9 @@ void CGameFramework::FrameAdvance()
 				m_pScene->PlayerList[log.ID]->SetScale(10.0f, 10.0f, 10.0f);
 				m_pScene->PlayerList[log.ID]->SetTerraindata(m_pScene->m_pTerrain);
 				if (m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController) m_pScene->PlayerList[log.ID]->PropagateAnimController(m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController);
+
+
+				m_pScene->PlayerList[log.ID]->torchIndex = m_pScene->PlayerList.size() + 1;
 				if (pUserModel) delete(pUserModel);
 			}
 			break;
@@ -2348,14 +2375,14 @@ void CGameFramework::FrameAdvance()
 					[log](CGameObject* obj) { return obj && obj->m_id == log.id; });
 
 				if (it == m_pScene->m_vGameObjects.end() && it2 == m_pScene->m_listGameObjects.end()) {
-					AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id);
+					AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id, log.hp);
 				}
 			}
 				break;
 			case E_PACKET::E_STRUCT_OBJ:
 			{
 				std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
-				AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id);
+				AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id, log.hp);
 			}
 			break;
 			default:
@@ -2468,7 +2495,8 @@ void CGameFramework::FrameAdvance()
 		}
 	}
 	HitInfo lastHit = m_pPlayer->m_pStateMachine->GetAndClearLastHitInfo();
-	if (lastHit.hasHit && m_pScene)
+	ObjectInfo objectHit = m_pPlayer->m_pStateMachine->GetLastObjectInfo();
+	if (lastHit.hasHit && m_pScene )
 	{
 		XMFLOAT3 pos = m_pPlayer->GetPosition();
 		// [수정] int 값을 CScene::ShardType으로 변환하여 전달합니다.
@@ -2485,6 +2513,10 @@ void CGameFramework::FrameAdvance()
 
 		// 변환된 타입으로 파편 생성을 요청합니다.
 		m_pScene->SpawnResourceShards(pos, typeToSpawn);
+	}
+	if (objectHit.hasHit && m_pScene)
+	{
+		m_pScene->SpawnBloodEffect(objectHit.position,objectHit.x,objectHit.y,objectHit.z);
 	}
 
 	//m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
@@ -2515,126 +2547,126 @@ void CGameFramework::FrameAdvance()
 	// 위치를 화면 너비와 높이에 대한 비율로 설정
 	ImVec2 hotbarPos = ImVec2(displaySize.x * 0.02f, displaySize.y * 0.9f);
 
-		if (m_eGameState == GameState::InGame) {
-			ImGui::SetNextWindowPos(hotbarPos);
-			ImGui::SetNextWindowSize(ImVec2(WindowWidth, 65));
-			ImGui::Begin("Hotbar", nullptr,
+	if (m_eGameState == GameState::InGame) {
+		ImGui::SetNextWindowPos(hotbarPos);
+		ImGui::SetNextWindowSize(ImVec2(WindowWidth, 65));
+		ImGui::Begin("Hotbar", nullptr,
+			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoBackground);
+
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+
+		for (int i = 0; i < HotbarCount; ++i)
+		{
+			if (i > 0) ImGui::SameLine();
+
+			ImGui::PushID(i);
+
+			if (i == m_SelectedHotbarIndex)
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 1.0f, 0.0f, 0.5f)); // 노란색 반투명
+
+			if (!m_inventorySlots[i].IsEmpty())
+			{
+				// 버튼 먼저 생성 (테두리 유지)
+				ImVec2 pos = ImGui::GetCursorScreenPos();
+				ImGui::Button(" ", ImVec2(SlotSize, SlotSize));
+
+				// 버튼 위에 아이콘을 따로 그리기
+				ImTextureID icon = m_inventorySlots[i].item->GetIconHandle();
+				if (icon)
+				{
+					ImGui::GetWindowDrawList()->AddImage(
+						icon,
+						pos,
+						ImVec2(pos.x + SlotSize, pos.y + SlotSize)
+					);
+				}
+			}
+			else
+			{
+				ImGui::Button(" ", ImVec2(SlotSize, SlotSize)); // 빈 슬롯은 그냥 테두리만
+			}
+			if (i == m_SelectedHotbarIndex)
+				ImGui::PopStyleColor();
+
+			ImGui::PopID();
+		}
+
+
+		ImGui::PopStyleVar();
+		ImGui::End();
+
+
+
+
+		//////////////////////////////////////////////////플레이어 UI
+
+		{
+			const float hudWidth = displaySize.x * 0.18f;
+			const float hudHeight = displaySize.y * 0.15f;
+			const float barWidth = displaySize.x * 0.07f;
+
+			// [추가] hudHeight를 기준으로 ProgressBar의 높이를 계산합니다.
+			const float barHeight = hudHeight * 0.15f; // 예: HUD 창 높이의 15%
+
+			ImVec2 hudPos = ImVec2(displaySize.x - hudWidth - (displaySize.x * 0.02f), displaySize.y - hudHeight - (displaySize.y * 0.01f));
+
+			ImGui::SetNextWindowPos(hudPos);
+			ImGui::SetNextWindowSize(ImVec2(hudWidth, hudHeight));
+			ImGui::Begin("StatusBars", nullptr,
 				ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
 				ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
-				ImGuiWindowFlags_NoBackground);
-
-			ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
-
-			for (int i = 0; i < HotbarCount; ++i)
-			{
-				if (i > 0) ImGui::SameLine();
-
-				ImGui::PushID(i);
-
-				if (i == m_SelectedHotbarIndex)
-					ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 1.0f, 0.0f, 0.5f)); // 노란색 반투명
-
-				if (!m_inventorySlots[i].IsEmpty())
-				{
-					// 버튼 먼저 생성 (테두리 유지)
-					ImVec2 pos = ImGui::GetCursorScreenPos();
-					ImGui::Button(" ", ImVec2(SlotSize, SlotSize));
-
-					// 버튼 위에 아이콘을 따로 그리기
-					ImTextureID icon = m_inventorySlots[i].item->GetIconHandle();
-					if (icon)
-					{
-						ImGui::GetWindowDrawList()->AddImage(
-							icon,
-							pos,
-							ImVec2(pos.x + SlotSize, pos.y + SlotSize)
-						);
-					}
-				}
-				else
-				{
-					ImGui::Button(" ", ImVec2(SlotSize, SlotSize)); // 빈 슬롯은 그냥 테두리만
-				}
-				if (i == m_SelectedHotbarIndex)
-					ImGui::PopStyleColor();
-
-				ImGui::PopID();
-			}
+				ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoCollapse);
 
 
-			ImGui::PopStyleVar();
+			ImGui::BeginGroup();
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Hp"); // 체력 
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+			ImGui::ProgressBar(
+				(float)m_pPlayer->Playerhp / (float)m_pPlayer->Maxhp,
+				ImVec2(barWidth, barHeight),
+				std::to_string(m_pPlayer->Playerhp).c_str()
+			);
+			ImGui::PopStyleColor();
+			ImGui::EndGroup();
+
+			ImGui::SameLine(0.0f, 50.0f);
+			ImGui::BeginGroup();
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Stamina"); // 스태미너
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.5f, 1.0f, 1.0f));
+			ImGui::ProgressBar(
+				(float)m_pPlayer->Playerstamina / (float)m_pPlayer->Maxstamina,
+				ImVec2(barWidth, barHeight),
+				std::to_string(m_pPlayer->Playerstamina).c_str()
+			);
+			ImGui::PopStyleColor();
+			ImGui::EndGroup();
+
+
+			ImGui::BeginGroup();
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Hunger"); // 허기
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
+			ImGui::ProgressBar(m_pPlayer->PlayerHunger / 100.f, ImVec2(barWidth, barHeight));
+			ImGui::PopStyleColor();
+			ImGui::EndGroup();
+
+			ImGui::SameLine(0.0f, 50.0f);
+
+			ImGui::BeginGroup();
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Thirst"); // 갈증
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 0.2f, 1.0f, 1.0f));
+			ImGui::ProgressBar(m_pPlayer->PlayerThirst / 100.f, ImVec2(barWidth, barHeight));
+			ImGui::PopStyleColor();
+			ImGui::EndGroup();
+
 			ImGui::End();
-
-
-
-
-			//////////////////////////////////////////////////플레이어 UI
-
-			{
-				const float hudWidth = displaySize.x * 0.18f;
-				const float hudHeight = displaySize.y * 0.15f;
-				const float barWidth = displaySize.x * 0.07f;
-
-				// [추가] hudHeight를 기준으로 ProgressBar의 높이를 계산합니다.
-				const float barHeight = hudHeight * 0.15f; // 예: HUD 창 높이의 15%
-
-				ImVec2 hudPos = ImVec2(displaySize.x - hudWidth - (displaySize.x * 0.02f), displaySize.y - hudHeight - (displaySize.y * 0.01f));
-
-				ImGui::SetNextWindowPos(hudPos);
-				ImGui::SetNextWindowSize(ImVec2(hudWidth, hudHeight));
-				ImGui::Begin("StatusBars", nullptr,
-					ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-					ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
-					ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoCollapse);
-
-
-				ImGui::BeginGroup();
-				ImGui::AlignTextToFramePadding();
-				ImGui::Text("Hp"); // 체력 
-				ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-				ImGui::ProgressBar(
-					(float)m_pPlayer->Playerhp / (float)m_pPlayer->Maxhp,
-					ImVec2(barWidth, barHeight),
-					std::to_string(m_pPlayer->Playerhp).c_str()
-				);
-				ImGui::PopStyleColor();
-				ImGui::EndGroup();
-
-				ImGui::SameLine(0.0f, 50.0f);
-				ImGui::BeginGroup();
-				ImGui::AlignTextToFramePadding();
-				ImGui::Text("Stamina"); // 스태미너
-				ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.5f, 1.0f, 1.0f));
-				ImGui::ProgressBar(
-					(float)m_pPlayer->Playerstamina / (float)m_pPlayer->Maxstamina,
-					ImVec2(barWidth, barHeight),
-					std::to_string(m_pPlayer->Playerstamina).c_str()
-				);
-				ImGui::PopStyleColor();
-				ImGui::EndGroup();
-
-
-				ImGui::BeginGroup();
-				ImGui::AlignTextToFramePadding();
-				ImGui::Text("Hunger"); // 허기
-				ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
-				ImGui::ProgressBar(m_pPlayer->PlayerHunger / 100.f, ImVec2(barWidth, barHeight));
-				ImGui::PopStyleColor();
-				ImGui::EndGroup();
-
-				ImGui::SameLine(0.0f, 50.0f);
-
-				ImGui::BeginGroup();
-				ImGui::AlignTextToFramePadding();
-				ImGui::Text("Thirst"); // 갈증
-				ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 0.2f, 1.0f, 1.0f));
-				ImGui::ProgressBar(m_pPlayer->PlayerThirst / 100.f, ImVec2(barWidth, barHeight));
-				ImGui::PopStyleColor();
-				ImGui::EndGroup();
-
-				ImGui::End();
-			}
 		}
+	}
 	//////////////////////////////////////////////////////// 인벤토리
 	if (ShowInventory)
 	{
@@ -3096,20 +3128,21 @@ void CGameFramework::FrameAdvance()
 						nwManager.PushSendQueue(s_packet, s_packet.size);
 					}
 
-
-					for (int i = 4; i < m_pScene->m_nLights; ++i) // 4번부터 화로 조명
-					{
-						// 꺼져있는 조명을 찾으면
-						if (!m_pScene->m_pLights[i].m_bEnable)
+					if (m_nSelectedBuildingIndex == 1) {
+						for (int i = 4; i < m_pScene->m_nLights; ++i) // 4번부터 화로 조명
 						{
-							m_pScene->m_pLights[i].m_bEnable = true;
+							// 꺼져있는 조명을 찾으면
+							if (!m_pScene->m_pLights[i].m_bEnable)
+							{
+								m_pScene->m_pLights[i].m_bEnable = true;
 
-							auto& f4x4 = pInstalledObject->m_xmf4x4ToParent;
-							f4x4._42 += 20.0f;
-							m_pScene->m_pLights[i].m_xmf3Position.x = f4x4._41;
-							m_pScene->m_pLights[i].m_xmf3Position.y = f4x4._42;
-							m_pScene->m_pLights[i].m_xmf3Position.z = f4x4._43;
-							break;
+								auto& f4x4 = pInstalledObject->m_xmf4x4ToParent;
+								f4x4._42 += 20.0f;
+								m_pScene->m_pLights[i].m_xmf3Position.x = f4x4._41;
+								m_pScene->m_pLights[i].m_xmf3Position.y = f4x4._42;
+								m_pScene->m_pLights[i].m_xmf3Position.z = f4x4._43;
+								break;
+							}
 						}
 					}
 				}
