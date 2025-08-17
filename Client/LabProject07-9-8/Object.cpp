@@ -331,8 +331,28 @@ void CGameObject::Check_attack()
 
 }
 
-void PlayAnimationSound(GameObjectType obj_type, ANIMATION_TYPE ani_type)
+void CGameObject::PlayAnimationSound(GameObjectType obj_type, ANIMATION_TYPE ani_type)
 {
+	const float MAX_SOUND_DISTANCE = 250.0f;
+	const float MAX_SOUND_DISTANCE_SQ = MAX_SOUND_DISTANCE * MAX_SOUND_DISTANCE;
+
+	// 2. 플레이어와 이 게임 오브젝트의 위치를 가져옵니다.
+	auto p_pos = m_pScene->m_pPlayer->GetPosition(); // 플레이어 위치
+	auto obj_pos = this->GetPosition();              // 현재 오브젝트 위치
+
+	// 3. 두 위치 사이의 제곱 거리를 계산합니다.
+	// GetPosition()이 반환하는 타입에 맞게 x, y, z 멤버에 접근해야 합니다.
+	// 아래는 일반적인 XMFLOAT3 또는 유사한 구조체를 가정합니다.
+	float dx = p_pos.x - obj_pos.x;
+	float dy = p_pos.y - obj_pos.y;
+	float dz = p_pos.z - obj_pos.z; // 2D 게임이라면 이 줄은 제외
+	float distance_squared = dx * dx + dy * dy + dz * dz;
+
+	// 4. 계산된 제곱 거리가 최대 거리의 제곱보다 크면 함수를 종료합니다.
+	if (distance_squared > MAX_SOUND_DISTANCE_SQ) {
+		return; // 너무 멀어서 사운드를 재생하지 않음
+	}
+
 	switch (obj_type) {
 	case GameObjectType::Spider:
 		switch (ani_type) {

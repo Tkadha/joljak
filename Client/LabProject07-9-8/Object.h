@@ -147,7 +147,7 @@ public:
 
 	virtual void FSMUpdate() {}
 	void ChangeAnimation(ANIMATION_TYPE type);
-
+	void PlayAnimationSound(GameObjectType obj_type, ANIMATION_TYPE ani_type);
 
 	// 그림자 렌더용 함수
 	virtual void RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList);
