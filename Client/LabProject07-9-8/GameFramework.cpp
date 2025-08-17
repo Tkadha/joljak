@@ -121,6 +121,14 @@ void CGameFramework::ProcessPacket(char* packet)
 				break;
 			}
 			m_pScene->PlayerList[r_packet->uid]->PlayerEquipTool(toolname.c_str());
+
+			if (toolname == "iron_hammer") {
+				m_pScene->m_pLights[m_pScene->PlayerList[r_packet->uid]->torchIndex].m_bEnable = true;
+			}
+			else {
+				m_pScene->m_pLights[m_pScene->PlayerList[r_packet->uid]->torchIndex].m_bEnable = false;
+			}
+
 		}
 	}
 	break;
@@ -136,6 +144,7 @@ void CGameFramework::ProcessPacket(char* packet)
 		
 		else if (m_pScene->PlayerList.find(recv_p->uid) != m_pScene->PlayerList.end()) {
 			m_pScene->PlayerList[recv_p->uid]->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z });
+			m_pScene->m_pLights[m_pScene->PlayerList[recv_p->uid]->torchIndex].m_xmf3Position = XMFLOAT3{ recv_p->position.x, recv_p->position.y + 50.0f, recv_p->position.z };
 		}
 	}
 	break;
@@ -854,9 +863,9 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				break;
 				break;
 			case 'G': 
-				if (m_pScene && m_pScene->m_pLights)
+				if (m_pScene && m_pScene->m_pLights )//&& !m_pScene->IsDaytime())	// 낮에는 횃불 못 켜
 				{
-					m_pScene->m_pLights[0].m_bEnable = (m_pScene->m_pLights[0].m_bEnable == 0) ? 1 : 0;
+					m_pScene->m_pLights[1].m_bEnable = (m_pScene->m_pLights[1].m_bEnable == 0) ? 1 : 0;
 				}
 				break;
 			case VK_F2:
@@ -870,6 +879,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				AddItem("stone_sword", 1);
 				AddItem("stone_axe", 1);
 				AddItem("stone_pickaxe", 1);
+				AddItem("iron_hammer", 1);
 				break;
 			case VK_F3:
 			{
@@ -2014,6 +2024,22 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
 			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
 			m_pScene->m_vConstructionObjects.push_back(gameObj);
+
+			for (int i = 4; i < m_pScene->m_nLights; ++i) // 4번부터 화로 조명
+			{
+				// 꺼져있는 조명을 찾으면
+				if (!m_pScene->m_pLights[i].m_bEnable)
+				{
+					m_pScene->m_pLights[i].m_bEnable = true;
+
+					auto& f4x4 = gameObj->m_xmf4x4ToParent;
+					f4x4._42 += 20.0f;
+					m_pScene->m_pLights[i].m_xmf3Position.x = f4x4._41;
+					m_pScene->m_pLights[i].m_xmf3Position.y = f4x4._42;
+					m_pScene->m_pLights[i].m_xmf3Position.z = f4x4._43;
+					break;
+				}
+			}
 		}
 		break;
 		default:
@@ -2324,6 +2350,9 @@ void CGameFramework::FrameAdvance()
 				m_pScene->PlayerList[log.ID]->SetScale(10.0f, 10.0f, 10.0f);
 				m_pScene->PlayerList[log.ID]->SetTerraindata(m_pScene->m_pTerrain);
 				if (m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController) m_pScene->PlayerList[log.ID]->PropagateAnimController(m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController);
+
+
+				m_pScene->PlayerList[log.ID]->torchIndex = m_pScene->PlayerList.size() + 1;
 				if (pUserModel) delete(pUserModel);
 			}
 			break;
@@ -3097,6 +3126,24 @@ void CGameFramework::FrameAdvance()
 						s_packet.position.z = f4x4._43;
 
 						nwManager.PushSendQueue(s_packet, s_packet.size);
+					}
+
+					if (m_nSelectedBuildingIndex == 1) {
+						for (int i = 4; i < m_pScene->m_nLights; ++i) // 4번부터 화로 조명
+						{
+							// 꺼져있는 조명을 찾으면
+							if (!m_pScene->m_pLights[i].m_bEnable)
+							{
+								m_pScene->m_pLights[i].m_bEnable = true;
+
+								auto& f4x4 = pInstalledObject->m_xmf4x4ToParent;
+								f4x4._42 += 20.0f;
+								m_pScene->m_pLights[i].m_xmf3Position.x = f4x4._41;
+								m_pScene->m_pLights[i].m_xmf3Position.y = f4x4._42;
+								m_pScene->m_pLights[i].m_xmf3Position.z = f4x4._43;
+								break;
+							}
+						}
 					}
 				}
 			}

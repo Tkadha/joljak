@@ -166,7 +166,7 @@ float4 PSStandard2(VS_STANDARD_OUTPUT input) : SV_TARGET
 
 
 float4 PSStandard3(VS_STANDARD_OUTPUT input) : SV_TARGET
-{
+{    
     float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
     if (gnTexturesMask & MATERIAL_ALBEDO_MAP)
         cAlbedoColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
@@ -197,10 +197,8 @@ float4 PSStandard3(VS_STANDARD_OUTPUT input) : SV_TARGET
         normalW = normalize(input.normalW);
     }
     
-    float4 cIlluminationColor = Lighting(gMaterialInfo, input.positionW, normalW, gShadowMap, gTorchShadowMap);
-
-    float3 totalLight = gMaterialInfo.AmbientColor.rgb + cIlluminationColor.rgb;
-    float3 finalColor = totalLight * cAlbedoColor.rgb;
+    float4 totalLight = Lighting(gMaterialInfo, input.positionW, normalW, gShadowMap, gTorchShadowMap);
+    float3 finalColor = cAlbedoColor.rgb * totalLight.rgb;
     
     // 4. 안개 적용
     
