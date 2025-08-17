@@ -1706,6 +1706,14 @@ void CScene::NewGameBuildObj()
 	{
 		m_vGameObjects.emplace_back(obj.second);
 	}
+	for (auto& obj : m_vBloodEffects)
+	{
+		m_vGameObjects.push_back(obj);
+	}
+	for (auto& obj : m_vVortexEffects)
+	{
+		m_vGameObjects.push_back(obj);
+	}
 }
 
 void CScene::ClearObj()
