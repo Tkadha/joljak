@@ -213,6 +213,7 @@ void CGameFramework::ProcessPacket(char* packet)
 			foundObj->SetUp(XMFLOAT3(recv_p->up.x, recv_p->up.y, recv_p->up.z));
 			foundObj->SetRight(XMFLOAT3(recv_p->right.x, recv_p->right.y, recv_p->right.z));
 			foundObj->SetPosition(recv_p->position.x, recv_p->position.y, recv_p->position.z);
+			foundObj->Sethp(recv_p->hp);
 			m_pScene->m_vGameObjects.emplace_back(*it);
 		}
 		else {
@@ -223,7 +224,8 @@ void CGameFramework::ProcessPacket(char* packet)
 			OBJECT_TYPE o_type = recv_p->o_type;
 			ANIMATION_TYPE a_type = recv_p->a_type;
 			int id = recv_p->id;
-			m_logQueue.push(log_inout{ E_PACKET::E_O_ADD,0,right,up,look,position,o_type,a_type,id });
+			int hp = recv_p->hp;
+			m_logQueue.push(log_inout{ E_PACKET::E_O_ADD,0,right,up,look,position,o_type,a_type,id,hp });
 		}
 	}
 	break;
@@ -408,7 +410,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	// 그림자 맵 DSV 힙
 	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-	dsvHeapDesc.NumDescriptors = 1;
+	dsvHeapDesc.NumDescriptors = 2;
 	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	dsvHeapDesc.NodeMask = 0;
@@ -631,10 +633,12 @@ void CGameFramework::CreateRtvAndDsvDescriptorHeaps()
 	HRESULT hResult = m_pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void **)&m_pd3dRtvDescriptorHeap);
 	::gnRtvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-	d3dDescriptorHeapDesc.NumDescriptors = 1;
 	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-	hResult = m_pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void **)&m_pd3dDsvDescriptorHeap);
-	::gnDsvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	d3dDescriptorHeapDesc.NumDescriptors = 3; // 메인 깊이버퍼 1개 + 그림자맵 2개
+	hResult = m_pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_pd3dDsvDescriptorHeap);
+
+	// 디바이스로부터 DSV 디스크립터의 증가 크기를 얻어와 멤버 변수에 저장
+	m_nDsvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 }
 
 void CGameFramework::CreateRenderTargetViews()
@@ -821,15 +825,11 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			case 'U':
 				if (m_pScene && m_pPlayer)
 				{
-					// 1. 플레이어의 상체 높이와 정면 위치를 계산합니다.
+					// 플레이어의 현재 위치를 가져옵니다.
 					XMFLOAT3 playerPos = m_pPlayer->GetPosition();
-					playerPos.y += 15.0f; // 상체 높이
 
-					XMFLOAT3 lookVector = m_pPlayer->GetLookVector();
-					XMFLOAT3 spawnOrigin = Vector3::Add(playerPos, Vector3::ScalarProduct(lookVector, 10.0f)); // 플레이어 정면 50 유닛 앞에서 생성
-
-					// 2. Scene에 파편 생성을 요청합니다.
-					m_pScene->SpawnGolemPunchEffect(spawnOrigin, lookVector);
+					// Scene의 소용돌이 생성 함수를 호출합니다.
+					m_pScene->SpawnVortexEffect(playerPos);
 				}
 				break;
 			case 'P':
@@ -1270,7 +1270,7 @@ void CGameFramework::ReleaseObjects()
 
 
 
-void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id)
+void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id, int hp)
 {
 	if (m_pScene)
 	{
@@ -1404,7 +1404,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
-
+			gameObj->hp = hp;
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
 
@@ -1477,6 +1477,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1552,6 +1553,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1627,6 +1629,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1702,6 +1705,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1777,6 +1781,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1852,6 +1857,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -1931,6 +1937,7 @@ void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3
 			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
 			gameObj->SetPosition(position.x, position.y, position.z);
 			gameObj->m_id = id;
+			gameObj->hp = hp;
 
 			gameObj->m_treecount = m_pScene->tree_obj_count;
 			gameObj->SetTerraindata(m_pScene->m_pTerrain);
@@ -2346,14 +2353,14 @@ void CGameFramework::FrameAdvance()
 					[log](CGameObject* obj) { return obj && obj->m_id == log.id; });
 
 				if (it == m_pScene->m_vGameObjects.end() && it2 == m_pScene->m_listGameObjects.end()) {
-					AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id);
+					AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id, log.hp);
 				}
 			}
 				break;
 			case E_PACKET::E_STRUCT_OBJ:
 			{
 				std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
-				AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id);
+				AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id, log.hp);
 			}
 			break;
 			default:

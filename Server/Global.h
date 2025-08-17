@@ -249,10 +249,12 @@ public:
 	FLOAT3 look{};
 	FLOAT3 position{};
 	int id;
+	int hp;
 	OBJECT_TYPE o_type;
 	ANIMATION_TYPE a_type;
 	ADD_PACKET() {
 		id = -1;
+		hp = -1;
 		o_type = OBJECT_TYPE::OB_UNKNOWN;
 		a_type = ANIMATION_TYPE::UNKNOWN;
 		size = sizeof(ADD_PACKET);

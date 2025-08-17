@@ -77,7 +77,8 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.6f, 0.1f, 1.0f);
 	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);		
 	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.0007f, 0.00017f);
+	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.07f, 0.017f);
+	m_pLights[0].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 	
 	
 	m_pLights[2].m_bEnable = true;
@@ -185,20 +186,34 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	// 1. 그림자 맵 객체 생성
 	m_pShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 4096 * 2, 4096 * 2);
 
-	// 2. SRV 핸들 할당: Framework의 AllocateSrvDescriptors 함수를 사용합니다.
 	D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE gpuSrvHandle;
 	m_pGameFramework->AllocateSrvDescriptors(1, cpuSrvHandle, gpuSrvHandle);
 
-	// 3. DSV 핸들 가져오기: 방금 Framework에 만든 그림자용 DSV 힙의 시작 핸들을 가져옵니다.
 	D3D12_CPU_DESCRIPTOR_HANDLE cpuDsvHandle = m_pGameFramework->GetShadowDsvHeap()->GetCPUDescriptorHandleForHeapStart();
 
-	// 4. ShadowMap에 모든 핸들을 전달하여 최종 리소스 생성
 	m_pShadowMap->BuildDescriptors(
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuSrvHandle),
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(gpuSrvHandle),
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuDsvHandle)
 	);
+
+
+	// 1. 횃불용 그림자 맵 객체를 생성합니다.
+	m_pTorchShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 1024, 1024);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandleForTorch; 
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuSrvHandleForTorch; 
+	m_pGameFramework->AllocateSrvDescriptors(1, cpuSrvHandleForTorch, gpuSrvHandleForTorch); 
+
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuDsvHandleForTorch = m_pGameFramework->GetShadowDsvHeap()->GetCPUDescriptorHandleForHeapStart(); 
+	cpuDsvHandleForTorch.ptr += m_pGameFramework->GetDsvDescriptorIncrementSize();
+
+	m_pTorchShadowMap->BuildDescriptors( 
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuSrvHandleForTorch), 
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(gpuSrvHandleForTorch), 
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuDsvHandleForTorch) 
+	); 
 
 	std::random_device rd;
 	std::mt19937 gen(rd());
@@ -367,7 +382,13 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 		m_vGameObjects.push_back(pBlood); // 렌더링을 위해 메인 목록에도 추가
 	}
 	/////////////////////////////////////////
-	
+	const int vortexPoolSize = 50; // 소용돌이에 사용할 파편 수
+	for (int i = 0; i < vortexPoolSize; ++i) {
+		auto* pVortex = new CVortexEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		//pVortex->SetScale(1.0f, 1.0f, 1.0f);
+		m_vVortexEffects.push_back(pVortex);
+		m_vGameObjects.push_back(pVortex);
+	}
 
 	// 생성할 건축물 목록 (프리팹 이름과 동일해야 함)
 	std::vector<std::string> buildableItems = { "wood_wall","furnace" /*, "wood_floor", ... */ };
@@ -981,6 +1002,59 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		}
 	}
 	*/
+
+	bool bIsVortexActive = false;
+	XMFLOAT3 vortexCenter = XMFLOAT3(0.f, 0.f, 0.f);
+
+	// 현재 활성화된 소용돌이가 있는지, 있다면 중심점이 어디인지 찾습니다.
+	for (const auto& pVortex : m_vVortexEffects)
+	{
+		if (pVortex && pVortex->isRender)
+		{
+			bIsVortexActive = true;
+			vortexCenter = pVortex->GetPosition(); // 활성화된 파티클 아무거나 하나로 중심점을 설정
+			break;
+		}
+	}
+
+	// 소용돌이가 활성화 상태이고 플레이어가 존재한다면 대미지 계산을 시작합니다.
+	if (bIsVortexActive && m_pPlayer)
+	{
+		// 대미지 범위 설정 (SpawnVortexEffect에서 설정한 가장 큰 값 기준)
+		const float fDamageRadius = 250.0f;
+		const float fDamageHeight = 100.0f;
+		const float fDamageInterval = 0.5f; // 0.5초마다 대미지
+		const int nDamageAmount = 5;       // 1회당 대미지 양
+
+		XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+
+		// 1. 수평 거리 계산 (Y축 무시)
+		float fDistanceXZ = sqrt(pow(playerPos.x - vortexCenter.x, 2) + pow(playerPos.z - vortexCenter.z, 2));
+
+		// 2. 수직 거리 계산
+		float fDistanceY = abs(playerPos.y - vortexCenter.y);
+
+		// 3. 플레이어가 대미지 범위(원통) 안에 있는지 확인
+		if (fDistanceXZ <= fDamageRadius && fDistanceY <= fDamageHeight)
+		{
+			m_fVortexDamageTimer += fTimeElapsed;
+			if (m_fVortexDamageTimer >= fDamageInterval)
+			{
+				m_pPlayer->DecreaseHp(nDamageAmount);
+
+				// 서버와 체력 동기화를 위한 패킷 전송
+				auto& nwManager = NetworkManager::GetInstance();
+				SET_HP_HIT_OBJ_PACKET p;
+				p.hit_obj_id = m_pPlayer->m_id; 
+				p.hp = m_pPlayer->getHp();
+				p.size = sizeof(SET_HP_HIT_OBJ_PACKET);
+				p.type = static_cast<char>(E_PACKET::E_P_SETHP);
+				nwManager.PushSendQueue(p, p.size);
+
+				m_fVortexDamageTimer = 0.0f; // 타이머 초기화
+			}
+		}
+	}
 	if (m_pLights)
 	{
 		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
@@ -990,11 +1064,10 @@ void CScene::AnimateObjects(float fTimeElapsed)
 	if (m_pPlayer && m_pLights)
 	{
 		XMFLOAT3 playerPosition = m_pPlayer->GetPosition();
-
-		// 빛이 플레이어 머리 약간 위에서 비추도록 y 좌표를 조정합니다.
 		playerPosition.y += 50.0f;
 
 		m_pLights[0].m_xmf3Position = playerPosition;
+		m_pLights[0].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
 
 	if (m_pWavesObject) m_pWavesObject->Animate(fTimeElapsed);
@@ -1018,7 +1091,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// =================================================================
 	// Pass 1: 그림자 맵 생성
 	// =================================================================
-	if(IsDaytime())
+	//if(IsDaytime())
 	{
 		// 렌더 타겟을 그림자 맵으로 설정
 		m_pShadowMap->SetRenderTarget(pd3dCommandList);
@@ -1035,19 +1108,9 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4Projection, XMMatrixTranspose(proj));
 
 
-		//pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbLightCamera->GetGPUVirtualAddress());
-
-
 		//CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Skinned_Shaodw");
 		//pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
 		//pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
-
-
-
-		// 그림자 생성을 위한 전용 셰이더 설정
-		CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Shadow");
-		pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
-		pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
 
 		{
 			std::lock_guard<std::mutex> lock(m_Mutex);
@@ -1092,6 +1155,71 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		// 1. 그림자 맵 리소스를 픽셀 셰이더에서 읽을 수 있는 상태로 변경
 		m_pShadowMap->TransitionToReadable(pd3dCommandList);
 	}
+
+	// =================================================================
+   // Pass 1.5: 횃불 그림자 맵 생성
+   // =================================================================
+	LIGHT* pTorchLight = &m_pLights[0]; 
+	if (pTorchLight->m_bEnable)
+	{
+		// 1. 렌더 타겟을 "횃불용" 섀도우 맵으로 설정합니다.
+		m_pTorchShadowMap->SetRenderTarget(pd3dCommandList);
+
+		// 2. "횃불의 시점"에서 바라보는 View/Projection 행렬을 계산합니다.
+		UpdateTorchShadowTransform(pTorchLight);
+		pCamera->UpdateTorchShadowTransform(mTorchShadowTransform);
+
+		// 3. 계산된 행렬을 빛 카메라 상수 버퍼(b0)에 업데이트합니다.
+		XMMATRIX view = XMLoadFloat4x4(&mLightView);
+		XMMATRIX proj = XMLoadFloat4x4(&mLightProj);
+		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4View, XMMatrixTranspose(view));
+		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4Projection, XMMatrixTranspose(proj));
+
+		//pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbLightCamera->GetGPUVirtualAddress());
+
+		{
+			std::lock_guard<std::mutex> lock(m_Mutex);
+
+			for (auto& obj : m_vGameObjects) {
+				if (obj->m_objectType != GameObjectType::Toad && obj->m_objectType != GameObjectType::Wasp &&
+					obj->m_objectType != GameObjectType::Wolf && obj->m_objectType != GameObjectType::Bat &&
+					obj->m_objectType != GameObjectType::Snake && obj->m_objectType != GameObjectType::Turtle &&
+					obj->m_objectType != GameObjectType::Raptor && obj->m_objectType != GameObjectType::Snail &&
+					obj->m_objectType != GameObjectType::Spider)
+				{
+					if (obj->isRender) obj->RenderShadow(pd3dCommandList);
+				}
+			}
+		}
+		const float fRenderDistanceSq = 800.0f * 800.0f;
+		XMVECTOR playerPos = XMLoadFloat3(&m_pPlayer->GetPosition());
+		for (auto& obj : m_lEnvironmentObjects) {
+
+			if (!obj) continue;
+			XMVECTOR objPos = XMLoadFloat3(&obj->GetPosition());
+			float fDistanceSq = XMVectorGetX(XMVector3LengthSq(XMVectorSubtract(playerPos, objPos)));
+
+			if (fDistanceSq <= fRenderDistanceSq)
+			{
+				obj->RenderShadow(pd3dCommandList);
+			}
+		}
+
+		for (auto& obj : m_vConstructionObjects) {
+			if (obj) obj->RenderShadow(pd3dCommandList);
+		}
+
+		if (m_pPlayer) m_pPlayer->RenderShadow(pd3dCommandList);
+
+		for (auto& p : PlayerList) {
+			if (p.second->isRender) p.second->RenderShadow(pd3dCommandList);
+		}
+
+		if (m_pTerrain) m_pTerrain->RenderShadow(pd3dCommandList);
+		// 5. 횃불 섀도우 맵을 읽기 가능한 상태로 전환합니다.
+		m_pTorchShadowMap->TransitionToReadable(pd3dCommandList);
+	}
+
 
 	// 2. 렌더 타겟을 다시 화면(메인 백버퍼)과 메인 깊이 버퍼로 설정
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pGameFramework->GetCurrentRtvCPUDescriptorHandle();
@@ -1266,20 +1394,20 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 
 	{
-		//// --- 그림자 맵 디버그 출력 ---
-		//CShader* pDebugShader = pShaderManager->GetShader("Debug");
-		//pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
-		//pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
+		// --- 그림자 맵 디버그 출력 ---
+		CShader* pDebugShader = pShaderManager->GetShader("Debug");
+		pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
+		pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
 
-		//// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
-		//pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pShadowMap->Srv());
+		// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
+		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTorchShadowMap->Srv());
 
 
-		//// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
-		//pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
-		//pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
-		//pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		//pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+		// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
+		pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
+		pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
+		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 	}
 }
 
@@ -1490,7 +1618,7 @@ void CScene::SpawnGolemPunchEffect(const XMFLOAT3& origin, const XMFLOAT3& direc
 
 void CScene::SpawnBloodEffect(const XMFLOAT3& position)
 {
-	int numEffects = 5 + (rand() % 5); // 5~9개
+	int numEffects = 8 + (rand() % 5); // 5~9개
 
 	for (int i = 0; i < numEffects; ++i)
 	{
@@ -1505,14 +1633,53 @@ void CScene::SpawnBloodEffect(const XMFLOAT3& position)
 
 				// [수정 2] 위로만 솟구치는게 아니라 사방으로 퍼져나가도록 초기 속도를 변경합니다.
 				XMFLOAT3 velocity = XMFLOAT3(
-					((float)(rand() % 800) - 400.0f), // X: -400 ~ +400
-					((float)(rand() % 400) - 100.0f), // Y: -100 ~ +300 (아래로도 튀도록)
-					((float)(rand() % 800) - 400.0f)  // Z: -400 ~ +400
+					((float)(rand() % 200) - 100.0f), // X: -100 ~ +100
+					((float)(rand() % 200) - 50.0f),  // Y: -50 ~ +150 (거의 위로 튀지 않음)
+					((float)(rand() % 200) - 100.0f)  // Z: -100 ~ +100
 				);
 
 				pBlood->Activate(spawnPos, velocity);
 				break;
 			}
+		}
+	}
+}
+
+void CScene::SpawnVortexEffect(const XMFLOAT3& centerPosition)
+{
+	// --- 층별 설정 정의 ---
+	const int numLayers = 3; // 총 층의 개수
+	const int particlesPerLayer = 20; // 층당 파티클 개수
+
+	// 각 층의 속성 (높이, 반경, 속도)
+	float layerHeights[] = { 20.0f, 60.0f, 100.0f };
+	float layerRadii[] = { 100.0f, 100.0f, 100.0f };
+	float layerSpeeds[] = { 90.0f, -110.0f, 130.0f }; // 속도를 음수로 주면 반대로 회전
+
+	int particlePoolIndex = 0; // 전체 파티클 풀을 순회하기 위한 인덱스
+
+	// --- 층별로 파티클 생성 ---
+	for (int i = 0; i < numLayers; ++i) // 3개의 층을 순회
+	{
+		for (int j = 0; j < particlesPerLayer; ++j) // 각 층마다 20개의 파티클 생성
+		{
+			// 사용 가능한 파티클을 풀에서 찾기
+			if (particlePoolIndex >= m_vVortexEffects.size()) break; // 풀이 부족하면 중단
+
+			CVortexEffectObject* pVortex = m_vVortexEffects[particlePoolIndex++];
+			if (pVortex->isRender) continue; // 이미 사용 중이면 건너뛰기
+
+			// 파티클마다 시작 각도를 다르게 주어 원형으로 배치
+			float startAngle = (360.0f / particlesPerLayer) * j;
+
+			// 현재 층(i)의 설정값으로 Activate 함수 호출
+			pVortex->Activate(
+				centerPosition,
+				layerRadii[i],   // i번째 층의 반경
+				layerHeights[i], // i번째 층의 높이
+				startAngle,
+				layerSpeeds[i]   // i번째 층의 속도
+			);
 		}
 	}
 }
@@ -1689,6 +1856,35 @@ void CScene::UpdateShadowTransform()
 	XMStoreFloat4x4(&mShadowTransform, S);
 }
 
+void CScene::UpdateTorchShadowTransform(LIGHT* pTorchLight)
+{
+	if (!pTorchLight || !m_pPlayer) return;
+
+	XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+
+	XMVECTOR lightPos = XMVectorSet(playerPos.x, playerPos.y + 50.0f, playerPos.z, 1.0f);
+	XMVECTOR targetPos = XMLoadFloat3(&playerPos);
+
+	XMVECTOR lightUp = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f); // 월드의 Z축
+
+	XMMATRIX view = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
+
+	float fovAngleY = 90.0f;
+	float aspectRatio = 1.0f;
+	float nearZ = 1.0f;
+	float farZ = pTorchLight->m_fRange; // 빛의 최대 범위
+	XMMATRIX proj = XMMatrixPerspectiveFovLH(XMConvertToRadians(fovAngleY), aspectRatio, nearZ, farZ);
+
+	// 3. 최종 그림자 변환 행렬을 계산하여 저장합니다.
+	XMMATRIX T(0.5f, 0.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f);
+	XMMATRIX S = view * proj * T;
+
+	// 계산된 행렬들을 저장합니다.
+	XMStoreFloat4x4(&mLightView, view);
+	XMStoreFloat4x4(&mLightProj, proj);
+	XMStoreFloat4x4(&mTorchShadowTransform, S);
+}
+
 
 void CScene::UpdateLights(float fTimeElapsed)
 {
@@ -1771,17 +1967,17 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
 
 
-
-	/*auto pballPrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Tool/Sphere.bin", m_pGameFramework);
+	/*
+	auto pballPrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Tool/Sphere.bin", m_pGameFramework);
 	pballPrefab->m_bIsPrefab = true;
 
 	int materialIndexToChange = 0;
 	UINT albedoTextureSlot = 0;
-	const wchar_t* textureFile = L"Model/Textures/red.dds";
-	ChangeAlbedoTexture(pballPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+	const wchar_t* textureFile2 = L"Model/Textures/red.dds";
+	ChangeAlbedoTexture(pballPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile2, pResourceManager, pd3dCommandList, pd3dDevice);
 
-	pResourceManager->RegisterPrefab("Sphere", pballPrefab);*/
-
+	pResourceManager->RegisterPrefab("Sphere", pballPrefab);
+	*/
 	// 나무
 	pResourceManager->RegisterPrefab("PineTree", std::make_shared<CPineObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
 

@@ -70,6 +70,7 @@ struct log_inout {
 	OBJECT_TYPE o_type;
 	ANIMATION_TYPE a_type;
 	int id;
+	int hp;
 };
 
 class CGameFramework
@@ -126,7 +127,7 @@ public:
 	void NerworkThread();
 	void ProcessPacket(char* packet);
 
-	void AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id);
+	void AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id, int hp);
 
 	bool CheckBuildMaterials(const std::string& buildableName);
 	void ConsumeBuildMaterials(const std::string& buildableName);
@@ -190,6 +191,7 @@ private:
 	ComPtr<ID3D12DescriptorHeap>	m_pd3dCbvSrvDescriptorHeap;
 	UINT							m_nCbvSrvDescriptorIncrementSize;
 	UINT							m_nRtvDescriptorIncrementSize;
+	UINT							m_nDsvDescriptorIncrementSize;
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dCbvCpuHandleStart;
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dCbvGpuHandleStart;
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCpuHandleStart;
@@ -317,5 +319,8 @@ public:
 	void LoadTools();              // 도구 로딩을 위한 함수
 	void OnImGuiRender();          // ImGui UI를 그리는 함수
 	void UpdateToolTransforms();   // ImGui 값으로 도구 위치를 업데이트하는 함수
+
+
+	UINT GetDsvDescriptorIncrementSize() const { return m_nDsvDescriptorIncrementSize; }
 };
 

@@ -26,6 +26,7 @@ cbuffer cbBoneTransforms : register(b8)
 
 // --- 텍스처 (Standard와 동일) ---
 Texture2D gShadowMap : register(t3);
+Texture2D gTorchShadowMap : register(t4);
 Texture2D gtxtAlbedoTexture : register(t6);
 Texture2D gtxtSpecularTexture : register(t7);
 Texture2D gtxtNormalTexture : register(t8);

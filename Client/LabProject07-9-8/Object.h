@@ -709,3 +709,26 @@ private:
 	XMFLOAT3 m_xmf3Velocity = { 0,0,0 };
 	XMFLOAT3 m_xmf3Gravity = { 0, -3500.0f, 0 }; // Ç÷Èç¿¡ ¸Â´Â Áß·Â°ª
 };
+
+class CVortexEffectObject : public CGameObject
+{
+public:
+	CVortexEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework);
+	virtual ~CVortexEffectObject() {}
+
+	void Activate(const XMFLOAT3& centerPos, float rotationRadius, float layerHeight, float startAngle, float speed);
+	virtual void Animate(float fTimeElapsed) override;
+
+private:
+	bool     m_bIsActive = false;
+	float    m_fLifeTime = 4.0f;    
+	float    m_fElapsedTime = 0.0f;
+
+	
+	XMFLOAT3 m_xmf3CenterPosition;
+	float    m_fRotationRadius;    
+	float    m_fLayerHeight; 
+	float    m_fCurrentRadius;     
+	float    m_fCurrentAngle;      
+	float    m_fRotationSpeed;     
+};
