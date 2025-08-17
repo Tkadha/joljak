@@ -928,6 +928,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         npc->Decreasehp(damage);
         packet.damage = damage;
         nwManager.PushSendQueue(packet, packet.size);
+        player->m_pStateMachine->SetObjectHitInfo(hitObject->GetPosition(),0,0,0);
 
         npc->SetInvincible(true); // set invincible
         if (npc->Gethp() <= 0) {
@@ -957,7 +958,12 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
         packet.damage = damage;
 
         nwManager.PushSendQueue(packet, packet.size);
-
+        if (hitObject->m_objectType == GameObjectType::Golem) {
+            player->m_pStateMachine->SetObjectHitInfo(hitObject->GetPosition(),0,15,0);
+        }
+        else {
+            player->m_pStateMachine->SetObjectHitInfo(hitObject->GetPosition(),0,0,0);
+        }
         npc->SetInvincible(true); // set invincible
         if (npc->Gethp() <= 0) {
             player->Playerxp += 20;

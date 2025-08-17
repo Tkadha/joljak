@@ -372,14 +372,24 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	if (pRockShardModel) delete pRockShardModel;
 
 	const int bloodPoolSize = 30;
-	for (int i = 0; i < bloodPoolSize; ++i) {
+	//pResourceManager = m_pGameFramework->GetResourceManager();
 
-		//ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
-		//std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab("Sphere");
-		//CGameObject* pBlood = prefab->Clone();
-		auto* pBlood = new CBloodEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		m_vBloodEffects.push_back(pBlood);
-		m_vGameObjects.push_back(pBlood); // 렌더링을 위해 메인 목록에도 추가
+	// 1. LoadPrefabs에서 등록한 프리팹을 가져옵니다.
+	std::shared_ptr<CGameObject> bloodPrefab = pResourceManager->GetPrefab("BloodEffectPrefab");
+
+	if (bloodPrefab && bloodPrefab->m_pChild)
+	{
+		// 2. 프리팹의 자식(실제 모델)으로부터 메쉬와 머티리얼을 가져옵니다.
+		CMesh* pSharedBloodMesh = bloodPrefab->m_pChild->m_pMesh;
+		CMaterial* pSharedBloodMaterial = bloodPrefab->m_pChild->GetMaterial(0);
+
+		for (int i = 0; i < bloodPoolSize; ++i)
+		{
+			// 3. 공유 리소스를 생성자에 전달하여 CBloodEffectObject를 생성합니다.
+			auto* pBlood = new CBloodEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework, pSharedBloodMesh, pSharedBloodMaterial);
+			m_vBloodEffects.push_back(pBlood);
+			m_vGameObjects.push_back(pBlood);
+		}
 	}
 	/////////////////////////////////////////
 	const int vortexPoolSize = 50; // 소용돌이에 사용할 파편 수
@@ -493,12 +503,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		m_vGameObjects.push_back(pEffect);
 	}
 
-	const int bloodPoolSize = 30;
-	for (int i = 0; i < bloodPoolSize; ++i) {
-		auto* pBlood = new CBloodEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		m_vBloodEffects.push_back(pBlood);
-		m_vGameObjects.push_back(pBlood); // 렌더링을 위해 메인 목록에도 추가
-	}
+	
 
 
 	CLoadedModelInfo* pWoodShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch_A.bin", m_pGameFramework);
@@ -1616,9 +1621,9 @@ void CScene::SpawnGolemPunchEffect(const XMFLOAT3& origin, const XMFLOAT3& direc
 	}
 }
 
-void CScene::SpawnBloodEffect(const XMFLOAT3& position)
+void CScene::SpawnBloodEffect(const XMFLOAT3& position,float x, float y, float z)
 {
-	int numEffects = 8 + (rand() % 5); // 5~9개
+	int numEffects = 20 + (rand() % 5); // 8~9개
 
 	for (int i = 0; i < numEffects; ++i)
 	{
@@ -1627,15 +1632,16 @@ void CScene::SpawnBloodEffect(const XMFLOAT3& position)
 				// [수정 1] 플레이어의 상체 높이를 기준으로 한 위치에서 생성합니다.
 				// 좌우(X,Z)로 너무 크게 벗어나지 않도록 오프셋을 줄입니다.
 				XMFLOAT3 spawnPos = position;
-				spawnPos.y += 15.0f; // 가슴 높이 정도
-				spawnPos.x += ((float)(rand() % 20) - 10.0f); // -10 ~ +10
-				spawnPos.z += ((float)(rand() % 20) - 10.0f); // -10 ~ +10
+				spawnPos.x += x;
+				spawnPos.y = spawnPos.y +15 +y;
+				spawnPos.z += z;// 가슴 높이 정도
+				
 
 				// [수정 2] 위로만 솟구치는게 아니라 사방으로 퍼져나가도록 초기 속도를 변경합니다.
 				XMFLOAT3 velocity = XMFLOAT3(
-					((float)(rand() % 200) - 100.0f), // X: -100 ~ +100
-					((float)(rand() % 200) - 50.0f),  // Y: -50 ~ +150 (거의 위로 튀지 않음)
-					((float)(rand() % 200) - 100.0f)  // Z: -100 ~ +100
+					((float)(rand() % 100) - 50.0f), // X: -100 ~ +100
+					((float)(rand() % 100) - 50.0f),  // Y: -50 ~ +150 (거의 위로 튀지 않음)
+					((float)(rand() % 100) - 50.0f)  // Z: -100 ~ +100
 				);
 
 				pBlood->Activate(spawnPos, velocity);
@@ -1967,25 +1973,25 @@ void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
 
 
-	/*
-	auto pballPrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Tool/Sphere.bin", m_pGameFramework);
-	pballPrefab->m_bIsPrefab = true;
+	
+	auto pBloodPrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Tool/Sphere.bin", m_pGameFramework);
+	pBloodPrefab->m_bIsPrefab = true;
 
 	int materialIndexToChange = 0;
 	UINT albedoTextureSlot = 0;
 	const wchar_t* textureFile2 = L"Model/Textures/red.dds";
-	ChangeAlbedoTexture(pballPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile2, pResourceManager, pd3dCommandList, pd3dDevice);
+	ChangeAlbedoTexture(pBloodPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile2, pResourceManager, pd3dCommandList, pd3dDevice);
 
-	pResourceManager->RegisterPrefab("Sphere", pballPrefab);
-	*/
+	pResourceManager->RegisterPrefab("BloodEffectPrefab", pBloodPrefab);
+	
 	// 나무
 	pResourceManager->RegisterPrefab("PineTree", std::make_shared<CPineObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
 
 	auto pBirchPrefab = std::make_shared<CBirchObject>(pd3dDevice, pd3dCommandList, m_pGameFramework);
 	pBirchPrefab->m_bIsPrefab = true;
 
-	int materialIndexToChange = 1;
-	UINT albedoTextureSlot = 0;
+	materialIndexToChange = 1;
+	albedoTextureSlot = 0;
 	const wchar_t*  textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
 	ChangeAlbedoTexture(pBirchPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
 

@@ -3121,28 +3121,21 @@ void CResourceShardEffect::Animate(float fTimeElapsed)
 
 
 
-CBloodEffectObject::CBloodEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework)
+CBloodEffectObject::CBloodEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework, CMesh* pSharedMesh, CMaterial* pSharedMaterial)
 	: CGameObject(1, framework)
 {
-	// 혈흔 모양을 표현할 간단한 모델을 로드합니다. (예: 작은 구체나 평면 모델)
-	// 여기서는 테스트를 위해 돌멩이 모델을 쓰되, 색상을 바꿔서 구분하겠습니다.
-	CLoadedModelInfo* pEffectModel = CGameObject::LoadGeometryAndAnimationFromFile(device, cmdList, "Model/Tool/Sphere.bin", framework);
-
-	int materialIndexToChange = 0;
-	UINT albedoTextureSlot = 0;
-	const wchar_t* textureFile = L"Model/Textures/red.dds";
-	ChangeAlbedoTexture(pEffectModel->m_pModelRootObject, materialIndexToChange, albedoTextureSlot, textureFile, m_pGameFramework->GetResourceManager(), cmdList, device);
-
-	SetChild(pEffectModel->m_pModelRootObject);
+	if (pSharedMesh) SetMesh(pSharedMesh);
+	if (pSharedMaterial) SetMaterial(0, pSharedMaterial);
 
 	isRender = false;
 }
+
 
 void CBloodEffectObject::Activate(const XMFLOAT3& position, const XMFLOAT3& velocity, float lifeTime)
 {
 	m_xmf4x4ToParent = Matrix4x4::Identity();
 	SetPosition(position);
-	SetScale(0.5f, 0.5f, 0.5f);
+	SetScale(0.4f, 0.4f, 0.4f);
 
 	m_xmf3Velocity = velocity; // 초기 속도 설정
 	m_fLifeTime = lifeTime;
@@ -3168,7 +3161,7 @@ void CBloodEffectObject::Animate(float fTimeElapsed)
 	XMFLOAT3 currentPos = GetPosition();
 	XMFLOAT3 shift = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed);
 
-	const float speedMultiplier = 0.4f; // 속도를 15배로 증폭 (이 값을 조절)
+	const float speedMultiplier = 0.2f; // 속도를 15배로 증폭 (이 값을 조절)
 	shift = Vector3::ScalarProduct(shift, speedMultiplier);
 
 	XMFLOAT3 newPos = Vector3::Add(currentPos, shift);

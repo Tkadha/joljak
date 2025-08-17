@@ -182,7 +182,7 @@ public:
 	void SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 	void SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity);
 	void SpawnGolemPunchEffect(const XMFLOAT3& origin, const XMFLOAT3& direction);
-	void SpawnBloodEffect(const XMFLOAT3& position);
+	void SpawnBloodEffect(const XMFLOAT3& position,float x, float y, float z);
 	void SpawnVortexEffect(const XMFLOAT3& centerPosition);
 
 	void NewGameBuildObj();
