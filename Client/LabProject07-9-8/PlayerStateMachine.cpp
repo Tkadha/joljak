@@ -482,7 +482,7 @@ public:
         m_bHasAppliedHit = false;
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f });
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
-        SoundManager::GetInstance().PlayLoadedSound(L"Sound/Player/sword.wav");
+        SoundManager::GetInstance().PlayLoadedSound(L"Playersword");
     }
 
     PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {
@@ -530,7 +530,7 @@ public:
         m_bHasAppliedHit = false;
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK;
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); 
-        SoundManager::GetInstance().PlayLoadedSound(L"Sound/Player/axe.wav");
+        SoundManager::GetInstance().PlayLoadedSound(L"Playeraxe");
 
     }
 
@@ -580,7 +580,7 @@ public:
         m_bHasAppliedHit = false;
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK; 
         player->SetVelocity({ 0.0f, player->GetVelocity().y, 0.0f }); 
-        SoundManager::GetInstance().PlayLoadedSound(L"Sound/Player/pickaxe.wav");
+        SoundManager::GetInstance().PlayLoadedSound(L"Playerpickaxe");
 
     }
 
@@ -863,7 +863,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
             
             if (hp <= 0) {
                 tree->StartFalling(player->GetLookVector()); // 플레이어가 바라보는 방향으로 쓰러지도록
-                SoundManager::GetInstance().PlayLoadedSound(L"Sound/Tree/Falling.wav");
+                SoundManager::GetInstance().PlayLoadedSound(L"TreeFalling");
             }
 #ifdef ONLINE
             auto& nwManager = NetworkManager::GetInstance();
@@ -880,7 +880,7 @@ void IPlayerState::CollisionUpdate(CTerrainPlayer* player, CGameObject* hitObjec
             int hp = rock->getHp();
             shardType = 2;
             player->m_pStateMachine->SetLastHitInfo(hitObject->GetPosition(), shardType);
-            SoundManager::GetInstance().PlayLoadedSound(L"Sound/Stone/Breaking Stone.wav");
+            SoundManager::GetInstance().PlayLoadedSound(L"StoneBreaking_Stone");
             if (hp > 0) {
                 if (hp > 0) {
                     hp -= currentToolStats.damageVsRock + (int)player->PlayerAttack / 10;

@@ -1,170 +1,213 @@
 #include "SoundManager.h"
-#include <mmsystem.h>
+#include <Windows.h> // CreateFileW, OutputDebugStringW 등 사용
 
-// GetInstance() 메서드 구현
+// --- WAV 파일 파싱을 위한 헬퍼 함수 ---
+HRESULT FindChunk(HANDLE hFile, DWORD fourcc, DWORD& dwChunkSize, DWORD& dwChunkDataPosition)
+{
+    HRESULT hr = S_OK;
+    if (SetFilePointer(hFile, 0, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+        return HRESULT_FROM_WIN32(GetLastError());
+
+    DWORD dwChunkType;
+    DWORD dwChunkDataSize;
+    DWORD dwRIFFDataSize = 0;
+    DWORD dwFileType;
+    DWORD bytesRead = 0;
+    DWORD dwOffset = 0;
+
+    while (hr == S_OK)
+    {
+        DWORD dwRead;
+        if (ReadFile(hFile, &dwChunkType, sizeof(DWORD), &dwRead, NULL) == 0)
+            hr = HRESULT_FROM_WIN32(GetLastError());
+
+        if (ReadFile(hFile, &dwChunkDataSize, sizeof(DWORD), &dwRead, NULL) == 0)
+            hr = HRESULT_FROM_WIN32(GetLastError());
+
+        switch (dwChunkType)
+        {
+        case 'FFIR': // "RIFF"
+            dwRIFFDataSize = dwChunkDataSize;
+            dwChunkDataSize = 4;
+            if (ReadFile(hFile, &dwFileType, sizeof(DWORD), &dwRead, NULL) == 0)
+                hr = HRESULT_FROM_WIN32(GetLastError());
+            break;
+
+        default:
+            if (SetFilePointer(hFile, dwChunkDataSize, NULL, FILE_CURRENT) == INVALID_SET_FILE_POINTER)
+                return HRESULT_FROM_WIN32(GetLastError());
+        }
+
+        dwOffset += sizeof(DWORD) * 2;
+
+        if (dwChunkType == fourcc)
+        {
+            dwChunkSize = dwChunkDataSize;
+            dwChunkDataPosition = dwOffset;
+            return S_OK;
+        }
+
+        dwOffset += dwChunkDataSize;
+
+        if (bytesRead >= dwRIFFDataSize) return S_FALSE;
+    }
+    return S_OK;
+}
+
+HRESULT ReadChunkData(HANDLE hFile, void* buffer, DWORD buffersize, DWORD bufferoffset)
+{
+    HRESULT hr = S_OK;
+    if (SetFilePointer(hFile, bufferoffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
+        return HRESULT_FROM_WIN32(GetLastError());
+    DWORD dwRead;
+    if (ReadFile(hFile, buffer, buffersize, &dwRead, NULL) == 0)
+        hr = HRESULT_FROM_WIN32(GetLastError());
+    return hr;
+}
+// --- 헬퍼 함수 끝 ---
+
+
 SoundManager& SoundManager::GetInstance()
 {
-    // C++11 이상에서 이 방식은 스레드에 안전합니다.
-    static SoundManager instance; // 이 인스턴스는 프로그램 전체에서 단 하나입니다.
+    static SoundManager instance;
     return instance;
 }
 
-// 생성자 구현
-SoundManager::SoundManager()
-    : m_hWnd(NULL), m_aliasCounter(0)
+SoundManager::SoundManager() : m_pXAudio2(nullptr), m_pMasteringVoice(nullptr)
 {
 }
 
 SoundManager::~SoundManager()
 {
-    // 프로그램 종료 시 혹시나 남아있는 사운드가 있다면 모두 닫습니다.
-    for (auto const& [deviceID, instance] : m_deviceMap)
-    {
-        std::wstring command = L"close " + instance.alias;
-        mciSendString(command.c_str(), NULL, 0, NULL);
-    }
-    m_deviceMap.clear();
+    Shutdown();
 }
 
-// 초기화 함수 구현
-void SoundManager::Init(HWND hWnd)
+bool SoundManager::Init()
 {
-    m_hWnd = hWnd;
+    // COM 초기화
+    HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    if (FAILED(hr)) {
+        OutputDebugStringW(L"[SoundManager] Failed to initialize COM\n");
+        return false;
+    }
+
+    // XAudio2 엔진 생성
+    if (FAILED(hr = XAudio2Create(&m_pXAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR)))
+    {
+        OutputDebugStringW(L"[SoundManager] Failed to create XAudio2 engine\n");
+        CoUninitialize();
+        return false;
+    }
+
+    // 마스터링 보이스 생성 (스피커로 나가는 최종 출력)
+    if (FAILED(hr = m_pXAudio2->CreateMasteringVoice(&m_pMasteringVoice)))
+    {
+        OutputDebugStringW(L"[SoundManager] Failed to create mastering voice\n");
+        m_pXAudio2->Release();
+        CoUninitialize();
+        return false;
+    }
+
+    return true;
 }
 
-void SoundManager::Play(const std::wstring& soundPath)
+void SoundManager::Shutdown()
 {
-    if (soundPath == L"Sound/Golem/Stamp land.wav" && IsPlaying(L"Sound/Golem/Stamp land.wav"))
-    {
-        return;
+    UnloadAllSounds();
+
+    if (m_pMasteringVoice) {
+        m_pMasteringVoice->DestroyVoice();
+        m_pMasteringVoice = nullptr;
     }
-
-    // 1. 고유한 별칭 생성 (예: "snd_0", "snd_1", ...)
-    std::wstring alias = L"snd_" + std::to_wstring(m_aliasCounter++);
-
-    // 2. "open" 명령으로 사운드 파일 열기
-    std::wstring command = L"open \"" + soundPath + L"\" type waveaudio alias " + alias;
-    if (mciSendString(command.c_str(), NULL, 0, NULL) != 0)
-    {
-        return;
+    if (m_pXAudio2) {
+        m_pXAudio2->Release();
+        m_pXAudio2 = nullptr;
     }
-
-    // 3. 별칭을 이용해 장치 ID(Device ID)를 얻어옴
-    DWORD deviceID = mciGetDeviceID(alias.c_str());
-    if (deviceID == 0)
-    {
-        // 장치 ID 얻기 실패 시, 열었던 장치를 바로 닫음
-        command = L"close " + alias;
-        mciSendString(command.c_str(), NULL, 0, NULL);
-        return;
-    }
-
-    // 4. 장치 ID와 별칭을 맵에 저장 (나중에 닫을 때 사용)
-    SoundInstance newInstance;
-    newInstance.alias = alias;
-    newInstance.path = soundPath; // 파일 경로도 함께 저장!
-    m_deviceMap[deviceID] = newInstance;
-
-    // 5. "play" 명령에 "notify" 옵션을 추가하여 재생 요청
-    command = L"play " + alias + L" notify";
-    mciSendString(command.c_str(), NULL, 0, m_hWnd);
+    CoUninitialize();
 }
 
-void SoundManager::HandleMciNotify(WPARAM wParam, LPARAM lParam)
+bool SoundManager::LoadSound(const std::wstring& soundPath, const std::wstring& key)
 {
-    // 재생이 성공적으로 끝났을 때만 처리
-    if (wParam == MCI_NOTIFY_SUCCESSFUL)
-    {
-        DWORD deviceID = (DWORD)lParam;
-        auto it = m_deviceMap.find(deviceID);
-        if (it != m_deviceMap.end())
-        {
-            const SoundInstance& instance = it->second;
+    if (m_sounds.count(key)) return true; // 이미 로드됨
 
-            // 별칭이 "pre_"로 시작하는지 확인
-            if (instance.alias.rfind(L"pre_", 0) != 0)
-            {
-                // "pre_"로 시작하지 않는 동적 사운드("snd_")만 close 합니다.
-                std::wstring command = L"close " + instance.alias;
-                mciSendString(command.c_str(), NULL, 0, NULL);
-            }
-            // "pre_"로 시작하는 사운드는 close하지 않고 열어둔 상태를 유지합니다!
-
-            // 재생이 끝났으므로 현재 재생 목록에서는 제거합니다.
-            m_deviceMap.erase(it);
-        }
+    // WAV 파일 열기
+    HANDLE hFile = CreateFileW(soundPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+    if (INVALID_HANDLE_VALUE == hFile) {
+        OutputDebugStringW((L"[SoundManager] Failed to open sound file: " + soundPath + L"\n").c_str());
+        return false;
     }
-}
-
-bool SoundManager::IsPlaying(const std::wstring& soundPath) const
-{
-    // m_deviceMap에 저장된 모든 재생 중인 사운드를 순회합니다.
-    for (auto const& [deviceID, instanceInfo] : m_deviceMap)
-    {
-        // 저장된 경로(instanceInfo.path)와 찾으려는 경로(soundPath)가 일치하는지 확인
-        if (instanceInfo.path == soundPath)
-        {
-            // 일치하는 것을 찾았으므로 true를 반환하고 함수를 종료합니다.
-            return true;
-        }
+    if (INVALID_SET_FILE_POINTER == SetFilePointer(hFile, 0, NULL, FILE_BEGIN)) {
+        CloseHandle(hFile);
+        return false;
     }
 
-    // 루프를 모두 돌았는데도 찾지 못했다면, 재생 중이 아니므로 false를 반환합니다.
-    return false;
-}
+    SoundData newSoundData;
+    DWORD dwChunkSize;
+    DWORD dwChunkPosition;
 
+    // "RIFF" 청크 찾기
+    FindChunk(hFile, 'FFIR', dwChunkSize, dwChunkPosition);
+    // ... (에러 처리 생략)
 
-void SoundManager::LoadSound(const std::wstring& soundPath, const std::wstring& key)
-{
-    // 이미 로드된 키라면 중복 로드 방지
-    if (m_preOpenedSounds.count(key)) return;
+    // "fmt " 청크(포맷 정보) 찾고 읽기
+    FindChunk(hFile, ' tmf', dwChunkSize, dwChunkPosition);
+    ReadChunkData(hFile, &newSoundData.wfx, dwChunkSize, dwChunkPosition);
 
-    LoadedSoundInfo info;
-    info.alias = L"pre_" + key; // "pre_jump", "pre_hit"
-    info.path = soundPath;
+    // "data" 청크(실제 오디오 데이터) 찾고 읽기
+    FindChunk(hFile, 'atad', dwChunkSize, dwChunkPosition);
+    newSoundData.audioData.resize(dwChunkSize);
+    ReadChunkData(hFile, newSoundData.audioData.data(), dwChunkSize, dwChunkPosition);
 
-    std::wstring command = L"open \"" + info.path + L"\" type waveaudio alias " + info.alias;
-    if (mciSendString(command.c_str(), NULL, 0, NULL) == 0)
-    {
-        m_preOpenedSounds[key] = info;
-    }
+    CloseHandle(hFile);
+
+    m_sounds[key] = std::move(newSoundData);
+    OutputDebugStringW((L"[SoundManager] Loaded sound: " + soundPath + L"\n").c_str());
+    return true;
 }
 
 void SoundManager::PlayLoadedSound(const std::wstring& key)
 {
-    auto it = m_preOpenedSounds.find(key);
-    if (it == m_preOpenedSounds.end()) return; // 로드되지 않은 사운드
-
-    if (key == L"Sound/Golem/Stamp land.wav" && IsPlaying(L"Sound/Golem/Stamp land.wav"))
+    auto it = m_sounds.find(key);
+    if (it == m_sounds.end())
     {
+        OutputDebugStringW((L"[SoundManager] Tried to play unloaded sound: " + key + L"\n").c_str());
         return;
     }
 
-    const LoadedSoundInfo& info = it->second; // 로드된 사운드 정보 가져오기
+    const SoundData& soundData = it->second;
 
-    // 1. 장치 ID 가져오기
-    DWORD deviceID = mciGetDeviceID(info.alias.c_str());
-    if (deviceID == 0) return; // 실패
+    IXAudio2SourceVoice* pSourceVoice;
+    HRESULT hr;
 
-    // 2. 현재 재생 목록(m_deviceMap)에 정보 등록
-    SoundInstance instance;
-    instance.alias = info.alias;
-    instance.path = info.path;
-    m_deviceMap[deviceID] = instance;
+    // 소스 보이스(재생 채널) 생성. 재생이 끝나면 콜백이 자동으로 파괴해줍니다.
+    if (FAILED(hr = m_pXAudio2->CreateSourceVoice(&pSourceVoice, &(soundData.wfx), 0, XAUDIO2_DEFAULT_FREQ_RATIO, &m_voiceCallback)))
+    {
+        OutputDebugStringW(L"[SoundManager] Error creating source voice\n");
+        return;
+    }
 
-    // 3. "from 0" 옵션으로 처음부터 재생 + "notify"로 종료 알림 받기
-    std::wstring command = L"play " + info.alias + L" from 0 notify";
-    mciSendString(command.c_str(), NULL, 0, m_hWnd);
+    XAUDIO2_BUFFER buffer = { 0 };
+    buffer.AudioBytes = static_cast<UINT32>(soundData.audioData.size());
+    buffer.pAudioData = soundData.audioData.data();
+    buffer.Flags = XAUDIO2_END_OF_STREAM;
+    // pContext에 자기 자신을 넘겨서, 콜백 함수에서 이 포인터를 받아 DestroyVoice()를 호출하게 합니다.
+    buffer.pContext = pSourceVoice;
+
+    if (FAILED(hr = pSourceVoice->SubmitSourceBuffer(&buffer)))
+    {
+        OutputDebugStringW(L"[SoundManager] Error submitting source buffer\n");
+        pSourceVoice->DestroyVoice(); // 실패 시 직접 파괴
+        return;
+    }
+
+    if (FAILED(hr = pSourceVoice->Start(0)))
+    {
+        OutputDebugStringW(L"[SoundManager] Error starting voice\n");
+        pSourceVoice->DestroyVoice(); // 실패 시 직접 파괴
+    }
 }
 
 void SoundManager::UnloadAllSounds()
 {
-    // 미리 열어두었던 모든 사운드를 닫습니다.
-    for (auto const& [key, info] : m_preOpenedSounds)
-    {
-        std::wstring command = L"close " + info.alias;
-        mciSendString(command.c_str(), NULL, 0, NULL);
-    }
-    // 맵을 비웁니다.
-    m_preOpenedSounds.clear();
+    m_sounds.clear();
 }

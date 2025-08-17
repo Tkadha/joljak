@@ -1038,7 +1038,7 @@ void CScene::AnimateObjects(float fTimeElapsed)
 			if (m_fVortexDamageTimer >= fDamageInterval)
 			{
 				m_pPlayer->DecreaseHp(nDamageAmount);
-				SoundManager::GetInstance().Play(L"Sound/Player/hit.wav");
+				SoundManager::GetInstance().PlayLoadedSound(L"Playerhit");
 				// 서버와 체력 동기화를 위한 패킷 전송
 				auto& nwManager = NetworkManager::GetInstance();
 				SET_HP_HIT_OBJ_PACKET p;

@@ -162,8 +162,8 @@ void CGameObject::ProcessPlayerHit(CPlayer* pPlayerInfo)
 	auto obj = dynamic_cast<CMonsterObject*>(this);
 	if (!obj) return;
 
-	SoundManager::GetInstance().PlayLoadedSound(L"Sound/Player/hit.wav");
-	SoundManager::GetInstance().PlayLoadedSound(L"Sound/Player/hit_voice.wav");
+	SoundManager::GetInstance().PlayLoadedSound(L"Playerhit");
+	SoundManager::GetInstance().PlayLoadedSound(L"Playerhit_voice");
 
 	pPlayerInfo->DecreaseHp(obj->GetAtk());
 	pPlayerInfo->SetInvincibility();
@@ -313,7 +313,7 @@ void CGameObject::Check_attack()
 
 		m_pScene->SpawnAttackEffect(GetPosition(), 20, 100.0f);
 		m_pScene->SpawnAttackEffect(GetPosition(), 20, 200.0f);
-		SoundManager::GetInstance().PlayLoadedSound(L"Sound/Golem/Stamp land.wav");
+		SoundManager::GetInstance().PlayLoadedSound(L"GolemStamp_land");
 		float distance = Vector3::Length(Vector3::Subtract(GetPosition(), pPlayerInfo->GetPosition()));
 		float height_distance = std::abs(GetPosition().y - pPlayerInfo->GetPosition().y);
 
@@ -337,89 +337,89 @@ void PlayAnimationSound(GameObjectType obj_type, ANIMATION_TYPE ani_type)
 	case GameObjectType::Spider:
 		switch (ani_type) {
 		case ANIMATION_TYPE::HIT:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/Spider/hurt.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"Spiderhurt");
 		break;
 		case ANIMATION_TYPE::DIE:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/Spider/death.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"Spiderdeath");
 		break;
 		}
 		break;
 	case GameObjectType::Bat:
 		switch (ani_type) {
 		case ANIMATION_TYPE::HIT:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/bat/hurt.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"bathurt");
 			break;
 		case ANIMATION_TYPE::DIE:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/bat/death.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"batdeath");
 			break;
 		}
 		break;
 	case GameObjectType::Pig:
 		switch (ani_type) {
 		case ANIMATION_TYPE::RUN:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/pig/hurt.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"pighurt");
 			break;
 		case ANIMATION_TYPE::DIE:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/pig/death.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"pigdeath");
 			break;
 		}
 		break;
 	case GameObjectType::Raptor:
 		switch (ani_type) {
 		case ANIMATION_TYPE::HIT:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/Raptor/hurt.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"Raptorhurt");
 			break;
 		case ANIMATION_TYPE::DIE:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/Raptor/death.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"Raptordeath");
 			break;
 		}
 		break;
 	case GameObjectType::Wolf:
 		switch (ani_type) {
 		case ANIMATION_TYPE::HIT:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/wolf/hurt.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"wolfhurt");
 			break;
 		case ANIMATION_TYPE::DIE:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/wolf/death.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"wolfdeath");
 			break;
 		}
 		break;
 	case GameObjectType::Cow:
 		switch (ani_type) {
 		case ANIMATION_TYPE::RUN:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/cow/hurt.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"cowhurt");
 			break;
 		case ANIMATION_TYPE::DIE:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/cow/death.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"cowdeath");
 			break;
 		}
 		break;
 	case GameObjectType::Toad:
 		switch (ani_type) {
 		case ANIMATION_TYPE::HIT:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/Toad/hurt.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"Toadhurt");
 			break;
 		case ANIMATION_TYPE::DIE:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/Toad/death.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"Toaddeath");
 			break;
 		}
 		break;
 	case GameObjectType::Golem:
 		switch (ani_type) {
 		case ANIMATION_TYPE::HIT:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/Golem/hurt.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"Golemhurt");
 			break;
 		case ANIMATION_TYPE::DIE:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/Golem/death.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"Golemdeath");
 			break;
 		case ANIMATION_TYPE::GROUND_SPELL_START:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/Golem/Charging.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"GolemCharging");
 			break;
 		case ANIMATION_TYPE::GROUND_SPELL_END:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/Golem/Special_Attack2.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"GolemSpecial_Attack2");
 			break;
 		case ANIMATION_TYPE::ATTACK:
-			SoundManager::GetInstance().PlayLoadedSound(L"Sound/Golem/Attack1.wav");
+			SoundManager::GetInstance().PlayLoadedSound(L"GolemAttack1");
 			break;
 		}
 		break;

@@ -89,7 +89,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	if (!hMainWnd) return(FALSE);
 
 	gGameFramework.OnCreate(hInstance, hMainWnd);
-	SoundManager::GetInstance().Init(hMainWnd);
 
 	::ShowWindow(hMainWnd, nCmdShow);
 	::UpdateWindow(hMainWnd);
@@ -136,9 +135,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_DESTROY:
 		::PostQuitMessage(0);
-		break;
-	case MM_MCINOTIFY:
-		SoundManager::GetInstance().HandleMciNotify(wParam, lParam);
 		break;
 	default:
 		return(::DefWindowProc(hWnd, message, wParam, lParam));

@@ -124,6 +124,7 @@ public:
 	double lastEventTime = 0.0;
 
 
+	void SoundThread();
 	void NerworkThread();
 	void ProcessPacket(char* packet);
 
