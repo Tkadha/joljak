@@ -220,7 +220,7 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	// 복사할 위치 (Destination)
 	CD3DX12_CPU_DESCRIPTOR_HANDLE destHandle(cpuShadowMapTableHandle);
 	// 복사할 원본 (Source)
-	CD3DX12_CPU_DESCRIPTOR_HANDLE srcSunHandle(m_pShadowMap->SrvCpu()); // ShadowMap 클래스에 SrvCpu() getter 필요
+	CD3DX12_CPU_DESCRIPTOR_HANDLE srcSunHandle(m_pShadowMap->SrvCpu());
 
 	// 0번: 태양 그림자 맵 복사
 	m_pGameFramework->GetDevice()->CopyDescriptorsSimple(1, destHandle, srcSunHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -1358,7 +1358,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
 
 		// 디버그 셰이더의 0번 슬롯에 그림자 맵의 SRV 핸들을 바인딩
-		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTorchShadowMap->Srv());
+		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_vTorchShadowMaps[0]->Srv());
 
 
 		// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
@@ -1779,10 +1779,22 @@ void CScene::UpdateTorchShadowTransform(LIGHT* pTorchLight, int nLightIndex)
 {
 	if (!pTorchLight || !m_pPlayer) return;
 
-	XMFLOAT3 playerPos = m_pPlayer->GetPosition();
-	XMFLOAT3 playerRight = m_pPlayer->GetRightVector();
-	XMFLOAT3 playerUp = m_pPlayer->GetUpVector();
-	XMFLOAT3 playerLook = m_pPlayer->GetLookVector();
+	XMFLOAT3 playerPos, playerRight, playerUp, playerLook;
+
+	if (nLightIndex == 0) {
+		playerPos = m_pPlayer->GetPosition();
+		playerRight = m_pPlayer->GetRightVector();
+		playerUp = m_pPlayer->GetUpVector();
+		playerLook = m_pPlayer->GetLookVector();
+	}
+	else {
+		for (const auto& pair : PlayerList) {
+			UserObject* user = pair.second.get(); // get()으로 원시 포인터 획득 가능
+			if (user && user->torchindex) {
+				
+			}
+		}
+	}
 
 	float rightOffset = 10.0f;
 	float upOffset = 75.0f;

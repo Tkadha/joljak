@@ -26,10 +26,12 @@ cbuffer cbBoneTransforms : register(b8)
 
 // --- 텍스처 (Standard와 동일) ---
 Texture2D gShadowMap : register(t3);
-Texture2D gTorchShadowMap : register(t4);
-Texture2D gtxtAlbedoTexture : register(t6);
-Texture2D gtxtSpecularTexture : register(t7);
-Texture2D gtxtNormalTexture : register(t8);
+Texture2D gTorchShadowMap1 : register(t4);
+Texture2D gTorchShadowMap2 : register(t5);
+Texture2D gTorchShadowMap3 : register(t6);
+Texture2D gtxtAlbedoTexture : register(t7);
+Texture2D gtxtSpecularTexture : register(t8);
+Texture2D gtxtNormalTexture : register(t9);
 // ... (나머지 t9-t12) ...
 
 // --- VS 입출력 구조체 ---
