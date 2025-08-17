@@ -7,12 +7,14 @@
 #define THIRD_PERSON_CAMERA			0x03
 #define TOP_VIEW_CAMERA 0x04
 
+#define MAX_PLAYER_LIGHTS 3 
+
 struct VS_CB_CAMERA_INFO
 {
 	XMFLOAT4X4                        m_xmf4x4View;
 	XMFLOAT4X4                        m_xmf4x4Projection;
 	XMFLOAT4X4  m_xmf4x4ShadowTransform;
-	XMFLOAT4X4  m_xmf4x4TorchShadowTransform;
+	XMFLOAT4X4  m_xmf4x4TorchShadowTransforms[MAX_PLAYER_LIGHTS];
 
 	XMFLOAT3                        m_xmf3Position;
 	float        m_fCameraPadding;
@@ -130,7 +132,7 @@ public:
 	void SetProjectionMatrix(const XMFLOAT4X4& xmf4x4Projection) { m_xmf4x4Projection = xmf4x4Projection; }
 
 	void UpdateShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4ShadowTransform);
-	void UpdateTorchShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4ShadowTransform);
+	void UpdateTorchShadowTransform(const DirectX::XMFLOAT4X4* pxmf4x4ShadowTransforms, int nTransforms);
 	void GetFrustumCorners(XMFLOAT3* pCorners) const;
 
 };

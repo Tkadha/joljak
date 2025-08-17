@@ -443,11 +443,11 @@ void CCamera::UpdateShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4ShadowTrans
 	}
 }
 
-void CCamera::UpdateTorchShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4ShadowTransform)
+void CCamera::UpdateTorchShadowTransform(const DirectX::XMFLOAT4X4* pxmf4x4ShadowTransforms, int nTransforms)
 {
 	if (m_pcbMappedCamera)
 	{
-		XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4TorchShadowTransform, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4ShadowTransform)));
+		memcpy(m_pcbMappedCamera->m_xmf4x4TorchShadowTransforms, pxmf4x4ShadowTransforms, sizeof(XMFLOAT4X4) * nTransforms);
 	}
 }
 

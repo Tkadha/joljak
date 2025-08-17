@@ -207,7 +207,7 @@ public:	// 그림자
 	DirectX::XMFLOAT4X4 mLightView = MathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 mLightProj = MathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 mShadowTransform = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 mTorchShadowTransform = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 m_vTorchShadowTransforms[MAX_PLAYER_LIGHTS];
 
 	float mLightRotationAngle = 0.0f;
 	XMFLOAT3 mBaseLightDirections[3] = {
@@ -221,7 +221,7 @@ public:	// 그림자
 
 	void UpdateShadowTransform(const XMFLOAT3& focusPoint);
 	void UpdateShadowTransform();
-	void UpdateTorchShadowTransform(LIGHT* pTorchLight);
+	void UpdateTorchShadowTransform(LIGHT* pTorchLight, int nLightIndex);
 
 
 	D3D12_GPU_DESCRIPTOR_HANDLE GetShadowMapSrv() { return m_pShadowMap->Srv(); }
@@ -236,6 +236,7 @@ public:	// 그림자
 
 	void UpdateLights(float fTimeElapsed);
 
+	D3D12_GPU_DESCRIPTOR_HANDLE m_d3dGpuShadowMapTableHandle;
 
 public:	// prefab
 	void LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);

@@ -843,7 +843,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 				pd3dCommandList->SetGraphicsRootConstantBufferView(2, pLightBuffer->GetGPUVirtualAddress());
 			}
 
-			pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->GetShadowMapSrv());
+			pd3dCommandList->SetGraphicsRootDescriptorTable(4, pScene->m_d3dGpuShadowMapTableHandle);
 		}
 
 

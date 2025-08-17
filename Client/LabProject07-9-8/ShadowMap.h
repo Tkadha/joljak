@@ -37,6 +37,7 @@ public:
 	void TransitionToReadable(ID3D12GraphicsCommandList* cmdList);
 
 	void Clean(ID3D12GraphicsCommandList* cmdList);
+	D3D12_CPU_DESCRIPTOR_HANDLE SrvCpu() const { return mhCpuSrv; } 
 private:
 	void BuildDescriptors();
 	void BuildResource();

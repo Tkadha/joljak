@@ -201,13 +201,37 @@ void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 		m_pGameFramework->AllocateSrvDescriptors(1, cpuSrvHandleForTorch, gpuSrvHandleForTorch);
 
 		D3D12_CPU_DESCRIPTOR_HANDLE cpuDsvHandleForTorch = m_pGameFramework->GetShadowDsvHeap()->GetCPUDescriptorHandleForHeapStart();
-		cpuDsvHandleForTorch.ptr += m_pGameFramework->GetDsvDescriptorIncrementSize();
+		cpuDsvHandleForTorch.ptr += (i + 1) * m_pGameFramework->GetDsvDescriptorIncrementSize();
 
 		m_vTorchShadowMaps[i]->BuildDescriptors(
 			CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuSrvHandleForTorch),
 			CD3DX12_GPU_DESCRIPTOR_HANDLE(gpuSrvHandleForTorch),
 			CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuDsvHandleForTorch)
 		);
+	}
+
+	// 1. 총 4개의 SRV를 담을 연속된 디스크립터 공간을 힙에서 할당받습니다.
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuShadowMapTableHandle;
+	m_pGameFramework->AllocateSrvDescriptors(4, cpuShadowMapTableHandle, m_d3dGpuShadowMapTableHandle);
+
+	// 2. 할당받은 공간에 각 그림자 맵의 SRV 디스크립터를 순서대로 복사합니다.
+	UINT srvDescriptorSize = m_pGameFramework->GetCbvSrvDescriptorSize();
+
+	// 복사할 위치 (Destination)
+	CD3DX12_CPU_DESCRIPTOR_HANDLE destHandle(cpuShadowMapTableHandle);
+	// 복사할 원본 (Source)
+	CD3DX12_CPU_DESCRIPTOR_HANDLE srcSunHandle(m_pShadowMap->SrvCpu()); // ShadowMap 클래스에 SrvCpu() getter 필요
+
+	// 0번: 태양 그림자 맵 복사
+	m_pGameFramework->GetDevice()->CopyDescriptorsSimple(1, destHandle, srcSunHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	destHandle.Offset(1, srvDescriptorSize);
+
+	// 1~3번: 횃불 그림자 맵들 복사
+	for (int i = 0; i < MAX_PLAYER_LIGHTS; ++i)
+	{
+		CD3DX12_CPU_DESCRIPTOR_HANDLE srcTorchHandle(m_vTorchShadowMaps[i]->SrvCpu());
+		m_pGameFramework->GetDevice()->CopyDescriptorsSimple(1, destHandle, srcTorchHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		destHandle.Offset(1, srvDescriptorSize);
 	}
 
 	std::random_device rd;
@@ -1109,7 +1133,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			m_vTorchShadowMaps[i]->SetRenderTarget(pd3dCommandList);
 
 			UpdateTorchShadowTransform(pTorchLight, i);
-			pCamera->UpdateTorchShadowTransform(mTorchShadowTransform);
+			pCamera->UpdateTorchShadowTransform(m_vTorchShadowTransforms, MAX_PLAYER_LIGHTS);
 
 			XMMATRIX view = XMLoadFloat4x4(&mLightView);
 			XMMATRIX proj = XMLoadFloat4x4(&mLightProj);
@@ -1751,7 +1775,7 @@ void CScene::UpdateShadowTransform()
 	XMStoreFloat4x4(&mShadowTransform, S);
 }
 
-void CScene::UpdateTorchShadowTransform(LIGHT* pTorchLight)
+void CScene::UpdateTorchShadowTransform(LIGHT* pTorchLight, int nLightIndex)
 {
 	if (!pTorchLight || !m_pPlayer) return;
 
@@ -1789,7 +1813,7 @@ void CScene::UpdateTorchShadowTransform(LIGHT* pTorchLight)
 	XMStoreFloat4x4(&mLightView, view);
 	XMStoreFloat4x4(&mLightProj, proj);
 
-	XMStoreFloat4x4(&mTorchShadowTransform, S);
+	XMStoreFloat4x4(&m_vTorchShadowTransforms[nLightIndex], S);
 }
 
 

@@ -22,7 +22,9 @@ Texture2D gtxtRock01 : register(t7);
 Texture2D gtxtRock02 : register(t8);
 
 Texture2D gShadowMap : register(t9);
-Texture2D gTorchShadowMap : register(t10); // 횃불 그림자 맵
+Texture2D gTorchShadowMap1 : register(t10);
+Texture2D gTorchShadowMap2 : register(t11);
+Texture2D gTorchShadowMap3 : register(t12);
 
 // --- VS 입출력 구조체 ---
 struct VS_TERRAIN_INPUT
@@ -186,7 +188,11 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     
     float3 normalW = normalize(input.normalW);
     
-    float4 totalLight = Lighting(gMaterialInfo, input.positionW, normalW, gShadowMap, gTorchShadowMap);
+    float4 totalLight = Lighting(gMaterialInfo, input.positionW, normalW,
+                                      gShadowMap,
+                                      gTorchShadowMap1,
+                                      gTorchShadowMap2,
+                                      gTorchShadowMap3);
     float3 finalColor = cTextureColor.rgb * totalLight.rgb;
     
    

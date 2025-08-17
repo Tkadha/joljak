@@ -15,14 +15,16 @@ cbuffer cbGameObjectInfo : register(b2)
 
 // --- 텍스처 (Standard, Skinned, Instancing 에서 사용) ---
 Texture2D gShadowMap : register(t3);
-Texture2D gTorchShadowMap : register(t4);
-Texture2D gtxtAlbedoTexture : register(t6);
-Texture2D gtxtSpecularTexture : register(t7);
-Texture2D gtxtNormalTexture : register(t8);
-Texture2D gtxtMetallicTexture : register(t9);
-Texture2D gtxtEmissionTexture : register(t10);
-Texture2D gtxtDetailAlbedoTexture : register(t11);
-Texture2D gtxtDetailNormalTexture : register(t12);
+Texture2D gTorchShadowMap1 : register(t4);
+Texture2D gTorchShadowMap2 : register(t5);
+Texture2D gTorchShadowMap3 : register(t6);
+Texture2D gtxtAlbedoTexture : register(t7);
+Texture2D gtxtSpecularTexture : register(t8);
+Texture2D gtxtNormalTexture : register(t9);
+Texture2D gtxtMetallicTexture : register(t10);
+Texture2D gtxtEmissionTexture : register(t11);
+Texture2D gtxtDetailAlbedoTexture : register(t12);
+Texture2D gtxtDetailNormalTexture : register(t13);
 
 // --- VS 입출력 구조체 ---
 struct VS_STANDARD_INPUT
@@ -197,7 +199,11 @@ float4 PSStandard3(VS_STANDARD_OUTPUT input) : SV_TARGET
         normalW = normalize(input.normalW);
     }
     
-    float4 totalLight = Lighting(gMaterialInfo, input.positionW, normalW, gShadowMap, gTorchShadowMap);
+    float4 totalLight = Lighting(gMaterialInfo, input.positionW, normalW,
+                                      gShadowMap,
+                                      gTorchShadowMap1,
+                                      gTorchShadowMap2,
+                                      gTorchShadowMap3);
     float3 finalColor = cAlbedoColor.rgb * totalLight.rgb;
     
     // 4. 안개 적용
