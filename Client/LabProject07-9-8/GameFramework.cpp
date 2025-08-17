@@ -848,14 +848,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				}
 				break;
 			case 'V':
-				if (m_pScene && m_pPlayer)
-				{
-					// 플레이어의 현재 위치를 가져옵니다.
-					XMFLOAT3 playerPos = m_pPlayer->GetPosition();
-
-					// Scene의 혈흔 생성 함수를 호출합니다.
-					m_pScene->SpawnBloodEffect(playerPos);
-				}
+				
 				break;
 				break;
 			case 'G': 
@@ -2471,7 +2464,8 @@ void CGameFramework::FrameAdvance()
 		}
 	}
 	HitInfo lastHit = m_pPlayer->m_pStateMachine->GetAndClearLastHitInfo();
-	if (lastHit.hasHit && m_pScene)
+	ObjectInfo objectHit = m_pPlayer->m_pStateMachine->GetLastObjectInfo();
+	if (lastHit.hasHit && m_pScene )
 	{
 		XMFLOAT3 pos = m_pPlayer->GetPosition();
 		// [수정] int 값을 CScene::ShardType으로 변환하여 전달합니다.
@@ -2488,6 +2482,10 @@ void CGameFramework::FrameAdvance()
 
 		// 변환된 타입으로 파편 생성을 요청합니다.
 		m_pScene->SpawnResourceShards(pos, typeToSpawn);
+	}
+	if (objectHit.hasHit && m_pScene)
+	{
+		m_pScene->SpawnBloodEffect(objectHit.position,objectHit.x,objectHit.y,objectHit.z);
 	}
 
 	//m_pPlayer->Update(m_GameTimer.GetTimeElapsed());

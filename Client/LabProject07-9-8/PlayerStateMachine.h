@@ -10,11 +10,21 @@ class CTerrainPlayer;       // 실제 플레이어 클래스 타입으로 변경 필요
 class CAnimationController;
 class IPlayerState;
 
+struct ObjectInfo {
+    bool hasHit = true;
+    XMFLOAT3 position;
+    float x;
+    float y;
+    float z;
+};
+
 struct HitInfo {
     bool hasHit = false;
     XMFLOAT3 position;
     int shardType = 0; // [수정] 파편 종류를 int로 저장 (0:없음, 1:나무, 2:돌)
 };
+
+
 // --- 상태 머신 클래스 ---
 class PlayerStateMachine {
 public:
@@ -39,7 +49,20 @@ public:
         m_LastHitInfo.position = position;
         m_LastHitInfo.shardType = type;
     }
-
+    
+    void SetObjectHitInfo(const XMFLOAT3& position, float x2, float y2, float z2) {
+        m_ObjectInfo.hasHit = true;
+        m_ObjectInfo.position = position;;
+        m_ObjectInfo.x = x2;
+        m_ObjectInfo.y = y2;
+        m_ObjectInfo.z = z2;
+    }
+    
+    ObjectInfo GetLastObjectInfo() {
+        ObjectInfo objecthit = m_ObjectInfo;
+        m_ObjectInfo.hasHit = false;
+        return objecthit;
+    }
     // [추가] GameFramework가 마지막 공격 정보를 가져가는 public 함수
     HitInfo GetAndClearLastHitInfo() {
         HitInfo lastHit = m_LastHitInfo; // 정보를 복사
@@ -78,6 +101,7 @@ private:
     void UpdateBlend(float deltaTime);
 
     HitInfo m_LastHitInfo;
+    ObjectInfo m_ObjectInfo;
 };
 
 class CGameObject;
