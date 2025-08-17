@@ -21,6 +21,12 @@ public:
     void HandleMciNotify(WPARAM wParam, LPARAM lParam);
     bool IsPlaying(const std::wstring& soundPath) const;
 
+
+    void LoadSound(const std::wstring& soundPath, const std::wstring& key);
+    void PlayLoadedSound(const std::wstring& key);
+
+    void UnloadAllSounds();
+
     SoundManager(const SoundManager&) = delete;
     SoundManager& operator=(const SoundManager&) = delete;
 
@@ -31,5 +37,12 @@ private:
     HWND m_hWnd;
     int m_aliasCounter;
     std::map<DWORD, SoundInstance> m_deviceMap;
+
+
+    struct LoadedSoundInfo {
+        std::wstring alias;
+        std::wstring path;
+    };
+    std::map<std::wstring, LoadedSoundInfo> m_preOpenedSounds;
 };
 

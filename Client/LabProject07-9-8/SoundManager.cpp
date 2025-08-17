@@ -75,19 +75,22 @@ void SoundManager::HandleMciNotify(WPARAM wParam, LPARAM lParam)
     // 재생이 성공적으로 끝났을 때만 처리
     if (wParam == MCI_NOTIFY_SUCCESSFUL)
     {
-        DWORD deviceID = (DWORD)lParam; // lParam으로 재생이 끝난 장치의 ID가 전달됨
-
-        // 맵에서 해당 장치 ID를 찾음
+        DWORD deviceID = (DWORD)lParam;
         auto it = m_deviceMap.find(deviceID);
         if (it != m_deviceMap.end())
         {
-            std::wstring alias = it->second.alias; // 맵에서 별칭을 가져옴
+            const SoundInstance& instance = it->second;
 
-            // "close" 명령으로 장치를 닫아 리소스 해제
-            std::wstring command = L"close " + alias;
-            mciSendString(command.c_str(), NULL, 0, NULL);
+            // 별칭이 "pre_"로 시작하는지 확인
+            if (instance.alias.rfind(L"pre_", 0) != 0)
+            {
+                // "pre_"로 시작하지 않는 동적 사운드("snd_")만 close 합니다.
+                std::wstring command = L"close " + instance.alias;
+                mciSendString(command.c_str(), NULL, 0, NULL);
+            }
+            // "pre_"로 시작하는 사운드는 close하지 않고 열어둔 상태를 유지합니다!
 
-            // 맵에서 해당 항목 제거
+            // 재생이 끝났으므로 현재 재생 목록에서는 제거합니다.
             m_deviceMap.erase(it);
         }
     }
@@ -108,4 +111,60 @@ bool SoundManager::IsPlaying(const std::wstring& soundPath) const
 
     // 루프를 모두 돌았는데도 찾지 못했다면, 재생 중이 아니므로 false를 반환합니다.
     return false;
+}
+
+
+void SoundManager::LoadSound(const std::wstring& soundPath, const std::wstring& key)
+{
+    // 이미 로드된 키라면 중복 로드 방지
+    if (m_preOpenedSounds.count(key)) return;
+
+    LoadedSoundInfo info;
+    info.alias = L"pre_" + key; // "pre_jump", "pre_hit"
+    info.path = soundPath;
+
+    std::wstring command = L"open \"" + info.path + L"\" type waveaudio alias " + info.alias;
+    if (mciSendString(command.c_str(), NULL, 0, NULL) == 0)
+    {
+        m_preOpenedSounds[key] = info;
+    }
+}
+
+void SoundManager::PlayLoadedSound(const std::wstring& key)
+{
+    auto it = m_preOpenedSounds.find(key);
+    if (it == m_preOpenedSounds.end()) return; // 로드되지 않은 사운드
+
+    if (key == L"Sound/Golem/Stamp land.wav" && IsPlaying(L"Sound/Golem/Stamp land.wav"))
+    {
+        return;
+    }
+
+    const LoadedSoundInfo& info = it->second; // 로드된 사운드 정보 가져오기
+
+    // 1. 장치 ID 가져오기
+    DWORD deviceID = mciGetDeviceID(info.alias.c_str());
+    if (deviceID == 0) return; // 실패
+
+    // 2. 현재 재생 목록(m_deviceMap)에 정보 등록
+    SoundInstance instance;
+    instance.alias = info.alias;
+    instance.path = info.path;
+    m_deviceMap[deviceID] = instance;
+
+    // 3. "from 0" 옵션으로 처음부터 재생 + "notify"로 종료 알림 받기
+    std::wstring command = L"play " + info.alias + L" from 0 notify";
+    mciSendString(command.c_str(), NULL, 0, m_hWnd);
+}
+
+void SoundManager::UnloadAllSounds()
+{
+    // 미리 열어두었던 모든 사운드를 닫습니다.
+    for (auto const& [key, info] : m_preOpenedSounds)
+    {
+        std::wstring command = L"close " + info.alias;
+        mciSendString(command.c_str(), NULL, 0, NULL);
+    }
+    // 맵을 비웁니다.
+    m_preOpenedSounds.clear();
 }

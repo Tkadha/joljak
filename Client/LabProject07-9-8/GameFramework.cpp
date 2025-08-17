@@ -10,6 +10,7 @@
 #include "GameFramework.h"
 #include "PlayerStateDefs.h"
 #include "Player.h"
+#include "SoundManager.h"
 
 #include "NetworkManager.h"
 #include "NonAtkState.h"
@@ -17,6 +18,8 @@
 // 서버 연결 여부
 
 #include <sstream> // Test
+
+void SoundThread();
 
 void CGameFramework::NerworkThread()
 {
@@ -438,7 +441,9 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 #endif
 
 	BuildObjects();
-	
+
+	std::thread st(&SoundThread, this);
+	st.detach();
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -473,6 +478,8 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	std::thread t(&CGameFramework::NerworkThread, this);
 	t.detach();
 #endif	
+
+	
 
 	//ChangeSwapChainState();
 
@@ -4261,4 +4268,48 @@ void CGameFramework::ConsumeBuildMaterials(const std::string& buildableName)
 		}
 	}
 	
+}
+
+
+
+void SoundThread()
+{
+	auto& soundManager = SoundManager::GetInstance();
+	soundManager.LoadSound(L"Sound/bat/death.wav", L"Sound/bat/death.wav");
+	soundManager.LoadSound(L"Sound/bat/hurt.wav", L"Sound/bat/hurt.wav");
+
+	soundManager.LoadSound(L"Sound/cow/death.wav", L"Sound/cow/death.wav");
+	soundManager.LoadSound(L"Sound/cow/hurt.wav", L"Sound/cow/hurt.wav");
+
+	soundManager.LoadSound(L"Sound/pig/death.wav", L"Sound/pig/death.wav");
+	soundManager.LoadSound(L"Sound/pig/hurt.wav", L"Sound/pig/hurt.wav");
+
+	soundManager.LoadSound(L"Sound/Raptor/death.wav", L"Sound/Raptor/death.wav");
+	soundManager.LoadSound(L"Sound/Raptor/hurt.wav", L"Sound/Raptor/hurt.wav");
+
+	soundManager.LoadSound(L"Sound/Spider/death.wav", L"Sound/Spider/death.wav");
+	soundManager.LoadSound(L"Sound/Spider/hurt.wav", L"Sound/Spider/hurt.wav");
+
+	soundManager.LoadSound(L"Sound/Toad/death.wav", L"Sound/Toad/death.wav");
+	soundManager.LoadSound(L"Sound/Toad/hurt.wav", L"Sound/Toad/hurt.wav");
+
+	soundManager.LoadSound(L"Sound/wolf/death.wav", L"Sound/wolf/death.wav");
+	soundManager.LoadSound(L"Sound/wolf/hurt.wav", L"Sound/wolf/hurt.wav");
+
+	soundManager.LoadSound(L"Sound/Tree/Falling.wav", L"Sound/Tree/Falling.wav");
+	soundManager.LoadSound(L"Sound/Stone/Breaking Stone.wav", L"Sound/Stone/Breaking Stone.wav");
+
+	soundManager.LoadSound(L"Sound/Player/axe.wav", L"Sound/Player/axe.wav");
+	soundManager.LoadSound(L"Sound/Player/pickaxe.wav", L"Sound/Player/pickaxe.wav");
+	soundManager.LoadSound(L"Sound/Player/sword.wav", L"Sound/Player/sword.wav");
+	soundManager.LoadSound(L"Sound/Player/hit.wav", L"Sound/Player/hit.wav");
+	soundManager.LoadSound(L"Sound/Player/hit_voice.wav", L"Sound/Player/hit_voice.wav");
+
+
+	soundManager.LoadSound(L"Sound/Golem/hurt.wav", L"Sound/Golem/hurt.wav");
+	soundManager.LoadSound(L"Sound/Golem/death.wav", L"Sound/Golem/death.wav");
+	soundManager.LoadSound(L"Sound/Golem/Charging.wav", L"Sound/Golem/Charging.wav");
+	soundManager.LoadSound(L"Sound/Golem/Special_Attack2.wav", L"Sound/Golem/Special_Attack2.wav");
+	soundManager.LoadSound(L"Sound/Golem/Attack1.wav", L"Sound/Golem/Attack1.wav");
+	soundManager.LoadSound(L"Sound/Golem/Stamp land.wav", L"Sound/Golem/Stamp land.wav");
 }
