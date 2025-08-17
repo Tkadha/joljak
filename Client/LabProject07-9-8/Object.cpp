@@ -3353,6 +3353,7 @@ void CGameObject::EquipTool(const std::string& itemName)
 
 	UnequipAllTools();
 
+
 	auto it = itemNameToToolName.find(itemName);
 	if (it != itemNameToToolName.end())
 	{
@@ -3375,6 +3376,13 @@ void CGameObject::EquipTool(const std::string& itemName)
 			else if (itemName.find("hammer") != std::string::npos) p.weapon_type = 4;
 			nwManager.PushSendQueue(p, p.size);
 		}
+	}
+
+	if (itemName == "iron_hammer") {
+		m_pScene->m_pLights[1].m_bEnable = true;
+	}
+	else {
+		m_pScene->m_pLights[1].m_bEnable = false;
 	}
 }
 
