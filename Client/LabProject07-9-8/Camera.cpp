@@ -450,6 +450,21 @@ void CCamera::UpdateTorchShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4Shadow
 		XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4TorchShadowTransform, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4ShadowTransform)));
 	}
 }
+void CCamera::UpdatePlayer2TorchShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4ShadowTransform)
+{
+	if (m_pcbMappedCamera)
+	{
+		XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4Player2TorchShadowTransform, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4ShadowTransform)));
+	}
+}
+
+void CCamera::UpdatePlayer3TorchShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4ShadowTransform)
+{
+	if (m_pcbMappedCamera)
+	{
+		XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4Player3TorchShadowTransform, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4ShadowTransform)));
+	}
+}
 
 void CCamera::GetFrustumCorners(XMFLOAT3* pCorners) const
 {

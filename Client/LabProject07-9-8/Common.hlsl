@@ -29,7 +29,9 @@ cbuffer cbCameraInfo : register(b1)
     matrix gmtxView; // 뷰 행렬
     matrix gmtxProjection; // 투영 행렬
     matrix gmtxShadowTransform;
-    matrix gmtxTorchShadowTransform;
+    matrix gmtxTorchShadowTransform;    
+    matrix gmtxPlayer2TorchShadowTransform;
+    matrix gmtxPlayer3TorchShadowTransform;
     
     float3 gvCameraPosition; // 카메라 월드 위치
     float gCameraPadding; // 패딩 추가
@@ -127,112 +129,50 @@ float CalcShadowFactor(float4 shadowPosH, Texture2D shadowMap)
 
 // 최종 조명 계산 함수 (모든 셰이더가 이 함수를 공통으로 사용)
 float4 Lighting(MaterialInfo material, float3 posW, float3 normalW,
-                Texture2D sunShadowMap, Texture2D torchShadowMap)
+                Texture2D sunShadowMap,
+                Texture2D torch1ShadowMap,
+                Texture2D torch2ShadowMap,
+                Texture2D torch3ShadowMap)
 {
-     // 1. 최종 색상은 전역 주변광에서 시작합니다.
     float4 finalColor = gcGlobalAmbientLight * material.AmbientColor;
-    for (int i = 0; i < gnLights; ++i)
-    {
-        if (gLights[i].m_bEnable)
-        {
-            finalColor += ComputeLight(material, gLights[i], posW, normalW);
-        }
-    }
-    
-    // 2. 모든 빛의 "그림자 계수"를 각각 계산하여, 그 중 가장 어두운 값을 찾습니다.
-    float finalShadowFactor = 1.0; // 기본값은 빛을 100% 받음
 
-    for (int j = 0; j < gnLights; ++j)
-    {
-        if (gLights[j].m_bEnable)
-        {
-            float currentShadowFactor = 1.0;
-            if (gLights[j].m_nType == DIRECTIONAL_LIGHT && gIsDaytime)
-            {
-                float4 sunShadowPosH = mul(float4(posW, 1.0f), gmtxShadowTransform);
-                currentShadowFactor = CalcShadowFactor(sunShadowPosH, sunShadowMap);
-            }
-            else if (gLights[j].m_nType == POINT_LIGHT && !gIsDaytime) // 횃불 그림자는 밤에만
-            {
-                float4 torchShadowPosH = mul(float4(posW, 1.0f), gmtxTorchShadowTransform);
-                currentShadowFactor = CalcShadowFactor(torchShadowPosH, torchShadowMap);
-            }
-            
-            // 계산된 그림자 값과 기존 최종 그림자 값 중 더 어두운(작은) 값을 선택
-            finalShadowFactor = min(finalShadowFactor, currentShadowFactor);
-        }
-    }
-    
-    // 3. 합쳐진 빛에, 가장 어두운 그림자 값을 한 번만 곱합니다.
-    return finalShadowFactor * finalColor;
-
-    // 2. 모든 조명을 순회하며 직사광과 반사광을 계산하여 더해줍니다.
+    [unroll]
     for (int i = 0; i < gnLights; ++i)
     {
         if (!gLights[i].m_bEnable) 
             continue;
 
         float shadowFactor = 1.0;
-        float4 illumination = float4(0, 0, 0, 0);
+        float4 illumination = ComputeLight(material, gLights[i], posW, normalW);
 
-        if (gLights[i].m_nType == DIRECTIONAL_LIGHT)
+        // 조명 인덱스에 따라 다른 그림자 맵과 변환 행렬 사용
+        if (gLights[i].m_nType == DIRECTIONAL_LIGHT && gIsDaytime)
         {
-            // 태양 빛 계산
-            illumination = ComputeLight(material, gLights[i], posW, normalW);
-            // 태양 그림자 계산
-            if (gIsDaytime)
-            {
-                float4 sunShadowPosH = mul(float4(posW, 1.0f), gmtxShadowTransform);
-                shadowFactor = CalcShadowFactor(sunShadowPosH, sunShadowMap);
-            }
+            float4 sunShadowPosH = mul(float4(posW, 1.0f), gmtxShadowTransform);
+            shadowFactor = CalcShadowFactor(sunShadowPosH, sunShadowMap);
         }
-        else if (gLights[i].m_nType == POINT_LIGHT)
+        else if (gLights[i].m_nType == POINT_LIGHT && !gIsDaytime)
         {
-            if (!gIsDaytime)
+            if (i == 1) // 플레이어 1 횃불
             {
-                illumination = ComputeLight(material, gLights[i], posW, normalW);
-            
                 float4 torchShadowPosH = mul(float4(posW, 1.0f), gmtxTorchShadowTransform);
-                shadowFactor = CalcShadowFactor(torchShadowPosH, torchShadowMap);
+                shadowFactor = CalcShadowFactor(torchShadowPosH, torch1ShadowMap);
+            }
+            else if (i == 2) // 플레이어 2 횃불
+            {
+                float4 torchShadowPosH = mul(float4(posW, 1.0f), gmtxPlayer2TorchShadowTransform);
+                shadowFactor = CalcShadowFactor(torchShadowPosH, torch2ShadowMap);
+            }
+            else if (i == 3) // 플레이어 3 횃불
+            {
+                float4 torchShadowPosH = mul(float4(posW, 1.0f), gmtxPlayer3TorchShadowTransform);
+                shadowFactor = CalcShadowFactor(torchShadowPosH, torch3ShadowMap);
             }
         }
         
-        // 최종 색상에 그림자가 적용된 조명을 더합니다.
         finalColor += shadowFactor * illumination;
     }
     
     return finalColor;
-    
-    
-    float4 finalIllumination = float4(0.0f, 0.0f, 0.0f, 0.0f);
-    
-    for (int i = 0; i < gnLights; ++i)
-    {
-        if (!gLights[i].m_bEnable)
-            continue;
-
-        float shadowFactor = 1.0f;
-
-        if (gLights[i].m_nType == DIRECTIONAL_LIGHT && gIsDaytime)
-        {
-            float4 shadowPosH = mul(float4(posW, 1.0f), gmtxShadowTransform);
-            shadowFactor = CalcShadowFactor(shadowPosH, sunShadowMap);
-        }
-        else if (gLights[i].m_nType == POINT_LIGHT)
-        {
-            float4 shadowPosH = mul(float4(posW, 1.0f), gmtxTorchShadowTransform);
-            shadowFactor = CalcShadowFactor(shadowPosH, torchShadowMap);
-            
-            
-            // 계산된 shadowFactor 값을 흑백으로 화면에 바로 출력합니다.
-            return float4(shadowFactor, shadowFactor, shadowFactor, 1.0f);
-        }
-        
-        float4 illumination = ComputeLight(material, gLights[i], posW, normalW);
-        finalIllumination += shadowFactor * illumination;
-    }
-    
-    return finalIllumination;
 }
-
 #endif // SHADERS_COMMON_HLSLI

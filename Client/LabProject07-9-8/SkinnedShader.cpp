@@ -35,8 +35,8 @@ D3D12_SHADER_BYTECODE CSkinnedAnimationStandardShader::CreatePixelShader() {
 ID3D12RootSignature* CSkinnedAnimationStandardShader::CreateRootSignature(ID3D12Device* pd3dDevice)
 {
 	CD3DX12_DESCRIPTOR_RANGE pd3dDescriptorRanges[2];
-	pd3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 7, 6, 0); // t6-t12
-	pd3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 3, 0); // t3: ±×¸²ÀÚ ¸Ê SRV
+	pd3dDescriptorRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 7, 7, 0); // t6-t12
+	pd3dDescriptorRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 3, 0); // t3: ±×¸²ÀÚ ¸Ê SRV
 
 	CD3DX12_ROOT_PARAMETER pd3dRootParameters[7];
 	pd3dRootParameters[0].InitAsConstantBufferView(1, 0, D3D12_SHADER_VISIBILITY_ALL); // b1: Camera

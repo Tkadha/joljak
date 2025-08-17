@@ -421,7 +421,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	// 그림자 맵 DSV 힙
 	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-	dsvHeapDesc.NumDescriptors = 2;
+	dsvHeapDesc.NumDescriptors = 4;
 	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	dsvHeapDesc.NodeMask = 0;
@@ -648,7 +648,7 @@ void CGameFramework::CreateRtvAndDsvDescriptorHeaps()
 	::gnRtvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-	d3dDescriptorHeapDesc.NumDescriptors = 3; // 메인 깊이버퍼 1개 + 그림자맵 2개
+	d3dDescriptorHeapDesc.NumDescriptors = 5; // 메인 깊이버퍼 1개 + 그림자맵 4개
 	hResult = m_pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_pd3dDsvDescriptorHeap);
 
 	// 디바이스로부터 DSV 디스크립터의 증가 크기를 얻어와 멤버 변수에 저장
@@ -2348,7 +2348,7 @@ void CGameFramework::FrameAdvance()
 				if (m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController) m_pScene->PlayerList[log.ID]->PropagateAnimController(m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController);
 
 
-				m_pScene->PlayerList[log.ID]->torchIndex = m_pScene->PlayerList.size() + 1;
+				m_pScene->PlayerList[log.ID]->torchIndex = m_pScene->PlayerList.size() + 2;
 				if (pUserModel) delete(pUserModel);
 			}
 			break;

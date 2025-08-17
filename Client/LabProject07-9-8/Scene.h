@@ -199,6 +199,8 @@ public:	// 그림자
 
 	std::unique_ptr<ShadowMap> m_pShadowMap;
 	std::unique_ptr<ShadowMap> m_pTorchShadowMap;
+	std::unique_ptr<ShadowMap> m_pPlayer2TorchShadowMap;
+	std::unique_ptr<ShadowMap> m_pPlayer3TorchShadowMap;
 
 	DirectX::BoundingSphere mSceneBounds;
 
@@ -209,6 +211,8 @@ public:	// 그림자
 	DirectX::XMFLOAT4X4 mLightProj = MathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 mShadowTransform = MathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 mTorchShadowTransform = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 mPlayer2TorchShadowTransform = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 mPlayer3TorchShadowTransform = MathHelper::Identity4x4();
 
 	float mLightRotationAngle = 0.0f;
 	XMFLOAT3 mBaseLightDirections[3] = {
@@ -220,10 +224,11 @@ public:	// 그림자
 
 	POINT mLastMousePos;
 
-	void UpdateShadowTransform(const XMFLOAT3& focusPoint);
+	//void UpdateShadowTransform(const XMFLOAT3& focusPoint);
 	void UpdateShadowTransform();
 	void UpdateTorchShadowTransform(LIGHT* pTorchLight);
-
+	
+    CD3DX12_GPU_DESCRIPTOR_HANDLE m_hGpuShadowMapSrvs; 
 
 	D3D12_GPU_DESCRIPTOR_HANDLE GetShadowMapSrv() { return m_pShadowMap->Srv(); }
 
