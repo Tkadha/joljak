@@ -140,7 +140,8 @@ float SimpleNoise(float2 p)
 
 // --- Pixel Shader ---
 float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
-{    
+{  
+    
     
     // 1. 텍스처 색상을 계산합니다 (이전과 동일).
     float4 splatWeights = gtxtTerrainSplatMap.Sample(gssWrap, input.uv0);
@@ -185,10 +186,8 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     
     float3 normalW = normalize(input.normalW);
     
-    float4 cIlluminationColor = Lighting(gMaterialInfo, input.positionW, normalW, gShadowMap, gTorchShadowMap);
-
-    float3 totalLight = gMaterialInfo.AmbientColor.rgb + cIlluminationColor.rgb;
-    float3 finalColor = totalLight * cTextureColor.rgb;
+    float4 totalLight = Lighting(gMaterialInfo, input.positionW, normalW, gShadowMap, gTorchShadowMap);
+    float3 finalColor = cTextureColor.rgb * totalLight.rgb;
     
    
     // 안개

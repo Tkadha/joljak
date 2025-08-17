@@ -62,72 +62,64 @@ CScene::~CScene()
 
 void CScene::BuildDefaultLightsAndMaterials()
 {
-	m_nLights = 5;
+	m_nLights = 10;
 	m_pLights = new LIGHT[m_nLights];
 	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
 
 	m_xmf4GlobalAmbient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
-
-	m_pLights[0].m_bEnable = false; // 시작할 때는 꺼진 상태
-	m_pLights[0].m_nType = POINT_LIGHT;
-	m_pLights[0].m_fRange = 450.0f; // 횃불이 비추는 범위
-	//m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.1f, 0.05f, 0.0f, 1.0f);		// 약한 주황색 주변광
-	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.2f, 0.1f, 0.05f, 1.0f);
-	//m_pLights[0].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.7f, 0.3f, 1.0f);		// 밝은 주황/노란색 불빛
-	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.6f, 0.1f, 1.0f);
-	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);		
-	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.07f, 0.017f);
-	m_pLights[0].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 	
-	
-	m_pLights[2].m_bEnable = true;
-	m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.05f, 0.05f, 0.05f, 1.0f);
-	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
-	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.5f, -0.707f, 0.5f);
-	m_pLights[2].m_xmf3Position = XMFLOAT3(0.0f, 3000.0f, 0.0f);
+	m_pLights[0].m_bEnable = true;
+	m_pLights[0].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.05f, 0.05f, 0.05f, 1.0f);
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
+	m_pLights[0].m_xmf3Direction = XMFLOAT3(0.5f, -0.707f, 0.5f);
+	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 3000.0f, 0.0f);
 
+	// 나(플레이어)
+	m_pLights[1].m_bEnable = false; // 시작할 때는 꺼진 상태
+	m_pLights[1].m_nType = POINT_LIGHT;
+	m_pLights[1].m_fRange = 450.0f; // 횃불이 비추는 범위
+	m_pLights[1].m_xmf4Ambient = XMFLOAT4(0.2f, 0.1f, 0.05f, 1.0f);
+	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.6f, 0.1f, 1.0f);
+	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);
+	m_pLights[1].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.0007f, 0.00017f);
+	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 
-	m_pLights[1].m_bEnable = false;
-	{
-		m_pLights[1].m_nType = SPOT_LIGHT;
-		m_pLights[1].m_fRange = 500.0f;
-		m_pLights[1].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
-		m_pLights[1].m_xmf4Diffuse = XMFLOAT4(0.4f, 0.4f, 0.4f, 1.0f);
-		m_pLights[1].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-		m_pLights[1].m_xmf3Position = XMFLOAT3(-50.0f, 20.0f, -5.0f);
-		m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 1.0f);
-		m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-		m_pLights[1].m_fFalloff = 8.0f;
-		m_pLights[1].m_fPhi = (float)cos(XMConvertToRadians(40.0f));
-		m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
+	// 플레이어2
+	m_pLights[2].m_bEnable = true; // 시작할 때는 꺼진 상태
+	m_pLights[2].m_nType = POINT_LIGHT;
+	m_pLights[2].m_fRange = 450.0f; // 횃불이 비추는 범위
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.2f, 0.1f, 0.05f, 1.0f);
+	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.6f, 0.1f, 1.0f);
+	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);
+	m_pLights[2].m_xmf3Position = XMFLOAT3(8000.0f, 1200.0f, 8000.0f);
+	m_pLights[2].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.0007f, 0.00017f);
+	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+
+	// 플레이어3
+	m_pLights[3].m_bEnable = false; // 시작할 때는 꺼진 상태
+	m_pLights[3].m_nType = POINT_LIGHT;
+	m_pLights[3].m_fRange = 450.0f; // 횃불이 비추는 범위
+	m_pLights[3].m_xmf4Ambient = XMFLOAT4(0.2f, 0.1f, 0.05f, 1.0f);
+	m_pLights[3].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.6f, 0.1f, 1.0f);
+	m_pLights[3].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);
+	m_pLights[3].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	m_pLights[3].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.0007f, 0.00017f);
+	m_pLights[3].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+
+	for (int i = 4; i < m_nLights; ++i) {
+		m_pLights[i].m_bEnable = false; // 처음에는 꺼진 상태
+		m_pLights[i].m_nType = POINT_LIGHT;
+		m_pLights[i].m_fRange = 300.0f; // 화로 주변을 밝힐 범위
+		m_pLights[i].m_xmf4Ambient = XMFLOAT4(0.1f, 0.05f, 0.0f, 1.0f);   // 약한 주황색 주변광
+		m_pLights[i].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.5f, 0.0f, 1.0f);    // 강한 주황색 불빛
+		m_pLights[i].m_xmf4Specular = XMFLOAT4(0.5f, 0.25f, 0.0f, 0.0f); // 반사광
+		m_pLights[i].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);        // 위치는 나중에 화로 오브젝트가 설정
+		m_pLights[i].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.005f, 0.0001f); // 빛이 자연스럽게 퍼져나가도록 감쇠값 설정
 	}
-	m_pLights[3].m_bEnable = false;
-	{
-		m_pLights[3].m_nType = SPOT_LIGHT;
-		m_pLights[3].m_fRange = 600.0f;
-		m_pLights[3].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
-		m_pLights[3].m_xmf4Diffuse = XMFLOAT4(0.3f, 0.7f, 0.0f, 1.0f);
-		m_pLights[3].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-		m_pLights[3].m_xmf3Position = XMFLOAT3(550.0f, 330.0f, 530.0f);
-		m_pLights[3].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 1.0f);
-		m_pLights[3].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-		m_pLights[3].m_fFalloff = 8.0f;
-		m_pLights[3].m_fPhi = (float)cos(XMConvertToRadians(90.0f));
-		m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
-	}
-	m_pLights[4].m_bEnable = false;
-	{
-		m_pLights[4].m_nType = POINT_LIGHT;
-		m_pLights[4].m_fRange = 200.0f;
-		m_pLights[4].m_xmf4Ambient = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-		m_pLights[4].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.3f, 0.3f, 1.0f);
-		m_pLights[4].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
-		m_pLights[4].m_xmf3Position = XMFLOAT3(600.0f, 250.0f, 700.0f);
-		m_pLights[4].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
-	}
+
 }
 
 void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
@@ -998,8 +990,8 @@ void CScene::AnimateObjects(float fTimeElapsed)
 	*/
 	if (m_pLights)
 	{
-		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
-		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
+		m_pLights[0].m_xmf3Position = m_pPlayer->GetPosition();
+		//m_pLights[0].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
 
 	if (m_pPlayer && m_pLights)
@@ -1007,8 +999,8 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		XMFLOAT3 playerPosition = m_pPlayer->GetPosition();
 		playerPosition.y += 50.0f;
 
-		m_pLights[0].m_xmf3Position = playerPosition;
-		m_pLights[0].m_xmf3Direction = m_pPlayer->GetLookVector();
+		m_pLights[1].m_xmf3Position = playerPosition;
+		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
 
 	if (m_pWavesObject) m_pWavesObject->Animate(fTimeElapsed);
@@ -1024,6 +1016,8 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
 	assert(pShaderManager != nullptr && "ShaderManager is not available!");
 
+	if (m_pShadowMap) { m_pShadowMap->Clean(pd3dCommandList); }
+	if (m_pTorchShadowMap)	{ m_pTorchShadowMap->Clean(pd3dCommandList); }
 
 	//UpdateShadowTransform(m_pPlayer->GetPosition()); // 빛의 위치/방향에 따라 ShadowTransform 행렬 계산
 	UpdateShadowTransform(m_pPlayer->GetPosition());
@@ -1100,7 +1094,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// =================================================================
    // Pass 1.5: 횃불 그림자 맵 생성
    // =================================================================
-	LIGHT* pTorchLight = &m_pLights[0]; 
+	LIGHT* pTorchLight = &m_pLights[1]; 
 	if (pTorchLight->m_bEnable)
 	{
 		// 1. 렌더 타겟을 "횃불용" 섀도우 맵으로 설정합니다.
@@ -1122,11 +1116,11 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			std::lock_guard<std::mutex> lock(m_Mutex);
 
 			for (auto& obj : m_vGameObjects) {
-				if (obj->m_objectType != GameObjectType::Toad && obj->m_objectType != GameObjectType::Wasp &&
+				/*if (obj->m_objectType != GameObjectType::Toad && obj->m_objectType != GameObjectType::Wasp &&
 					obj->m_objectType != GameObjectType::Wolf && obj->m_objectType != GameObjectType::Bat &&
 					obj->m_objectType != GameObjectType::Snake && obj->m_objectType != GameObjectType::Turtle &&
 					obj->m_objectType != GameObjectType::Raptor && obj->m_objectType != GameObjectType::Snail &&
-					obj->m_objectType != GameObjectType::Spider)
+					obj->m_objectType != GameObjectType::Spider)*/
 				{
 					if (obj->isRender) obj->RenderShadow(pd3dCommandList);
 				}
@@ -1763,18 +1757,29 @@ void CScene::UpdateTorchShadowTransform(LIGHT* pTorchLight)
 	if (!pTorchLight || !m_pPlayer) return;
 
 	XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+	XMFLOAT3 playerRight = m_pPlayer->GetRightVector();
+	XMFLOAT3 playerUp = m_pPlayer->GetUpVector();
+	XMFLOAT3 playerLook = m_pPlayer->GetLookVector();
 
-	XMVECTOR lightPos = XMVectorSet(playerPos.x, playerPos.y + 50.0f, playerPos.z, 1.0f);
-	XMVECTOR targetPos = XMLoadFloat3(&playerPos);
+	float rightOffset = 10.0f;
+	float upOffset = 75.0f;
+	float forwardOffset = 0.0f;
 
-	XMVECTOR lightUp = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f); // 월드의 Z축
+	XMVECTOR vTorchPos = XMLoadFloat3(&playerPos);
+	vTorchPos += XMLoadFloat3(&playerRight) * rightOffset;
+	vTorchPos += XMLoadFloat3(&playerLook) * forwardOffset;
+	XMVECTOR vTargetPos = vTorchPos;
 
-	XMMATRIX view = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
+	vTorchPos += XMLoadFloat3(&playerUp) * upOffset;
 
-	float fovAngleY = 90.0f;
+	XMVECTOR lightUp = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+
+	XMMATRIX view = XMMatrixLookAtLH(vTorchPos, vTargetPos, lightUp);
+
+	float fovAngleY = 128.0f;
 	float aspectRatio = 1.0f;
-	float nearZ = 1.0f;
-	float farZ = pTorchLight->m_fRange; // 빛의 최대 범위
+	float nearZ = 0.1f;
+	float farZ = pTorchLight->m_fRange * 5.0f; // 빛의 최대 범위
 	XMMATRIX proj = XMMatrixPerspectiveFovLH(XMConvertToRadians(fovAngleY), aspectRatio, nearZ, farZ);
 
 	// 3. 최종 그림자 변환 행렬을 계산하여 저장합니다.
@@ -1784,18 +1789,17 @@ void CScene::UpdateTorchShadowTransform(LIGHT* pTorchLight)
 	// 계산된 행렬들을 저장합니다.
 	XMStoreFloat4x4(&mLightView, view);
 	XMStoreFloat4x4(&mLightProj, proj);
+
 	XMStoreFloat4x4(&mTorchShadowTransform, S);
 }
 
 
 void CScene::UpdateLights(float fTimeElapsed)
 {
-	// 1. 빛의 회전 각도를 업데이트합니다.
 	float rotationSpeed = 0.75f; // 속도를 약간 조절
 	m_fLightRotationAngle += fTimeElapsed * rotationSpeed;
 	if (m_fLightRotationAngle > 360.0f) m_fLightRotationAngle -= 360.0f;
 
-	// 주 방향광을 찾습니다.
 	LIGHT* pMainLight = nullptr;
 	for (int i = 0; i < m_nLights; ++i) {
 		if (m_pLights[i].m_nType == DIRECTIONAL_LIGHT) {
@@ -1805,12 +1809,12 @@ void CScene::UpdateLights(float fTimeElapsed)
 	}
 	if (!pMainLight) return;
 
-	//빛의 현재 방향을 계산합니다. (동쪽에서 떠서 서쪽으로 지는 Z축 회전)
+	//빛의 현재 방향을 계산 (동쪽에서 떠서 서쪽으로 지는 Z축 회전)
 	XMVECTOR xmvBaseLightDirection = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
 	XMMATRIX xmmtxLightRotate = XMMatrixRotationZ(XMConvertToRadians(m_fLightRotationAngle));
 	XMVECTOR xmvCurrentLightDirection = XMVector3TransformNormal(xmvBaseLightDirection, xmmtxLightRotate);
 
-	// 계산된 새로운 방향을 실제 조명 데이터에 업데이트합니다.
+	// 실제 조명 데이터에 업데이트
 	XMStoreFloat3(&pMainLight->m_xmf3Direction, xmvCurrentLightDirection);
 
 	// 빛의 Y 방향을 기준으로 낮과 밤을 판단
@@ -1823,13 +1827,17 @@ void CScene::UpdateLights(float fTimeElapsed)
 		pMainLight->m_xmf4Specular = m_xmf4DaylightSpecular;
 		if(GetSkyBox()->GetCurrentTextureIndex() != 0)
 			GetSkyBox()->SetSkyboxIndex(0);
+
+		m_pLights[1].m_bEnable = false;
+		//m_pLights[2].m_bEnable = false;
+		//m_pLights[3].m_bEnable = false;
 	}
 	else // 빛이 위를 향하면 밤
 	{
 		//직사광을 끄고, 주변광을 어두운 달빛으로 교체
 		m_bIsDaytime = false;
 		m_xmf4GlobalAmbient = m_xmf4MoonlightAmbient;
-		pMainLight->m_xmf4Diffuse = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // 빛 색상을 검은색
+		pMainLight->m_xmf4Diffuse = XMFLOAT4(0.1f, 0.1f, 0.15f, 1.0f);
 		pMainLight->m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 		if (GetSkyBox()->GetCurrentTextureIndex() != 1)
 		GetSkyBox()->SetSkyboxIndex(1);

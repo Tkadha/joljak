@@ -448,7 +448,6 @@ void CCamera::UpdateTorchShadowTransform(const DirectX::XMFLOAT4X4& xmf4x4Shadow
 	if (m_pcbMappedCamera)
 	{
 		XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4TorchShadowTransform, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4ShadowTransform)));
-		//m_pcbMappedCamera->m_xmf4x4TorchShadowTransform = xmf4x4ShadowTransform;
 	}
 }
 

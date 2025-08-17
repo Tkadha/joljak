@@ -36,6 +36,7 @@ public:
 	void SetRenderTarget(ID3D12GraphicsCommandList* cmdList);
 	void TransitionToReadable(ID3D12GraphicsCommandList* cmdList);
 
+	void Clean(ID3D12GraphicsCommandList* cmdList);
 private:
 	void BuildDescriptors();
 	void BuildResource();

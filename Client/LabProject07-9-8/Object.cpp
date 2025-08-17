@@ -974,7 +974,6 @@ void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 	if(pPrimaryMaterial && pPrimaryMaterial->m_pShader)
 		shaderType = pPrimaryMaterial->m_pShader->GetShaderType();
 
-    if (m_pMesh)
 	{
 
 		if (shaderType == "Skinned")
@@ -997,6 +996,18 @@ void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 					pd3dCommandList->SetGraphicsRootConstantBufferView(6, pController->m_ppd3dcbSkinningBoneTransforms[0]->GetGPUVirtualAddress());
 				}
 			}
+
+			if (m_pMesh->m_nSubMeshes > 0)
+			{
+				for (int i = 0; i < m_pMesh->m_nSubMeshes; i++)
+				{
+					m_pMesh->Render(pd3dCommandList, i);
+				}
+			}
+			else
+			{
+				m_pMesh->Render(pd3dCommandList, 0);
+			}
 		}
 		else 
 		{
@@ -1017,26 +1028,23 @@ void CGameObject::RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList)
 
 			pd3dCommandList->SetGraphicsRoot32BitConstants(1, 41, &gameObjectInfo, 0);
 
-			D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pPrimaryMaterial->GetTextureTableGpuHandle();
-			if (textureTableHandle.ptr != 0)
+			for (int i = 0; i < m_nMaterials; i++)
 			{
-				pd3dCommandList->SetGraphicsRootDescriptorTable(2, textureTableHandle);
-			}
-		}
+				CMaterial* pMaterial = GetMaterial(i);
+				if (!pMaterial) continue;
 
+				D3D12_GPU_DESCRIPTOR_HANDLE textureTableHandle = pMaterial->GetTextureTableGpuHandle(); 
+				if (textureTableHandle.ptr != 0) {
+					pd3dCommandList->SetGraphicsRootDescriptorTable(2, textureTableHandle); 
+				}
 
-
-		if (m_pMesh->m_nSubMeshes > 0)
-		{
-			for (int i = 0; i < m_pMesh->m_nSubMeshes; i++)
-			{
 				m_pMesh->Render(pd3dCommandList, i);
 			}
 		}
-		else
-		{
-			m_pMesh->Render(pd3dCommandList, 0);
-		}
+
+
+
+		
 
 	}
 
@@ -3107,6 +3115,18 @@ void CGameObject::LoadTools(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	{
 		CGameObject* pTool = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, (char*)info.path.c_str(), pGameFramework)->m_pModelRootObject;
 		if (!pTool) continue;
+
+		if (info.name == "Sword_Stone")
+		{
+			ResourceManager* pResourceManager = pGameFramework->GetResourceManager();
+
+			const wchar_t* newTextureFile = L"Model/Textures/Universal_Pack.dds"; // <<-- 실제 사용할 텍스처 파일 경로로 수정하세요.
+
+			if (pTool->m_pChild) {
+				ChangeAlbedoTexture(pTool->m_pChild, 1, 0, newTextureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+				ChangeAlbedoTexture(pTool->m_pChild, 0, 0, newTextureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+			}
+		}
 
 		CGameObject* handFrame = this->FindFrame((char*)info.boneName.c_str());
 		if (handFrame) {

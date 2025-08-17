@@ -863,9 +863,9 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				break;
 				break;
 			case 'G': 
-				if (m_pScene && m_pScene->m_pLights)
+				if (m_pScene && m_pScene->m_pLights )//&& !m_pScene->IsDaytime())	// 낮에는 횃불 못 켜
 				{
-					m_pScene->m_pLights[0].m_bEnable = (m_pScene->m_pLights[0].m_bEnable == 0) ? 1 : 0;
+					m_pScene->m_pLights[1].m_bEnable = (m_pScene->m_pLights[1].m_bEnable == 0) ? 1 : 0;
 				}
 				break;
 			case VK_F2:
@@ -3094,6 +3094,23 @@ void CGameFramework::FrameAdvance()
 						s_packet.position.z = f4x4._43;
 
 						nwManager.PushSendQueue(s_packet, s_packet.size);
+					}
+
+
+					for (int i = 4; i < m_pScene->m_nLights; ++i) // 4번부터 화로 조명
+					{
+						// 꺼져있는 조명을 찾으면
+						if (!m_pScene->m_pLights[i].m_bEnable)
+						{
+							m_pScene->m_pLights[i].m_bEnable = true;
+
+							auto& f4x4 = pInstalledObject->m_xmf4x4ToParent;
+							f4x4._42 += 20.0f;
+							m_pScene->m_pLights[i].m_xmf3Position.x = f4x4._41;
+							m_pScene->m_pLights[i].m_xmf3Position.y = f4x4._42;
+							m_pScene->m_pLights[i].m_xmf3Position.z = f4x4._43;
+							break;
+						}
 					}
 				}
 			}
