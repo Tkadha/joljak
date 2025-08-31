@@ -31,6 +31,17 @@ float4 PSPostProcess(VS_OUTPUT input) : SV_TARGET
     // 중앙은 0, 모서리는 1
     float vignette = saturate(distFromCenter * 2.0f);
 
+    /* 
+    // 화면 중앙으로부터 거리 계산
+    float distFromCenter = length(input.TexC - 0.5f);
+    
+    // 효과가 시작될 지점 (0.0 = 중앙, 0.5 = 화면 모서리).
+    float startPoint = 0.3f;
+
+    // 그라데이션이 퍼져나갈 폭 (클수록 부드러움).
+    float gradientWidth = 0.4f;
+    */
+    
     // 피격 효과 색상
     float3 hitColor = float3(1.0f, 0.0f, 0.0f);
 
