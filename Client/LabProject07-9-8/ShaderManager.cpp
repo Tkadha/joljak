@@ -10,6 +10,7 @@
 #include "DebugShader.h"
 #include "WavesShader.h" 
 #include "SkinnedShadowShader.h"
+#include "PostProcessShader.h"
 
 // --- 생성자, 소멸자, 정리 함수 ---
 ShaderManager::ShaderManager(ID3D12Device* pd3dDevice) : m_pd3dDevice(pd3dDevice)
@@ -40,6 +41,8 @@ void ShaderManager::CreateRootSignatures()
     m_mapRootSignatures["Debug"] = CDebugShader::CreateRootSignature(m_pd3dDevice);
     m_mapRootSignatures["Waves"] = CStandardShader::CreateRootSignature(m_pd3dDevice);
     m_mapRootSignatures["Skinned_Shadow"] = CSkinnedAnimationStandardShader::CreateRootSignature(m_pd3dDevice);
+    m_mapRootSignatures["PostProcess"] = CPostProcessShader::CreateRootSignature(m_pd3dDevice);
+
 }
 
 void ShaderManager::CreateShaders()
@@ -53,6 +56,7 @@ void ShaderManager::CreateShaders()
     m_mapShaders["Debug"] = std::make_unique<CDebugShader>();
     m_mapShaders["Waves"] = std::make_unique<CWavesShader>();
     m_mapShaders["Skinned_Shadow"] = std::make_unique<CSkinnedShadowShader>();
+    m_mapShaders["PostProcess"] = std::make_unique<CPostProcessShader>();
 }
 
 ID3D12RootSignature* ShaderManager::GetRootSignature(const std::string& name)

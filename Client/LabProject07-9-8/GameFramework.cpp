@@ -427,6 +427,40 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	dsvHeapDesc.NodeMask = 0;
 	ThrowIfFailed(m_pd3dDevice->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_pd3dShadowDsvHeap)));
 
+	D3D12_RESOURCE_DESC texDesc = {};
+	texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	texDesc.Alignment = 0;
+	texDesc.Width = m_nWndClientWidth;
+	texDesc.Height = m_nWndClientHeight;
+	texDesc.DepthOrArraySize = 1;
+	texDesc.MipLevels = 1;
+	texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	texDesc.SampleDesc.Count = 1;
+	texDesc.SampleDesc.Quality = 0;
+	texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	texDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+	D3D12_CLEAR_VALUE clearValue = {};
+	clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	float pfClearColor[4] = { 0.0f, 0.125f, 0.3f, 1.0f };
+	memcpy(clearValue.Color, pfClearColor, sizeof(float) * 4);
+
+	CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
+	ThrowIfFailed(m_pd3dDevice->CreateCommittedResource(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&texDesc,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, 
+		&clearValue,
+		IID_PPV_ARGS(&m_pd3dOffscreenTexture)));
+
+	m_d3dOffscreenRtvCPUHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	m_d3dOffscreenRtvCPUHandle.ptr += m_nSwapChainBuffers * m_nRtvDescriptorIncrementSize;
+	m_pd3dDevice->CreateRenderTargetView(m_pd3dOffscreenTexture.Get(), nullptr, m_d3dOffscreenRtvCPUHandle);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandle;
+	AllocateSrvDescriptors(1, cpuSrvHandle, m_d3dOffscreenSrvGPUHandle);
+	m_pd3dDevice->CreateShaderResourceView(m_pd3dOffscreenTexture.Get(), nullptr, cpuSrvHandle);
 
 
 	CoInitialize(NULL);
@@ -640,7 +674,7 @@ void CGameFramework::CreateRtvAndDsvDescriptorHeaps()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
 	::ZeroMemory(&d3dDescriptorHeapDesc, sizeof(D3D12_DESCRIPTOR_HEAP_DESC));
-	d3dDescriptorHeapDesc.NumDescriptors = m_nSwapChainBuffers;
+	d3dDescriptorHeapDesc.NumDescriptors = m_nSwapChainBuffers + 1;
 	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 	d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	d3dDescriptorHeapDesc.NodeMask = 0;
@@ -831,9 +865,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			case 'Y':
 				if (m_pScene && m_pPlayer)
 				{
-					
-					XMFLOAT3 playerPos = m_pPlayer->GetPosition();
-					m_pScene->SpawnAttackEffect(playerPos, 20, 100.0f);
+					OnPlayerHit();
 				}
 				break;
 			case 'U':
@@ -863,7 +895,12 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					nwManager.PushSendQueue(p, p.size);
 				}
 				break;
-			
+			case 'G':
+				if (m_pScene && m_pScene->m_pLights)//&& !m_pScene->IsDaytime())	// 낮에는 횃불 못 켜
+				{
+					m_pScene->m_pLights[1].m_bEnable = (m_pScene->m_pLights[1].m_bEnable == 0) ? 1 : 0;
+				}
+				break;
 			case VK_F2:
 				AddItem("wood", 30);
 				AddItem("stone", 30);
@@ -1237,6 +1274,28 @@ void CGameFramework::BuildObjects()
 	m_d3dDebugQuadIBView.BufferLocation = m_pd3dDebugQuadIB->GetGPUVirtualAddress();
 	m_d3dDebugQuadIBView.Format = DXGI_FORMAT_R16_UINT;
 	m_d3dDebugQuadIBView.SizeInBytes = ibByteSize;
+
+	struct SimpleVertex { XMFLOAT3 Pos; XMFLOAT2 Tex; };
+	SimpleVertex pVertices[4] =
+	{
+		{ XMFLOAT3(-1.0f,  1.0f, 0.5f), XMFLOAT2(0.0f, 0.0f) }, // 왼쪽 위
+		{ XMFLOAT3(1.0f,  1.0f, 0.5f), XMFLOAT2(1.0f, 0.0f) }, // 오른쪽 위
+		{ XMFLOAT3(1.0f, -1.0f, 0.5f), XMFLOAT2(1.0f, 1.0f) }, // 오른쪽 아래
+		{ XMFLOAT3(-1.0f, -1.0f, 0.5f), XMFLOAT2(0.0f, 1.0f) }  // 왼쪽 아래
+	};
+	std::uint16_t pIndices[6] = { 0, 1, 2, 0, 2, 3 };
+
+	m_pd3dFullScreenQuadVB = d3dUtil::CreateDefaultBuffer(m_pd3dDevice, m_pd3dCommandList, pVertices, vbByteSize, m_pd3dFullScreenQuadVB_Uploader);
+	m_pd3dFullScreenQuadIB = d3dUtil::CreateDefaultBuffer(m_pd3dDevice, m_pd3dCommandList, pIndices, ibByteSize, m_pd3dFullScreenQuadIB_Uploader);
+
+	m_d3dFullScreenQuadVBView.BufferLocation = m_pd3dFullScreenQuadVB->GetGPUVirtualAddress();
+	m_d3dFullScreenQuadVBView.StrideInBytes = sizeof(SimpleVertex);
+	m_d3dFullScreenQuadVBView.SizeInBytes = vbByteSize;
+
+	m_d3dFullScreenQuadIBView.BufferLocation = m_pd3dFullScreenQuadIB->GetGPUVirtualAddress();
+	m_d3dFullScreenQuadIBView.Format = DXGI_FORMAT_R16_UINT;
+	m_d3dFullScreenQuadIBView.SizeInBytes = ibByteSize;
+
 
 
 	m_pd3dCommandList->Close();
@@ -2287,7 +2346,11 @@ void CGameFramework::AnimateObjects()
 	if (m_pScene) m_pScene->AnimateObjects(fTimeElapsed);
 	if (m_pPlayer) m_pPlayer->Animate(fTimeElapsed);
 	
-	
+	if (m_fPlayerHitEffectAmount > 0.0f)
+	{
+		m_fPlayerHitEffectAmount -= fTimeElapsed * 1.5f; // 1.5는 감쇠 속도
+		if (m_fPlayerHitEffectAmount < 0.0f) m_fPlayerHitEffectAmount = 0.0f;
+	}
 }
 
 void CGameFramework::WaitForGpuComplete()
@@ -2414,40 +2477,43 @@ void CGameFramework::FrameAdvance()
 	if (m_pConstructionSystem->IsBuildMode()) {
 		m_pConstructionSystem->UpdatePreviewPosition(m_pCamera);
 	}
-	
+
+
 
 	HRESULT hResult = m_pd3dCommandAllocator->Reset();
 	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
 
-
-	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
-	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
-	d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	d3dResourceBarrier.Transition.pResource = m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex];
-	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	d3dRtvCPUDescriptorHandle.ptr += (m_nSwapChainBufferIndex * ::gnRtvDescriptorIncrementSize);
-
+	D3D12_RESOURCE_BARRIER d3dResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_pd3dOffscreenTexture.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
+    
+    D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = GetDsvCPUDescriptorHandle();
+    m_pd3dCommandList->OMSetRenderTargets(1, &m_d3dOffscreenRtvCPUHandle, TRUE, &d3dDsvCPUDescriptorHandle);
+    
 	float pfClearColor[4] = { 0.0f, 0.125f, 0.3f, 1.0f };
-	m_pd3dCommandList->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, pfClearColor/*Colors::Azure*/, 0, NULL);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	m_pd3dCommandList->ClearRenderTargetView(m_d3dOffscreenRtvCPUHandle, pfClearColor, 0, NULL);
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
-
-	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
 	if (m_pScene) m_pScene->Render(m_pd3dCommandList, m_pCamera);
 
-	//auto currentTimePoint = std::chrono::high_resolution_clock::now();
-	//std::chrono::duration<double> elapsed = currentTimePoint - startTime;
-	//double currentTime = elapsed.count(); // 초 단위 경과 시간
 
-	//if (currentTime - lastEventTime >= eventInterval)
+
+	d3dResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = GetCurrentRtvCPUDescriptorHandle();
+	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, NULL);
+
+	CShader* pPostProcessShader = m_pShaderManager->GetShader("PostProcess");
+	m_pScene->SetGraphicsState(m_pd3dCommandList, pPostProcessShader);
+
+	m_pd3dCommandList->SetGraphicsRootDescriptorTable(0, GetOffscreenSrvGPUHandle());
+	m_pd3dCommandList->SetGraphicsRoot32BitConstants(1, 1, &m_fPlayerHitEffectAmount, 0);
+
+	m_pd3dCommandList->IASetVertexBuffers(0, 1, &m_d3dFullScreenQuadVBView);
+	m_pd3dCommandList->IASetIndexBuffer(&m_d3dFullScreenQuadIBView);
+	m_pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+
+	
 	//{
 	//	if (m_pScene && m_pScene->GetSkyBox()) {
 	//		int textureCount = m_pScene->GetSkyBox()->GetTextureCount();

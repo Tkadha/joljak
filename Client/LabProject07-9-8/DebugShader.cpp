@@ -7,13 +7,10 @@ CDebugShader::~CDebugShader() {}
 
 D3D12_INPUT_LAYOUT_DESC CDebugShader::CreateInputLayout()
 {
-    // 입력 요소가 2개 (POSITION, TEXCOORD) 이므로 크기를 2로 바꿉니다.
     UINT nInputElementDescs = 2;
     D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
-    // 0번 요소: 위치
     pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-    // --- 1번 요소: 텍스처 좌표(UV)를 추가합니다. ---
     pd3dInputElementDescs[1] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
 
@@ -48,10 +45,7 @@ D3D12_RASTERIZER_DESC CDebugShader::CreateRasterizerState()
     D3D12_RASTERIZER_DESC d3dRasterizerDesc;
     ::ZeroMemory(&d3dRasterizerDesc, sizeof(D3D12_RASTERIZER_DESC));
 
-    // 삼각형 내부를 채워서 그립니다.
     d3dRasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
-    // --- 가장 중요한 부분: 컬링을 완전히 끕니다. ---
-    // 이제 삼각형의 앞면이든 뒷면이든 상관없이 무조건 그리게 됩니다.
     d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
 
     d3dRasterizerDesc.FrontCounterClockwise = FALSE;
