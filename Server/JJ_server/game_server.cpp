@@ -850,7 +850,7 @@ int main(int argc, char* argv[])
 			g_timer.Tick(120.f);
 			if (!g_is_start_game) continue;
 			float deltaTime = g_timer.GetTimeElapsed(); // Use Tick same deltaTime
-			float time_speed = 0.75f;
+			float time_speed = 0.75f / 2;
 			time_accumulator += deltaTime * time_speed;
 			if (time_accumulator > 360.0f) {
 				time_accumulator -= 360.0f;
