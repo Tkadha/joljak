@@ -93,12 +93,12 @@ public:
 
 	void ChangeSwapChainState();
 
-    void BuildObjects();
-    void ReleaseObjects();
+	void BuildObjects();
+	void ReleaseObjects();
 
-    void ProcessInput();
-    void AnimateObjects();
-    void FrameAdvance();
+	void ProcessInput();
+	void AnimateObjects();
+	void FrameAdvance();
 	void CreateCbvSrvDescriptorHeap();
 
 	void WaitForGpuComplete();
@@ -109,7 +109,7 @@ public:
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	std::shared_ptr<Item> CreateDummyItem();
 	void AddDummyItem();
-	void AddItem(const std::string &name, int quantity);
+	void AddItem(const std::string& name, int quantity);
 	ImTextureID LoadIconTexture(const std::wstring& filename);
 	void CreateIconDescriptorHeap();
 	void InitializeCraftItems();
@@ -135,13 +135,13 @@ public:
 	void InitializeBuildRecipes();
 private:
 	HINSTANCE					m_hInstance;
-	HWND						m_hWnd; 
+	HWND						m_hWnd;
 
 	int							m_nWndClientWidth;
 	int							m_nWndClientHeight;
 	int                         m_SelectedHotbarIndex = 0;
 	bool						ShowInventory = false;
-	bool						ShowCraftingUI = false; 
+	bool						ShowCraftingUI = false;
 	bool						ShowFurnaceUI = false;
 	bool						ShowTraitUI = false;
 	int							selectedCraftItemIndex = -1;
@@ -155,11 +155,11 @@ private:
 
 	void CheckAndToggleFurnaceUI();
 	void CheckEscape();
-        
-	IDXGIFactory4				*m_pdxgiFactory = NULL;
-	IDXGISwapChain3				*m_pdxgiSwapChain = NULL;
+
+	IDXGIFactory4* m_pdxgiFactory = NULL;
+	IDXGISwapChain3* m_pdxgiSwapChain = NULL;
 public:
-	ID3D12Device				*m_pd3dDevice = NULL;
+	ID3D12Device* m_pd3dDevice = NULL;
 
 	bool						m_bMsaa4xEnable = false;
 	UINT						m_nMsaa4xQualityLevels = 0;
@@ -167,25 +167,25 @@ public:
 	static const UINT			m_nSwapChainBuffers = 2;
 	UINT						m_nSwapChainBufferIndex;
 
-	ID3D12Resource				*m_ppd3dSwapChainBackBuffers[m_nSwapChainBuffers];
-	ID3D12DescriptorHeap		*m_pd3dRtvDescriptorHeap = NULL;
+	ID3D12Resource* m_ppd3dSwapChainBackBuffers[m_nSwapChainBuffers];
+	ID3D12DescriptorHeap* m_pd3dRtvDescriptorHeap = NULL;
 
-	ID3D12Resource				*m_pd3dDepthStencilBuffer = NULL;
-	ID3D12DescriptorHeap		*m_pd3dDsvDescriptorHeap = NULL;
+	ID3D12Resource* m_pd3dDepthStencilBuffer = NULL;
+	ID3D12DescriptorHeap* m_pd3dDsvDescriptorHeap = NULL;
 
-	ID3D12CommandAllocator		*m_pd3dCommandAllocator = NULL;
-	ID3D12CommandQueue			*m_pd3dCommandQueue = NULL;
-	ID3D12GraphicsCommandList	*m_pd3dCommandList = NULL;
+	ID3D12CommandAllocator* m_pd3dCommandAllocator = NULL;
+	ID3D12CommandQueue* m_pd3dCommandQueue = NULL;
+	ID3D12GraphicsCommandList* m_pd3dCommandList = NULL;
 	CConstructionSystem* m_pConstructionSystem = NULL;
 	ID3D12RootSignature* m_pRootSignature = nullptr;
 
-	ID3D12Fence					*m_pd3dFence = NULL;
+	ID3D12Fence* m_pd3dFence = NULL;
 	UINT64						m_nFenceValues[m_nSwapChainBuffers];
 	HANDLE						m_hFenceEvent;
 	int							m_nIconCount;
-	
-	ID3D12CommandAllocator*		m_pd3dUploadCommandAllocator = nullptr;
-	ID3D12GraphicsCommandList*	m_pd3dUploadCommandList = nullptr;
+
+	ID3D12CommandAllocator* m_pd3dUploadCommandAllocator = nullptr;
+	ID3D12GraphicsCommandList* m_pd3dUploadCommandList = nullptr;
 	// --- 종료 동기화용 펜스 값 추가 ---
 	UINT64                      m_nMasterFenceValue = 0;
 private:
@@ -197,13 +197,13 @@ private:
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dCbvGpuHandleStart;
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCpuHandleStart;
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dSrvGpuHandleStart;
-	
+
 
 	// 그림자
 	ID3D12DescriptorHeap* m_pd3dShadowDsvHeap = nullptr;
 
 	// 샘플러 힙 크기도 필요할 수 있음
-	UINT m_nSamplerDescriptorIncrementSize = 0; 
+	UINT m_nSamplerDescriptorIncrementSize = 0;
 
 	UINT m_nNextCbvOffset = 0; // CBV 영역 내 다음 오프셋
 	UINT m_nNextSrvOffset = 0; // SRV 영역 내 다음 오프셋 (CBV 영역 이후 시작)
@@ -230,7 +230,7 @@ public:
 
 	void CreateCbvSrvDescriptorHeaps(int nConstantBufferViews, int nShaderResourceViews);
 	D3D12_GPU_DESCRIPTOR_HANDLE CreateConstantBufferViews(int nConstantBufferViews, ID3D12Resource* pd3dConstantBuffers, UINT nStride);
-	
+
 	// --- 디스크립터 크기 반환 함수 추가 ---
 	UINT GetSamplerDescriptorIncrementSize() const { return m_nSamplerDescriptorIncrementSize; }
 
@@ -252,7 +252,7 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRtvCPUDescriptorHandle();
 	D3D12_CPU_DESCRIPTOR_HANDLE GetDsvCPUDescriptorHandle();
 
-	
+
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_pd3dDebugQuadVB;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_pd3dDebugQuadIB;
 
@@ -268,14 +268,14 @@ public:
 	void ChangeGameState(GameState newState);
 
 #if defined(_DEBUG)
-	ID3D12Debug					*m_pd3dDebugController;
+	ID3D12Debug* m_pd3dDebugController;
 #endif
 
 	CGameTimer					m_GameTimer;
 
-	CScene						*m_pScene = NULL;
-	CPlayer						*m_pPlayer = NULL;
-	CCamera						*m_pCamera = NULL;
+	CScene* m_pScene = NULL;
+	CPlayer* m_pPlayer = NULL;
+	CCamera* m_pCamera = NULL;
 
 	POINT						m_ptOldCursorPos;
 
@@ -304,7 +304,7 @@ public:
 
 
 
-// 도구 위치 잡기
+	// 도구 위치 잡기
 private:
 	CGameObject* m_pSword = nullptr;
 	CGameObject* m_pAxe = nullptr;
@@ -323,5 +323,29 @@ public:
 
 
 	UINT GetDsvDescriptorIncrementSize() const { return m_nDsvDescriptorIncrementSize; }
+
+// 포스트 프로세싱
+private:
+	ComPtr<ID3D12Resource>        m_pd3dOffscreenTexture;
+
+	// 이 텍스처의 "주소" 역할을 할 디스크립터 핸들
+	D3D12_CPU_DESCRIPTOR_HANDLE   m_d3dOffscreenRtvCPUHandle; // 렌더 타겟으로 쓸 때 (CPU)
+	D3D12_GPU_DESCRIPTOR_HANDLE   m_d3dOffscreenSrvGPUHandle; // 셰이더에서 읽을 때 (GPU)
+
+public:
+	D3D12_GPU_DESCRIPTOR_HANDLE GetOffscreenSrvGPUHandle() const { return m_d3dOffscreenSrvGPUHandle; }
+	D3D12_CPU_DESCRIPTOR_HANDLE GetOffscreenRtvCPUHandle() const { return m_d3dOffscreenRtvCPUHandle; }
+
+private:
+	ComPtr<ID3D12Resource>        m_pd3dFullScreenQuadVB;
+	ComPtr<ID3D12Resource>        m_pd3dFullScreenQuadIB;
+	ComPtr<ID3D12Resource>        m_pd3dFullScreenQuadVB_Uploader;
+	ComPtr<ID3D12Resource>        m_pd3dFullScreenQuadIB_Uploader;
+	D3D12_VERTEX_BUFFER_VIEW      m_d3dFullScreenQuadVBView;
+	D3D12_INDEX_BUFFER_VIEW       m_d3dFullScreenQuadIBView;
+
+public:
+	float m_fPlayerHitEffectAmount = 0.0f; // 피격 효과 강도
+	void OnPlayerHit() { m_fPlayerHitEffectAmount = 1.0f; } // 피격 시 호출
 };
 

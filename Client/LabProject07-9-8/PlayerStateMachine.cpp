@@ -751,7 +751,6 @@ public:
     PlayerStateID GetID() const override { return PlayerStateID::HitReaction; }
 
     void Enter(CTerrainPlayer* player, PlayerStateMachine* stateMachine) override {
-        std::cout << "Entering HitReaction State\n";
         m_bAnimFinished = false;
         m_fElapsedTimeInState = 0.0f;
         m_nAnimTrack = BlendConfig::PRIMARY_TRACK; // 즉시 전환이므로 주 트랙 사용
@@ -764,9 +763,9 @@ public:
 
 
         // 피격 시 이동 속도 0으로
-        player->SetVelocity({0.0f, player->GetVelocity().y, 0.0f}); // Y축 속도는 유지할 수 있음 (공중 피격 등)
-        // 또는 아주 짧은 넉백 효과를 줄 수도 있습니다.
+        player->SetVelocity({0.0f, player->GetVelocity().y, 0.0f});
 
+        player->m_pGameFramework->OnPlayerHit();
     }
 
     PlayerStateID Update(CTerrainPlayer* player, PlayerStateMachine* stateMachine, float deltaTime) override {

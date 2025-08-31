@@ -1221,9 +1221,10 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 
 	// 2. 렌더 타겟을 다시 화면(메인 백버퍼)과 메인 깊이 버퍼로 설정
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pGameFramework->GetCurrentRtvCPUDescriptorHandle();
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dOffscreenRtvCPUHandle = m_pGameFramework->GetOffscreenRtvCPUHandle(); 
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pGameFramework->GetDsvCPUDescriptorHandle();
-	pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
+	pd3dCommandList->OMSetRenderTargets(1, &d3dOffscreenRtvCPUHandle, TRUE, &d3dDsvCPUDescriptorHandle);
+
 
 	// 3. 뷰포트와 시저 렉트도 메인 카메라 기준으로 다시 설정
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
@@ -1939,10 +1940,6 @@ void CScene::UpdateLights(float fTimeElapsed)
 		pMainLight->m_xmf4Specular = m_xmf4DaylightSpecular;
 		if(GetSkyBox()->GetCurrentTextureIndex() != 0)
 			GetSkyBox()->SetSkyboxIndex(0);
-
-		m_pLights[1].m_bEnable = false;
-		//m_pLights[2].m_bEnable = false;
-		//m_pLights[3].m_bEnable = false;
 	}
 	else // 빛이 위를 향하면 밤
 	{

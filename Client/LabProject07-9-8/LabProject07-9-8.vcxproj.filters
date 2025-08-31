@@ -96,6 +96,9 @@
     <Filter Include="소스 파일\Sound">
       <UniqueIdentifier>{0735b70c-a1a7-4986-be8b-70d8ef4ca9b5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Shader\PostProcess">
+      <UniqueIdentifier>{2c614e81-02f0-4199-9b44-bf4cbb97408f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConstructionSystem.cpp" />
@@ -244,6 +247,9 @@
     </ClCompile>
     <ClCompile Include="SoundManager.cpp">
       <Filter>소스 파일\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="PostProcessShader.cpp">
+      <Filter>소스 파일\Shader\PostProcess</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -398,6 +404,9 @@
     <ClInclude Include="SoundManager.h">
       <Filter>소스 파일\Sound</Filter>
     </ClInclude>
+    <ClInclude Include="PostProcessShader.h">
+      <Filter>소스 파일\Shader\PostProcess</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LabProject07-9-8.rc" />
@@ -448,5 +457,8 @@
       <Filter>소스 파일\Shader\DebugShader</Filter>
     </FxCompile>
     <FxCompile Include="Skinned_Shadow.hlsl" />
+    <FxCompile Include="PostProcess.hlsl">
+      <Filter>소스 파일\Shader\PostProcess</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
