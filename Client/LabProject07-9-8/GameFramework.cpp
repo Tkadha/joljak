@@ -2497,42 +2497,23 @@ void CGameFramework::FrameAdvance()
 
 
 
-	// =================================================================
-	// [추가] Pass 2: 최종 화면(백버퍼)에 포스트 프로세싱 결과 렌더링
-	// =================================================================
-
-	// 1. 렌더 타겟을 다시 화면(백버퍼)으로 설정
 	d3dResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = GetCurrentRtvCPUDescriptorHandle();
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, NULL);
 
-	// 2. 포스트 프로세싱 셰이더와 리소스를 설정합니다.
 	CShader* pPostProcessShader = m_pShaderManager->GetShader("PostProcess");
 	m_pScene->SetGraphicsState(m_pd3dCommandList, pPostProcessShader);
 
-	// 3. 오프스크린 텍스처(t0)와 피격 강도(b1)를 셰이더에 전달합니다.
 	m_pd3dCommandList->SetGraphicsRootDescriptorTable(0, GetOffscreenSrvGPUHandle());
 	m_pd3dCommandList->SetGraphicsRoot32BitConstants(1, 1, &m_fPlayerHitEffectAmount, 0);
 
-	// 4. 전체 화면 사각형 메시를 그립니다.
 	m_pd3dCommandList->IASetVertexBuffers(0, 1, &m_d3dFullScreenQuadVBView);
 	m_pd3dCommandList->IASetIndexBuffer(&m_d3dFullScreenQuadIBView);
 	m_pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
-	//	// 디버그용 사각형의 정점/인덱스 버퍼를 설정하고 그립니다.
-	//	pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
-	//	pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
-	//	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	//	pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
-	// 
-	// 
-	//auto currentTimePoint = std::chrono::high_resolution_clock::now();
-	//std::chrono::duration<double> elapsed = currentTimePoint - startTime;
-	//double currentTime = elapsed.count(); // 초 단위 경과 시간
-
-	//if (currentTime - lastEventTime >= eventInterval)
+	
 	//{
 	//	if (m_pScene && m_pScene->GetSkyBox()) {
 	//		int textureCount = m_pScene->GetSkyBox()->GetTextureCount();

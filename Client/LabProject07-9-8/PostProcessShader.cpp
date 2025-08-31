@@ -13,7 +13,7 @@ ID3D12RootSignature* CPostProcessShader::CreateRootSignature(ID3D12Device* pd3dD
 
     CD3DX12_ROOT_PARAMETER rootParameters[2];
     rootParameters[0].InitAsDescriptorTable(1, &descRange, D3D12_SHADER_VISIBILITY_PIXEL);
-    rootParameters[1].InitAsConstants(1, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL); // b1: 피격 강도(float 1개)
+    rootParameters[1].InitAsConstants(1, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL); // b1: 피격 강도
 
     auto d3dStaticSamplers = CShader::GetStaticSamplers();
     CD3DX12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc;
@@ -49,15 +49,6 @@ D3D12_SHADER_BYTECODE CPostProcessShader::CreatePixelShader()
 {
     return CompileShaderFromFile(L"PostProcess.hlsl", "PSPostProcess", "ps_5_1", &m_pd3dPixelShaderBlob);
 }
-
-//// 포스트프로세싱은 깊이 테스트와 쓰기를 모두 끕니다.
-//D3D12_DEPTH_STENCIL_DESC CPostProcessShader::CreateDepthStencilState()
-//{
-//    D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc = CShader::CreateDepthStencilState();
-//    d3dDepthStencilDesc.DepthEnable = FALSE;
-//    d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-//    return d3dDepthStencilDesc;
-//}
 
 D3D12_RASTERIZER_DESC CPostProcessShader::CreateRasterizerState()
 {

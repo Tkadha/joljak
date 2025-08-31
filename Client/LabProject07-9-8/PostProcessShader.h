@@ -13,7 +13,6 @@ public:
 
     virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState() override;
     virtual D3D12_RASTERIZER_DESC CreateRasterizerState() override;
-    //virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState() override;
 
     static ID3D12RootSignature* CreateRootSignature(ID3D12Device* pd3dDevice);
 
