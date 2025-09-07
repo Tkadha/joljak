@@ -1909,7 +1909,7 @@ void CScene::UpdateTorchShadowTransform(LIGHT* pTorchLight)
 
 void CScene::UpdateLights(float fTimeElapsed)
 {
-	float rotationSpeed = 0.75f; // 속도를 약간 조절
+	float rotationSpeed = 0.1f; // 속도를 약간 조절
 	m_fLightRotationAngle += fTimeElapsed * rotationSpeed;
 	if (m_fLightRotationAngle > 360.0f) m_fLightRotationAngle -= 360.0f;
 
