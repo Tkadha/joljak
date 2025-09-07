@@ -25,6 +25,8 @@ cbuffer cbBoneTransforms : register(b8)
 };
 
 // --- 텍스처 (Standard와 동일) ---
+Texture2D gShadowMap : register(t3);
+Texture2D gTorchShadowMap : register(t4);
 Texture2D gtxtAlbedoTexture : register(t6);
 Texture2D gtxtSpecularTexture : register(t7);
 Texture2D gtxtNormalTexture : register(t8);
@@ -51,6 +53,8 @@ struct VS_STANDARD_OUTPUT
     float3 tangentW : TANGENT;
     float3 bitangentW : BITANGENT;
     float2 uv : TEXCOORD;
+    
+    float4 ShadowPosH : TEXCOORD1; // 그림자 좌표를 위한 공간 추가
 };
 
 
@@ -83,6 +87,33 @@ VS_STANDARD_OUTPUT VSSkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
     output.position = mul(output.position, gmtxProjection);
 
     output.uv = input.uv;
+    
+    output.ShadowPosH = mul(float4(output.positionW, 1.0f), gmtxShadowTransform);
+    
+    return output;
+}
+
+struct VS_SHADOW_OUTPUT
+{
+    float4 PosH : SV_POSITION;
+};
+
+VS_SHADOW_OUTPUT VSSkinnedAnimationShadow(VS_SKINNED_STANDARD_INPUT input)
+{
+    VS_SHADOW_OUTPUT output = (VS_SHADOW_OUTPUT) 0;
+    
+    matrix skinTransform = (matrix) 0.0f;
+    for (int i = 0; i < MAX_VERTEX_INFLUENCES; ++i)
+    {
+        matrix boneMatrix = mul(gpmtxBoneOffsets[input.indices[i]], gpmtxBoneTransforms[input.indices[i]]);
+        skinTransform += input.weights[i] * boneMatrix;
+    }
+    
+    float4 skinnedPosW = mul(float4(input.position, 1.0f), skinTransform);
+   
+    float4x4 gLightViewProj = mul(gmtxView, gmtxProjection);
+    
+    output.PosH = mul(skinnedPosW, gLightViewProj);
 
     return output;
 }

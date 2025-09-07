@@ -8,7 +8,7 @@
 #pragma comment (lib, "WS2_32.LIB")
 #include "../../Server/Global.h"
 
-#define BUFSIZE 1024 // 패킷(현재는 버퍼)크기
+#define BUFSIZE 1024 * 4 // 패킷(현재는 버퍼)크기
 
 
 using namespace std;
@@ -47,7 +47,7 @@ public:
 	void PushSendQueue(P packet, short size)
 	{
 		auto buffer = make_unique<char[]>(size);
-		memcpy(buffer.get(), reinterpret_cast<const char*>(& packet), size);
+		memcpy(buffer.get(), reinterpret_cast<const char*>(&packet), size);
 		lock_guard<mutex> lock(s_mu);
 		if (packet.type == static_cast<char>(E_PACKET::E_P_ROTATE))
 		{

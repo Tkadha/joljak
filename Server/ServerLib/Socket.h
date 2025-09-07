@@ -16,9 +16,10 @@
 typedef int SOCKET;
 #endif
 
-#define BUFSIZE 1024 // 패킷(현재는 버퍼)크기
-#define MAX_CLIENT 100 // 최대 접속가능한 클라이언트 수
-#define MAX_WORKERTHREAD 4 // 쓰레드 풀(CP객체)에 넣을 쓰레드 수
+#define BUFSIZE 1024 * 4 // 패킷(현재는 버퍼)크기
+
+//#define MAX_CLIENT 100 // 최대 접속가능한 클라이언트 수
+//#define MAX_WORKERTHREAD 4 // 쓰레드 풀(CP객체)에 넣을 쓰레드 수
 
 class Endpoint;
 
@@ -28,7 +29,7 @@ enum class SocketType
 	Udp,
 };
 
-enum class COMP_TYPE { OP_ACCEPT, OP_RECV, OP_SEND };
+enum class COMP_TYPE { OP_ACCEPT, OP_RECV, OP_SEND, OP_FSM_UPDATE, OP_PLAYER_UPDATE };
 class OVER_EXP {
 public:
 	WSAOVERLAPPED over;
@@ -36,7 +37,7 @@ public:
 	char send_buf[BUFSIZE];
 	COMP_TYPE comp_type;
 	char m_isReadOverlapped = false;
-
+	int obj_id;
 	OVER_EXP() : comp_type(COMP_TYPE::OP_RECV)
 	{
 		ZeroMemory(&over, sizeof(over));

@@ -1,12 +1,14 @@
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN             // 거의 사용되지 않는 내용은 Windows 헤더에서 제외합니다.
-// Windows 헤더 파일:
+///---------���� ����------------
+#define ONLINE
+
+
+#define WIN32_LEAN_AND_MEAN     
 #define NOMINMAX
 
 #include <windows.h>
 
-// C�� ��Ÿ�� ��� �����Դϴ�.
 #include <stdlib.h>
 #include <malloc.h>
 #include <memory.h>
@@ -60,8 +62,8 @@ extern HINSTANCE						ghAppInstance;
 
 //#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
 
-#define FRAME_BUFFER_WIDTH				1600
-#define FRAME_BUFFER_HEIGHT				1280
+#define FRAME_BUFFER_WIDTH				1900
+#define FRAME_BUFFER_HEIGHT				1100
 
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "d3d12.lib")
@@ -69,7 +71,7 @@ extern HINSTANCE						ghAppInstance;
 
 #pragma comment(lib, "dxguid.lib")
 
-// TODO: ���α׷��� �ʿ��� �߰� ����� ���⿡�� �����մϴ�.
+
 
 extern UINT	gnCbvSrvDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;
@@ -190,7 +192,7 @@ namespace Vector3
 	inline float LengthSq(const XMFLOAT3& v)
 	{
 		XMVECTOR vec = XMLoadFloat3(&v);
-		XMVECTOR lengthSqVec = XMVector3LengthSq(vec); // 각 성분 제곱합의 X 성분만 가져옴
+		XMVECTOR lengthSqVec = XMVector3LengthSq(vec); // �??�분 ?�곱?�의 X ?�분�?가?�옴
 		return XMVectorGetX(lengthSqVec);
 	}
 
@@ -428,3 +430,14 @@ namespace genRandom
 		return std::make_pair(x, z);
 	}
 }
+
+
+
+// Wave
+
+struct Vertex
+{
+	DirectX::XMFLOAT3 pos;
+	DirectX::XMFLOAT3 normal;
+	DirectX::XMFLOAT2 texc;
+};

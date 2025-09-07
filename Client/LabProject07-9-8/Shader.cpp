@@ -43,18 +43,17 @@ D3D12_SHADER_BYTECODE CShader::CompileShaderFromFile(WCHAR* pszFileName, LPCSTR 
 
 	ID3DBlob* pd3dErrorBlob = NULL;
 	HRESULT hResult = ::D3DCompileFromFile(
-		pszFileName,            // 셰이더 파일 경로
-		NULL,                   // 매크로 정의 없음
-		D3D_COMPILE_STANDARD_FILE_INCLUDE, // 표준 Include 처리 사용
-		pszShaderName,          // 진입점 함수 이름 ("VSStandard")
-		pszShaderProfile,       // 셰이더 프로파일 ("vs_5_1")
-		nCompileFlags,          // 컴파일 플래그
-		0,                      // Effect 플래그 (사용 안 함)
-		ppd3dShaderBlob,        // 컴파일된 코드 출력 포인터 주소 (&m_pd3dVertexShaderBlob)
-		&pd3dErrorBlob          // 오류 메시지 출력 포인터 주소
+		pszFileName,            
+		NULL,                   
+		D3D_COMPILE_STANDARD_FILE_INCLUDE, 
+		pszShaderName,          
+		pszShaderProfile,       
+		nCompileFlags,         
+		0,                    
+		ppd3dShaderBlob,       
+		&pd3dErrorBlob          
 	);
 
-	// --- 중요: HRESULT 확인 및 오류 메시지 출력 ---
 	if (FAILED(hResult))
 	{
 		OutputDebugStringA("Shader Compile Failed: ");
@@ -68,39 +67,31 @@ D3D12_SHADER_BYTECODE CShader::CompileShaderFromFile(WCHAR* pszFileName, LPCSTR 
 		if (pd3dErrorBlob)
 		{
 			OutputDebugStringA("Compile Error:\n");
-			// 오류 메시지를 디버그 출력 창에 표시
 			OutputDebugStringA((char*)pd3dErrorBlob->GetBufferPointer());
-			pd3dErrorBlob->Release(); // 오류 블롭 해제
+			pd3dErrorBlob->Release();
 		}
 		else
 		{
 			OutputDebugStringA("Compile Error: Unknown error (No error blob).\n");
 		}
 
-		// 실패 시 *ppd3dShaderBlob은 유효하지 않으므로 NULL로 설정 (안전 조치)
 		if (ppd3dShaderBlob && *ppd3dShaderBlob) {
 			(*ppd3dShaderBlob)->Release();
 			*ppd3dShaderBlob = NULL;
 		}
 
-		// 빈 바이트코드 반환
 		D3D12_SHADER_BYTECODE emptyByteCode = { nullptr, 0 };
 		return emptyByteCode;
 }
 
-	// 성공 시 오류 블롭 해제 (오류는 없지만 경고 등이 있을 수 있음)
 	if (pd3dErrorBlob) pd3dErrorBlob->Release();
 
-	// --- 성공 시에만 바이트코드 정보 설정 ---
 	D3D12_SHADER_BYTECODE d3dShaderByteCode;
-	// *ppd3dShaderBlob이 유효한지 한번 더 확인 (방어적 코드)
 	if (ppd3dShaderBlob && *ppd3dShaderBlob) {
 		d3dShaderByteCode.BytecodeLength = (*ppd3dShaderBlob)->GetBufferSize();
 		d3dShaderByteCode.pShaderBytecode = (*ppd3dShaderBlob)->GetBufferPointer();
 	}
 	else {
-		// 이론적으로 여기까지 오면 안되지만, 예외 상황 처리
-		OutputDebugStringA("Error: Shader blob is null even after successful compile?\n");
 		d3dShaderByteCode.BytecodeLength = 0;
 		d3dShaderByteCode.pShaderBytecode = nullptr;
 	}
@@ -264,6 +255,41 @@ void CShader::OnPrepareRender(ID3D12GraphicsCommandList *pd3dCommandList, int nP
 void CShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 	OnPrepareRender(pd3dCommandList);
+}
+
+
+std::array<const CD3DX12_STATIC_SAMPLER_DESC, 3> CShader::GetStaticSamplers()
+{
+	const CD3DX12_STATIC_SAMPLER_DESC wrapSampler(
+		0, // shaderRegister (s0)
+		D3D12_FILTER_ANISOTROPIC,
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		0.0f, // mipLODBias
+		16, // maxAnisotropy
+		D3D12_COMPARISON_FUNC_LESS_EQUAL
+	);
+
+	const CD3DX12_STATIC_SAMPLER_DESC clampSampler(
+		1, // shaderRegister (s1)
+		D3D12_FILTER_ANISOTROPIC,
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+		0.0f, // mipLODBias
+		16, // maxAnisotropy
+		D3D12_COMPARISON_FUNC_LESS_EQUAL
+	);
+
+	const CD3DX12_STATIC_SAMPLER_DESC shadow(
+		2, // shaderRegister
+		D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,  // addressW
+		0.0f,                               // mipLODBias
+		16,                                 // maxAnisotropy
+		D3D12_COMPARISON_FUNC_LESS_EQUAL,
+		D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK);
+
+	return { wrapSampler, clampSampler, shadow };
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

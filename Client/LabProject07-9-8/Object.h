@@ -52,11 +52,28 @@ enum class GameObjectType : int {
 	Snake,
 	Turtle,
 	Snail,
-	Spider
+	Spider,
+	Raptor,
+	Golem,
+	Furnace,
+	Antenna
 
 };
+enum class ToolType : int {
+	None,
+	Sword,
+	Axe,
+	Pickaxe,
+	Hammer
+};
 
+struct ToolTransform
+{
+	XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };
+	XMFLOAT3 rotation = { 0.0f, 0.0f, 0.0f };
+};
 
+enum class ANIMATION_TYPE;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 class CGameObject
@@ -85,6 +102,11 @@ public:
 	int								m_nMaterials = 0;
 	CMaterial						**m_ppMaterials = NULL;
 	int 							m_treecount{};
+	int								m_id{};
+	int								m_anitype;
+	bool							_invincible = false;
+
+	bool							m_bIsPrefab = false; // ������ �������� Ȯ��
 
 	XMFLOAT4 m_xmf4DebugColor = XMFLOAT4(1, 1, 1, 1);
 	// OBB
@@ -97,9 +119,8 @@ public:
 	ID3D12Resource* m_pOBBIndexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW m_OBBVertexBufferView;
 	D3D12_INDEX_BUFFER_VIEW m_OBBIndexBufferView;
-	// OBB 변환 행렬용 상수 버퍼
 	ID3D12Resource* m_pd3dcbOBBTransform = nullptr;
-	XMFLOAT4X4* m_pcbMappedOBBTransform = nullptr; // 맵핑된 포인터
+	XMFLOAT4X4* m_pcbMappedOBBTransform = nullptr;
 
 	CMaterial* m_OBBMaterial = NULL;
 	//COBBShader m_OBBShader;
@@ -117,16 +138,20 @@ public:
 	LPVOID									terraindata = NULL;
 
 	CGameFramework* m_pGameFramework;
-
-	// 바뀐 구조에서 계층 구조 처리를 위해 필요
 	CAnimationController* m_pSharedAnimController = nullptr;
 	void PropagateAnimController(CAnimationController* controller); 
 
 
-	CScene* m_pScene = nullptr; // 자신을 소유한 Scene 포인터
+	CScene* m_pScene = nullptr; 
 	GameObjectType m_objectType = GameObjectType::Unknown;
 
 	virtual void FSMUpdate() {}
+	void ChangeAnimation(ANIMATION_TYPE type);
+	void PlayAnimationSound(GameObjectType obj_type, ANIMATION_TYPE ani_type);
+
+	// �׸��� ������ �Լ�
+	virtual void RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList);
+
 
 	void SetMesh(CMesh *pMesh);
 	//void SetShader(CShader *pShader);
@@ -134,6 +159,7 @@ public:
 	void SetMaterial(int nMaterial, CMaterial *pMaterial);
 
 	void SetChild(CGameObject *pChild, bool bReferenceUpdate=false);
+	void RemoveChild(CGameObject* pChildToRemove);
 
 	virtual void BuildMaterials(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
 
@@ -164,6 +190,7 @@ public:
 	void SetUp(XMFLOAT3 xmf3Up);
 	void SetRight(XMFLOAT3 xmf3Right);
 
+	void SetRotation(float fPitch, float fYaw, float fRoll);
 
 	XMFLOAT3 GetToParentPosition();
 	void Move(XMFLOAT3 xmf3Offset);
@@ -190,27 +217,28 @@ public:
 
 	bool CheckCollisionOBB(CGameObject* other);
 	void SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
-	void SetOBB();
+	void SetOBB(float scalex, float scaley, float scalez, const XMFLOAT3& centerOffset);
 	void SetOBB(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CShader* shader);
+	BoundingOrientedBox GetOBB();
+	BoundingOrientedBox GetBossOBB();
 	void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList);
 	void InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void SetColor(const XMFLOAT4& color);
 
-	// --- 재질 접근자 추가 ---
+	virtual bool ShouldRenderOBB() const { return isRender; } 
 	CMaterial* GetMaterial(int nIndex = 0) const {
-		// 인덱스 범위 및 포인터 유효성 검사
 		if (nIndex >= 0 && nIndex < m_nMaterials && m_ppMaterials) {
 			return m_ppMaterials[nIndex];
 		}
-		return nullptr; // 유효하지 않으면 nullptr 반환
+		return nullptr; 
 	}
 	int GetMaterialCount() const { return m_nMaterials; }
 
-	// --- OBB 렌더링 함수 선언 ---
 	virtual void RenderOBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 	void SetTerraindata(LPVOID pContext) {terraindata = pContext;}
 	void SetOwningScene(CScene* pScene) { m_pScene = pScene; };
+	void SetInvincible(bool invincible) { _invincible = invincible; }
 
 public:
 	void FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnSkinnedMesh);
@@ -232,6 +260,42 @@ public:
 
 	static void PrintFrameInfo(CGameObject* pGameObject, CGameObject* pParent);
 
+
+public:
+	int hp{ 100 };
+	int level = 0;
+	int atk = 5;
+
+	int getHp() { return hp; }
+	void setHp(int n) { hp = n; }
+
+	void Sethp(int ghp) { hp = ghp; }
+	void Decreasehp(int num) { hp -= num; }
+	int Gethp() { return hp; }
+	int GetAtk() { return atk; }
+
+	void Check_attack();
+	bool IsInActiveFrame(float startRatio, float endRatio);
+	void ProcessPlayerHit(CPlayer* pPlayerInfo);
+	// Prefab
+	void CopyDataFrom(CGameObject* pSource);
+	virtual CGameObject* Clone();
+public:
+	bool is_load = false;
+
+// ��� �߰�
+public:
+		void LoadTools(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
+		void UpdateToolTransforms();
+		void EquipTool(const std::string& itemName);
+		void PlayerEquipTool(const std::string& itemName);
+		void UnequipAllTools();
+
+		void RenderToolEditorImGui(); // ���� ������ ImGui â�� �׸��� �Լ�
+
+	std::map<std::string, CGameObject*> m_tools;
+	std::string m_equippedToolName;
+	std::map<std::string, ToolTransform> m_toolTransforms;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -262,7 +326,7 @@ public:
 	float GetLength() { return(m_nLength * m_xmf3Scale.z); }
 
 	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
-
+	virtual void RenderShadow(ID3D12GraphicsCommandList* pd3dCommandList);
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -270,18 +334,24 @@ public:
 class CSkyBox : public CGameObject
 {
 public:
-	CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CGameFramework* pGameFramework);
+	CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
+
 	virtual ~CSkyBox();
 
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL) override;
+	void SetSkyboxIndex(int index);
+	void LoadTextures(ID3D12GraphicsCommandList* cmdList, const std::vector<std::wstring>& texturePaths);
+	int  GetTextureCount() const { return static_cast<int>(m_vSkyboxTextures.size()); }
+	int GetCurrentTextureIndex() const { return m_nCurrentTextureIndex; }
+private:
+	std::vector<std::shared_ptr<CTexture>> m_vSkyboxTextures;
+	int m_nCurrentTextureIndex = 0;
 };
 
 
 class CMonsterObject : public CGameObject
 {
-	int _level = 0;
-	int _hp = 20;
-	int _atk = 3;
+
 public:
 	CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CLoadedModelInfo* pModel, int nAnimationTracks, CGameFramework* pGameFramework);
 	virtual ~CMonsterObject();
@@ -294,10 +364,12 @@ public:
 	{
 		FSM_manager->ChangeState(newstate);
 	}
-	void Sethp(int hp) { _hp = hp; }
-	void Decreasehp(int num) { _hp -= num; }
-	int Gethp() { return _hp; }
-	int GetAtk() { return _atk; }
+
+	CMonsterObject(CGameFramework* pGameFramework);
+
+	virtual CGameObject* Clone() override;
+
+	void PostCloneAnimationSetup();
 };
 
 class PlayerInput;
@@ -305,6 +377,15 @@ class UserObject : public CGameObject
 {
 public:
 	int on_track = 0;
+
+	ToolType m_eCurrentTool;
+	CGameObject* m_pEquippedTool = nullptr;
+	CGameObject* m_pSword = nullptr;
+	CGameObject* m_pAxe = nullptr;
+	CGameObject* m_pPickaxe = nullptr;
+	CGameObject* m_pHammer = nullptr;
+
+	int torchIndex = -1;
 
 	UserObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CLoadedModelInfo* pModel, int nAnimationTracks, CGameFramework* pGameFramework);
 	virtual ~UserObject();
@@ -314,6 +395,8 @@ public:
 	void AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate, XMFLOAT3 scale);
 	CGameObject* FindFrame(char* framename);
 
+	//UserObject(CGameFramework* pGameFramework);
+	//virtual CGameObject* Clone();
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -366,61 +449,50 @@ class CItemObject : virtual public CGameObject
 {
 public:
 	XMFLOAT3 m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	XMFLOAT3 m_xmf3Gravity = XMFLOAT3(0.0f, -980.0f, 0.0f); // 중력 가속도 (조정 필요)
+	XMFLOAT3 m_xmf3Gravity = XMFLOAT3(0.0f, -980.0f, 0.0f); 
 	bool m_bOnGround = false;
-	float m_fLifeTime = 15.0f; // 바닥에 떨어진 후 사라지기까지 시간 (초)
+	float m_fLifeTime = 15.0f; 
 	float m_fElapsedAfterLanding = 0.0f;
 
-	CHeightMapTerrain* m_pTerrainRef = nullptr; // 지형 참조 (충돌 감지용)
+	CHeightMapTerrain* m_pTerrainRef = nullptr; 
 
 	CItemObject() { m_objectType = GameObjectType::Item; };
+	CItemObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) { m_objectType = GameObjectType::Item; };
 	virtual ~CItemObject() {};
 
-	virtual void Animate(float fTimeElapsed) override; // 물리 및 수명 처리
+	virtual void Animate(float fTimeElapsed) override; 
 	void SetInitialVelocity(const XMFLOAT3& velocity) { m_xmf3Velocity = velocity; }
 };
 
 
-// ------------------ 나무 ------------------
 class CTreeObject : virtual public CGameObject
 {
-	int hp{ 30 };
 public:
-
-
-
-	CTreeObject() { m_objectType = GameObjectType::Tree; };
+	CTreeObject() { m_objectType = GameObjectType::Tree; hp = 30; };
+	CTreeObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) { m_objectType = GameObjectType::Tree; };
 	CTreeObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) {};
 	virtual ~CTreeObject() {};
 
-	int getHp() { return hp; }
-	void setHp(int n) { hp = n; }
 
-// ------- 쓰러지는 애니메이션 -------
-
-	// 쓰러지는 애니메이션 시작 함수
-	void StartFalling(const XMFLOAT3& hitDirection); // 플레이어의 공격 방향 등을 받을 수 있음
-
-	// 매 프레임 애니메이션 업데이트
+	void StartFalling(const XMFLOAT3& hitDirection); 
 	virtual void Animate(float fTimeElapsed) override;
 
 	bool IsFalling() const { return	m_bIsFalling; }
 	bool HasFallen() const { return m_bHasFallen; }
 
-	bool m_bIsFalling = false;       // 현재 쓰러지는 애니메이션 중인가?
-	bool m_bHasFallen = false;       // 이미 쓰러진 상태인가?
-	float m_fFallingDuration = 2.5f;  // 쓰러지는 데 걸리는 시간 (초)
-	float m_fFallingTimer = 0.0f;     // 쓰러지기 시작한 후 지난 시간
-	XMFLOAT3 m_xmf3FallingAxis;       // 회전 축 (쓰러지는 방향 결정)
-	float m_fCurrentFallAngle = 0.0f; // 현재까지 회전한 각도
-	float m_fTargetFallAngle = XM_PIDIV2; // 목표 회전 각도 (90도)
+	bool m_bIsFalling = false;       
+	bool m_bHasFallen = false;       
+	float m_fFallingDuration = 2.5f;  
+	float m_fFallingTimer = 0.0f;     
+	XMFLOAT3 m_xmf3FallingAxis;       
+	float m_fCurrentFallAngle = 0.0f; 
+	float m_fTargetFallAngle = XM_PIDIV2; 
 
-	// 쓰러지기 시작할 때의 초기 m_xmf4x4ToParent 값을 저장 (상대 변환 기준)
 	XMFLOAT4X4 m_xmf4x4InitialToParent;
 
-	// 회전의 중심점 (나무 밑동 부분, 로컬 좌표계 기준)
-	// 모델의 원점이 이미 밑동이라면 (0,0,0) 사용 가능
 	XMFLOAT3 m_xmf3RotationPivot = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+
 };
 
 
@@ -429,6 +501,9 @@ class CBirchObject : public CTreeObject
 public:
 	CBirchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CBirchObject() {}
+
+	CBirchObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
 class CWillowObject : public CTreeObject
@@ -436,6 +511,9 @@ class CWillowObject : public CTreeObject
 public:
 	CWillowObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CWillowObject() {}
+
+	//CWillowObject(CGameFramework* pGameFramework);
+	//virtual CGameObject* Clone();
 };
 
 class CPineObject : public CTreeObject
@@ -443,27 +521,29 @@ class CPineObject : public CTreeObject
 public:
 	CPineObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CPineObject() {}
+
+	CPineObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
-// 나뭇가지(드롭 아이템)
 class CBranchObject : public CItemObject {
 public:
 	CBranchObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain);
 	virtual ~CBranchObject() {};
+
+	//CBranchObject(CGameFramework* pGameFramework);
+	//virtual CGameObject* Clone();
 };
 
 
-// ------------------ 돌 ------------------
+// ------------------ ??------------------
 class CRockObject : virtual public CGameObject
 {
-	int hp{ 30 };
 public:
-	CRockObject() { m_objectType = GameObjectType::Rock; };
+	CRockObject() { m_objectType = GameObjectType::Rock; hp = 30; };
+	CRockObject(CGameFramework* pGameFramework) : CGameObject(1, pGameFramework) { m_objectType = GameObjectType::Rock; };
 	CRockObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework) {};
 	virtual ~CRockObject() {};
-
-	int getHp() { return hp; }
-	void setHp(int n) { hp = n; }
 
 	void EraseRock();
 };
@@ -473,6 +553,9 @@ class CRockClusterAObject : public CRockObject
 public:
 	CRockClusterAObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CRockClusterAObject() {}
+
+	CRockClusterAObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
 class CRockClusterBObject : public CRockObject
@@ -480,6 +563,9 @@ class CRockClusterBObject : public CRockObject
 public:
 	CRockClusterBObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CRockClusterBObject() {}
+
+	CRockClusterBObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
 class CRockClusterCObject : public CRockObject
@@ -487,6 +573,9 @@ class CRockClusterCObject : public CRockObject
 public:
 	CRockClusterCObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CRockClusterCObject() {}
+
+	CRockClusterCObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
 class CCliffFObject : public CGameObject
@@ -494,18 +583,23 @@ class CCliffFObject : public CGameObject
 public:
 	CCliffFObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CCliffFObject() {}
+
+	CCliffFObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
-// 돌 파편(드롭 아이템)
 class CRockDropObject : public CItemObject {
 public:
 	CRockDropObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework, CHeightMapTerrain* pTerrain);
 	virtual ~CRockDropObject() {};
 
+	CRockDropObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
+
 };
 
 
-// ------------------ 꽃, 풀 ------------------
+// ------------------ ?? ?? ------------------
 class VegetationObject : virtual public CGameObject
 {
 public:
@@ -519,6 +613,9 @@ class CBushAObject : public VegetationObject
 public:
 	CBushAObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
 	virtual ~CBushAObject() {}
+
+	CBushAObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
 
@@ -532,13 +629,108 @@ public:
 class CStaticObject : public CGameObject
 {
 public:
-	CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* modelname, CGameFramework* pGameFramework);
+	CStaticObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const char* modelname, CGameFramework* pGameFramework);
 	virtual ~CStaticObject() {}
+
+	CStaticObject(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
 };
 
-class CConstructionObject : public CGameObject
+
+
+class CRockShardEffect : public CGameObject
 {
 public:
-	CConstructionObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameFramework* pGameFramework);
-	virtual ~CConstructionObject() {}
+	CRockShardEffect(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework);
+
+	void Activate(const XMFLOAT3& position, const XMFLOAT3& velocity);
+	void Update(float deltaTime);
+	bool IsActive() const { return m_bActive; }
+
+	CRockShardEffect(CGameFramework* pGameFramework);
+	virtual CGameObject* Clone();
+private:
+	bool m_bActive = false;
+	float m_fElapsedTime = 0.0f;
+	float m_fLifeTime = 2.0f;
+	XMFLOAT3 m_vVelocity = { 0, 0, 0 };
+};
+
+class CAttackEffectObject : public CGameObject
+{
+public:
+	
+	CAttackEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework);
+	virtual ~CAttackEffectObject() {}
+
+	
+	void Activate(const XMFLOAT3& position, float lifeTime = 0.5f);
+
+	
+	virtual void Animate(float fTimeElapsed) override;
+
+private:
+	bool  m_bIsActive = false;    
+	float m_fLifeTime = 0.5f;     // ����Ʈ�� ������ �ð�
+	float m_fElapsedTime = 0.0f;  // Ȱ��ȭ�� �� ���� �ð�
+};
+
+class CResourceShardEffect : public CGameObject
+{
+public:
+	CResourceShardEffect(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework, CMesh* pSharedMesh, CMaterial* pSharedMaterial);
+	virtual ~CResourceShardEffect() {}
+
+	void Activate(const XMFLOAT3& position, const XMFLOAT3& velocity);
+	virtual void Animate(float fTimeElapsed) override;
+
+private:
+	bool     m_bIsActive = false;
+	float    m_fLifeTime = 1.0f;     // ���� ���� �ð�
+	float    m_fElapsedTime = 0.0f;
+	XMFLOAT3 m_xmf3Velocity = { 0,0,0 };
+	XMFLOAT3 m_xmf3Gravity = { 0, -9800.0f, 0 }; // �߷�
+};
+
+class CBloodEffectObject : public CGameObject
+{
+public:
+	CBloodEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework, CMesh* pSharedMesh, CMaterial* pSharedMaterial);
+	virtual ~CBloodEffectObject() {}
+
+	
+	// Activate �Լ��� ��ġ�� ������ �޽��ϴ�.
+	void Activate(const XMFLOAT3& position, const XMFLOAT3& velocity, float lifeTime = 0.4f);
+	virtual void Animate(float fTimeElapsed) override;
+
+private:
+	bool     m_bIsActive = false;
+	float    m_fLifeTime = 0.1f;
+	float    m_fElapsedTime = 0.0f;
+
+	XMFLOAT3 m_xmf3Velocity = { 0,0,0 };
+	XMFLOAT3 m_xmf3Gravity = { 0, -3500.0f, 0 }; // ���翡 �´� �߷°�
+};
+
+class CVortexEffectObject : public CGameObject
+{
+public:
+	CVortexEffectObject(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, CGameFramework* framework);
+	virtual ~CVortexEffectObject() {}
+
+	void Activate(const XMFLOAT3& centerPos, float rotationRadius, float layerHeight, float startAngle, float speed);
+	virtual void Animate(float fTimeElapsed) override;
+
+private:
+	bool     m_bIsActive = false;
+	float    m_fLifeTime = 4.0f;    
+	float    m_fElapsedTime = 0.0f;
+
+	
+	XMFLOAT3 m_xmf3CenterPosition;
+	float    m_fRotationRadius;    
+	float    m_fLayerHeight; 
+	float    m_fCurrentRadius;     
+	float    m_fCurrentAngle;      
+	float    m_fRotationSpeed;     
 };

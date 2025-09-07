@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "LabProject07-9-8.h"
 #include "GameFramework.h"
+#include "SoundManager.h"
 
 #define MAX_LOADSTRING 100
 

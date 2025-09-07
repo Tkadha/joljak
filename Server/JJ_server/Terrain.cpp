@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Terrain.h"
 
+std::shared_ptr<Terrain> Terrain::terrain = std::make_shared<Terrain>(_T("../../Client/LabProject07-9-8/Terrain/terrain_16.raw"), 2049, 2049, XMFLOAT3(5.f, 0.1f, 5.f));
+
 Terrain::Terrain(LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale)
 {
 	m_nWidth = nWidth;

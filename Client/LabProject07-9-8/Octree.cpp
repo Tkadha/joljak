@@ -8,7 +8,7 @@ Octree::~Octree() {
 
 // ��ü ����
 void Octree::insert(std::unique_ptr<tree_obj> obj) {
-    // ��ü�� ���� ��忡 ������ ������ ����
+    // ��ü�� ���� ���?������ ������ ����
     if (!obj->isWithin(minBound, maxBound)) return;
 
     // ���� ���� ���ҵ��� �ʾҰ�, ��ü ���� ������ �ʰ����� ������ �߰�
@@ -17,14 +17,14 @@ void Octree::insert(std::unique_ptr<tree_obj> obj) {
         return;
     }
 
-    // ó������ ���� ��带 ����
+    // ó������ ���� ���?����
     if (children[0] == nullptr) subdivide();
 
-    // ���� ��忡 ��ü ���� �õ�
+    // ���� ���?��ü ���� �õ�
     for (auto& child : children) {
         if (obj->isWithin(child->minBound, child->maxBound)) {
             child->insert(std::move(obj));
-            return;  // �ùٸ� ���� ��忡 ���ԵǸ� ����
+            return;  // �ùٸ� ���� ���?���ԵǸ� ����
         }
     }
 }
@@ -38,7 +38,7 @@ bool Octree::remove(int id)
         objects.erase(it);
         return true;
     }
-    // �ڽ� ��忡�� ���� �õ�
+    // �ڽ� ��忡��?���� �õ�
     for (auto& child : children) {
         if (child != nullptr && child->remove(id)) {
             return true;
@@ -54,7 +54,7 @@ void Octree::update(int id, const XMFLOAT3& newpos)
             (*it)->position = newpos;
             if ((*it)->isWithin(minBound, maxBound)) return;
 
-            // ��ü�� �̵� �� ���� �� �����
+            // ��ü�� �̵� �� ���� �� �����?
             std::unique_ptr<tree_obj> temp = std::move(*it);
             insert(std::move(temp));
             return;
@@ -68,12 +68,12 @@ void Octree::update(int id, const XMFLOAT3& newpos)
     }
 }
 
-// Ư�� ���� �� ��ü �˻�
+
 void Octree::query(const tree_obj& object, const XMFLOAT3& distance, std::vector<tree_obj*>& results) {
-    // ���� ��尡 ������ �������� ������ ����
+   
     if (!intersects(object.Sub_Pos_return(distance), object.Add_Pos_return(distance))) return;
 
-    // ���� ����� ��ü �߰�
+    
     for (auto& obj : objects) {
         if (obj->u_id == object.u_id) continue;
         if (obj->isWithin(object.Sub_Pos_return(distance), object.Add_Pos_return(distance))) {
@@ -81,7 +81,7 @@ void Octree::query(const tree_obj& object, const XMFLOAT3& distance, std::vector
         }
     }
 
-    // ���� ��忡 ���� �˻�
+   
     for (auto& child : children) {
         if (child != nullptr) {
             child->query(object, distance, results);
@@ -104,7 +104,7 @@ void Octree::subdivide() {
     children[7] = new Octree(center, maxBound, depth + 1);
 }
 
-// ���� ��尡 ������ �����ϴ��� Ȯ��
+// ���� ���?������ �����ϴ��� Ȯ��
 bool Octree::intersects(const XMFLOAT3& queryMin, const XMFLOAT3& queryMax) const {
     return !(queryMax.x < minBound.x || queryMin.x > maxBound.x ||
         queryMax.y < minBound.y || queryMin.y > maxBound.y ||

@@ -1,7 +1,7 @@
 ﻿#pragma once
 
-#define FRAME_BUFFER_WIDTH		1600
-#define FRAME_BUFFER_HEIGHT		1280
+#define FRAME_BUFFER_WIDTH		1900
+#define FRAME_BUFFER_HEIGHT		1100
 
 #include "Timer.h"
 #include "Player.h"
@@ -15,6 +15,8 @@
 #include "ResourceManager.h"
 #include "ShaderManager.h"
 #include "ConstructionSystem.h"
+#include "../../Server/Global.h"
+#include <chrono>
 using namespace Microsoft::WRL; // 추가
 
 struct CraftMaterial
@@ -39,15 +41,36 @@ struct FurnaceSlot
 	float smeltTime = 0.0f;
 	bool isSmelting = false;
 };
-
+enum class GameState
+{
+	Lobby,
+	InGame,
+	Ending
+};
+struct BuildMaterial {
+	std::string MaterialName;
+	int Quantity;
+};
 
 #include <unordered_map>
 #include <queue>
 
 enum class E_PACKET;
+class FLOAT3;
+enum class OBJECT_TYPE;
+enum class ANIMATION_TYPE;
+
 struct log_inout {
 	E_PACKET packetType;
 	ULONGLONG ID;
+	FLOAT3 right;
+	FLOAT3 up;
+	FLOAT3 look;
+	FLOAT3 position;
+	OBJECT_TYPE o_type;
+	ANIMATION_TYPE a_type;
+	int id;
+	int hp;
 };
 
 class CGameFramework
@@ -70,12 +93,12 @@ public:
 
 	void ChangeSwapChainState();
 
-    void BuildObjects();
-    void ReleaseObjects();
+	void BuildObjects();
+	void ReleaseObjects();
 
-    void ProcessInput();
-    void AnimateObjects();
-    void FrameAdvance();
+	void ProcessInput();
+	void AnimateObjects();
+	void FrameAdvance();
 	void CreateCbvSrvDescriptorHeap();
 
 	void WaitForGpuComplete();
@@ -86,7 +109,7 @@ public:
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	std::shared_ptr<Item> CreateDummyItem();
 	void AddDummyItem();
-	void AddItem(const std::string &name, int quantity);
+	void AddItem(const std::string& name, int quantity);
 	ImTextureID LoadIconTexture(const std::wstring& filename);
 	void CreateIconDescriptorHeap();
 	void InitializeCraftItems();
@@ -95,30 +118,48 @@ public:
 	void InitializeItemIcons();
 	void UpdateFurnace(float deltaTime);
 	std::vector<CraftItem> m_vecCraftableItems;
+	int m_nCurrentSkybox = 0;
+	std::chrono::high_resolution_clock::time_point startTime = std::chrono::high_resolution_clock::now();
+	double eventInterval = 10.0; // 3초마다 이벤트
+	double lastEventTime = 0.0;
 
 
-
+	void SoundThread();
 	void NerworkThread();
 	void ProcessPacket(char* packet);
+
+	void AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id, int hp);
+
+	bool CheckBuildMaterials(const std::string& buildableName);
+	void ConsumeBuildMaterials(const std::string& buildableName);
+	void InitializeBuildRecipes();
 private:
 	HINSTANCE					m_hInstance;
-	HWND						m_hWnd; 
+	HWND						m_hWnd;
 
 	int							m_nWndClientWidth;
 	int							m_nWndClientHeight;
 	int                         m_SelectedHotbarIndex = 0;
 	bool						ShowInventory = false;
-	bool						ShowCraftingUI = false; 
-	bool						BuildMode = false;
+	bool						ShowCraftingUI = false;
 	bool						ShowFurnaceUI = false;
-	bool					bPrevBuildMode = false;
+	bool						ShowTraitUI = false;
 	int							selectedCraftItemIndex = -1;
-	CPineObject*				m_pPreviewObject = nullptr;
 	FurnaceSlot					furnaceSlot;
-        
-	IDXGIFactory4				*m_pdxgiFactory = NULL;
-	IDXGISwapChain3				*m_pdxgiSwapChain = NULL;
-	ID3D12Device				*m_pd3dDevice = NULL;
+
+	bool						m_bBuildMode = false; // 건축 모드 활성화 여부
+	bool						m_bIsPreviewVisible = false; // 프리뷰 오브젝트가 보이는지 여부
+	int							m_nSelectedBuildingIndex = -1; // UI에서 선택한 건축물 인덱스
+
+	std::unordered_map<std::string, std::vector<BuildMaterial>> m_mapBuildRecipes;
+
+	void CheckAndToggleFurnaceUI();
+	void CheckEscape();
+
+	IDXGIFactory4* m_pdxgiFactory = NULL;
+	IDXGISwapChain3* m_pdxgiSwapChain = NULL;
+public:
+	ID3D12Device* m_pd3dDevice = NULL;
 
 	bool						m_bMsaa4xEnable = false;
 	UINT						m_nMsaa4xQualityLevels = 0;
@@ -126,35 +167,43 @@ private:
 	static const UINT			m_nSwapChainBuffers = 2;
 	UINT						m_nSwapChainBufferIndex;
 
-	ID3D12Resource				*m_ppd3dSwapChainBackBuffers[m_nSwapChainBuffers];
-	ID3D12DescriptorHeap		*m_pd3dRtvDescriptorHeap = NULL;
+	ID3D12Resource* m_ppd3dSwapChainBackBuffers[m_nSwapChainBuffers];
+	ID3D12DescriptorHeap* m_pd3dRtvDescriptorHeap = NULL;
 
-	ID3D12Resource				*m_pd3dDepthStencilBuffer = NULL;
-	ID3D12DescriptorHeap		*m_pd3dDsvDescriptorHeap = NULL;
+	ID3D12Resource* m_pd3dDepthStencilBuffer = NULL;
+	ID3D12DescriptorHeap* m_pd3dDsvDescriptorHeap = NULL;
 
-	ID3D12CommandAllocator		*m_pd3dCommandAllocator = NULL;
-	ID3D12CommandQueue			*m_pd3dCommandQueue = NULL;
-	ID3D12GraphicsCommandList	*m_pd3dCommandList = NULL;
+	ID3D12CommandAllocator* m_pd3dCommandAllocator = NULL;
+	ID3D12CommandQueue* m_pd3dCommandQueue = NULL;
+	ID3D12GraphicsCommandList* m_pd3dCommandList = NULL;
 	CConstructionSystem* m_pConstructionSystem = NULL;
 	ID3D12RootSignature* m_pRootSignature = nullptr;
 
-	ID3D12Fence					*m_pd3dFence = NULL;
+	ID3D12Fence* m_pd3dFence = NULL;
 	UINT64						m_nFenceValues[m_nSwapChainBuffers];
 	HANDLE						m_hFenceEvent;
 	int							m_nIconCount;
-	
+
+	ID3D12CommandAllocator* m_pd3dUploadCommandAllocator = nullptr;
+	ID3D12GraphicsCommandList* m_pd3dUploadCommandList = nullptr;
 	// --- 종료 동기화용 펜스 값 추가 ---
 	UINT64                      m_nMasterFenceValue = 0;
 private:
 	ComPtr<ID3D12DescriptorHeap>	m_pd3dCbvSrvDescriptorHeap;
 	UINT							m_nCbvSrvDescriptorIncrementSize;
+	UINT							m_nRtvDescriptorIncrementSize;
+	UINT							m_nDsvDescriptorIncrementSize;
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dCbvCpuHandleStart;
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dCbvGpuHandleStart;
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCpuHandleStart;
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dSrvGpuHandleStart;
 
+
+	// 그림자
+	ID3D12DescriptorHeap* m_pd3dShadowDsvHeap = nullptr;
+
 	// 샘플러 힙 크기도 필요할 수 있음
-	UINT m_nSamplerDescriptorIncrementSize = 0; 
+	UINT m_nSamplerDescriptorIncrementSize = 0;
 
 	UINT m_nNextCbvOffset = 0; // CBV 영역 내 다음 오프셋
 	UINT m_nNextSrvOffset = 0; // SRV 영역 내 다음 오프셋 (CBV 영역 이후 시작)
@@ -162,8 +211,15 @@ private:
 	UINT m_nTotalSrvDescriptors; // 생성 시 설정
 
 	std::unique_ptr<ResourceManager> m_pResourceManager;
-	//std::unique_ptr<ShaderManager> m_pShaderManager;
-	ShaderManager* m_pShaderManager;
+	//ShaderManager* m_pShaderManager;
+	std::unique_ptr<ShaderManager> m_pShaderManager;
+
+	GameState m_eGameState = GameState::Lobby;
+	ImTextureID m_imGuiLobbyBackgroundTextureId = 0;
+	std::vector<std::string> m_vTestPlayerNames;
+
+	CCamera* m_pEndingCamera = nullptr; // [추가] 엔딩 연출용 카메라
+	float    m_fEndingSequenceTimer = 0.0f; // [추가] 엔딩 연출 경과 시간
 
 public:
 	bool AllocateCbvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle);
@@ -174,7 +230,7 @@ public:
 
 	void CreateCbvSrvDescriptorHeaps(int nConstantBufferViews, int nShaderResourceViews);
 	D3D12_GPU_DESCRIPTOR_HANDLE CreateConstantBufferViews(int nConstantBufferViews, ID3D12Resource* pd3dConstantBuffers, UINT nStride);
-	
+
 	// --- 디스크립터 크기 반환 함수 추가 ---
 	UINT GetSamplerDescriptorIncrementSize() const { return m_nSamplerDescriptorIncrementSize; }
 
@@ -182,7 +238,7 @@ public:
 	ID3D12Device* GetDevice() { return m_pd3dDevice; }
 	ID3D12GraphicsCommandList* GetCommandList() { return m_pd3dCommandList; }
 	ResourceManager* GetResourceManager() { return m_pResourceManager.get(); };
-	ShaderManager* GetShaderManager() { return m_pShaderManager; };
+	ShaderManager* GetShaderManager() { return m_pShaderManager.get(); };
 
 	CScene* GetScene() { return m_pScene; }
 
@@ -191,15 +247,35 @@ public:
 	ID3D12DescriptorHeap* m_pd3dSrvDescriptorHeapForImGui = nullptr;
 	ID3D12DescriptorHeap* m_pd3dSrvDescriptorHeapForIcons = nullptr;
 
+	// 그림자
+	ID3D12DescriptorHeap* GetShadowDsvHeap() { return m_pd3dShadowDsvHeap; }
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRtvCPUDescriptorHandle();
+	D3D12_CPU_DESCRIPTOR_HANDLE GetDsvCPUDescriptorHandle();
+
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_pd3dDebugQuadVB;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_pd3dDebugQuadIB;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_pd3dDebugQuadVB_Uploader;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_pd3dDebugQuadIB_Uploader;
+
+	D3D12_VERTEX_BUFFER_VIEW m_d3dDebugQuadVBView;
+	D3D12_INDEX_BUFFER_VIEW  m_d3dDebugQuadIBView;
+
+	D3D12_VERTEX_BUFFER_VIEW GetDebugQuadVBView() const { return m_d3dDebugQuadVBView; }
+	D3D12_INDEX_BUFFER_VIEW GetDebugQuadIBView() const { return m_d3dDebugQuadIBView; }
+
+	void ChangeGameState(GameState newState);
+
 #if defined(_DEBUG)
-	ID3D12Debug					*m_pd3dDebugController;
+	ID3D12Debug* m_pd3dDebugController;
 #endif
 
 	CGameTimer					m_GameTimer;
 
-	CScene						*m_pScene = NULL;
-	CPlayer						*m_pPlayer = NULL;
-	CCamera						*m_pCamera = NULL;
+	CScene* m_pScene = NULL;
+	CPlayer* m_pPlayer = NULL;
+	CCamera* m_pCamera = NULL;
 
 	POINT						m_ptOldCursorPos;
 
@@ -221,5 +297,55 @@ public:
 	ULONGLONG					_MyID = -1;
 
 	std::queue<log_inout> 	m_logQueue;
+	std::list<GameObjectType> gameobj_list;
+	// 서버연결 확인코드
+	bool serverConnected = false;
+	std::atomic_bool b_running;
+
+
+
+	// 도구 위치 잡기
+private:
+	CGameObject* m_pSword = nullptr;
+	CGameObject* m_pAxe = nullptr;
+	CGameObject* m_pPickaxe = nullptr;
+	CGameObject* m_pHammer = nullptr;
+
+	ToolTransform m_swordTransform;
+	ToolTransform m_axeTransform;
+	ToolTransform m_pickaxeTransform;
+	ToolTransform m_hammerTransform;
+
+public:
+	void LoadTools();              // 도구 로딩을 위한 함수
+	void OnImGuiRender();          // ImGui UI를 그리는 함수
+	void UpdateToolTransforms();   // ImGui 값으로 도구 위치를 업데이트하는 함수
+
+
+	UINT GetDsvDescriptorIncrementSize() const { return m_nDsvDescriptorIncrementSize; }
+
+// 포스트 프로세싱
+private:
+	ComPtr<ID3D12Resource>        m_pd3dOffscreenTexture;
+
+	// 이 텍스처의 "주소" 역할을 할 디스크립터 핸들
+	D3D12_CPU_DESCRIPTOR_HANDLE   m_d3dOffscreenRtvCPUHandle; // 렌더 타겟으로 쓸 때 (CPU)
+	D3D12_GPU_DESCRIPTOR_HANDLE   m_d3dOffscreenSrvGPUHandle; // 셰이더에서 읽을 때 (GPU)
+
+public:
+	D3D12_GPU_DESCRIPTOR_HANDLE GetOffscreenSrvGPUHandle() const { return m_d3dOffscreenSrvGPUHandle; }
+	D3D12_CPU_DESCRIPTOR_HANDLE GetOffscreenRtvCPUHandle() const { return m_d3dOffscreenRtvCPUHandle; }
+
+private:
+	ComPtr<ID3D12Resource>        m_pd3dFullScreenQuadVB;
+	ComPtr<ID3D12Resource>        m_pd3dFullScreenQuadIB;
+	ComPtr<ID3D12Resource>        m_pd3dFullScreenQuadVB_Uploader;
+	ComPtr<ID3D12Resource>        m_pd3dFullScreenQuadIB_Uploader;
+	D3D12_VERTEX_BUFFER_VIEW      m_d3dFullScreenQuadVBView;
+	D3D12_INDEX_BUFFER_VIEW       m_d3dFullScreenQuadIBView;
+
+public:
+	float m_fPlayerHitEffectAmount = 0.0f; // 피격 효과 강도
+	void OnPlayerHit() { m_fPlayerHitEffectAmount = 1.0f; } // 피격 시 호출
 };
 

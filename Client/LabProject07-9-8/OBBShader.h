@@ -23,4 +23,6 @@ public:
     // 다른 상태(Blend, DepthStencil)는 CShader 기본값 사용
 
     virtual std::string GetShaderType() const override { return "OBB"; }
+
+    static ID3D12RootSignature* CreateRootSignature(ID3D12Device* pd3dDevice);
 };

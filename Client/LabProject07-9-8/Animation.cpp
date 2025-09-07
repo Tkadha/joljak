@@ -13,11 +13,44 @@ CLoadedModelInfo::~CLoadedModelInfo()
 
 void CLoadedModelInfo::PrepareSkinning()
 {
-	int nSkinnedMesh = 0;
-	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
-	m_pModelRootObject->FindAndSetSkinnedMesh(m_ppSkinnedMeshes, &nSkinnedMesh);
+	//int nSkinnedMesh = 0;
+	//m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
+	//m_pModelRootObject->FindAndSetSkinnedMesh(m_ppSkinnedMeshes, &nSkinnedMesh);
 
-	for (int i = 0; i < m_nSkinnedMeshes; i++) m_ppSkinnedMeshes[i]->PrepareSkinning(m_pModelRootObject);
+	for (int i = 0; i < m_nSkinnedMeshes; i++) 
+		m_ppSkinnedMeshes[i]->PrepareSkinning(m_pModelRootObject);
+}
+
+void CLoadedModelInfo::FindAndCacheSkinnedMeshes()
+{
+	if (m_nSkinnedMeshes == 0 || !m_pModelRootObject)
+	{
+		if (m_ppSkinnedMeshes) { // 이미 할당되었다면 이전 것 해제
+			delete[] m_ppSkinnedMeshes;
+			m_ppSkinnedMeshes = nullptr;
+		}
+		return;
+	}
+
+	// m_ppSkinnedMeshes가 이미 할당되었는지 확인
+	if (m_ppSkinnedMeshes) delete[] m_ppSkinnedMeshes;
+
+	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
+	for (int i = 0; i < m_nSkinnedMeshes; ++i) m_ppSkinnedMeshes[i] = nullptr; // 초기화
+
+	int nFoundSkinnedMeshes = 0; // 실제로 찾은 스킨드 메쉬 개수
+	m_pModelRootObject->FindAndSetSkinnedMesh(m_ppSkinnedMeshes, &nFoundSkinnedMeshes);
+
+	if (nFoundSkinnedMeshes != m_nSkinnedMeshes)
+	{
+		// 예상했던 개수와 실제로 찾은 개수가 다르면 로그를 남기거나 처리할 수 있습니다.
+		// 예를 들어 m_nSkinnedMeshes = nFoundSkinnedMeshes; 로 업데이트 할 수도 있습니다.
+		// 여기서는 일단 m_nSkinnedMeshes가 정확한 용량이라고 가정합니다.
+		// 만약 nFoundSkinnedMeshes가 더 적다면, m_ppSkinnedMeshes의 뒷부분은 nullptr로 남아있을 것입니다.
+		// 또는, 실제 찾은 개수만큼만 유효하다고 간주하고 m_nSkinnedMeshes 값을 업데이트합니다.
+		// 안전하게는 m_nSkinnedMeshes = nFoundSkinnedMeshes; 로 설정하는 것이 좋습니다.
+		m_nSkinnedMeshes = nFoundSkinnedMeshes;
+	}
 }
 
 
@@ -378,7 +411,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject *pRootGam
 //*
 void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGameObject)
 {
-	m_fTime += fTimeElapsed;
+	float scaledTimeElapsed = fTimeElapsed * m_fAnimationSpeed;
 	if (m_pAnimationTracks)
 	{
 		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++) 
@@ -389,7 +422,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 			if (m_pAnimationTracks[k].m_bEnable)
 			{
 				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSets[m_pAnimationTracks[k].m_nAnimationSet];
-				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
+				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, scaledTimeElapsed, pAnimationSet->m_fLength);
 				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 				{
 					//XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4ToParent;
@@ -505,4 +538,44 @@ void CAnimationController::UpdateBoneLocalTransformCBV()
 			}
 		}
 	}
+}
+
+
+
+CAnimationController::CAnimationController(const CAnimationController& other, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	// 애니메이션 트랙 복사
+	m_nAnimationTracks = other.m_nAnimationTracks;
+	m_pAnimationTracks = new CAnimationTrack[m_nAnimationTracks];
+	for (int i = 0; i < m_nAnimationTracks; ++i) {
+		m_pAnimationTracks[i] = other.m_pAnimationTracks[i];
+	}
+
+	// 애니메이션 데이터 공유
+	m_pAnimationSets = other.m_pAnimationSets;
+	if (m_pAnimationSets) m_pAnimationSets->AddRef();
+
+	// 메쉬 정보 공유
+	m_nSkinnedMeshes = other.m_nSkinnedMeshes;
+	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
+	for (int i = 0; i < m_nSkinnedMeshes; i++) m_ppSkinnedMeshes[i] = nullptr;
+
+	// 루트 오브젝트 정보 복사
+	m_pModelRootObject = other.m_pModelRootObject;
+
+	// 뼈 변환을 위한 상수 버퍼(CBV)는 새로 생성
+	m_ppd3dcbSkinningBoneTransforms = new ID3D12Resource * [m_nSkinnedMeshes];
+	m_ppcbxmf4x4MappedSkinningBoneTransforms = new XMFLOAT4X4 * [m_nSkinnedMeshes];
+	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255);
+	for (int i = 0; i < m_nSkinnedMeshes; i++)
+	{
+		m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
+		m_ppd3dcbSkinningBoneTransforms[i]->Map(0, NULL, (void**)&m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
+	}
+}
+
+
+CAnimationController* CAnimationController::Clone(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	return new CAnimationController(*this, pd3dDevice, pd3dCommandList);
 }

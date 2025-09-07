@@ -8,10 +8,52 @@
 
 #include "NonAtkState.h"
 #include "AtkState.h"
+#include "WaveObject.h"
+#include "NetworkManager.h"
+#include "SoundManager.h"
+#define MIN_HEIGHT                  1055.f      
 
+bool ChangeAlbedoTexture(
+	CGameObject* pParentGameObject,
+	int materialIndex,
+	UINT textureSlot,
+	const wchar_t* textureFilePath,
+	ResourceManager* pResourceManager,
+	ID3D12GraphicsCommandList* pd3dCommandList,
+	ID3D12Device* pd3dDevice)
+{
+	if (!pParentGameObject || !pParentGameObject->m_pChild ||
+		!pResourceManager || !pd3dCommandList || !pd3dDevice ||
+		!textureFilePath || !*textureFilePath) { 
+		return false;
+	}
+
+	CMaterial* pTargetMaterial = pParentGameObject->m_pChild->GetMaterial(materialIndex);
+	if (!pTargetMaterial) {
+		return false;
+	}
+
+	std::shared_ptr<CTexture> pTextureToAssign = pResourceManager->GetTexture(textureFilePath, pd3dCommandList);
+	if (!pTextureToAssign) {
+		return false;
+	}
+
+	return pTargetMaterial->AssignTexture(textureSlot, pTextureToAssign, pd3dDevice);
+}
 
 CScene::CScene(CGameFramework* pFramework) : m_pGameFramework(pFramework)
 {
+	UINT ncbElementBytes = ((sizeof(VS_CB_CAMERA_INFO) + 255) & ~255); // 256¿« πËºˆ
+	m_pd3dcbLightCamera = ::CreateBufferResource(pFramework->GetDevice(), nullptr, nullptr, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr);
+	m_pd3dcbLightCamera->Map(0, nullptr, (void**)&m_pcbMappedLightCamera);
+
+	// ≥∑: π‡¿∫ πÈªˆ±§∞˙ π‡¿∫ ¡÷∫Ø±§
+	m_xmf4DaylightAmbient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
+	m_xmf4DaylightDiffuse = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
+	m_xmf4DaylightSpecular = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+
+	// π„: æ∆¡÷ æÓµŒøÓ «™∏•∫˚¿« ¡÷∫Ø±§ (¥ﬁ∫˚)
+	m_xmf4MoonlightAmbient = XMFLOAT4(0.02f, 0.02f, 0.05f, 1.0f);
 }
 
 CScene::~CScene()
@@ -20,87 +62,397 @@ CScene::~CScene()
 
 void CScene::BuildDefaultLightsAndMaterials()
 {
-	m_nLights = 5;
+	m_nLights = 10;
 	m_pLights = new LIGHT[m_nLights];
 	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
 
-	m_xmf4GlobalAmbient = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);
-
-	m_pLights[0].m_bEnable = false;
-	m_pLights[0].m_nType = POINT_LIGHT;
-	m_pLights[0].m_fRange = 300.0f;
-	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
+	m_xmf4GlobalAmbient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
+	
+	m_pLights[0].m_bEnable = true;
+	m_pLights[0].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.05f, 0.05f, 0.05f, 1.0f);
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
-	m_pLights[0].m_xmf3Position = XMFLOAT3(230.0f, 330.0f, 480.0f);
-	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+	m_pLights[0].m_xmf3Direction = XMFLOAT3(0.5f, -0.707f, 0.5f);
+	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 3000.0f, 0.0f);
 
-	// 2. Ï£ºÏöî Î∞©Ìñ•Í¥ë (ÌÉúÏñë) ÏÑ§Ï†ï
-	m_pLights[2].m_bEnable = true;
-	m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f); // Î∞©Ìñ•Í¥ë ÏûêÏ≤¥Ïùò ÏïΩÌïú Ï£ºÎ≥ÄÍ¥ë
-	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.75f, 0.7f, 1.0f); // ÏïΩÍ∞Ñ Îî∞ÎúªÌïú ÎäêÎÇåÏùò ÌÉúÏñëÍ¥ë
-	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f); // Î∞òÏÇ¨Í¥ë
-	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.5f, -0.707f, 0.5f); // ÎÇ®ÎèôÏ™Ω ÏúÑÏóêÏÑú ÎπÑÏ∂îÎäî ÎäêÎÇå (Î≤°ÌÑ∞ Ï†ïÍ∑úÌôî ÌïÑÏöîÌï† Ïàò ÏûàÏùå)
+	// ≥™(«√∑π¿ÃæÓ)
+	m_pLights[1].m_bEnable = false; // Ω√¿€«“ ∂ß¥¬ ≤®¡¯ ªÛ≈¬
+	m_pLights[1].m_nType = POINT_LIGHT;
+	m_pLights[1].m_fRange = 450.0f; // »∂∫“¿Ã ∫Ò√ﬂ¥¬ π¸¿ß
+	m_pLights[1].m_xmf4Ambient = XMFLOAT4(0.2f, 0.1f, 0.05f, 1.0f);
+	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.6f, 0.1f, 1.0f);
+	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);
+	m_pLights[1].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.0007f, 0.00017f);
+	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 
+	// «√∑π¿ÃæÓ2
+	m_pLights[2].m_bEnable = false; // Ω√¿€«“ ∂ß¥¬ ≤®¡¯ ªÛ≈¬
+	m_pLights[2].m_nType = POINT_LIGHT;
+	m_pLights[2].m_fRange = 450.0f; // »∂∫“¿Ã ∫Ò√ﬂ¥¬ π¸¿ß
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.8f, 0.4f, 0.2f, 1.0f);
+	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.6f, 0.1f, 1.0f);
+	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);
+	m_pLights[2].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	m_pLights[2].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.0007f, 0.00017f);
+	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 
-	m_pLights[1].m_bEnable = false;
-	{
-		m_pLights[1].m_nType = SPOT_LIGHT;
-		m_pLights[1].m_fRange = 500.0f;
-		m_pLights[1].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
-		m_pLights[1].m_xmf4Diffuse = XMFLOAT4(0.4f, 0.4f, 0.4f, 1.0f);
-		m_pLights[1].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-		m_pLights[1].m_xmf3Position = XMFLOAT3(-50.0f, 20.0f, -5.0f);
-		m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 1.0f);
-		m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-		m_pLights[1].m_fFalloff = 8.0f;
-		m_pLights[1].m_fPhi = (float)cos(XMConvertToRadians(40.0f));
-		m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
+	// «√∑π¿ÃæÓ3
+	m_pLights[3].m_bEnable = false; // Ω√¿€«“ ∂ß¥¬ ≤®¡¯ ªÛ≈¬
+	m_pLights[3].m_nType = POINT_LIGHT;
+	m_pLights[3].m_fRange = 450.0f; // »∂∫“¿Ã ∫Ò√ﬂ¥¬ π¸¿ß
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.8f, 0.4f, 0.2f, 1.0f);
+	m_pLights[3].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.6f, 0.1f, 1.0f);
+	m_pLights[3].m_xmf4Specular = XMFLOAT4(0.8f, 0.5f, 0.2f, 0.0f);
+	m_pLights[3].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	m_pLights[3].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.0007f, 0.00017f);
+	m_pLights[3].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+
+	for (int i = 4; i < m_nLights; ++i) {
+		m_pLights[i].m_bEnable = false; // √≥¿Ωø°¥¬ ≤®¡¯ ªÛ≈¬
+		m_pLights[i].m_nType = POINT_LIGHT;
+		m_pLights[i].m_fRange = 300.0f; // »≠∑Œ ¡÷∫Ø¿ª π‡»˙ π¸¿ß
+		m_pLights[i].m_xmf4Ambient = XMFLOAT4(0.1f, 0.05f, 0.0f, 1.0f);   // æ‡«— ¡÷»≤ªˆ ¡÷∫Ø±§
+		m_pLights[i].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.5f, 0.0f, 1.0f);    // ∞≠«— ¡÷»≤ªˆ ∫“∫˚
+		m_pLights[i].m_xmf4Specular = XMFLOAT4(0.5f, 0.25f, 0.0f, 0.0f); // π›ªÁ±§
+		m_pLights[i].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);        // ¿ßƒ°¥¬ ≥™¡ﬂø° »≠∑Œ ø¿∫Í¡ß∆Æ∞° º≥¡§
+		m_pLights[i].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.005f, 0.0001f); // ∫˚¿Ã ¿⁄ø¨Ω∫∑¥∞‘ ∆€¡Æ≥™∞°µµ∑œ ∞®ºË∞™ º≥¡§
 	}
-	m_pLights[3].m_bEnable = false;
-	{
-		m_pLights[3].m_nType = SPOT_LIGHT;
-		m_pLights[3].m_fRange = 600.0f;
-		m_pLights[3].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
-		m_pLights[3].m_xmf4Diffuse = XMFLOAT4(0.3f, 0.7f, 0.0f, 1.0f);
-		m_pLights[3].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-		m_pLights[3].m_xmf3Position = XMFLOAT3(550.0f, 330.0f, 530.0f);
-		m_pLights[3].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 1.0f);
-		m_pLights[3].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-		m_pLights[3].m_fFalloff = 8.0f;
-		m_pLights[3].m_fPhi = (float)cos(XMConvertToRadians(90.0f));
-		m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
-	}
-	m_pLights[4].m_bEnable = false;
-	{
-		m_pLights[4].m_nType = POINT_LIGHT;
-		m_pLights[4].m_fRange = 200.0f;
-		m_pLights[4].m_xmf4Ambient = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-		m_pLights[4].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.3f, 0.3f, 1.0f);
-		m_pLights[4].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
-		m_pLights[4].m_xmf3Position = XMFLOAT3(600.0f, 250.0f, 700.0f);
-		m_pLights[4].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
-	}
+
 }
 
-void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
+void CScene::ServerBuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	// ShaderManager Í∞ÄÏ†∏Ïò§Í∏∞
 	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed!");
 	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
 	assert(pShaderManager != nullptr && "ShaderManager is not available!");
-	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); // Í∏∞Ï°¥ ÏΩîÎìú Ïú†ÏßÄ
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); 
 
 	BuildDefaultLightsAndMaterials();
 
 	if (!pResourceManager) {
-		// Î¶¨ÏÜåÏä§ Îß§ÎãàÏ†ÄÍ∞Ä ÏóÜÎã§Î©¥ Î°úÎî© Î∂àÍ∞Ä! Ïò§Î•ò Ï≤òÎ¶¨
-		OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
+		//OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
 		return;
 	}
 
+	std::vector<std::wstring> skyboxTextures = {
+	   L"Skybox/Morning.dds",
+	   L"Skybox/Night.dds",
+	   L"Skybox/eve.dds"
+	};
+
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	m_pSkyBox->LoadTextures(pd3dCommandList, skyboxTextures);
+
+	srand((unsigned int)time(NULL));
+
+	XMFLOAT3 xmf3Scale(5.f, 0.1f, 5.f);
+	XMFLOAT4 xmf4Color(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, _T("Terrain/terrain_16.raw"), 2049, 2049, xmf3Scale, xmf4Color, m_pGameFramework);
+	m_pTerrain->m_xmf4x4World = Matrix4x4::Identity();
+	m_pTerrain->m_xmf4x4ToParent = Matrix4x4::Identity();
+
+
+
+	// 1. Waves ∞¥√º∏¶ ª˝º∫«’¥œ¥Ÿ.
+	m_pWavesObject = new CWavesObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	// π∞∞·¿Ã ∫∏¿œ ¿ßƒ°∏¶ º≥¡§«’¥œ¥Ÿ. (∏ ¿« ¡ﬂæ” ±Ÿ√≥, ºˆ∏È ≥Ù¿Ã)
+	m_pWavesObject->SetPosition(5000.0f, 1070.0f, 5000.0f);
+	m_pWavesObject->SetScale(15.f, 1.f, 15.f);
+	// 2. Waves∏¶ ¿ß«— ¿Á¡˙(Material)¿ª ª˝º∫«’¥œ¥Ÿ.
+	CMaterial* pWavesMaterial = new CMaterial(1, m_pGameFramework);
+
+	// 3. ShaderManagerø°º≠ "Waves" ºŒ¿Ã¥ı∏¶ ∞°¡ÆøÕ ¿Á¡˙ø° º≥¡§«’¥œ¥Ÿ.
+	pWavesMaterial->SetShader(m_pGameFramework->GetShaderManager()->GetShader("Waves"));
+
+	// (º±≈√) π∞ ≈ÿΩ∫√≥∞° ¿÷¥Ÿ∏È ø©±‚º≠ ∑ŒµÂ«œø© ¿Á¡˙ø° «“¥Á«“ ºˆ ¿÷Ω¿¥œ¥Ÿ.
+	// pWavesMaterial->AssignTexture(...);
+
+	// 4. ª˝º∫«— ¿Á¡˙¿ª Waves ∞¥√ºø° º≥¡§«’¥œ¥Ÿ.
+	m_pWavesObject->SetMaterial(0, pWavesMaterial);
+
+
+
+
+	// 1. ±◊∏≤¿⁄ ∏  ∞¥√º ª˝º∫
+	m_pShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 4096 * 2, 4096 * 2);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandle;
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuSrvHandle;
+	m_pGameFramework->AllocateSrvDescriptors(1, cpuSrvHandle, gpuSrvHandle);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuDsvHandle = m_pGameFramework->GetShadowDsvHeap()->GetCPUDescriptorHandleForHeapStart();
+
+	m_pShadowMap->BuildDescriptors(
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuSrvHandle),
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(gpuSrvHandle),
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuDsvHandle)
+	);
+
+
+	// 1. »∂∫“øÎ ±◊∏≤¿⁄ ∏  ∞¥√º∏¶ ª˝º∫«’¥œ¥Ÿ.
+	m_pTorchShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 1024, 1024);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandleForTorch; 
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuSrvHandleForTorch; 
+	m_pGameFramework->AllocateSrvDescriptors(1, cpuSrvHandleForTorch, gpuSrvHandleForTorch); 
+
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuDsvHandleForTorch = m_pGameFramework->GetShadowDsvHeap()->GetCPUDescriptorHandleForHeapStart(); 
+	cpuDsvHandleForTorch.ptr += m_pGameFramework->GetDsvDescriptorIncrementSize();
+
+	m_pTorchShadowMap->BuildDescriptors( 
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuSrvHandleForTorch), 
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(gpuSrvHandleForTorch), 
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuDsvHandleForTorch) 
+	); 
+
+	std::random_device rd;
+	std::mt19937 gen(rd());
+
+	LoadPrefabs(pd3dDevice, pd3dCommandList);
+
+	// 2. «Ô∆€ «‘ºˆ∏¶ ªÁøÎ«œø© ¡§¿˚ ø¿∫Í¡ß∆ÆµÈ¿ª πËƒ°«’¥œ¥Ÿ.
+	const wchar_t* barkTexture = L"Model/Textures/Tree_Bark_Diffuse.dds";
+	const wchar_t* rockTexture = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
+
+	// ¿Œ¿⁄ : ∞¥√º¿Ã∏ß, ∞πºˆ, Ω∫∆˘¿ßƒ° min, max, ≈©±‚ min, max, ~ , ≈ÿΩ∫√ƒ¿Œµ¶Ω∫, ≈ÿΩ∫√ƒ 
+
+	SpawnStaticObjects("BushA", 1000, 500, 9500, 7, 12, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("BushB", 1000, 500, 9500, 7, 12, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Fern", 1000, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Chervil", 1000, 500, 9500, 5, 8, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("RedPoppy", 1000, 500, 9500, 5, 8, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("BluePoppy", 1000, 500, 9500, 5, 8, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Dandelion", 1000, 500, 9500, 5, 8, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Daisy", 1000, 500, 9500, 5, 8, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("ElephantEarA", 1000, 500, 9500, 5, 10, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("ElephantEarB", 1000, 500, 9500, 5, 10, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("GrassTall", 1000, 500, 9500, 7, 12, gen, pd3dDevice, pd3dCommandList);
+	//SpawnStaticObjects("Sphere", 1000, 500, 9500, 7, 12, gen, pd3dDevice, pd3dCommandList);
+
+	/*
+	pResourceManager->RegisterPrefab("BushA", std::make_shared<CBushAObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+	pResourceManager->RegisterPrefab("BushB", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Bush_B_LOD0.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Fern", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Fern_LOD0.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Chervil", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/ChervilCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("RedPoppy", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/RedPoppyCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("BluePoppy", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/BluePoppyCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Dandelion", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/DandelionCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Daisy", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/DaisyCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("ElephantEarA", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/ElephantEar_A.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("ElephantEarB", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/ElephantEar_B.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("GrassTall", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/GrassTall.bin", m_pGameFramework));
+	*/
+
+
+	// ≈ª√‚¿Âƒ°
+	//SpawnStaticObjects("Anthena", 1, 8050, 8050, 10, 10, gen, pd3dDevice, pd3dCommandList);
+	//SpawnStaticObjects("Helipad", 1, 8000, 8000, 10, 10, gen, pd3dDevice, pd3dCommandList);
+
+	std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab("Helipad");
+	CGameObject* gameObj = prefab->Clone();
+	float x = 8000, z = 8450;
+	gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+	gameObj->SetScale(10.0f, 10.0f, 10.0f);
+	gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+	gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+	gameObj->m_id = 0;
+	heilport_anthena.emplace_back(gameObj);
+	m_vGameObjects.emplace_back(gameObj);
+	{
+		NetworkManager& nw = NetworkManager::GetInstance();
+		OBJ_OBB_PACKET p;
+		auto& obb = gameObj->GetOBB();
+		p.Center.x = obb.Center.x;
+		p.Center.y = obb.Center.y;
+		p.Center.z = obb.Center.z;
+		p.Extents.x = obb.Extents.x;
+		p.Extents.y = obb.Extents.y;
+		p.Extents.z = obb.Extents.z;
+		p.Orientation.x = obb.Orientation.x;
+		p.Orientation.y = obb.Orientation.y;
+		p.Orientation.z = obb.Orientation.z;
+		p.Orientation.w = obb.Orientation.w;
+		p.oid = 0;
+		p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+		p.size = sizeof(OBJ_OBB_PACKET);
+		nw.PushSendQueue(p, p.size);
+	}
+
+	prefab = pResourceManager->GetPrefab("Anthena");
+	z = 8500;
+	gameObj = prefab->Clone();
+	gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+	gameObj->SetScale(10.0f, 10.0f, 10.0f);
+	gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+	gameObj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+	gameObj->m_id = 1;
+	heilport_anthena.emplace_back(gameObj);
+	m_vGameObjects.emplace_back(gameObj);
+
+	{
+		NetworkManager& nw = NetworkManager::GetInstance();
+		OBJ_OBB_PACKET p;
+		auto& obb = gameObj->GetOBB();
+		p.Center.x = obb.Center.x;
+		p.Center.y = obb.Center.y;
+		p.Center.z = obb.Center.z;
+		p.Extents.x = obb.Extents.x;
+		p.Extents.y = obb.Extents.y;
+		p.Extents.z = obb.Extents.z;
+		p.Orientation.x = obb.Orientation.x;
+		p.Orientation.y = obb.Orientation.y;
+		p.Orientation.z = obb.Orientation.z;
+		p.Orientation.w = obb.Orientation.w;
+		p.oid = 1;
+		p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+		p.size = sizeof(OBJ_OBB_PACKET);
+		nw.PushSendQueue(p, p.size);
+	}
+	/////////////////////////////////////////¿Ã∆Â∆Æ ø¿∫Í¡ß∆Æ
+	const int effectPoolSize = 100;
+	for (int i = 0; i < effectPoolSize; ++i)
+	{
+
+		auto* pEffect = new CAttackEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		int materialIndexToChange = 0;
+		UINT albedoTextureSlot = 0;
+		const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
+		ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
+		ChangeAlbedoTexture(pEffect, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+
+		pEffect->m_id = -1;
+
+		m_vAttackEffects.push_back(pEffect);
+
+
+		m_vGameObjects.push_back(pEffect);
+	}
+
+	CLoadedModelInfo* pWoodShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch_A.bin", m_pGameFramework);
+	CLoadedModelInfo* pRockShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/RockCluster_B_LOD0.bin", m_pGameFramework);
+
+	CMesh* pWoodMesh = pWoodShardModel->m_pModelRootObject->m_pMesh;
+	CMaterial* pWoodMaterial = pWoodShardModel->m_pModelRootObject->GetMaterial(0);
+	CMesh* pRockMesh = pRockShardModel->m_pModelRootObject->m_pMesh;
+	CMaterial* pRockMaterial = pRockShardModel->m_pModelRootObject->GetMaterial(0);
+
+	const int shardPoolSize = 50; // «Æ ≈©±‚
+
+	// 2. ≥™π´ ∆ƒ∆Ì «Æ ª˝º∫
+	for (int i = 0; i < shardPoolSize; ++i) {
+		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pWoodMesh, pWoodMaterial);
+		pShard->SetScale(1.0f, 1.0f, 1.0f);
+		pShard->m_id = -1;
+		m_vWoodShards.push_back(pShard);
+		m_vGameObjects.push_back(pShard);
+	}
+
+	// 3. µπ ∆ƒ∆Ì «Æ ª˝º∫
+	for (int i = 0; i < shardPoolSize; ++i) {
+		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pRockMesh, pRockMaterial);
+
+		pShard->SetScale(0.2f, 0.2f, 0.2f);
+		pShard->m_id = -1;
+		m_vRockShards.push_back(pShard);
+		m_vGameObjects.push_back(pShard);
+	}
+
+	// ∑ŒµÂ∞° ≥°≥≠ ¿”Ω√ ∏µ® ¡§∫∏¥¬ ªË¡¶
+	if (pWoodShardModel) delete pWoodShardModel;
+	if (pRockShardModel) delete pRockShardModel;
+
+	const int bloodPoolSize = 30;
+	//pResourceManager = m_pGameFramework->GetResourceManager();
+
+	// 1. LoadPrefabsø°º≠ µÓ∑œ«— «¡∏Æ∆’¿ª ∞°¡Æø…¥œ¥Ÿ.
+	std::shared_ptr<CGameObject> bloodPrefab = pResourceManager->GetPrefab("BloodEffectPrefab");
+
+	if (bloodPrefab && bloodPrefab->m_pChild)
+	{
+		// 2. «¡∏Æ∆’¿« ¿⁄Ωƒ(Ω«¡¶ ∏µ®)¿∏∑Œ∫Œ≈Õ ∏ﬁΩ¨øÕ ∏”∆º∏ÆæÛ¿ª ∞°¡Æø…¥œ¥Ÿ.
+		CMesh* pSharedBloodMesh = bloodPrefab->m_pChild->m_pMesh;
+		CMaterial* pSharedBloodMaterial = bloodPrefab->m_pChild->GetMaterial(0);
+
+		for (int i = 0; i < bloodPoolSize; ++i)
+		{
+			// 3. ∞¯¿Ø ∏Æº“Ω∫∏¶ ª˝º∫¿⁄ø° ¿¸¥ﬁ«œø© CBloodEffectObject∏¶ ª˝º∫«’¥œ¥Ÿ.
+			auto* pBlood = new CBloodEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework, pSharedBloodMesh, pSharedBloodMaterial);
+			m_vBloodEffects.push_back(pBlood);
+			m_vGameObjects.push_back(pBlood);
+		}
+	}
+	/////////////////////////////////////////
+	const int vortexPoolSize = 50; // º“øÎµπ¿Ãø° ªÁøÎ«“ ∆ƒ∆Ì ºˆ
+	for (int i = 0; i < vortexPoolSize; ++i) {
+		auto* pVortex = new CVortexEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+		//pVortex->SetScale(1.0f, 1.0f, 1.0f);
+		m_vVortexEffects.push_back(pVortex);
+		m_vGameObjects.push_back(pVortex);
+	}
+
+	// ª˝º∫«“ ∞«√‡π∞ ∏Ò∑œ («¡∏Æ∆’ ¿Ã∏ß∞˙ µø¿œ«ÿæﬂ «‘)
+	std::vector<std::string> buildableItems = { "wood_wall","furnace" /*, "wood_floor", ... */ };
+
+	for (const auto& itemName : buildableItems) {
+		std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab(itemName);
+		if (prefab) {
+			CGameObject* previewObject = prefab->Clone();
+			previewObject->isRender = false; // √≥¿Ωø°¥¬ ∫∏¿Ã¡ˆ æ µµ∑œ º≥¡§
+			previewObject->SetPosition(5000.0f, 2600.0f, 5000.0f);
+			previewObject->SetScale(10.0f, 10.0f, 10.0f);
+			previewObject->m_id = -1;
+			m_mapBuildPrefabs[itemName] = previewObject; // ∏ ø° ¿Ã∏ß¿∏∑Œ ¿˙¿Â
+			m_vGameObjects.emplace_back(previewObject);     // æ¿¿« ∏ﬁ¿Œ ∏Ò∑œø°µµ √ﬂ∞°
+		}
+	}
+
+	
+
+	for (auto obj : m_vGameObjects) {
+		if (obj->m_objectType == GameObjectType::Tree) {
+			obj->SetOBB(0.1f, 1.0f, 0.1f, XMFLOAT3(0.0f, 0.0f, 0.0f));
+		}
+		else if (obj->m_objectType == GameObjectType::Pig) {
+			obj->SetOBB(1.0f, 0.8f, 1.0f, XMFLOAT3(0.0f, 1.0f, -1.0f));
+		}
+		else if (obj->m_id = -1) {
+			obj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
+		}
+		else {
+			obj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
+		}
+		
+		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+	}
+	
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+}
+
+void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	
+	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed!");
+	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
+	assert(pShaderManager != nullptr && "ShaderManager is not available!");
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager(); 
+	BuildDefaultLightsAndMaterials();
+
+	if (!pResourceManager) {
+		
+		//OutputDebugString(L"Error: ResourceManager is not available in CScene::BuildObjects.\n");
+		return;
+	}
+
+	std::vector<std::wstring> skyboxTextures = {
+	   L"Skybox/Morning.dds",
+	   L"Skybox/nig.dds"
+	};
+
+	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	m_pSkyBox->LoadTextures(pd3dCommandList, skyboxTextures);
+	
 	srand((unsigned int)time(NULL));
 
 	XMFLOAT3 xmf3Scale(5.f, 0.2f, 5.f);
@@ -109,260 +461,196 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_pTerrain->m_xmf4x4World = Matrix4x4::Identity();
 	m_pTerrain->m_xmf4x4ToParent = Matrix4x4::Identity();
 
-	// ÎûúÎç§ ÏóîÏßÑ
+
+
+	// 1. Waves ∞¥√º∏¶ ª˝º∫«’¥œ¥Ÿ.
+	m_pWavesObject = new CWavesObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	// π∞∞·¿Ã ∫∏¿œ ¿ßƒ°∏¶ º≥¡§«’¥œ¥Ÿ. (∏ ¿« ¡ﬂæ” ±Ÿ√≥, ºˆ∏È ≥Ù¿Ã)
+	m_pWavesObject->SetPosition(5000.0f, 2600.0f, 5000.0f);
+
+	// 2. Waves∏¶ ¿ß«— ¿Á¡˙(Material)¿ª ª˝º∫«’¥œ¥Ÿ.
+	CMaterial* pWavesMaterial = new CMaterial(1, m_pGameFramework);
+
+	// 3. ShaderManagerø°º≠ "Waves" ºŒ¿Ã¥ı∏¶ ∞°¡ÆøÕ ¿Á¡˙ø° º≥¡§«’¥œ¥Ÿ.
+	pWavesMaterial->SetShader(m_pGameFramework->GetShaderManager()->GetShader("Waves"));
+	
+	// (º±≈√) π∞ ≈ÿΩ∫√≥∞° ¿÷¥Ÿ∏È ø©±‚º≠ ∑ŒµÂ«œø© ¿Á¡˙ø° «“¥Á«“ ºˆ ¿÷Ω¿¥œ¥Ÿ.
+	// pWavesMaterial->AssignTexture(...);
+
+	// 4. ª˝º∫«— ¿Á¡˙¿ª Waves ∞¥√ºø° º≥¡§«’¥œ¥Ÿ.
+	m_pWavesObject->SetMaterial(0, pWavesMaterial);
+	
+
+	/////////////////////////////////////////¿Ã∆Â∆Æ ø¿∫Í¡ß∆Æ
+	const int effectPoolSize = 20; 
+	for (int i = 0; i < effectPoolSize; ++i)
+	{
+		
+		auto* pEffect = new CAttackEffectObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
+
+		
+		m_vAttackEffects.push_back(pEffect);
+
+		
+		m_vGameObjects.push_back(pEffect);
+	}
+
+	
+
+
+	CLoadedModelInfo* pWoodShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/Branch_A.bin", m_pGameFramework);
+	CLoadedModelInfo* pRockShardModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/RockCluster_A_LOD0.bin", m_pGameFramework);
+
+	CMesh* pWoodMesh = pWoodShardModel->m_pModelRootObject->m_pMesh;
+	CMaterial* pWoodMaterial = pWoodShardModel->m_pModelRootObject->GetMaterial(0);
+	CMesh* pRockMesh = pRockShardModel->m_pModelRootObject->m_pMesh;
+	CMaterial* pRockMaterial = pRockShardModel->m_pModelRootObject->GetMaterial(0);
+
+	const int shardPoolSize = 50; // «Æ ≈©±‚
+
+	// 2. ≥™π´ ∆ƒ∆Ì «Æ ª˝º∫
+	for (int i = 0; i < shardPoolSize; ++i) {
+		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pWoodMesh, pWoodMaterial);
+
+		pShard->SetScale(2.0f, 2.0f, 2.0f);
+		m_vWoodShards.push_back(pShard);
+		m_vGameObjects.push_back(pShard);
+	}
+
+	// 3. µπ ∆ƒ∆Ì «Æ ª˝º∫
+	for (int i = 0; i < shardPoolSize; ++i) {
+		auto* pShard = new CResourceShardEffect(pd3dDevice, pd3dCommandList, m_pGameFramework, pRockMesh, pRockMaterial);
+
+		pShard->SetScale(0.01f, 0.01f, 0.01f);
+
+		m_vRockShards.push_back(pShard);
+		m_vGameObjects.push_back(pShard);
+	}
+
+	// ∑ŒµÂ∞° ≥°≥≠ ¿”Ω√ ∏µ® ¡§∫∏¥¬ ªË¡¶
+	if (pWoodShardModel) delete pWoodShardModel;
+	if (pRockShardModel) delete pRockShardModel;
+
+	/////////////////////////////////////////
+
+
+	// 1. ±◊∏≤¿⁄ ∏  ∞¥√º ª˝º∫
+	m_pShadowMap = std::make_unique<ShadowMap>(m_pGameFramework->GetDevice(), 4096 * 2, 4096 * 2);
+
+	// 2. SRV «⁄µÈ «“¥Á: Framework¿« AllocateSrvDescriptors «‘ºˆ∏¶ ªÁøÎ«’¥œ¥Ÿ.
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandle;
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuSrvHandle;
+	m_pGameFramework->AllocateSrvDescriptors(1, cpuSrvHandle, gpuSrvHandle);
+
+	// 3. DSV «⁄µÈ ∞°¡Æø¿±‚: πÊ±› Frameworkø° ∏∏µÁ ±◊∏≤¿⁄øÎ DSV »¸¿« Ω√¿€ «⁄µÈ¿ª ∞°¡Æø…¥œ¥Ÿ.
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuDsvHandle = m_pGameFramework->GetShadowDsvHeap()->GetCPUDescriptorHandleForHeapStart();
+
+	// 4. ShadowMapø° ∏µÁ «⁄µÈ¿ª ¿¸¥ﬁ«œø© √÷¡æ ∏Æº“Ω∫ ª˝º∫
+	m_pShadowMap->BuildDescriptors(
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuSrvHandle),
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(gpuSrvHandle), 
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuDsvHandle) 
+	);
+
+	LoadPrefabs(pd3dDevice, pd3dCommandList);
+
 	std::random_device rd;
 	std::mt19937 gen(rd());
 
-	int tree_obj_count{ 0 };
+	// 2. «Ô∆€ «‘ºˆ∏¶ ªÁøÎ«œø© ¡§¿˚ ø¿∫Í¡ß∆ÆµÈ¿ª πËƒ°«’¥œ¥Ÿ.
+	const wchar_t* barkTexture = L"Model/Textures/Tree_Bark_Diffuse.dds";
+	const wchar_t* rockTexture = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
 
-	float spawnMin = 500, spawnMax = 9500;
-	float objectMinSize = 15, objectMaxSize = 20;
+	// ¿Œ¿⁄ : ∞¥√º¿Ã∏ß, ∞πºˆ, Ω∫∆˘¿ßƒ° min, max, ≈©±‚ min, max, ~ , ≈ÿΩ∫√ƒ¿Œµ¶Ω∫, ≈ÿΩ∫√ƒ 
+	SpawnStaticObjects("PineTree", 100, 500, 9500, 15, 20, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("BirchTree", 100, 500, 9500, 15, 20, gen, pd3dDevice, pd3dCommandList, 1, barkTexture);
 
-	int nPineObjects = 100;
-	for (int i = 0; i < nPineObjects; ++i) {
-		CGameObject* gameObj = new CPineObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nPineObjects; ++i) {
-		CGameObject* gameObj = new CBirchObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nPineObjects; ++i) {
-		CGameObject* gameObj = new CWillowObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
+	SpawnStaticObjects("RockClusterA", 100, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList, 0, rockTexture);
+	SpawnStaticObjects("RockClusterB", 100, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList, 0, rockTexture);
+	SpawnStaticObjects("RockClusterC", 100, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList, 0, rockTexture);
 
+	SpawnStaticObjects("Cliff", 30, 1700, 9000, 30, 50, gen, pd3dDevice, pd3dCommandList, 0, rockTexture);
 
-	int nRockObjects = 100;	objectMinSize = 10, objectMaxSize = 15;
-	for (int i = 0; i < nRockObjects; ++i) {
-		CGameObject* gameObj = new CRockClusterAObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nRockObjects; ++i) {
-		CGameObject* gameObj = new CRockClusterBObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nRockObjects; ++i) {
-		CGameObject* gameObj = new CRockClusterCObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
+	SpawnStaticObjects("BushA", 100, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Chervil", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("RedPoppy", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("ElephantEar", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("GrassPatch", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Clovers", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Daisies", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("Leaves", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
+	SpawnStaticObjects("GroundPoppies", 20, 500, 9500, 10, 15, gen, pd3dDevice, pd3dCommandList);
 
-
-	nRockObjects = 30;	objectMinSize = 30, objectMaxSize = 50;
-	spawnMin = 1700, spawnMax = 9000;
-	for (int i = 0; i < nRockObjects; ++i) {
-		CGameObject* gameObj = new CCliffFObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-
-
-	m_pPreviewPine = new CConstructionObject(
-		pd3dDevice, pd3dCommandList, m_pGameFramework);
-	m_pPreviewPine->SetPosition(XMFLOAT3(0, 0, 0));
 	
-	//auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-	m_pPreviewPine->SetScale(10, 10, 10);
-	
-	m_pPreviewPine->isRender = false;
 
-	m_pPreviewPine->m_treecount = tree_obj_count;
-	m_vGameObjects.emplace_back(m_pPreviewPine);
-	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, m_pPreviewPine->m_worldOBB.Center);
-	octree.insert(std::move(t_obj));
+	// ª˝º∫«“ ∞«√‡π∞ ∏Ò∑œ («¡∏Æ∆’ ¿Ã∏ß∞˙ µø¿œ«ÿæﬂ «‘)
+	std::vector<std::string> buildableItems = { "wood_wall" ,"furnace"/*, "wood_floor", ... */ };
 
-	//int nCliffFObjectCObjects = 5;
-	//for (int i = 0; i < nCliffFObjectCObjects; ++i) {
-	//	CGameObject* gameObj = new CCliffFObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-	//	auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-	//	gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-	//	auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-	//	gameObj->SetScale(w, h, w);
-	//	m_vGameObjects.emplace_back(gameObj);
+	for (const auto& itemName : buildableItems) {
+		std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab(itemName);
+		if (prefab) {
+			CGameObject* previewObject = prefab->Clone();
+			previewObject->isRender = false; // √≥¿Ωø°¥¬ ∫∏¿Ã¡ˆ æ µµ∑œ º≥¡§
+			previewObject->SetPosition(5000.0f,2600.0f, 5000.0f);
+			previewObject->SetScale(10.0f, 10.0f, 10.0f);
+
+			m_mapBuildPrefabs[itemName] = previewObject; // ∏ ø° ¿Ã∏ß¿∏∑Œ ¿˙¿Â
+			m_vGameObjects.emplace_back(previewObject);     // æ¿¿« ∏ﬁ¿Œ ∏Ò∑œø°µµ √ﬂ∞°
+		}
+	}
+
+	int animate_count = 13;
+	// Cow πËƒ°
+	//std::shared_ptr<CGameObject> cowPrefab = pResourceManager->GetPrefab("Cow");
+	//if (cowPrefab) {
+	//	CGameObject* prefabInstance = cowPrefab.get();
+	//	prefabInstance->SetPosition(5000, 2700, 5000); // ¥´ø° ¿ﬂ ∂Á¥¬ ∞˜ø° πËƒ°
+	//	m_vGameObjects.emplace_back(prefabInstance);
+
+	//	prefabInstance->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	//	for (int j = 1; j < animate_count; ++j) {
+	//		prefabInstance->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+	//		prefabInstance->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+	//	}
+
+	//	prefabInstance->SetOwningScene(this);
+	//	prefabInstance->FSM_manager = std::make_shared<FSMManager<CGameObject>>(prefabInstance);
+	//	prefabInstance->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+	//	prefabInstance->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+
+	//	prefabInstance->SetScale(12.0f, 12.0f, 12.0f);
+
+	//	auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, prefabInstance->m_worldOBB.Center);
+	//	octree.insert(std::move(t_obj));
+
+	//	for (int i = 0; i < 10; ++i) {
+	//		CMonsterObject* newCow = dynamic_cast<CMonsterObject*>(cowPrefab->Clone());
+	//		newCow->m_objectType = GameObjectType::Cow;
+
+	//		newCow->PostCloneAnimationSetup();	// ª¿¥Î ¿Áø¨∞·
+
+	//		newCow->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	//		for (int j = 1; j < animate_count; ++j) {
+	//			newCow->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+	//			newCow->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+	//		}
+
+	//		newCow->SetOwningScene(this);
+	//		newCow->FSM_manager = std::make_shared<FSMManager<CGameObject>>(newCow);
+	//		newCow->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+	//		newCow->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+	//		
+	//		auto [x, z] = genRandom::generateRandomXZ(gen, 5000, 5500, 5000, 5500);
+	//		newCow->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
+	//		newCow->SetScale(12.0f, 12.0f, 12.0f);
+	//		m_vGameObjects.emplace_back(newCow);
+
+	//		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, newCow->m_worldOBB.Center);
+	//		octree.insert(std::move(t_obj));
+	//	}
 	//}
 
-
-
-	int nBushObject = 100;
-	objectMinSize = 10, objectMaxSize = 15;
-	for (int i = 0; i < nBushObject; ++i) {
-		CGameObject* gameObj = new CBushAObject(pd3dDevice, pd3dCommandList, m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	int nVegetationObject = 20;
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/ChervilCluster.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/RedPoppyCluster.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Speedwell.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/ElephantEar_A.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/GrassPatch_LOD0.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Clovers.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Daisies.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Leaves.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-	for (int i = 0; i < nVegetationObject; ++i) {
-		CGameObject* gameObj = new CStaticObject(pd3dDevice, pd3dCommandList, "Model/Vegetation/Groundcover_Poppies.bin", m_pGameFramework);
-		auto [x, z] = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
-		gameObj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
-		auto [w, h] = genRandom::generateRandomXZ(gen, objectMinSize, objectMaxSize, objectMinSize, objectMaxSize);
-		gameObj->SetScale(w, h, w);
-		gameObj->m_treecount = tree_obj_count;
-
-		m_vGameObjects.emplace_back(gameObj);
-		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameObj->m_worldOBB.Center);
-		octree.insert(std::move(t_obj));
-	}
-
-
-	
-
 	int nCowObjects = 10;
-	int animate_count = 13;
 	for (int i = 0; i < nCowObjects; ++i)
 	{
 		CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Cow.bin", m_pGameFramework);
@@ -374,8 +662,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
 		}
 		gameobj->SetOwningScene(this);
-		gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
-		gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+		//gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+		//gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 
 		gameobj->Rotate(0.f, 180.f, 0.f);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
@@ -400,14 +688,15 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
 		}
 		gameobj->SetOwningScene(this);
-		gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
-		gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
+		//gameobj->FSM_manager->SetCurrentState(std::make_shared<NonAtkNPCStandingState>());
+		//gameobj->FSM_manager->SetGlobalState(std::make_shared<NonAtkNPCGlobalState>());
 		gameobj->Rotate(0.f, 180.f, 0.f);
-		auto [x, z] = genRandom::generateRandomXZ(gen, 800, 2500, 800, 2500);
+		auto [x, z] = genRandom::generateRandomXZ(gen, 5000, 5500, 5000, 5500);
 		gameobj->SetPosition(x, m_pTerrain->GetHeight(x, z), z);
 		gameobj->SetScale(10.0f, 10.0f, 10.0f);
 		gameobj->SetTerraindata(m_pTerrain);
 		gameobj->m_treecount = tree_obj_count;
+
 		m_vGameObjects.emplace_back(gameobj);
 		auto t_obj = std::make_unique<tree_obj>(tree_obj_count++, gameobj->m_worldOBB.Center);
 		octree.insert(std::move(t_obj));
@@ -426,8 +715,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
 		}
 		gameobj->SetOwningScene(this);
-		gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
-		gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
+		//gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+		//gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
 		gameobj->Rotate(0.f, 180.f, 0.f);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
@@ -452,8 +741,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
 		}
 		gameobj->SetOwningScene(this);
-		gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
-		gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
+		//gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+		//gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
 		gameobj->Rotate(0.f, 180.f, 0.f);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
@@ -478,8 +767,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 			gameobj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
 		}
 		gameobj->SetOwningScene(this);
-		gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
-		gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
+		//gameobj->FSM_manager->SetCurrentState(std::make_shared<AtkNPCStandingState>());
+		//gameobj->FSM_manager->SetGlobalState(std::make_shared<AtkNPCGlobalState>());
 
 		gameobj->Rotate(0.f, 180.f, 0.f);
 		auto [x, z] = genRandom::generateRandomXZ(gen, 1800, 3500, 1800, 3500);
@@ -493,11 +782,27 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		if (pWolfModel) delete pWolfModel;
 	}
 
+	
 
+	//int materialIndexToChange = 0;
+	//UINT albedoTextureSlot = 0;
+	//const wchar_t* textureFile = L"Model/Textures/T_HU_M_Body_04_D.dds";
+	//CGameObject* gameObj = m_pPlayer->FindFrame("Bracers_Naked");
+	//ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+
+	//m_pPlayer->SetCollisionTargets(m_vGameObjects);
 
 	for (auto obj : m_vGameObjects) {
-		obj->SetOBB();
-		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
+		if (obj->m_objectType == GameObjectType::Tree) {
+			obj->SetOBB(0.1f, 1.0f, 0.1f,XMFLOAT3(0.0f,0.0f,0.0f));
+		}
+		else if (obj->m_objectType == GameObjectType::Pig) {
+			obj->SetOBB(1.0f, 0.8f, 1.0f, XMFLOAT3(0.0f, 1.0f, -1.0f));
+		}
+		else {
+			obj->SetOBB(1.0f,1.0f,1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
+		}
+		
 		if (obj->m_pSkinnedAnimationController) obj->PropagateAnimController(obj->m_pSkinnedAnimationController);
 
 		switch (obj->m_objectType)
@@ -531,21 +836,33 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 			break;
 		case GameObjectType::Pig:
 			obj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			obj->m_localOBB.Center.y += 30.0f;
 			break;
-		default:	// ÏûòÎ™ªÎêú ÌÉÄÏûÖÏù¥Îã§.
+		default:	
 			break;
 		}
+
+		obj->InitializeOBBResources(pd3dDevice, pd3dCommandList);
 	}
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
-
 void CScene::ReleaseObjects()
 {
 	if (m_pTerrain) delete m_pTerrain;
 	if (m_pSkyBox) delete m_pSkyBox;
+	if (m_pWavesObject) delete m_pWavesObject;
 
 	ReleaseShaderVariables();
+	for (auto& pObject : m_vGameObjects)
+	{
+		// ∫π¡¶µ» ¿ŒΩ∫≈œΩ∫∏∏ delete
+		if (pObject && !pObject->m_bIsPrefab)
+		{
+			delete pObject;
+		}
+	}
+	m_vGameObjects.clear();
 
 	m_listBranchObjects.clear();
 
@@ -554,21 +871,21 @@ void CScene::ReleaseObjects()
 
 void CScene::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256ÔøΩÔøΩ ÔøΩÔøΩÔøΩ
+	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); 
 	m_pd3dcbLights = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbLights->Map(0, NULL, (void**)&m_pcbMappedLights);
 
 
-	// Ïù∏Ïä§ÌÑ¥Ïã±
+	
 	UINT m_nObjects = 100;
-	//Ïù∏Ïä§ÌÑ¥Ïä§ Ï†ïÎ≥¥Î•º Ï†ÄÏû•Ìï† Ï†ïÏ†ê Î≤ÑÌçºÎ•º ÏóÖÎ°úÎìú Ìûô Ïú†ÌòïÏúºÎ°ú ÏÉùÏÑ±ÌïúÎã§. 
+	
 	m_pd3dcbGameObjects = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL,
 		sizeof(VS_VB_INSTANCE) * m_nObjects, D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-	//Ï†ïÏ†ê Î≤ÑÌçº(ÏóÖÎ°úÎìú Ìûô)Ïóê ÎåÄÌïú Ìè¨Ïù∏ÌÑ∞Î•º Ï†ÄÏû•ÌïúÎã§. 
+	
 	m_pd3dcbGameObjects->Map(0, NULL, (void**)&m_pcbMappedGameObjects);
-	//Ï†ïÏ†ê Î≤ÑÌçºÏóê ÎåÄÌïú Î∑∞Î•º ÏÉùÏÑ±ÌïúÎã§. 
+	
 	m_d3dInstancingBufferView.BufferLocation =
 		m_pd3dcbGameObjects->GetGPUVirtualAddress();
 	m_d3dInstancingBufferView.StrideInBytes = sizeof(VS_VB_INSTANCE);
@@ -580,12 +897,13 @@ void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 	if (m_pcbMappedLights && m_pLights) {
 		assert(m_nLights >= 0 && m_nLights <= MAX_LIGHTS && "Invalid number of lights!");
 		if (m_nLights < 0 || m_nLights > MAX_LIGHTS) {
-			OutputDebugStringA("!!!!!!!! ERROR: Invalid m_nLights value detected! Clamping to 0. !!!!!!!!\n");
-			m_nLights = 0; //ÏûÑÏãú
+			//OutputDebugStringA("!!!!!!!! ERROR: Invalid m_nLights value detected! Clamping to 0. !!!!!!!!\n");
+			m_nLights = 0; 
 		}
 		::memcpy(m_pcbMappedLights->m_pLights, m_pLights, sizeof(LIGHT) * m_nLights);
 		::memcpy(&m_pcbMappedLights->m_xmf4GlobalAmbient, &m_xmf4GlobalAmbient, sizeof(XMFLOAT4));
 		::memcpy(&m_pcbMappedLights->m_nLights, &m_nLights, sizeof(int));
+		::memcpy(&m_pcbMappedLights->gIsDaytime, &m_bIsDaytime, sizeof(bool));
 	}
 }
 
@@ -605,6 +923,7 @@ void CScene::ReleaseUploadBuffers()
 {
 	if (m_pSkyBox) m_pSkyBox->ReleaseUploadBuffers();
 	if (m_pTerrain) m_pTerrain->ReleaseUploadBuffers();
+	if (m_pWavesObject) m_pWavesObject->ReleaseUploadBuffers();
 	for(auto& obj : m_vGameObjects) {
 		if (obj) obj->ReleaseUploadBuffers();
 	}
@@ -637,6 +956,8 @@ void CScene::AnimateObjects(float fTimeElapsed)
 {
 	m_fElapsedTime = fTimeElapsed;
 
+	if (m_pPlayer) m_pPlayer->checkmove = false;
+
 	for (auto& obj : m_listBranchObjects) {
 		if (CollisionCheck(m_pPlayer, obj)) {
 			auto branch = dynamic_cast<CBranchObject*>(obj);
@@ -666,91 +987,332 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		}
 	}
 
+	/*
+	if (m_pPlayer) {
+		for (auto obj : m_vGameObjects) {
+			if (obj->m_objectType != GameObjectType::Player&& obj->isRender) {
+				if (m_pPlayer->CheckCollisionOBB(obj)) {
+					m_pPlayer->checkmove = true; // Ï∂©Îèå Î∞úÏÉù ???¥Îèô Í∏àÏ?
+					break;
+				}
+			}
+		}
+	}
+	*/
 
+	bool bIsVortexActive = false;
+	XMFLOAT3 vortexCenter = XMFLOAT3(0.f, 0.f, 0.f);
+
+	// «ˆ¿Á »∞º∫»≠µ» º“øÎµπ¿Ã∞° ¿÷¥¬¡ˆ, ¿÷¥Ÿ∏È ¡ﬂΩ…¡°¿Ã æÓµ¿Œ¡ˆ √£Ω¿¥œ¥Ÿ.
+	for (const auto& pVortex : m_vVortexEffects)
+	{
+		if (pVortex && pVortex->isRender)
+		{
+			bIsVortexActive = true;
+			vortexCenter = pVortex->GetPosition(); // »∞º∫»≠µ» ∆ƒ∆º≈¨ æ∆π´∞≈≥™ «œ≥™∑Œ ¡ﬂΩ…¡°¿ª º≥¡§
+			break;
+		}
+	}
+
+	// º“øÎµπ¿Ã∞° »∞º∫»≠ ªÛ≈¬¿Ã∞Ì «√∑π¿ÃæÓ∞° ¡∏¿Á«—¥Ÿ∏È ¥ÎπÃ¡ˆ ∞ËªÍ¿ª Ω√¿€«’¥œ¥Ÿ.
+	if (bIsVortexActive && m_pPlayer)
+	{
+		// ¥ÎπÃ¡ˆ π¸¿ß º≥¡§ (SpawnVortexEffectø°º≠ º≥¡§«— ∞°¿Â ≈´ ∞™ ±‚¡ÿ)
+		const float fDamageRadius = 250.0f;
+		const float fDamageHeight = 100.0f;
+		const float fDamageInterval = 0.5f; // 0.5√ ∏∂¥Ÿ ¥ÎπÃ¡ˆ
+		const int nDamageAmount = 5;       // 1»∏¥Á ¥ÎπÃ¡ˆ æÁ
+
+		XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+
+		// 1. ºˆ∆Ú ∞≈∏Æ ∞ËªÍ (Y√‡ π´Ω√)
+		float fDistanceXZ = sqrt(pow(playerPos.x - vortexCenter.x, 2) + pow(playerPos.z - vortexCenter.z, 2));
+
+		// 2. ºˆ¡˜ ∞≈∏Æ ∞ËªÍ
+		float fDistanceY = abs(playerPos.y - vortexCenter.y);
+
+		// 3. «√∑π¿ÃæÓ∞° ¥ÎπÃ¡ˆ π¸¿ß(ø¯≈Î) æ»ø° ¿÷¥¬¡ˆ »Æ¿Œ
+		if (fDistanceXZ <= fDamageRadius && fDistanceY <= fDamageHeight)
+		{
+			m_fVortexDamageTimer += fTimeElapsed;
+			if (m_fVortexDamageTimer >= fDamageInterval)
+			{
+				m_pPlayer->DecreaseHp(nDamageAmount);
+				SoundManager::GetInstance().PlayLoadedSound(L"Playerhit");
+				// º≠πˆøÕ √º∑¬ µø±‚»≠∏¶ ¿ß«— ∆–≈∂ ¿¸º€
+				auto& nwManager = NetworkManager::GetInstance();
+				SET_HP_HIT_OBJ_PACKET p;
+				p.hit_obj_id = m_pPlayer->m_id; 
+				p.hp = m_pPlayer->getHp();
+				p.size = sizeof(SET_HP_HIT_OBJ_PACKET);
+				p.type = static_cast<char>(E_PACKET::E_P_SETHP);
+				nwManager.PushSendQueue(p, p.size);
+
+				m_fVortexDamageTimer = 0.0f; // ≈∏¿Ã∏” √ ±‚»≠
+			}
+		}
+	}
 	if (m_pLights)
 	{
-		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
+		m_pLights[0].m_xmf3Position = m_pPlayer->GetPosition();
+		//m_pLights[0].m_xmf3Direction = m_pPlayer->GetLookVector();
+	}
+
+	if (m_pPlayer && m_pLights)
+	{
+		XMFLOAT3 playerPosition = m_pPlayer->GetPosition();
+		playerPosition.y += 50.0f;
+
+		m_pLights[1].m_xmf3Position = playerPosition;
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
+
+	if (m_pWavesObject) m_pWavesObject->Animate(fTimeElapsed);
+
+	
 }
 
 
 void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	// ShaderManager Í∞ÄÏ†∏Ïò§Í∏∞ (Îß§Î≤à Ìò∏Ï∂úÌïòÎäî ÎåÄÏã† Î©§Î≤Ñ Î≥ÄÏàòÎ°ú Ï∫êÏã±Ìï¥ÎèÑ Ï¢ãÏùå)
+
 	assert(m_pGameFramework != nullptr && "GameFramework pointer is needed in CScene!");
 	ShaderManager* pShaderManager = m_pGameFramework->GetShaderManager();
 	assert(pShaderManager != nullptr && "ShaderManager is not available!");
 
-	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
-	// Ïπ¥Î©îÎùº ÏÉÅÏàò Î≤ÑÌçº(b1) ÏóÖÎç∞Ïù¥Ìä∏
-	pCamera->UpdateShaderVariables(pd3dCommandList);
+	if (m_pShadowMap) { m_pShadowMap->Clean(pd3dCommandList); }
+	if (m_pTorchShadowMap)	{ m_pTorchShadowMap->Clean(pd3dCommandList); }
 
-	// 3. Ï†ÑÏó≠ Ï°∞Î™Ö ÏÉÅÏàò Î≤ÑÌçº ÏóÖÎç∞Ïù¥Ìä∏ 
+	//UpdateShadowTransform(m_pPlayer->GetPosition()); // ∫˚¿« ¿ßƒ°/πÊ«‚ø° µ˚∂Û ShadowTransform «‡∑ƒ ∞ËªÍ
+	UpdateShadowTransform(m_pPlayer->GetPosition());
+	pCamera->UpdateShadowTransform(mShadowTransform); // ƒ´∏ﬁ∂Ûø° ShadowTransform ¿¸¥ﬁ«œø© ªÛºˆ πˆ∆€ æ˜µ•¿Ã∆Æ ¡ÿ∫Ò
+
+	// =================================================================
+	// Pass 1: ±◊∏≤¿⁄ ∏  ª˝º∫
+	// =================================================================
+	//if(IsDaytime())
+	{
+		// ∑ª¥ı ≈∏∞Ÿ¿ª ±◊∏≤¿⁄ ∏ ¿∏∑Œ º≥¡§
+		m_pShadowMap->SetRenderTarget(pd3dCommandList);
+
+		ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() };
+		pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+
+		// --- ∫˚ ƒ´∏ﬁ∂Û ªÛºˆ πˆ∆€ æ˜µ•¿Ã∆Æ π◊ πŸ¿Œµ˘ ---
+		XMMATRIX view = XMLoadFloat4x4(&mLightView);
+		XMMATRIX proj = XMLoadFloat4x4(&mLightProj);
+
+		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4View, XMMatrixTranspose(view));
+		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4Projection, XMMatrixTranspose(proj));
+
+
+		//CShader* pShadowShader = m_pGameFramework->GetShaderManager()->GetShader("Skinned_Shaodw");
+		//pd3dCommandList->SetPipelineState(pShadowShader->GetPipelineState());
+		//pd3dCommandList->SetGraphicsRootSignature(pShadowShader->GetRootSignature());
+
+		{
+			std::lock_guard<std::mutex> lock(m_Mutex);
+
+			for (auto& obj : m_vGameObjects) {
+				if (obj->m_objectType != GameObjectType::Toad && obj->m_objectType != GameObjectType::Wasp &&
+					obj->m_objectType != GameObjectType::Wolf && obj->m_objectType != GameObjectType::Bat &&
+					obj->m_objectType != GameObjectType::Snake && obj->m_objectType != GameObjectType::Turtle &&
+					obj->m_objectType != GameObjectType::Raptor && obj->m_objectType != GameObjectType::Snail && 
+					obj->m_objectType != GameObjectType::Spider)
+				{
+					if (obj->isRender) obj->RenderShadow(pd3dCommandList);
+				}
+			}
+		}
+		const float fRenderDistanceSq = 800.0f * 800.0f;
+		XMVECTOR playerPos = XMLoadFloat3(&m_pPlayer->GetPosition());
+		for (auto& obj : m_lEnvironmentObjects) {
+
+			if (!obj) continue;
+			XMVECTOR objPos = XMLoadFloat3(&obj->GetPosition());
+			float fDistanceSq = XMVectorGetX(XMVector3LengthSq(XMVectorSubtract(playerPos, objPos)));
+
+			if (fDistanceSq <= fRenderDistanceSq)
+			{
+				obj->RenderShadow(pd3dCommandList);
+			}
+		}
+
+		for (auto& obj : m_vConstructionObjects) {
+			if (obj) obj->RenderShadow(pd3dCommandList);
+		}
+
+		if (m_pPlayer) m_pPlayer->RenderShadow(pd3dCommandList);
+
+		for (auto& p : PlayerList) {
+			if (p.second->isRender) p.second->RenderShadow(pd3dCommandList);
+		}
+
+		if (m_pTerrain) m_pTerrain->RenderShadow(pd3dCommandList);
+
+		// 1. ±◊∏≤¿⁄ ∏  ∏Æº“Ω∫∏¶ «»ºø ºŒ¿Ã¥ıø°º≠ ¿–¿ª ºˆ ¿÷¥¬ ªÛ≈¬∑Œ ∫Ø∞Ê
+		m_pShadowMap->TransitionToReadable(pd3dCommandList);
+	}
+
+	// =================================================================
+   // Pass 1.5: »∂∫“ ±◊∏≤¿⁄ ∏  ª˝º∫
+   // =================================================================
+	LIGHT* pTorchLight = &m_pLights[1]; 
+	if (pTorchLight->m_bEnable)
+	{
+		// 1. ∑ª¥ı ≈∏∞Ÿ¿ª "»∂∫“øÎ" º®µµøÏ ∏ ¿∏∑Œ º≥¡§«’¥œ¥Ÿ.
+		m_pTorchShadowMap->SetRenderTarget(pd3dCommandList);
+
+		// 2. "»∂∫“¿« Ω√¡°"ø°º≠ πŸ∂Û∫∏¥¬ View/Projection «‡∑ƒ¿ª ∞ËªÍ«’¥œ¥Ÿ.
+		UpdateTorchShadowTransform(pTorchLight);
+		pCamera->UpdateTorchShadowTransform(mTorchShadowTransform);
+
+		// 3. ∞ËªÍµ» «‡∑ƒ¿ª ∫˚ ƒ´∏ﬁ∂Û ªÛºˆ πˆ∆€(b0)ø° æ˜µ•¿Ã∆Æ«’¥œ¥Ÿ.
+		XMMATRIX view = XMLoadFloat4x4(&mLightView);
+		XMMATRIX proj = XMLoadFloat4x4(&mLightProj);
+		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4View, XMMatrixTranspose(view));
+		XMStoreFloat4x4(&m_pcbMappedLightCamera->m_xmf4x4Projection, XMMatrixTranspose(proj));
+
+		//pd3dCommandList->SetGraphicsRootConstantBufferView(0, m_pd3dcbLightCamera->GetGPUVirtualAddress());
+
+		{
+			std::lock_guard<std::mutex> lock(m_Mutex);
+
+			for (auto& obj : m_vGameObjects) {
+				/*if (obj->m_objectType != GameObjectType::Toad && obj->m_objectType != GameObjectType::Wasp &&
+					obj->m_objectType != GameObjectType::Wolf && obj->m_objectType != GameObjectType::Bat &&
+					obj->m_objectType != GameObjectType::Snake && obj->m_objectType != GameObjectType::Turtle &&
+					obj->m_objectType != GameObjectType::Raptor && obj->m_objectType != GameObjectType::Snail &&
+					obj->m_objectType != GameObjectType::Spider)*/
+				{
+					if (obj->isRender) obj->RenderShadow(pd3dCommandList);
+				}
+			}
+		}
+		const float fRenderDistanceSq = 800.0f * 800.0f;
+		XMVECTOR playerPos = XMLoadFloat3(&m_pPlayer->GetPosition());
+		for (auto& obj : m_lEnvironmentObjects) {
+
+			if (!obj) continue;
+			XMVECTOR objPos = XMLoadFloat3(&obj->GetPosition());
+			float fDistanceSq = XMVectorGetX(XMVector3LengthSq(XMVectorSubtract(playerPos, objPos)));
+
+			if (fDistanceSq <= fRenderDistanceSq)
+			{
+				obj->RenderShadow(pd3dCommandList);
+			}
+		}
+
+		for (auto& obj : m_vConstructionObjects) {
+			if (obj) obj->RenderShadow(pd3dCommandList);
+		}
+
+		if (m_pPlayer) m_pPlayer->RenderShadow(pd3dCommandList);
+
+		for (auto& p : PlayerList) {
+			if (p.second->isRender) p.second->RenderShadow(pd3dCommandList);
+		}
+
+		if (m_pTerrain) m_pTerrain->RenderShadow(pd3dCommandList);
+		// 5. »∂∫“ º®µµøÏ ∏ ¿ª ¿–±‚ ∞°¥…«— ªÛ≈¬∑Œ ¿¸»Ø«’¥œ¥Ÿ.
+		m_pTorchShadowMap->TransitionToReadable(pd3dCommandList);
+	}
+
+
+	// 2. ∑ª¥ı ≈∏∞Ÿ¿ª ¥ŸΩ√ »≠∏È(∏ﬁ¿Œ πÈπˆ∆€)∞˙ ∏ﬁ¿Œ ±Ì¿Ã πˆ∆€∑Œ º≥¡§
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dOffscreenRtvCPUHandle = m_pGameFramework->GetOffscreenRtvCPUHandle(); 
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pGameFramework->GetDsvCPUDescriptorHandle();
+	pd3dCommandList->OMSetRenderTargets(1, &d3dOffscreenRtvCPUHandle, TRUE, &d3dDsvCPUDescriptorHandle);
+
+
+	// 3. ∫‰∆˜∆ÆøÕ Ω√¿˙ ∑∫∆Æµµ ∏ﬁ¿Œ ƒ´∏ﬁ∂Û ±‚¡ÿ¿∏∑Œ ¥ŸΩ√ º≥¡§
+	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+
+
+	pCamera->UpdateShaderVariables(pd3dCommandList);
 	UpdateShaderVariables(pd3dCommandList);
 
-	// ÎîîÏä§ÌÅ¨Î¶ΩÌÑ∞ Ìûô ÏÑ§Ï†ï 
-	ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() }; // CBV/SRV/UAV Ìûô Í∞ÄÏ†∏Ïò§Í∏∞
-	if (ppHeaps[0]) { // Ìûô Ìè¨Ïù∏ÌÑ∞ Ïú†Ìö®ÏÑ± Í≤ÄÏÇ¨
+
+	ID3D12DescriptorHeap* ppHeaps[] = { m_pGameFramework->GetCbvSrvHeap() };
+	if (ppHeaps[0]) {
 		pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 	}
 	else {
 		assert(!"CBV/SRV Descriptor Heap is NULL in CScene::Render!");
-		return; // Ìûô ÏóÜÏúºÎ©¥ Î†åÎçîÎßÅ Î∂àÍ∞Ä
+		return;
 	}
 
-	// --- 4. Î†åÎçîÎßÅ ÏÉÅÌÉú Ï∂îÏ†Å Î≥ÄÏàò ---
+
 	m_pCurrentRootSignature = nullptr;
 	m_pCurrentPSO = nullptr;
 	m_pCurrentShader = nullptr;
 
 
+	
 
-	// 5.1. Ïä§Ïπ¥Ïù¥Î∞ïÏä§ Î†åÎçîÎßÅ
-	if (m_pSkyBox) {
-		m_pSkyBox->Render(pd3dCommandList, pCamera); // SkyBox::Render ÎÇ¥Î∂ÄÏóêÏÑú ÏÉÅÌÉú ÏÑ§Ï†ï Î∞è Î†åÎçîÎßÅ
-	}
+	if (m_pSkyBox)
+		m_pSkyBox->Render(pd3dCommandList, pCamera);
 
-	// 5.2. ÏßÄÌòï Î†åÎçîÎßÅ
+	
+
+
 	if (m_pTerrain) {
-		m_pTerrain->Render(pd3dCommandList, pCamera); // Terrain::Render ÎÇ¥Î∂ÄÏóêÏÑú ÏÉÅÌÉú ÏÑ§Ï†ï Î∞è Î†åÎçîÎßÅ
+		m_pTerrain->Render(pd3dCommandList, pCamera);
 	}
 
 
-	// octree Î†åÎçîÎßÅ
-	std::vector<tree_obj*> results;
-	tree_obj player_obj{ -1, m_pPlayer->GetPosition() };
 
-	octree.query(player_obj, XMFLOAT3{ 2500,1000,2500 }, results);
+	
+	{
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		for (auto& obj : m_vGameObjects) {
+			if (obj->m_objectType != GameObjectType::Toad && obj->m_objectType != GameObjectType::Wasp &&
+				obj->m_objectType != GameObjectType::Wolf && obj->m_objectType != GameObjectType::Bat &&
+				obj->m_objectType != GameObjectType::Snake && obj->m_objectType != GameObjectType::Turtle &&
+				obj->m_objectType != GameObjectType::Raptor && obj->m_objectType != GameObjectType::Snail &&
+				obj->m_objectType != GameObjectType::Spider) {
+				if (obj) obj->Animate(m_fElapsedTime);
+				if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
+			}
+			else {
+				if (!IsDaytime()) {
+					if (obj) obj->Animate(m_fElapsedTime);
+					if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
+				}
+			}
+		}
+		const float fRenderDistanceSq = 1000.0f * 1000.0f;
+		XMVECTOR playerPos = XMLoadFloat3(&m_pPlayer->GetPosition());
+		for (auto& obj : m_lEnvironmentObjects) {
 
-	for (auto& obj : results) {
-		if (m_vGameObjects[obj->u_id]) {
-			if (m_vGameObjects[obj->u_id]->FSM_manager) m_vGameObjects[obj->u_id]->FSMUpdate();
-			//if (m_vGameObjects[obj->u_id]->m_pSkinnedAnimationController) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
-			if (m_vGameObjects[obj->u_id]) m_vGameObjects[obj->u_id]->Animate(m_fElapsedTime);
-			if (m_vGameObjects[obj->u_id]->isRender) m_vGameObjects[obj->u_id]->Render(pd3dCommandList, pCamera);
+			if (!obj) continue;
+			XMVECTOR objPos = XMLoadFloat3(&obj->GetPosition());
+			float fDistanceSq = XMVectorGetX(XMVector3LengthSq(XMVectorSubtract(playerPos, objPos)));
+
+			if (fDistanceSq <= fRenderDistanceSq)
+			{
+				obj->Render(pd3dCommandList, pCamera);
+			}
 		}
 	}
+	
+	for (auto& constructionObj : m_vConstructionObjects) {
+		if (constructionObj) constructionObj->Animate(m_fElapsedTime);
+		if (constructionObj && constructionObj->isRender) constructionObj->Render(pd3dCommandList, pCamera);
+	}
 
-	//for (auto it = m_listBranchObjects.begin(); it != m_listBranchObjects.end(); ) {
-	//	(*it)->Animate(m_fElapsedTime);
-	//	if (!(*it)->isRender) { // isRenderÍ∞Ä falseÏù¥Î©¥ (ÏàòÎ™ÖÏù¥ Îã§ÌïòÎ©¥) Î¶¨Ïä§Ìä∏ÏóêÏÑú Ï†úÍ±∞
-	//		it = m_listBranchObjects.erase(it);
-	//	}
-	//	else {
-	//		++it;
-	//	}
-	//}
+	if (m_pWavesObject) m_pWavesObject->Render(pd3dCommandList, pCamera);
 
 	for (auto branch : m_listBranchObjects) {
-		if (branch->isRender) { // Î†åÎçîÎßÅ ÌîåÎûòÍ∑∏ ÌôïÏù∏
+		if (branch->isRender) {
 			branch->Animate(m_fElapsedTime);
 			branch->Render(pd3dCommandList, pCamera);
 		}
 	}
 
 	for (auto branch : m_listRockObjects) {
-		if (branch->isRender) { // Î†åÎçîÎßÅ ÌîåÎûòÍ∑∏ ÌôïÏù∏
+		if (branch->isRender) {
 			branch->Animate(m_fElapsedTime);
 			branch->Render(pd3dCommandList, pCamera);
 		}
@@ -758,85 +1320,97 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 	//if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
 
-	if(m_pPreviewPine->isRender)	m_pPreviewPine->Render(pd3dCommandList, pCamera);
-
-	//// 5.3. ÏùºÎ∞ò Í≤åÏûÑ Ïò§Î∏åÏ†ùÌä∏ Î†åÎçîÎßÅ
-	//for (auto& obj : m_vGameObjects) {
-	//	if (obj /*&& obj->IsVisible()*/) {
-	//		if (obj->FSM_manager) obj->FSMUpdate();
-	//		if (obj->m_pSkinnedAnimationController) obj->Animate(m_fElapsedTime);
-	//		if (obj->isRender) obj->Render(pd3dCommandList, pCamera);
-	//	}	
-	//	// 5.5. OBB Î†åÎçîÎßÅ (ÏÑ†ÌÉùÏ†Å)
-	//	//bool bRenderOBBs = true; // OBB Î†åÎçîÎßÅ Ïó¨Î∂Ä ÌîåÎûòÍ∑∏ (ÏòàÏãú)
-	//	//if (bRenderOBBs) {
-	//	//	CShader* pOBBShader = pShaderManager->GetShader("OBB", pd3dCommandList);
-	//	//	if (pOBBShader) {
-	//	//		// OBB Î†åÎçîÎßÅ ÏãúÏûë Ï†ÑÏóê ÏÉÅÌÉú ÏÑ§Ï†ï
-	//	//		SetGraphicsState(pd3dCommandList, pOBBShader); // CSceneÏùò Î©§Î≤Ñ Ìï®Ïàò Ìò∏Ï∂ú
-	//	//
-	//	//		for (auto& obj : m_vGameObjects) {
-	//	//			if (obj /*&& obj->ShouldRenderOBB()*/) {
-	//	//				// RenderOBB ÎÇ¥Î∂ÄÏóêÏÑúÎäî OBBÏö© CBVÎßå Î∞îÏù∏Îî©
-	//	//				obj->RenderOBB(pd3dCommandList, pCamera);
-	//	//				pOBBShader->Release();
-	//	//			}
-	//	//
-	//	//			// ÌîåÎ†àÏù¥Ïñ¥ OBB Î†åÎçîÎßÅ Îì±
-	//	//			if (m_pPlayer) {
-	//	//				m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
-	//	//			}
-	//	//
-	//	//			pOBBShader->Release();
-	//	//		}
-	//	//	}
-	//	//}
+	//if (m_pPreviewPine && m_pPreviewPine->isRender) {
+	//	m_pPreviewPine->Animate(m_fElapsedTime);
+	//	m_pPreviewPine->Render(pd3dCommandList, pCamera);
 	//}
 
-	// 5.5. ÌîåÎ†àÏù¥Ïñ¥ Î†åÎçîÎßÅ
+
+
 	if (m_pPlayer) {
 		if (m_pPlayer->invincibility) {
 			auto endtime = std::chrono::system_clock::now();
 			auto exectime = endtime - m_pPlayer->starttime;
 			auto exec_ms = std::chrono::duration_cast<std::chrono::milliseconds>(exectime).count();
-			if (exec_ms > 1000.f) { // Î¨¥Ï†ÅÏãúÍ∞ÑÏù¥ 1Ï¥àÍ∞Ä Í≤ΩÍ≥ºÎêòÎ©¥
-				m_pPlayer->SetInvincibility();	// Î≥ÄÍ≤Ω
+			if (exec_ms > 1000.f) {
+				m_pPlayer->SetInvincibility();
 			}
 		}
+		m_pPlayer->pos_mu.lock();
 		m_pPlayer->Render(pd3dCommandList, pCamera);
+		m_pPlayer->pos_mu.unlock();
 	}
 	for (auto& p : PlayerList) {
 		if (p.second->m_pSkinnedAnimationController) p.second->Animate(m_fElapsedTime);
 		if (p.second->isRender) p.second->Render(pd3dCommandList, pCamera);
 	}
-}
 
-void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader)
-{
-	if (!pShader || !pd3dCommandList) return;
 
-	// ÏÖ∞Ïù¥Îçî Í∞ùÏ≤¥ ÏûêÏ≤¥Í∞Ä Î∞îÎÄåÏóàÎäîÏßÄ ÌôïÏù∏
-	if (pShader != m_pCurrentShader)
-	{
-		m_pCurrentShader = pShader; // ÌòÑÏû¨ ÏÖ∞Ïù¥Îçî ÏóÖÎç∞Ïù¥Ìä∏
+	if (obbRender) {
+		CShader* pOBBShader = pShaderManager->GetShader("OBB");
+		if (pOBBShader) {
+			SetGraphicsState(pd3dCommandList, pOBBShader);
+			for (auto& obj : m_vGameObjects) {
+				if (obj->ShouldRenderOBB()) {
+					obj->RenderOBB(pd3dCommandList, pCamera);
+				}
+			}
 
-		// Î£®Ìä∏ ÏÑúÎ™Ö ÏÑ§Ï†ï (ÏÖ∞Ïù¥ÎçîÏóê Ï†ÄÏû•Îêú Î£®Ìä∏ ÏÑúÎ™Ö ÏÇ¨Ïö©)
-		ID3D12RootSignature* pRootSig = pShader->GetRootSignature();
-		if (pRootSig && pRootSig != m_pCurrentRootSignature) {
-			pd3dCommandList->SetGraphicsRootSignature(pRootSig);
-			m_pCurrentRootSignature = pRootSig;
-			// !!! Ïó¨Í∏∞ÏÑú Í≥µÌÜµ CBV Î∞îÏù∏Îî© Î°úÏßÅÏùÄ Ï†úÍ±∞Îê® !!!
+
+			for (auto& branch : m_listBranchObjects) {
+				if (branch->ShouldRenderOBB()) {
+					branch->RenderOBB(pd3dCommandList, pCamera);
+				}
+			}
+			for (auto& rock : m_listRockObjects) {
+				if (rock->ShouldRenderOBB()) {
+					rock->RenderOBB(pd3dCommandList, pCamera);
+				}
+			}
+
+			
+			for (auto& constructionObj : m_vConstructionObjects) {
+				if (constructionObj->ShouldRenderOBB()) 
+					constructionObj->RenderOBB(pd3dCommandList, pCamera);
+			}
+
+
+			if (m_pPlayer && m_pPlayer->ShouldRenderOBB()) {
+				m_pPlayer->RenderOBB(pd3dCommandList, pCamera);
+			}
+
+
+			//for (auto& entry : PlayerList) {
+			//    CPlayer* pOtherPlayer = entry.second;
+			//    if (pOtherPlayer && pOtherPlayer->ShouldRenderOBB()) {
+			//        pOtherPlayer->RenderOBB(pd3dCommandList, pCamera);
+			//    }
+			//}
 		}
-
-		// PSO ÏÑ§Ï†ï (ÏÖ∞Ïù¥ÎçîÏóê Ï†ÄÏû•Îêú PSO ÏÇ¨Ïö©)
-		ID3D12PipelineState* pPSO = pShader->GetPipelineState();
-		if (pPSO && pPSO != m_pCurrentPSO) {
-			pd3dCommandList->SetPipelineState(pPSO);
-			m_pCurrentPSO = pPSO;
+		else {
+			assert(!"OBB Shader (named 'OBB') not found in ShaderManager!");
 		}
 	}
-	// Ïù¥ÎØ∏ Í∞ôÏùÄ ÏÖ∞Ïù¥Îçî(Í∞ôÏùÄ RS, Í∞ôÏùÄ PSO)ÎùºÎ©¥ ÏïÑÎ¨¥Í≤ÉÎèÑ Î≥ÄÍ≤Ω Ïïà Ìï®
+
+
+	//{
+	//	// --- ±◊∏≤¿⁄ ∏  µπˆ±◊ √‚∑¬ ---
+	//	CShader* pDebugShader = pShaderManager->GetShader("Debug");
+	//	pd3dCommandList->SetPipelineState(pDebugShader->GetPipelineState());
+	//	pd3dCommandList->SetGraphicsRootSignature(pDebugShader->GetRootSignature());
+
+	//	// µπˆ±◊ ºŒ¿Ã¥ı¿« 0π¯ ΩΩ∑‘ø° ±◊∏≤¿⁄ ∏ ¿« SRV «⁄µÈ¿ª πŸ¿Œµ˘
+	//	pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTorchShadowMap->Srv());
+
+
+	//	// µπˆ±◊øÎ ªÁ∞¢«¸¿« ¡§¡°/¿Œµ¶Ω∫ πˆ∆€∏¶ º≥¡§«œ∞Ì ±◊∏≥¥œ¥Ÿ.
+	//	pd3dCommandList->IASetVertexBuffers(0, 1, &GetGameFramework()->m_d3dDebugQuadVBView);
+	//	pd3dCommandList->IASetIndexBuffer(&GetGameFramework()->m_d3dDebugQuadIBView);
+	//	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//	pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+	//}
 }
+
 
 ShaderManager* CScene::GetShaderManager() const {
 	return m_pGameFramework ? m_pGameFramework->GetShaderManager() : nullptr;
@@ -849,41 +1423,41 @@ bool CScene::CollisionCheck(CGameObject* a, CGameObject* b)
 		return false;
 	}
 
-	// a Î™®Îì† OBB ÏàòÏßë
+	
 	std::vector<DirectX::BoundingOrientedBox> obbListA;
 	CollectHierarchyObjects(a, obbListA);
 
-	//b Î™®Îì† OBB ÏàòÏßë
+	
 	std::vector<DirectX::BoundingOrientedBox> obbListB;
 	CollectHierarchyObjects(b, obbListB);
 
-	// Ï∂©Îèå Í≤ÄÏÇ¨
+	
 	for (const auto& obbA : obbListA) { 
 		for (const auto& obbB : obbListB) {
 			if (obbA.Intersects(obbB)) {
-				return true; // Ï∂©Îèå Ïãú Ï¶âÏãú true Î∞òÌôò
+				return true; 
 			}
 		}
 	}
 
-	// Ï∂©Îèå ÏóÜÏúºÎ©¥ false Î∞òÌôò
+	
 	return false;
 
 }
 
 void CScene::CollectHierarchyObjects(CGameObject* obj, std::vector<BoundingOrientedBox>& obbList) {
 	if (!obj) {
-		return; // Ïû¨Í∑Ä ÌÉàÏ∂ú Ï°∞Í±¥
+		return; 
 	}
 
 	if(obj->m_pMesh)
 		obbList.push_back(obj->m_worldOBB);
 
-	// Ïû¨Í∑Ä Ìò∏Ï∂ú
+	
 	CGameObject* currentChild = obj->m_pChild;
 	while (currentChild) {
-		CollectHierarchyObjects(currentChild, obbList); // ÏûêÏãù ÎÖ∏ÎìúÏóê ÎåÄÌï¥ 
-		currentChild = currentChild->m_pSibling;        // Îã§Ïùå ÌòïÏ†ú ÏûêÏãù
+		CollectHierarchyObjects(currentChild, obbList); 
+		currentChild = currentChild->m_pSibling;        
 	}
 }
 
@@ -896,14 +1470,14 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 	for (auto& obj : m_vGameObjects) {
 		if (CollisionCheck(m_pPlayer, obj)) {
 			if (!obj->isRender)   continue;
-			// ÎÇòÎ¨¥ Ï∂©ÎèåÏ≤òÎ¶¨
+			
 			if (obj->m_objectType == GameObjectType::Tree) {
 				//obj->isRender = false;
 				//m_pGameFramework->AddItem("wood", 3);
 			}
-			// Îèå Ï∂©ÎèåÏ≤òÎ¶¨
+			
 			if (obj->m_objectType == GameObjectType::Rock) {
-				//printf("[Rock Ï∂©Îèå ÌôïÏù∏])\n");
+				//printf("[Rock ?∞‚ë∏Î£??Î∫§Ïî§])\n");
 				//obj->isRender = false;
 
 				//int randValue = rand() % 100; // 0 ~ 99
@@ -917,7 +1491,7 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 				//	m_pGameFramework->AddItem("iron_material",1);
 				//}
 			}
-			/*if (obj->m_objectType == GameObjectType::Cow || obj->m_objectType == GameObjectType::Pig) {
+			if (obj->m_objectType == GameObjectType::Cow || obj->m_objectType == GameObjectType::Pig) {
 				auto npc = dynamic_cast<CMonsterObject*>(obj);
 				if (npc->Gethp() <= 0) continue;
 				if (npc->FSM_manager->GetInvincible()) continue;
@@ -957,7 +1531,7 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 						m_pPlayer->StatPoint += 5;
 					}
 				}
-			}*/
+			}
 		}
 	}
 }
@@ -965,7 +1539,7 @@ void CScene::CheckPlayerInteraction(CPlayer* pPlayer) {
 
 
 void CScene::SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVelocity) {
-	if (!m_pGameFramework || !m_pTerrain) return; // ÌîÑÎ†àÏûÑÏõåÌÅ¨ÏôÄ ÏßÄÌòï Ìè¨Ïù∏ÌÑ∞ Ïú†Ìö®ÏÑ± Í≤ÄÏÇ¨
+	if (!m_pGameFramework || !m_pTerrain) return; 
 
 	CBranchObject* newBranch = new CBranchObject(
 		m_pGameFramework->GetDevice(),
@@ -975,8 +1549,8 @@ void CScene::SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVeloci
 	);
 	newBranch->SetPosition(position);
 	newBranch->SetInitialVelocity(initialVelocity);
-	// ÌïÑÏöîÏãú Ï¥àÍ∏∞ ÌöåÏ†Ñ Îì± ÏÑ§Ï†ï
-	newBranch->Rotate(0, (float)(rand() % 360), 0); // YÏ∂ïÏúºÎ°ú ÎûúÎç§ ÌöåÏ†Ñ
+	
+	newBranch->Rotate(0, (float)(rand() % 360), 0); 
 
 	m_listBranchObjects.emplace_back(newBranch);
 	//auto t_obj = std::make_unique<newBranch>(tree_obj_count++, gameObj->m_worldOBB.Center);
@@ -984,7 +1558,7 @@ void CScene::SpawnBranch(const XMFLOAT3& position, const XMFLOAT3& initialVeloci
 }
 
 void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity) {
-	if (!m_pGameFramework || !m_pTerrain) return; // ÌîÑÎ†àÏûÑÏõåÌÅ¨ÏôÄ ÏßÄÌòï Ìè¨Ïù∏ÌÑ∞ Ïú†Ìö®ÏÑ± Í≤ÄÏÇ¨
+	if (!m_pGameFramework || !m_pTerrain) return; 
 
 	CRockDropObject* newBranch = new CRockDropObject(
 		m_pGameFramework->GetDevice(),
@@ -994,10 +1568,608 @@ void CScene::SpawnRock(const XMFLOAT3& position, const XMFLOAT3& initialVelocity
 	);
 	newBranch->SetPosition(position);
 	newBranch->SetInitialVelocity(initialVelocity);
-	// ÌïÑÏöîÏãú Ï¥àÍ∏∞ ÌöåÏ†Ñ Îì± ÏÑ§Ï†ï
-	newBranch->Rotate(0, (float)(rand() % 360), 0); // YÏ∂ïÏúºÎ°ú ÎûúÎç§ ÌöåÏ†Ñ
+	
+	newBranch->Rotate(0, (float)(rand() % 360), 0); 
 
 	m_listRockObjects.emplace_back(newBranch);
 	//auto t_obj = std::make_unique<newBranch>(tree_obj_count++, gameObj->m_worldOBB.Center);
 	//octree.insert(std::move(t_obj));
+}
+
+void CScene::SpawnGolemPunchEffect(const XMFLOAT3& origin, const XMFLOAT3& direction)
+{
+	std::vector<CResourceShardEffect*>& shardPool = m_vRockShards;
+
+	// «— π¯ø° ª˝º∫«“ ∆ƒ∆Ì ∞≥ºˆ
+	int numShardsToSpawn = 5 + (rand() % 4); // 5~8∞≥
+
+	for (int i = 0; i < numShardsToSpawn; ++i)
+	{
+		for (auto& pShard : shardPool)
+		{
+			if (!pShard->isRender)
+			{
+				// [ºˆ¡§] 1. ¡÷ πÊ«‚ ∫§≈Õ∏¶ ∞°¡Æø…¥œ¥Ÿ.
+				XMVECTOR vDirection = XMLoadFloat3(&direction);
+
+				// [ºˆ¡§] 2. æ∆¡÷ ¿€¿∫ ∑£¥˝ ∫§≈Õ∏¶ ∏∏µÈæÓ ªÏ¬¶ πÊ«‚¿ª ∆µ¥œ¥Ÿ.
+				//    ¿Ã ∞™µÈ¿Ã ¿€¿ªºˆ∑œ ∆ƒ∆Ì¿Ã ¥ı æ’¿∏∑Œ ¡˝¡ﬂµÀ¥œ¥Ÿ.
+				XMVECTOR vRandomOffset = XMVectorSet(
+					((float)(rand() % 100) - 50.0f) * 0.005f, // X: -0.25 ~ +0.25
+					((float)(rand() % 100) - 50.0f) * 0.005f, // Y: -0.25 ~ +0.25
+					((float)(rand() % 100) - 50.0f) * 0.005f, // Z: -0.25 ~ +0.25
+					0.0f
+				);
+
+				// 3. ø¯∑° πÊ«‚ø° ∑£¥˝ ∫§≈Õ∏¶ ¥ı«œ∞Ì ¡§±‘»≠«œø© √÷¡æ πÊ«‚¿ª ∞·¡§«’¥œ¥Ÿ.
+				vDirection = XMVector3Normalize(vDirection + vRandomOffset);
+
+				// 4. √÷¡æ πﬂªÁ º”µµ∏¶ ∞ËªÍ«’¥œ¥Ÿ. (º”µµ¥¬ ±◊¥Î∑Œ ∫¸∏£∞‘ ¿Ø¡ˆ)
+				float launchSpeed = 4000.0f + (rand() % 2000);
+				XMFLOAT3 velocity;
+				XMStoreFloat3(&velocity, vDirection * launchSpeed);
+
+				pShard->Activate(origin, velocity);
+				break;
+			}
+		}
+	}
+}
+
+void CScene::SpawnBloodEffect(const XMFLOAT3& position,float x, float y, float z)
+{
+	int numEffects = 20 + (rand() % 5); // 8~9∞≥
+
+	for (int i = 0; i < numEffects; ++i)
+	{
+		for (auto& pBlood : m_vBloodEffects) {
+			if (!pBlood->isRender) {
+				// [ºˆ¡§ 1] «√∑π¿ÃæÓ¿« ªÛ√º ≥Ù¿Ã∏¶ ±‚¡ÿ¿∏∑Œ «— ¿ßƒ°ø°º≠ ª˝º∫«’¥œ¥Ÿ.
+				// ¡¬øÏ(X,Z)∑Œ ≥ π´ ≈©∞‘ π˛æÓ≥™¡ˆ æ µµ∑œ ø¿«¡º¬¿ª ¡Ÿ¿‘¥œ¥Ÿ.
+				XMFLOAT3 spawnPos = position;
+				spawnPos.x += x;
+				spawnPos.y = spawnPos.y +15 +y;
+				spawnPos.z += z;// ∞°Ωø ≥Ù¿Ã ¡§µµ
+				
+
+				// [ºˆ¡§ 2] ¿ß∑Œ∏∏ º⁄±∏ƒ°¥¬∞‘ æ∆¥œ∂Û ªÁπÊ¿∏∑Œ ∆€¡Æ≥™∞°µµ∑œ √ ±‚ º”µµ∏¶ ∫Ø∞Ê«’¥œ¥Ÿ.
+				XMFLOAT3 velocity = XMFLOAT3(
+					((float)(rand() % 100) - 50.0f), // X: -100 ~ +100
+					((float)(rand() % 100) - 50.0f),  // Y: -50 ~ +150 (∞≈¿« ¿ß∑Œ ∆¢¡ˆ æ ¿Ω)
+					((float)(rand() % 100) - 50.0f)  // Z: -100 ~ +100
+				);
+
+				pBlood->Activate(spawnPos, velocity);
+				break;
+			}
+		}
+	}
+}
+
+void CScene::SpawnVortexEffect(const XMFLOAT3& centerPosition)
+{
+	// --- √˛∫∞ º≥¡§ ¡§¿« ---
+	const int numLayers = 3; // √— √˛¿« ∞≥ºˆ
+	const int particlesPerLayer = 20; // √˛¥Á ∆ƒ∆º≈¨ ∞≥ºˆ
+
+	// ∞¢ √˛¿« º”º∫ (≥Ù¿Ã, π›∞Ê, º”µµ)
+	float layerHeights[] = { 20.0f, 60.0f, 100.0f };
+	float layerRadii[] = { 100.0f, 100.0f, 100.0f };
+	float layerSpeeds[] = { 90.0f, -110.0f, 130.0f }; // º”µµ∏¶ ¿Ωºˆ∑Œ ¡÷∏È π›¥Î∑Œ »∏¿¸
+
+	int particlePoolIndex = 0; // ¿¸√º ∆ƒ∆º≈¨ «Æ¿ª º¯»∏«œ±‚ ¿ß«— ¿Œµ¶Ω∫
+
+	// --- √˛∫∞∑Œ ∆ƒ∆º≈¨ ª˝º∫ ---
+	for (int i = 0; i < numLayers; ++i) // 3∞≥¿« √˛¿ª º¯»∏
+	{
+		for (int j = 0; j < particlesPerLayer; ++j) // ∞¢ √˛∏∂¥Ÿ 20∞≥¿« ∆ƒ∆º≈¨ ª˝º∫
+		{
+			// ªÁøÎ ∞°¥…«— ∆ƒ∆º≈¨¿ª «Æø°º≠ √£±‚
+			if (particlePoolIndex >= m_vVortexEffects.size()) break; // «Æ¿Ã ∫Œ¡∑«œ∏È ¡ﬂ¥‹
+
+			CVortexEffectObject* pVortex = m_vVortexEffects[particlePoolIndex++];
+			if (pVortex->isRender) continue; // ¿ÃπÃ ªÁøÎ ¡ﬂ¿Ã∏È ∞«≥ ∂Ÿ±‚
+
+			// ∆ƒ∆º≈¨∏∂¥Ÿ Ω√¿€ ∞¢µµ∏¶ ¥Ÿ∏£∞‘ ¡÷æÓ ø¯«¸¿∏∑Œ πËƒ°
+			float startAngle = (360.0f / particlesPerLayer) * j;
+
+			// «ˆ¿Á √˛(i)¿« º≥¡§∞™¿∏∑Œ Activate «‘ºˆ »£√‚
+			pVortex->Activate(
+				centerPosition,
+				layerRadii[i],   // iπ¯¬∞ √˛¿« π›∞Ê
+				layerHeights[i], // iπ¯¬∞ √˛¿« ≥Ù¿Ã
+				startAngle,
+				layerSpeeds[i]   // iπ¯¬∞ √˛¿« º”µµ
+			);
+		}
+	}
+}
+
+void CScene::NewGameBuildObj()
+{
+	for (auto& obj : heilport_anthena)
+	{
+		m_vGameObjects.push_back(obj);
+	}
+	for (auto& obj : m_vAttackEffects)
+	{
+		m_vGameObjects.push_back(obj);
+	}
+	for (auto& obj : m_vWoodShards)
+	{
+		m_vGameObjects.push_back(obj);
+	}
+	for (auto& obj : m_vRockShards)
+	{
+		m_vGameObjects.push_back(obj);
+	}
+	for (auto& obj : m_mapBuildPrefabs)
+	{
+		m_vGameObjects.emplace_back(obj.second);
+	}
+	for (auto& obj : m_vBloodEffects)
+	{
+		m_vGameObjects.push_back(obj);
+	}
+	for (auto& obj : m_vVortexEffects)
+	{
+		m_vGameObjects.push_back(obj);
+	}
+}
+
+void CScene::ClearObj()
+{
+	m_vGameObjects.clear();
+	m_vConstructionObjects.clear();
+	m_listGameObjects.clear();
+}
+
+
+
+
+
+
+void CScene::UpdateShadowTransform(const XMFLOAT3& focusPoint)
+{
+	LIGHT* pMainLight = nullptr;
+	for (int i = 0; i < m_nLights; ++i) {
+		if (m_pLights[i].m_nType == DIRECTIONAL_LIGHT) {
+			pMainLight = &m_pLights[i];
+			break;
+		}
+	}
+	if (!pMainLight) return;
+
+	XMVECTOR lightDir = XMLoadFloat3(&pMainLight->m_xmf3Direction);
+	XMVECTOR lightPos = XMLoadFloat3(&focusPoint) - 2000.0f * lightDir;
+	XMVECTOR targetPos = XMLoadFloat3(&focusPoint);
+	XMVECTOR lightUp;
+
+	float dot = fabsf(XMVectorGetY(lightDir));
+
+	if (dot > 0.99f) {
+		lightUp = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+	}
+	else {
+		lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	}
+
+	XMMATRIX view = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
+
+	float sceneRadius = 2500.0f;
+	XMMATRIX proj = XMMatrixOrthographicLH(sceneRadius * 2.0f, sceneRadius * 2.0f, 0.0f, 5000.0f);
+
+	XMMATRIX T(
+		0.5f, 0.0f, 0.0f, 0.0f,
+		0.0f, -0.5f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.5f, 0.5f, 0.0f, 1.0f);
+
+	XMMATRIX S = view * proj * T;
+
+	XMStoreFloat4x4(&mLightView, view);
+	XMStoreFloat4x4(&mLightProj, proj);
+	XMStoreFloat4x4(&mShadowTransform, S);
+
+}
+
+// ∞Ì¡§ ±§ø¯
+//void CScene::UpdateShadowTransform()
+//{
+//
+//	LIGHT* pMainLight = nullptr;
+//	for (int i = 0; i < m_nLights; ++i) {
+//		if (m_pLights[i].m_nType == DIRECTIONAL_LIGHT) {
+//			pMainLight = &m_pLights[i];
+//			break;
+//		}
+//	}
+//	if (!pMainLight) return;
+//
+//	XMVECTOR lightDir = XMVectorSet(0.5f, -0.707f, 0.5f, 0.0f);
+//	lightDir = XMVector3Normalize(lightDir);
+//
+//	XMVECTOR targetPos = XMVectorSet(5000.0f, 0.0f, 5000.0f, 0.0f);
+//	XMVECTOR lightPos = targetPos - (lightDir * 10000.0f);
+//	XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+//
+//	XMMATRIX view = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
+//
+//	float sceneSpan = 5000.0f; 
+//	float sceneNear = 1.0f;
+//	float sceneFar = 9000.0f;
+//	XMMATRIX proj = XMMatrixOrthographicLH(sceneSpan, sceneSpan, sceneNear, sceneFar);
+//
+//	XMMATRIX T(0.5f, 0.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f);
+//	XMMATRIX S = view * proj * T;
+//
+//	XMStoreFloat4x4(&mLightView, view);
+//	XMStoreFloat4x4(&mLightProj, proj);
+//	XMStoreFloat4x4(&mShadowTransform, S);
+//}
+
+
+// ƒ´∏ﬁ∂Û «¡∑ØΩ∫≈“ ¿˚øÎ πˆ¿¸
+void CScene::UpdateShadowTransform()
+{
+	CCamera* m_pCamera = m_pPlayer->GetCamera();
+	if (m_pCamera) return;
+
+	LIGHT* pMainLight = nullptr;
+	for (int i = 0; i < m_nLights; ++i) {
+		if (m_pLights[i].m_nType == DIRECTIONAL_LIGHT) {
+			pMainLight = &m_pLights[i];
+			break;
+		}
+	}
+	if (!pMainLight) return;
+
+	XMVECTOR lightDir = XMVectorSet(0.5f, -0.707f, 0.5f, 0.0f);
+	lightDir = XMVector3Normalize(lightDir);
+
+	XMFLOAT3 frustumCorners[8];
+	m_pCamera->GetFrustumCorners(frustumCorners);
+
+	XMVECTOR frustumCenter = XMVectorZero();
+	for (int i = 0; i < 8; ++i)
+	{
+		frustumCenter += XMLoadFloat3(&frustumCorners[i]);
+	}
+	frustumCenter /= 8.0f;
+
+	float maxDistSq = 0.0f;
+	for (int i = 0; i < 8; ++i)
+	{
+		XMVECTOR dist = XMLoadFloat3(&frustumCorners[i]) - frustumCenter;
+		maxDistSq = XMVectorGetX(XMVectorMax(XMVector3LengthSq(dist), XMVectorSet(maxDistSq, maxDistSq, maxDistSq, maxDistSq)));
+	}
+	float sphereRadius = sqrtf(maxDistSq);
+
+	XMVECTOR lightPos = frustumCenter - lightDir * sphereRadius;
+	XMVECTOR targetPos = frustumCenter;
+	XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+	XMMATRIX view = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
+
+	float viewWidth = sphereRadius * 2.0f;
+	float viewHeight = sphereRadius * 2.0f;
+	float viewNear = 0.0f;
+	float viewFar = sphereRadius * 2.0f;
+	XMMATRIX proj = XMMatrixOrthographicLH(viewWidth, viewHeight, viewNear, viewFar);
+
+	XMMATRIX T(0.5f, 0.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f);
+	XMMATRIX S = view * proj * T;
+
+	XMStoreFloat4x4(&mLightView, view);
+	XMStoreFloat4x4(&mLightProj, proj);
+	XMStoreFloat4x4(&mShadowTransform, S);
+}
+
+void CScene::UpdateTorchShadowTransform(LIGHT* pTorchLight)
+{
+	if (!pTorchLight || !m_pPlayer) return;
+
+	XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+	XMFLOAT3 playerRight = m_pPlayer->GetRightVector();
+	XMFLOAT3 playerUp = m_pPlayer->GetUpVector();
+	XMFLOAT3 playerLook = m_pPlayer->GetLookVector();
+
+	float rightOffset = 10.0f;
+	float upOffset = 75.0f;
+	float forwardOffset = 0.0f;
+
+	XMVECTOR vTorchPos = XMLoadFloat3(&playerPos);
+	vTorchPos += XMLoadFloat3(&playerRight) * rightOffset;
+	vTorchPos += XMLoadFloat3(&playerLook) * forwardOffset;
+	XMVECTOR vTargetPos = vTorchPos;
+
+	vTorchPos += XMLoadFloat3(&playerUp) * upOffset;
+
+	XMVECTOR lightUp = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+
+	XMMATRIX view = XMMatrixLookAtLH(vTorchPos, vTargetPos, lightUp);
+
+	float fovAngleY = 128.0f;
+	float aspectRatio = 1.0f;
+	float nearZ = 0.1f;
+	float farZ = pTorchLight->m_fRange * 5.0f; // ∫˚¿« √÷¥Î π¸¿ß
+	XMMATRIX proj = XMMatrixPerspectiveFovLH(XMConvertToRadians(fovAngleY), aspectRatio, nearZ, farZ);
+
+	// 3. √÷¡æ ±◊∏≤¿⁄ ∫Ø»Ø «‡∑ƒ¿ª ∞ËªÍ«œø© ¿˙¿Â«’¥œ¥Ÿ.
+	XMMATRIX T(0.5f, 0.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f);
+	XMMATRIX S = view * proj * T;
+
+	// ∞ËªÍµ» «‡∑ƒµÈ¿ª ¿˙¿Â«’¥œ¥Ÿ.
+	XMStoreFloat4x4(&mLightView, view);
+	XMStoreFloat4x4(&mLightProj, proj);
+
+	XMStoreFloat4x4(&mTorchShadowTransform, S);
+}
+
+
+void CScene::UpdateLights(float fTimeElapsed)
+{
+	float rotationSpeed = 0.1f; // º”µµ∏¶ æ‡∞£ ¡∂¿˝
+	m_fLightRotationAngle += fTimeElapsed * rotationSpeed;
+	if (m_fLightRotationAngle > 360.0f) m_fLightRotationAngle -= 360.0f;
+
+	LIGHT* pMainLight = nullptr;
+	for (int i = 0; i < m_nLights; ++i) {
+		if (m_pLights[i].m_nType == DIRECTIONAL_LIGHT) {
+			pMainLight = &m_pLights[i];
+			break;
+		}
+	}
+	if (!pMainLight) return;
+
+	//∫˚¿« «ˆ¿Á πÊ«‚¿ª ∞ËªÍ (µø¬ ø°º≠ ∂∞º≠ º≠¬ ¿∏∑Œ ¡ˆ¥¬ Z√‡ »∏¿¸)
+	XMVECTOR xmvBaseLightDirection = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
+	XMMATRIX xmmtxLightRotate = XMMatrixRotationZ(XMConvertToRadians(m_fLightRotationAngle));
+	XMVECTOR xmvCurrentLightDirection = XMVector3TransformNormal(xmvBaseLightDirection, xmmtxLightRotate);
+
+	// Ω«¡¶ ¡∂∏Ì µ•¿Ã≈Õø° æ˜µ•¿Ã∆Æ
+	XMStoreFloat3(&pMainLight->m_xmf3Direction, xmvCurrentLightDirection);
+
+	// ∫˚¿« Y πÊ«‚¿ª ±‚¡ÿ¿∏∑Œ ≥∑∞˙ π„¿ª ∆«¥‹
+	if (XMVectorGetY(xmvCurrentLightDirection) < 0.0f) // ∫˚¿Ã æ∆∑°∏¶ «‚«œ∏È ≥∑
+	{
+		// ¡˜ªÁ±§¿ª ƒ—∞Ì, ¡÷∫Ø±§¿ª π‡∞‘
+		m_bIsDaytime = true;
+		m_xmf4GlobalAmbient = m_xmf4DaylightAmbient;
+		pMainLight->m_xmf4Diffuse = m_xmf4DaylightDiffuse;
+		pMainLight->m_xmf4Specular = m_xmf4DaylightSpecular;
+		if(GetSkyBox()->GetCurrentTextureIndex() != 0)
+			GetSkyBox()->SetSkyboxIndex(0);
+	}
+	else // ∫˚¿Ã ¿ß∏¶ «‚«œ∏È π„
+	{
+		//¡˜ªÁ±§¿ª ≤Ù∞Ì, ¡÷∫Ø±§¿ª æÓµŒøÓ ¥ﬁ∫˚¿∏∑Œ ±≥√º
+		m_bIsDaytime = false;
+		m_xmf4GlobalAmbient = m_xmf4MoonlightAmbient;
+		pMainLight->m_xmf4Diffuse = XMFLOAT4(0.1f, 0.1f, 0.15f, 1.0f);
+		pMainLight->m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+		if (GetSkyBox()->GetCurrentTextureIndex() != 1)
+		GetSkyBox()->SetSkyboxIndex(1);
+	}
+}
+
+void CScene::SetGraphicsState(ID3D12GraphicsCommandList* pd3dCommandList, CShader* pShader)
+{
+	if (!pShader || !pd3dCommandList) return;
+
+
+	//if (pShader != m_pCurrentShader)
+	//{
+	m_pCurrentShader = pShader;
+
+
+	ID3D12RootSignature* pRootSig = pShader->GetRootSignature();
+	pd3dCommandList->SetGraphicsRootSignature(pRootSig);
+	if (pRootSig && pRootSig != m_pCurrentRootSignature) {
+		m_pCurrentRootSignature = pRootSig;
+
+	}
+
+
+	ID3D12PipelineState* pPSO = pShader->GetPipelineState();
+	pd3dCommandList->SetPipelineState(pPSO);
+	if (pPSO && pPSO != m_pCurrentPSO) {
+		m_pCurrentPSO = pPSO;
+	}
+	//}
+
+}
+
+
+void CScene::LoadPrefabs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
+
+
+	
+	auto pBloodPrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Tool/Sphere.bin", m_pGameFramework);
+	pBloodPrefab->m_bIsPrefab = true;
+
+	int materialIndexToChange = 0;
+	UINT albedoTextureSlot = 0;
+	const wchar_t* textureFile2 = L"Model/Textures/red.dds";
+	ChangeAlbedoTexture(pBloodPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile2, pResourceManager, pd3dCommandList, pd3dDevice);
+
+	pResourceManager->RegisterPrefab("BloodEffectPrefab", pBloodPrefab);
+	
+	// ≥™π´
+	pResourceManager->RegisterPrefab("PineTree", std::make_shared<CPineObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+
+	auto pBirchPrefab = std::make_shared<CBirchObject>(pd3dDevice, pd3dCommandList, m_pGameFramework);
+	pBirchPrefab->m_bIsPrefab = true;
+
+	materialIndexToChange = 1;
+	albedoTextureSlot = 0;
+	const wchar_t*  textureFile = L"Model/Textures/Tree_Bark_Diffuse.dds";
+	ChangeAlbedoTexture(pBirchPrefab.get(), materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, pd3dCommandList, pd3dDevice);
+
+	pResourceManager->RegisterPrefab("BirchTree", pBirchPrefab);
+
+	// πŸ¿ß
+	pResourceManager->RegisterPrefab("RockClusterA", std::make_shared<CRockClusterAObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+	pResourceManager->RegisterPrefab("RockClusterB", std::make_shared<CRockClusterBObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+	pResourceManager->RegisterPrefab("RockClusterC", std::make_shared<CRockClusterCObject>(pd3dDevice, pd3dCommandList, m_pGameFramework)); // "RockClusterB" -> "RockClusterC"
+
+	// ¿˝∫Æ
+	pResourceManager->RegisterPrefab("Cliff", std::make_shared<CCliffFObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+
+	// ºˆ«Æ π◊ Ωƒπ∞
+	pResourceManager->RegisterPrefab("BushA", std::make_shared<CBushAObject>(pd3dDevice, pd3dCommandList, m_pGameFramework));
+	pResourceManager->RegisterPrefab("BushB", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Bush_B_LOD0.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Fern", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/Fern_LOD0.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Chervil", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/ChervilCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("RedPoppy", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/RedPoppyCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("BluePoppy", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/BluePoppyCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Dandelion", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/DandelionCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("Daisy", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/DaisyCluster.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("ElephantEarA", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/ElephantEar_A.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("ElephantEarB", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/ElephantEar_B.bin", m_pGameFramework));
+	pResourceManager->RegisterPrefab("GrassTall", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Vegetation/GrassTall.bin", m_pGameFramework));
+
+	// ≈ª√‚¿Âƒ°?
+	pResourceManager->RegisterPrefab("Helipad", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Anthena/Props_Roof_Helipad.bin", m_pGameFramework));
+	auto pAntennaPrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/Anthena/Props_Roof_Antenna.bin", m_pGameFramework);
+	pAntennaPrefab->m_objectType = GameObjectType::Antenna; // ≈∏¿‘ ¡ˆ¡§
+	pResourceManager->RegisterPrefab("Anthena", pAntennaPrefab);
+	// ∏ÛΩ∫≈Õ
+	CLoadedModelInfo* pLoadedModel = nullptr;
+
+	pLoadedModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Cow.bin", m_pGameFramework);
+	auto pCowPrefab = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, pLoadedModel, 13, m_pGameFramework);
+
+	pCowPrefab->m_bIsPrefab = true;
+
+	pResourceManager->RegisterPrefab("Cow", pCowPrefab);
+	if (pLoadedModel) delete pLoadedModel;
+
+	pLoadedModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Pig.bin", m_pGameFramework);
+	pResourceManager->RegisterPrefab("Pig", std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, pLoadedModel, 13, m_pGameFramework));
+	if (pLoadedModel) delete pLoadedModel;
+
+	pLoadedModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Spider.bin", m_pGameFramework);
+	pResourceManager->RegisterPrefab("Spider", std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, pLoadedModel, 13, m_pGameFramework));
+	if (pLoadedModel) delete pLoadedModel;
+
+	pLoadedModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Toad.bin", m_pGameFramework);
+	pResourceManager->RegisterPrefab("Toad", std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, pLoadedModel, 13, m_pGameFramework));
+	if (pLoadedModel) delete pLoadedModel;
+
+	pLoadedModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, "Model/SK_Wolf.bin", m_pGameFramework);
+	pResourceManager->RegisterPrefab("Wolf", std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, pLoadedModel, 13, m_pGameFramework));
+	if (pLoadedModel) delete pLoadedModel;
+
+	//∞«√‡
+	pResourceManager->RegisterPrefab("wood_wall", std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/buildobject/Fence_WoodC_A.bin", m_pGameFramework));
+	auto pFurnacePrefab = std::make_shared<CStaticObject>(pd3dDevice, pd3dCommandList, "Model/buildobject/furnace.bin", m_pGameFramework);
+	pFurnacePrefab->m_objectType = GameObjectType::Furnace; // ≈∏¿‘ ¡ˆ¡§
+	pResourceManager->RegisterPrefab("furnace", pFurnacePrefab);
+
+
+}
+
+
+void CScene::SpawnStaticObjects(const std::string& prefabName, int count, float spawnMin, float spawnMax, float scaleMin, float scaleMax, std::mt19937& gen, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int matIdx, const wchar_t* texFile)
+{
+	ResourceManager* pResourceManager = m_pGameFramework->GetResourceManager();
+	std::shared_ptr<CGameObject> prefab = pResourceManager->GetPrefab(prefabName);
+	if (!prefab) return;
+
+	for (int i = 0; i < count; ++i)
+	{
+		CGameObject* gameObj = prefab->Clone();
+		std::pair<float, float> randompos = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		while (m_pTerrain->GetHeight(randompos.first, randompos.second) < MIN_HEIGHT) {
+			randompos = genRandom::generateRandomXZ(gen, spawnMin, spawnMax, spawnMin, spawnMax);
+		}
+
+		gameObj->SetPosition(randompos.first, m_pTerrain->GetHeight(randompos.first, randompos.second), randompos.second);
+
+		auto [w, h] = genRandom::generateRandomXZ(gen, scaleMin, scaleMax, scaleMin, scaleMax);
+		gameObj->SetScale(w, h, w);
+
+		if (matIdx != -1 && texFile != nullptr) {
+			ChangeAlbedoTexture(gameObj, matIdx, 0, texFile, pResourceManager, pd3dCommandList, pd3dDevice);
+		}
+		gameObj->m_id = -1;
+		gameObj->m_treecount = tree_obj_count;
+		m_lEnvironmentObjects.emplace_back(gameObj);
+	}
+}
+
+void CScene::SpawnAttackEffect(const XMFLOAT3& centerPosition, int numEffects, float radius)
+{
+	
+	// [√ﬂ∞°] ¿Á»∞øÎ¿ª ¿ß«— ¿Œµ¶Ω∫ ∫Øºˆ
+	static int nEffectPoolIndex = 0;
+
+	float angleStep = 360.0f / numEffects;
+
+	for (int i = 0; i < numEffects; ++i)
+	{
+		float angle = XMConvertToRadians(i * angleStep);
+		XMFLOAT3 offset = XMFLOAT3(cos(angle) * radius, 0, sin(angle) * radius);
+		XMFLOAT3 spawnPos = Vector3::Add(centerPosition, offset);
+
+		if (m_pTerrain) {
+			spawnPos.y = m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + 5.0f;
+		}
+
+		CAttackEffectObject* pEffectToUse = nullptr;
+
+		
+		for (auto& pEffect : m_vAttackEffects)
+		{
+			if (!pEffect->isRender)
+			{
+				pEffectToUse = pEffect;
+				break;
+			}
+		}
+
+		
+		if (!pEffectToUse)
+		{
+			
+			pEffectToUse = m_vAttackEffects[nEffectPoolIndex];
+			nEffectPoolIndex = (nEffectPoolIndex + 1) % m_vAttackEffects.size();
+		}
+
+		
+		if (pEffectToUse)
+		{
+			pEffectToUse->Activate(spawnPos);
+		}
+	}
+}
+
+void CScene::SpawnResourceShards(const XMFLOAT3& origin, ShardType type)
+{
+	
+	std::vector<CResourceShardEffect*>& shardPool = (type == ShardType::Wood) ? m_vWoodShards : m_vRockShards;
+
+	int numShardsToSpawn = 8 + (rand() % 5); //8~12
+
+	for (int i = 0; i < numShardsToSpawn; ++i)
+	{
+		
+		for (auto& pShard : shardPool)
+		{
+			if (!pShard->isRender)
+			{
+				
+				XMFLOAT3 velocity = XMFLOAT3(
+					((float)(rand() % 10) - 5.0f), // X: -2000 ~ +2000
+					((float)(rand() % 4) + 2.0f), // Y: +1500 ~ +3500 (¿ß∑Œ ∏≈øÏ ∞≠«œ∞‘)
+					((float)(rand() % 10) - 5.0f)  // Z: -2000 ~ +2000
+				);
+				pShard->Activate(origin, velocity);
+				break;
+			}
+		}
+	}
 }

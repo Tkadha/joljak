@@ -110,9 +110,9 @@ void CMaterial::LoadTextureFromFile(
     }
     pstrTextureName[nStrLength] = '\0'; // Null 종단 처리
 
-    OutputDebugStringA("CMaterial::LoadTextureFromFile - Read FileName (char*): ");
-    OutputDebugStringA(pstrTextureName);
-    OutputDebugStringA("\n");
+    //OutputDebugStringA("CMaterial::LoadTextureFromFile - Read FileName (char*): ");
+    //OutputDebugStringA(pstrTextureName);
+    //OutputDebugStringA("\n");
 
 
     // 3. "null" 텍스처 처리
@@ -145,9 +145,9 @@ void CMaterial::LoadTextureFromFile(
 
     // 5. 변환된 Wide Char 파일 이름 저장
     if (m_ppstrTextureNames) lstrcpy(m_ppstrTextureNames[nTextureIndex], pwstrTextureName);
-    OutputDebugStringW(L"CMaterial::LoadTextureFromFile - Loading Texture: ");
-    OutputDebugStringW(pwstrTextureName);
-    OutputDebugStringW(L"\n");
+    //OutputDebugStringW(L"CMaterial::LoadTextureFromFile - Loading Texture: ");
+    //OutputDebugStringW(pwstrTextureName);
+    //OutputDebugStringW(L"\n");
 
     // 6. 재질 타입 마스크 설정
     SetMaterialType(nTextureType);
@@ -158,7 +158,6 @@ void CMaterial::LoadTextureFromFile(
     {
         pTexture = pResourceManager->GetTexture(pwstrTextureName, pd3dCommandList);
         if (pTexture) {
-            OutputDebugStringW(L"    Loaded via ResourceManager.\n");
         }
         else {
             OutputDebugStringW(L"    !!!!!!!! FAILED to load via ResourceManager !!!!!!!!\n");
@@ -174,7 +173,7 @@ void CMaterial::LoadTextureFromFile(
             // 루트에서 텍스처 찾기
             pTexture = pRootGameObject->FindReplicatedTexture(pwstrTextureName); // shared_ptr 반환 받음
             if (pTexture) {
-                OutputDebugStringW(L"    Found replicated texture (manual AddRef).\n");
+                //OutputDebugStringW(L"    Found replicated texture (manual AddRef).\n");
                 }
             else {
                 OutputDebugStringW(L"    !!!!!!!! FAILED to find replicated texture !!!!!!!!\n");
@@ -199,7 +198,7 @@ void CMaterial::LoadTextureFromFile(
         // SRV 생성
         if (pShaderResource) {
             pd3dDevice->CreateShaderResourceView(pShaderResource, &srvDesc, cpuHandle);
-            OutputDebugStringW(L"    SRV Created in CMaterial.\n");
+            //OutputDebugStringW(L"    SRV Created in CMaterial.\n");
         }
 
     }
@@ -220,7 +219,7 @@ bool CMaterial::AssignTexture(UINT nTextureIndex, std::shared_ptr<CTexture> pTex
     // shared_ptr 저장 (벡터 사용)
     m_vTextures[nTextureIndex] = pTexture;
 
-    // SRV 생성
+    // SRV 생성   
     if (pTexture && pTexture->GetResource(0)) {
         CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(m_d3dCpuSrvStartHandle);
         cpuHandle.Offset(nTextureIndex, m_nCbvSrvDescriptorIncrementSize);
@@ -230,7 +229,7 @@ bool CMaterial::AssignTexture(UINT nTextureIndex, std::shared_ptr<CTexture> pTex
 
         if (pShaderResource) {
             pd3dDevice->CreateShaderResourceView(pShaderResource, &srvDesc, cpuHandle);
-            OutputDebugStringW(L"    SRV Created in CMaterial::AssignTexture.\n");
+            //OutputDebugStringW(L"    SRV Created in CMaterial::AssignTexture.\n");
             return true;
         }
         else {

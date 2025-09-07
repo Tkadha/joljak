@@ -11,12 +11,8 @@
 #include "Camera.h"
 #include <chrono>
 #include "PlayerStateMachine.h" 
+#include <mutex>
 
-enum class WeaponType : int {
-	Sword,
-	Axe,
-	Pick
-};
 
 class CPlayer : public CGameObject
 {
@@ -42,21 +38,27 @@ protected:
 	LPVOID						m_pCameraUpdatedContext = NULL;
 
 	BoundingOrientedBox playerObb;
-	XMFLOAT3 playerSize = XMFLOAT3(4.0f, 4.0f, 4.0f); // 실제 크기의 반
+	XMFLOAT3 playerSize = XMFLOAT3(2.0f, 2.0f, 2.0f); // ?�제 ?�기??�?
 	XMFLOAT4 playerRotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
 	CCamera						*m_pCamera = NULL;
+	const std::list<CGameObject*>* m_pCollisionTargets = nullptr;
+
+	bool cameramove = true;
+	
 
 
 public:
 	PlayerStateMachine* m_pStateMachine = nullptr;
 
+	XMFLOAT3 offset{ -0.230000, 0.040000, -0.010000 }, scale{ 1.10000, 1.250000, 1.150000 };
+	bool observe = false;
 
 	CPlayer(CGameFramework* pGameFramework);
 	virtual ~CPlayer();
 	bool					    checkmove = false;
-	float PlayerHunger = 1.0f;
-	float PlayerThirst = 1.0f;
+	float PlayerHunger = 100.0f;
+	float PlayerThirst = 100.0f;
 	int PlayerLevel = 1;
 	int Playerhp = 300;
 	int Maxhp = 300;
@@ -65,17 +67,25 @@ public:
 	int StatPoint = 5;
 	int PlayerAttack = 10;
 	float PlayerSpeed = 10.0f;
+	int PlayerSpeedLevel = 0;
 	int Playerxp = 0;
 	int Totalxp = 20;
 	bool invincibility = false;
-	std::chrono::time_point<std::chrono::system_clock> starttime; // 무적 시작시간
+	float attackdamage = 1.0f;
+	bool killheal = false;
+	std::chrono::time_point<std::chrono::system_clock> starttime; 
 
-	WeaponType weaponType;
+	/*ToolType m_eCurrentTool;
+	CGameObject* m_pEquippedTool = nullptr;
+	CGameObject* m_pSword = nullptr;
+	CGameObject* m_pAxe = nullptr;
+	CGameObject* m_pPickaxe = nullptr;
+	CGameObject* m_pHammer = nullptr;  
 
-	CGameObject* m_pSword;
-	CGameObject* m_pAxe;
-	CGameObject* m_pPick;
-	
+	void EquipTool(ToolType type);*/
+
+	std::mutex pos_mu;
+
 	XMFLOAT3 GetPosition() { return(m_xmf3Position); }
 	XMFLOAT3 GetLookVector() { return(m_xmf3Look); }
 	XMFLOAT3 GetUpVector() { return(m_xmf3Up); }
@@ -87,8 +97,10 @@ public:
 	void SetMaxVelocityY(float fMaxVelocity) { m_fMaxVelocityY = fMaxVelocity; }
 	void SetVelocity(const XMFLOAT3& xmf3Velocity) { m_xmf3Velocity = xmf3Velocity; }
 	void SetPosition(const XMFLOAT3& xmf3Position) { Move(XMFLOAT3(xmf3Position.x - m_xmf3Position.x, xmf3Position.y - m_xmf3Position.y, xmf3Position.z - m_xmf3Position.z), false); }
+	
 
 	void SetScale(XMFLOAT3& xmf3Scale) { m_xmf3Scale = xmf3Scale; }
+	void SetCollisionTargets(const std::list<CGameObject*>& targets);
 
 	const XMFLOAT3& GetVelocity() const { return(m_xmf3Velocity); }
 	float GetYaw() const { return(m_fYaw); }
@@ -104,12 +116,14 @@ public:
 	void Rotate(float x, float y, float z);
 
 	virtual void Update(float fTimeElapsed);
+	void UpdateTraits();
 
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed) { }
 	void SetPlayerUpdatedContext(LPVOID pContext) { m_pPlayerUpdatedContext = pContext; }
 
 	virtual void OnCameraUpdateCallback(float fTimeElapsed) { }
 	void SetCameraUpdatedContext(LPVOID pContext) { m_pCameraUpdatedContext = pContext; }
+	LPVOID GetCameraUpdatedContext() { return m_pCameraUpdatedContext; }
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
@@ -127,8 +141,9 @@ public:
 	bool CheckCollisionOBB(CGameObject* other);
 	//void SetOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
 	void UpdateOBB(const XMFLOAT3& center, const XMFLOAT3& size, const XMFLOAT4& orientation);
+	
+	void SetCameraMove();
 
-	// 장비
 	CGameObject* AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework);
 	CGameObject* AddObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, char* framename, char* modelname, CGameFramework* pGameFramework, XMFLOAT3 offset, XMFLOAT3 rotate, XMFLOAT3 scale);
 	CGameObject* FindFrame(char* framename);
@@ -146,6 +161,9 @@ public:
 	void DecreaseHp(int value) { Playerhp -= value; }
 
 	const PlayerInputData& GetStateMachineInput() const;
+
+
+	void InitializeOBBResources(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 };
 
 class CAirplanePlayer : public CPlayer
@@ -183,13 +201,13 @@ public:
 	virtual ~CTerrainPlayer();
 
 public:
-	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
+	virtual CCamera* ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
 
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
 	virtual void OnCameraUpdateCallback(float fTimeElapsed);
 
 	//virtual void Move(DWORD nDirection, float fDistance, bool bVelocity = false);
-	
+
 	virtual void Update(float fTimeElapsed);
 
 	int nAni{};
@@ -197,7 +215,8 @@ public:
 	void keyInput(UCHAR* key);
 
 
-	CGameObject* FindObjectHitByAttack();
-	
+	std::vector<CGameObject*>  FindObjectHitByAttack();
+
+
 };
 

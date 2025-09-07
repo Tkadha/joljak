@@ -8,7 +8,7 @@
 
 short PORT = 8999; // 완성결과는 const 제외 하나의 포트가 왔다갔다 하는 형식
 const short GAME_PORT = 9000;
-char SERVER_ADDR[] = "58.228.11.233";
+char SERVER_ADDR[] = "118.221.0.109";
 //char SERVER_ADDR[] = "127.0.0.1";
 
 void recv_callback(DWORD err, DWORD recv_size, LPWSAOVERLAPPED recv_over, DWORD sendflag)
@@ -48,7 +48,7 @@ void recv_callback(DWORD err, DWORD recv_size, LPWSAOVERLAPPED recv_over, DWORD 
 
 	memset(nwManager.server_s->m_recv_over.send_buf + nwManager.server_s->m_prev_remain, 0,
 		sizeof(nwManager.server_s->m_recv_over.send_buf) - nwManager.server_s->m_prev_remain);
-	memset(&nwManager.server_s->m_recv_over.wsabuf, 0, sizeof(nwManager.server_s->m_recv_over.over));
+	memset(&nwManager.server_s->m_recv_over.over, 0, sizeof(nwManager.server_s->m_recv_over.over));
 
 	// 다음 수신 준비
 	nwManager.do_recv();
@@ -91,8 +91,8 @@ void NetworkManager::Init()
 void NetworkManager::do_recv()
 {
 	server_s->m_readFlags = 0;
-	server_s->m_recv_over.wsabuf.len = BUFSIZE;
-	server_s->m_recv_over.wsabuf.buf = server_s->m_recv_over.send_buf;
+	server_s->m_recv_over.wsabuf.len = BUFSIZE - server_s->m_prev_remain;
+	server_s->m_recv_over.wsabuf.buf = server_s->m_recv_over.send_buf + server_s->m_prev_remain;
 	WSARecv(server_s->m_fd, &(server_s->m_recv_over.wsabuf), 1, nullptr, &server_s->m_readFlags, &(server_s->m_recv_over.over), recv_callback);
 }
 
@@ -114,9 +114,9 @@ void NetworkManager::Process_Packet(char* packet)
 	case E_PACKET::E_P_CHANGEPORT: {
 		CHANGEPORT_PACKET* recv_p = reinterpret_cast<CHANGEPORT_PACKET*>(packet);
 		//cout << "Changing server to " << recv_p->addr << ":" << recv_p->port << endl;
-		ReconnectToNewServer(recv_p->addr, recv_p->port);
-		if (recv_p->port = 9000) s_type = SERVER_TYPE::E_GAME;
-		else s_type = SERVER_TYPE::E_LOBBY;
+		//ReconnectToNewServer(recv_p->addr, recv_p->port);
+		//if (recv_p->port = 9000) s_type = SERVER_TYPE::E_GAME;
+		//else s_type = SERVER_TYPE::E_LOBBY;
 	}
 								 break;
 	case E_PACKET::E_DB_SUCCESS_FAIL: {
@@ -139,16 +139,9 @@ void NetworkManager::Process_Packet(char* packet)
 		}
 	}
 		break;
-	case E_PACKET::E_P_POSITION:
-	case E_PACKET::E_P_ROTATE:
-	case E_PACKET::E_P_INPUT:
-	case E_PACKET::E_P_LOGIN:
-	case E_PACKET::E_P_LOGOUT:
-
+	default:
 		PushRecvQueue(packet, static_cast<short>(packet[0]));
 		break;
-	default:
-	break;
 	}
 }
 

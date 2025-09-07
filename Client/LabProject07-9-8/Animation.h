@@ -21,6 +21,7 @@ public:
 
 public:
 	void PrepareSkinning();
+	void FindAndCacheSkinnedMeshes();
 };
 
 struct CALLBACKKEY
@@ -142,7 +143,7 @@ public:
 	~CAnimationController();
 
 public:
-	float 							m_fTime = 0.0f;
+	//float 							m_fTime = 0.0f;
 
 	int 							m_nAnimationTracks = 0;
 	CAnimationTrack* m_pAnimationTracks = NULL;
@@ -172,6 +173,10 @@ public:
 
 	void AdvanceTime(float fElapsedTime, CGameObject* pRootGameObject);
 
+	CAnimationController* Clone(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+private:
+	CAnimationController(const CAnimationController& other, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
 public:
 	bool							m_bRootMotion = false;
 	CGameObject* m_pModelRootObject = NULL;
@@ -187,4 +192,11 @@ public:
 
 	void UpdateBoneTransformCBVContents();
 	void UpdateBoneLocalTransformCBV();
+
+
+protected:
+	float m_fAnimationSpeed = 1.0f;
+
+public:
+	void SetAnimationSpeed(float fSpeed) { m_fAnimationSpeed = fSpeed; }
 };

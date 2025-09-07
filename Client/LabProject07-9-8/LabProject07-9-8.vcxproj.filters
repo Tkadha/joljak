@@ -81,6 +81,24 @@
     <Filter Include="소스 파일\Object\Player\PlayerStateMachine">
       <UniqueIdentifier>{b468b9b6-15c6-4e72-ad25-76ecdd26a8f9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\shadow">
+      <UniqueIdentifier>{27573b34-d2e1-4f9e-b7ea-80716f24be6d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\ShadowShader">
+      <UniqueIdentifier>{e6ddf7e0-73ee-4413-ab24-6d572d504f7c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\DebugShader">
+      <UniqueIdentifier>{99db3735-a5c3-47db-8397-e14ba7e7fb84}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\SkinnedShadowShader">
+      <UniqueIdentifier>{4be8ab15-1733-4b15-a029-0fe7ab4678a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Sound">
+      <UniqueIdentifier>{0735b70c-a1a7-4986-be8b-70d8ef4ca9b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader\PostProcess">
+      <UniqueIdentifier>{2c614e81-02f0-4199-9b44-bf4cbb97408f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConstructionSystem.cpp" />
@@ -206,12 +224,38 @@
     <ClCompile Include="MathHelper.cpp">
       <Filter>Utility</Filter>
     </ClCompile>
+    <ClCompile Include="WaveObject.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Waves.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="WavesShader.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="ShadowMap.cpp">
+      <Filter>소스 파일\shadow</Filter>
+    </ClCompile>
+    <ClCompile Include="ShadowShader.cpp">
+      <Filter>소스 파일\Shader\ShadowShader</Filter>
+    </ClCompile>
+    <ClCompile Include="DebugShader.cpp">
+      <Filter>소스 파일\Shader\DebugShader</Filter>
+    </ClCompile>
+    <ClCompile Include="SkinnedShadowShader.cpp">
+      <Filter>소스 파일\Shader\SkinnedShadowShader</Filter>
+    </ClCompile>
+    <ClCompile Include="SoundManager.cpp">
+      <Filter>소스 파일\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="PostProcessShader.cpp">
+      <Filter>소스 파일\Shader\PostProcess</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Server\Global.h" />
     <ClInclude Include="ConstructionSystem.h" />
     <ClInclude Include="LabProject07-9-8.h" />
-    <ClInclude Include="Scene.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="d3dx12.h">
       <Filter>Utility</Filter>
@@ -339,6 +383,30 @@
     <ClInclude Include="UploadBuffer.h">
       <Filter>Utility</Filter>
     </ClInclude>
+    <ClInclude Include="Scene.h">
+      <Filter>소스 파일\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="WaveObject.h" />
+    <ClInclude Include="Waves.h" />
+    <ClInclude Include="WavesShader.h" />
+    <ClInclude Include="ShadowMap.h">
+      <Filter>소스 파일\shadow</Filter>
+    </ClInclude>
+    <ClInclude Include="ShadowShader.h">
+      <Filter>소스 파일\Shader\ShadowShader</Filter>
+    </ClInclude>
+    <ClInclude Include="DebugShader.h">
+      <Filter>소스 파일\Shader\DebugShader</Filter>
+    </ClInclude>
+    <ClInclude Include="SkinnedShadowShader.h">
+      <Filter>소스 파일\Shader\SkinnedShadowShader</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundManager.h">
+      <Filter>소스 파일\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="PostProcessShader.h">
+      <Filter>소스 파일\Shader\PostProcess</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LabProject07-9-8.rc" />
@@ -380,6 +448,17 @@
     </FxCompile>
     <FxCompile Include="OBBShader.hlsl">
       <Filter>소스 파일\Shader\OBBShader</Filter>
+    </FxCompile>
+    <FxCompile Include="WavesShader.hlsl" />
+    <FxCompile Include="Shadow.hlsl">
+      <Filter>소스 파일\Shader\ShadowShader</Filter>
+    </FxCompile>
+    <FxCompile Include="Debug.hlsl">
+      <Filter>소스 파일\Shader\DebugShader</Filter>
+    </FxCompile>
+    <FxCompile Include="Skinned_Shadow.hlsl" />
+    <FxCompile Include="PostProcess.hlsl">
+      <Filter>소스 파일\Shader\PostProcess</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

@@ -4,20 +4,27 @@
 
 #include "stdafx.h"
 #include <thread>
-#include "GameFramework.h"
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
-#include "NetworkManager.h"
+#include "GameFramework.h"
 #include "PlayerStateDefs.h"
 #include "Player.h"
+#include "SoundManager.h"
+#include "NetworkManager.h"
+#include "NonAtkState.h"
+#include "AtkState.h"
+// 서버 연결 여부
 
+#include <sstream> // Test
+
+void SoundLoading();
 
 void CGameFramework::NerworkThread()
 {
 	auto& nwManager = NetworkManager::GetInstance();
 	nwManager.do_recv();
-	while (true)
+	while (b_running)
 	{
 
 		while (!nwManager.send_queue.empty())
@@ -34,7 +41,7 @@ void CGameFramework::NerworkThread()
 			ProcessPacket(packet.first.get());
 
 		}
-		SleepEx(10, TRUE);
+		SleepEx(1, TRUE);
 	}
 }
 void CGameFramework::ProcessPacket(char* packet)
@@ -42,14 +49,104 @@ void CGameFramework::ProcessPacket(char* packet)
 	E_PACKET type = static_cast<E_PACKET>(packet[1]);
 	switch (type)
 	{
+	case E_PACKET::E_GAME_START:{
+		ChangeGameState(GameState::InGame);
+	}
+	break;
+	case E_PACKET::E_GAME_END: {
+		ChangeGameState(GameState::Ending);
+	}
+	break;
+	case E_PACKET::E_GAME_NEW: {
+		ChangeGameState(GameState::Lobby);
+		for (auto& slot : m_inventorySlots) {
+			slot.item = nullptr;
+			slot.quantity = 0;
+		}
+		m_pScene->ClearObj();
+		m_pScene->NewGameBuildObj();
+		m_pPlayer->PlayerHunger = 100.0f;
+		m_pPlayer->PlayerThirst = 100.0f;
+		m_pPlayer->PlayerLevel = 1;
+		m_pPlayer->Playerhp = 300;
+		m_pPlayer->Maxhp = 300;
+		m_pPlayer->Playerstamina = 150;
+		m_pPlayer->Maxstamina = 150;
+		m_pPlayer->StatPoint = 5;
+		m_pPlayer->PlayerAttack = 10;
+		m_pPlayer->PlayerSpeed = 10.0f;
+		m_pPlayer->PlayerSpeedLevel = 0;
+		m_pPlayer->Playerxp = 0;
+		m_pPlayer->Totalxp = 20;
+		m_pPlayer->attackdamage = 1;
+		m_pPlayer->killheal = false;
+		m_pPlayer->UnequipAllTools();
+		for (auto& p : m_pScene->PlayerList) {
+			p.second->UnequipAllTools();
+		}
+	}
+	break;
+	case E_PACKET::E_P_RESPAWN:{
+		// 인벤토리 초기화
+	}
+	break;
+	case E_PACKET::E_P_WEAPON_CHANGE:
+	{
+		WEAPON_CHANGE_PACKET* r_packet = reinterpret_cast<WEAPON_CHANGE_PACKET*>(packet);
+		if (r_packet->uid == _MyID) break;
+		if (m_pScene->PlayerList.find(r_packet->uid) != m_pScene->PlayerList.end()) {
+			std::string toolname{};
+			switch (r_packet->material_type) {
+			case 1:
+				toolname += "wooden_";
+				break;
+			case 2:
+				toolname += "stone_";
+				break;
+			case 3:
+				toolname += "iron_";
+				break;
+			}
+
+			switch (r_packet->weapon_type) {
+			case 1:
+				toolname += "sword";
+				break;
+			case 2:
+				toolname += "axe";
+				break;
+			case 3:
+				toolname += "pickaxe";
+				break;
+			case 4:
+				toolname += "hammer";
+				break;
+			}
+			m_pScene->PlayerList[r_packet->uid]->PlayerEquipTool(toolname.c_str());
+
+			if (toolname == "iron_hammer") {
+				m_pScene->m_pLights[m_pScene->PlayerList[r_packet->uid]->torchIndex].m_bEnable = true;
+			}
+			else {
+				m_pScene->m_pLights[m_pScene->PlayerList[r_packet->uid]->torchIndex].m_bEnable = false;
+			}
+
+		}
+	}
+	break;
 	case E_PACKET::E_P_POSITION:
 	{
 		POSITION_PACKET* recv_p = reinterpret_cast<POSITION_PACKET*>(packet);
+		
 		if (recv_p->uid == _MyID) {
+			m_pPlayer->pos_mu.lock();
 			m_pPlayer->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z});
+			m_pPlayer->pos_mu.unlock();
 		}
+		
 		else if (m_pScene->PlayerList.find(recv_p->uid) != m_pScene->PlayerList.end()) {
 			m_pScene->PlayerList[recv_p->uid]->SetPosition(XMFLOAT3{ recv_p->position.x, recv_p->position.y, recv_p->position.z });
+			m_pScene->m_pLights[m_pScene->PlayerList[recv_p->uid]->torchIndex].m_xmf3Position = XMFLOAT3{ recv_p->position.x, recv_p->position.y + 50.0f, recv_p->position.z };
 		}
 	}
 	break;
@@ -71,7 +168,7 @@ void CGameFramework::ProcessPacket(char* packet)
 			m_pScene->PlayerList[recv_p->uid]->ChangeAnimation(recv_p->inputData);
 		}
 	}
-		break;
+	break;
 	case E_PACKET::E_P_LOGIN:
 	{
 		LOGIN_PACKET* recv_p = reinterpret_cast<LOGIN_PACKET*>(packet);
@@ -87,10 +184,192 @@ void CGameFramework::ProcessPacket(char* packet)
 		m_logQueue.push(log_inout{ E_PACKET::E_P_LOGOUT ,recv_p->uid });
 	}
 	break;
+	case E_PACKET::E_P_CHANGE_STAT: {
+		CHANGE_STAT_PACKET* recv_p = reinterpret_cast<CHANGE_STAT_PACKET*>(packet);
+		switch (recv_p->stat)
+		{
+		case E_STAT::HP:
+			m_pPlayer->Playerhp = recv_p->value;
+			break;
+		case E_STAT::STAMINA:
+			m_pPlayer->Playerstamina = recv_p->value;
+			break;
+		case E_STAT::HUNGER:
+			m_pPlayer->PlayerHunger = recv_p->value;
+			break;
+		case E_STAT::THIRST:
+			m_pPlayer->PlayerThirst = recv_p->value;
+			break;
+		default:
+			break;
+		}
+	}
+	break;
+	case E_PACKET::E_O_ADD:
+	{
+		ADD_PACKET* recv_p = reinterpret_cast<ADD_PACKET*>(packet);
+
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+		auto already_it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [recv_p](CGameObject* obj) {
+			return obj->m_id == recv_p->id;
+			});
+		if (already_it != m_pScene->m_vGameObjects.end())
+			break;
+		auto it = std::find_if(m_pScene->m_listGameObjects.begin(), m_pScene->m_listGameObjects.end(), [recv_p](CGameObject* obj) {
+			return obj->m_id == recv_p->id;
+			});
+		if (it != m_pScene->m_listGameObjects.end()) {
+			CGameObject* foundObj = *it;
+			foundObj->SetLook(XMFLOAT3(recv_p->look.x, recv_p->look.y, recv_p->look.z));
+			foundObj->SetUp(XMFLOAT3(recv_p->up.x, recv_p->up.y, recv_p->up.z));
+			foundObj->SetRight(XMFLOAT3(recv_p->right.x, recv_p->right.y, recv_p->right.z));
+			foundObj->SetPosition(recv_p->position.x, recv_p->position.y, recv_p->position.z);
+			foundObj->Sethp(recv_p->hp);
+			m_pScene->m_vGameObjects.emplace_back(*it);
+		}
+		else {
+			FLOAT3 right = recv_p->right;
+			FLOAT3 up = recv_p->up;
+			FLOAT3 look = recv_p->look;
+			FLOAT3 position = recv_p->position;
+			OBJECT_TYPE o_type = recv_p->o_type;
+			ANIMATION_TYPE a_type = recv_p->a_type;
+			int id = recv_p->id;
+			int hp = recv_p->hp;
+			m_logQueue.push(log_inout{ E_PACKET::E_O_ADD,0,right,up,look,position,o_type,a_type,id,hp });
+		}
+	}
+	break;
+	case E_PACKET::E_O_REMOVE:
+	{
+		REMOVE_PACKET* recv_p = reinterpret_cast<REMOVE_PACKET*>(packet);
+		int id = recv_p->id;
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
+			return obj->m_id == id;
+			});
+		if (it != m_pScene->m_vGameObjects.end()) {	
+			m_pScene->m_vGameObjects.erase(it);
+		}
+	}
+	break;
+	case E_PACKET::E_O_MOVE:
+	{
+		MOVE_PACKET* recv_p = reinterpret_cast<MOVE_PACKET*>(packet);
+		int id = recv_p->id;
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
+			return obj->m_id == id;
+			});
+		if (it != m_pScene->m_vGameObjects.end()) {
+			CGameObject* Found_obj = *it;
+			Found_obj->SetLook(XMFLOAT3(recv_p->look.x, recv_p->look.y, recv_p->look.z));
+			Found_obj->SetUp(XMFLOAT3(recv_p->up.x, recv_p->up.y, recv_p->up.z));
+			Found_obj->SetRight(XMFLOAT3(recv_p->right.x, recv_p->right.y, recv_p->right.z));
+			Found_obj->SetPosition(recv_p->position.x, recv_p->position.y, recv_p->position.z);
+			Found_obj->Check_attack();
+		}
+	}
+	break;
+	case E_PACKET::E_O_CHANGEANIMATION:
+	{
+		CHANGEANIMATION_PACKET* recv_p = reinterpret_cast<CHANGEANIMATION_PACKET*>(packet);
+		int id = recv_p->oid;
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
+			return obj->m_id == id;
+			});
+		if (it != m_pScene->m_vGameObjects.end()) {
+			CGameObject* Found_obj = *it;
+			if (Found_obj->m_pSkinnedAnimationController) Found_obj->ChangeAnimation(recv_p->a_type);
+		}
+	}
+	break;
+	case E_PACKET::E_O_SETHP: {
+		OBJ_HP_PACKET* recv_p = reinterpret_cast<OBJ_HP_PACKET*>(packet);
+		int id = recv_p->oid;
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
+			return obj->m_id == id;
+			});
+		if (it != m_pScene->m_vGameObjects.end()) {	
+			CGameObject* Found_obj = *it;
+			Found_obj->Sethp(recv_p->hp);
+
+			if (Found_obj->m_objectType == GameObjectType::Tree) {
+				auto tree = dynamic_cast<CTreeObject*>(Found_obj);
+				int hp = Found_obj->getHp();
+				if (hp <= 0)
+					tree->StartFalling(m_pPlayer->GetLookVector());
+			}
+			else if (Found_obj->m_objectType == GameObjectType::Rock) {
+				auto rock = dynamic_cast<CRockObject*>(Found_obj);
+				if (rock->Gethp() <= 0) {
+					rock->isRender = false;
+
+				}
+				else {
+					rock->SetScale(0.9f, 0.9f, 0.9f);
+
+					XMFLOAT3 treePos = rock->GetPosition();
+
+					XMFLOAT3 spawnOffsetLocal = XMFLOAT3(
+						((float)(rand() % 200) - 100.0f) * 0.1f, // X -10 ~ +10
+						(rand() % 10) + 10.0f,                     // Y 10~19
+						((float)(rand() % 200) - 100.0f) * 0.1f  // Z -10 ~ +10
+					);
+					XMFLOAT3 spawnPos = Vector3::Add(treePos, spawnOffsetLocal);
+					if (m_pScene->m_pTerrain) { // 지형 위에 스폰되도록 높이 보정
+						spawnPos.y = m_pScene->m_pTerrain->GetHeight(spawnPos.x, spawnPos.z) + spawnOffsetLocal.y + 20;
+					}
+
+					XMFLOAT3 ejectVelocity = XMFLOAT3(
+						((float)(rand() % 100) - 50.0f),
+						((float)(rand() % 60) + 50.0f),
+						((float)(rand() % 100) - 50.0f)
+					);
+				}
+			}
+		}
+	}
+	break;
+	case E_PACKET::E_O_INVINCIBLE: {
+		OBJ_INVINCIBLE_PACKET* recv_p = reinterpret_cast<OBJ_INVINCIBLE_PACKET*>(packet);
+		int id = recv_p->oid;
+		std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+		auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(), [id](CGameObject* obj) {
+			return obj->m_id == id;
+			});
+		if (it != m_pScene->m_vGameObjects.end()) {	
+			CGameObject* Found_obj = *it;
+			Found_obj->SetInvincible(recv_p->invincible);
+		}
+	}
+	break;
+	case E_PACKET::E_STRUCT_OBJ: {
+		STRUCT_OBJ_PACKET* recv_p = reinterpret_cast<STRUCT_OBJ_PACKET*>(packet);
+		FLOAT3 right = recv_p->right;
+		FLOAT3 up = recv_p->up;
+		FLOAT3 look = recv_p->look;
+		FLOAT3 position = recv_p->position;
+		OBJECT_TYPE o_type = recv_p->o_type;
+		ANIMATION_TYPE a_type = ANIMATION_TYPE::UNKNOWN;
+		int id = -1;
+		m_logQueue.push(log_inout{ E_PACKET::E_STRUCT_OBJ,0,right,up,look,position,o_type,a_type,id });
+	}
+	break;
+	case E_PACKET::E_SYNC_TIME:
+		{
+		TIME_SYNC_PACKET* recv_p = reinterpret_cast<TIME_SYNC_PACKET*>(packet);
+		m_pScene->m_fLightRotationAngle = recv_p->serverTime;
+	}
+	break;
 	default:
 		break;
 	}
 }
+
+
 CGameFramework::CGameFramework()
 {
 	m_pdxgiFactory = NULL;
@@ -135,21 +414,74 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CreateDirect3DDevice();
 	CreateCommandQueueAndList();
-	CreateCbvSrvDescriptorHeaps(200, 30000);
+	CreateCbvSrvDescriptorHeaps(200, 90000);
 	CreateRtvAndDsvDescriptorHeaps();
 	CreateSwapChain();
 	CreateDepthStencilView();
 
-	CoInitialize(NULL);
+	// 그림자 맵 DSV 힙
+	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
+	dsvHeapDesc.NumDescriptors = 2;
+	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	dsvHeapDesc.NodeMask = 0;
+	ThrowIfFailed(m_pd3dDevice->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_pd3dShadowDsvHeap)));
 
+	D3D12_RESOURCE_DESC texDesc = {};
+	texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	texDesc.Alignment = 0;
+	texDesc.Width = m_nWndClientWidth;
+	texDesc.Height = m_nWndClientHeight;
+	texDesc.DepthOrArraySize = 1;
+	texDesc.MipLevels = 1;
+	texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	texDesc.SampleDesc.Count = 1;
+	texDesc.SampleDesc.Quality = 0;
+	texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	texDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+	D3D12_CLEAR_VALUE clearValue = {};
+	clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	float pfClearColor[4] = { 0.0f, 0.125f, 0.3f, 1.0f };
+	memcpy(clearValue.Color, pfClearColor, sizeof(float) * 4);
+
+	CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
+	ThrowIfFailed(m_pd3dDevice->CreateCommittedResource(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&texDesc,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, 
+		&clearValue,
+		IID_PPV_ARGS(&m_pd3dOffscreenTexture)));
+
+	m_d3dOffscreenRtvCPUHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	m_d3dOffscreenRtvCPUHandle.ptr += m_nSwapChainBuffers * m_nRtvDescriptorIncrementSize;
+	m_pd3dDevice->CreateRenderTargetView(m_pd3dOffscreenTexture.Get(), nullptr, m_d3dOffscreenRtvCPUHandle);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuSrvHandle;
+	AllocateSrvDescriptors(1, cpuSrvHandle, m_d3dOffscreenSrvGPUHandle);
+	m_pd3dDevice->CreateShaderResourceView(m_pd3dOffscreenTexture.Get(), nullptr, cpuSrvHandle);
+
+
+	CoInitialize(NULL);
+	
+	// 서버 연결
+#ifdef ONLINE
+	auto& nwManager = NetworkManager::GetInstance();
+	nwManager.Init();
+	serverConnected = true;
+	b_running = true;
+#endif
 
 	BuildObjects();
-	
+
+	SoundLoading();
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
 	io.Fonts->AddFontFromFileTTF("Paperlogy-4Regular.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesKorean());
+	io.Fonts->AddFontFromFileTTF("Paperlogy-4Regular.ttf", 72.0f, nullptr, io.Fonts->GetGlyphRangesKorean());
 	io.Fonts->Build();
 	ImGui::StyleColorsDark();
 
@@ -165,18 +497,20 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 		m_pd3dSrvDescriptorHeapForImGui->GetGPUDescriptorHandleForHeapStart()
 	);
 	InitializeCraftItems();
+	InitializeBuildRecipes();
 	ItemManager::Initialize();
 	InitializeItemIcons();
+	m_imGuiLobbyBackgroundTextureId = LoadIconTexture(L"lobby.png");
 
 
 	m_pConstructionSystem = new CConstructionSystem();
 	m_pConstructionSystem->Init(m_pd3dDevice, m_pd3dCommandList, this, m_pScene);
 	
-	
-	auto& nwManager = NetworkManager::GetInstance();
-	nwManager.Init();
+#ifdef ONLINE
 	std::thread t(&CGameFramework::NerworkThread, this);
 	t.detach();
+#endif	
+
 	
 
 	//ChangeSwapChainState();
@@ -284,10 +618,11 @@ void CGameFramework::CreateDirect3DDevice()
 	}
 	else {
 		// 디바이스 생성 실패 시 오류 처리
-		OutputDebugString(L"Error: Failed to create D3D12 Device. Cannot get descriptor sizes.\n");
+		//OutputDebugString(L"Error: Failed to create D3D12 Device. Cannot get descriptor sizes.\n");
 		// 필요하다면 프로그램 종료 또는 예외 처리
 	}
-	m_pShaderManager = new ShaderManager(m_pd3dDevice);
+	m_pShaderManager = std::make_unique<ShaderManager>(m_pd3dDevice);
+
 
 	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS d3dMsaaQualityLevels;
 	d3dMsaaQualityLevels.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -310,6 +645,9 @@ void CGameFramework::CreateDirect3DDevice()
 	::gnRtvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	::gnDsvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
+	// 추가(그림자)
+	m_nRtvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
 	if (pd3dAdapter) pd3dAdapter->Release();
 }
 
@@ -322,28 +660,33 @@ void CGameFramework::CreateCommandQueueAndList()
 	d3dCommandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 	d3dCommandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 	hResult = m_pd3dDevice->CreateCommandQueue(&d3dCommandQueueDesc, _uuidof(ID3D12CommandQueue), (void **)&m_pd3dCommandQueue);
-
 	hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void **)&m_pd3dCommandAllocator);
 
 	hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dCommandAllocator, NULL, __uuidof(ID3D12GraphicsCommandList), (void **)&m_pd3dCommandList);
 	hResult = m_pd3dCommandList->Close();
+
+	hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&m_pd3dUploadCommandAllocator);
+	hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dUploadCommandAllocator, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&m_pd3dUploadCommandList);
+	hResult = m_pd3dUploadCommandList->Close();
 }
 
 void CGameFramework::CreateRtvAndDsvDescriptorHeaps()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
 	::ZeroMemory(&d3dDescriptorHeapDesc, sizeof(D3D12_DESCRIPTOR_HEAP_DESC));
-	d3dDescriptorHeapDesc.NumDescriptors = m_nSwapChainBuffers;
+	d3dDescriptorHeapDesc.NumDescriptors = m_nSwapChainBuffers + 1;
 	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 	d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	d3dDescriptorHeapDesc.NodeMask = 0;
 	HRESULT hResult = m_pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void **)&m_pd3dRtvDescriptorHeap);
 	::gnRtvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-	d3dDescriptorHeapDesc.NumDescriptors = 1;
 	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-	hResult = m_pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void **)&m_pd3dDsvDescriptorHeap);
-	::gnDsvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	d3dDescriptorHeapDesc.NumDescriptors = 3; // 메인 깊이버퍼 1개 + 그림자맵 2개
+	hResult = m_pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_pd3dDsvDescriptorHeap);
+
+	// 디바이스로부터 DSV 디스크립터의 증가 크기를 얻어와 멤버 변수에 저장
+	m_nDsvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 }
 
 void CGameFramework::CreateRenderTargetViews()
@@ -457,16 +800,23 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			switch (wParam)
 			{
 				case VK_ESCAPE:
-					::PostQuitMessage(0);
+					//::PostQuitMessage(0);
 					break;
 				case VK_RETURN:
 					break;
-				case VK_F1:
-				case VK_F2:
-				case VK_F3:
-				case VK_F4:
-					m_pCamera = m_pPlayer->ChangeCamera((DWORD)(wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
-					break;
+				//case VK_F1:
+				//case VK_F2:
+				//	//if (m_pScene && m_pScene->GetSkyBox()) {
+				//	//	int textureCount = m_pScene->GetSkyBox()->GetTextureCount();
+				//	//	//OutputDebugString(std::format(L"[SkyBox] 텍스처 로드 개수: {}\n",textureCount).c_str());
+				//	//	if (textureCount > 0) {
+				//	//		m_nCurrentSkybox = (m_nCurrentSkybox + 1) % textureCount;
+				//	//		m_pScene->GetSkyBox()->SetSkyboxIndex(m_nCurrentSkybox);
+				//	//	}
+				//	//}
+				//	break;
+				
+					
 				case VK_F9:
 					ChangeSwapChainState();
 					break;
@@ -481,22 +831,100 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				ShowInventory = !ShowInventory;
 				break;
 			case 'I':
-				
 				break;
 			case 'O':
 				ShowCraftingUI = !ShowCraftingUI;
 				break;
 			case 'B':
-				BuildMode = !BuildMode;
+				m_bBuildMode = !m_bBuildMode;
+				
+				if (!m_bBuildMode) {
+					m_bIsPreviewVisible = false;
+					m_nSelectedBuildingIndex = -1;
+					m_pConstructionSystem->ExitBuildMode();
+				}
 				break;
+				
 			case 'K':
-				ShowFurnaceUI = !ShowFurnaceUI;
+				CheckAndToggleFurnaceUI();
+				break;
+			case 'E':
+				CheckEscape();
 				break;
 			case 'R':
-				BuildMode = false;
-				bPrevBuildMode = BuildMode;
-				m_pConstructionSystem->ConfirmPlacement();
+				if (m_bBuildMode && m_pConstructionSystem) {
+					m_pConstructionSystem->RotatePreviewObject(-45.0f);
+				}
+				break;
+			case 'T':
+				m_pScene->obbRender = m_pScene->obbRender ? false : true;
+				break;
+			case 'L':
+				ShowTraitUI = !ShowTraitUI;
+				break;
+			case 'Y':
+				if (m_pScene && m_pPlayer)
+				{
+					OnPlayerHit();
+				}
+				break;
+			case 'U':
+				if (m_pScene && m_pPlayer)
+				{
+					// 플레이어의 현재 위치를 가져옵니다.
+					XMFLOAT3 playerPos = m_pPlayer->GetPosition();
 
+					// Scene의 소용돌이 생성 함수를 호출합니다.
+					m_pScene->SpawnVortexEffect(playerPos);
+				}
+				break;
+			case 'P':
+				CheckEscape();
+				break;
+			case 'M':
+				if (m_eGameState != GameState::Ending) break;
+				ChangeGameState(GameState::Lobby);
+				// 씬에 있는 모든 객체 초기화 해야함
+				m_pScene->ClearObj();
+				m_pScene->NewGameBuildObj();
+				{
+					auto& nwManager = NetworkManager::GetInstance();
+					NEW_GAME_PACKET p;
+					p.type = static_cast<char>(E_PACKET::E_GAME_NEW);
+					p.size = sizeof(NEW_GAME_PACKET);
+					nwManager.PushSendQueue(p, p.size);
+				}
+				break;
+			case 'G':
+				if (m_pScene && m_pScene->m_pLights)//&& !m_pScene->IsDaytime())	// 낮에는 횃불 못 켜
+				{
+					m_pScene->m_pLights[1].m_bEnable = (m_pScene->m_pLights[1].m_bEnable == 0) ? 1 : 0;
+				}
+				break;
+			case VK_F2:
+				AddItem("wood", 30);
+				AddItem("stone", 30);
+				AddItem("iron_material", 30);
+				AddItem("coal", 30);
+				AddItem("pork", 30);
+				break;
+			case VK_F1:
+				AddItem("stone_sword", 1);
+				AddItem("stone_axe", 1);
+				AddItem("stone_pickaxe", 1);
+				AddItem("iron_hammer", 1);
+				break;
+			case VK_F3:
+			{
+				auto& nwManager = NetworkManager::GetInstance();
+				CHANGE_TIME_PACKET p;
+				p.type = static_cast<char>(E_PACKET::E_CHANGE_TIME);
+				p.size = sizeof(CHANGE_TIME_PACKET);
+				nwManager.PushSendQueue(p, p.size);
+			}
+				break;
+			case VK_F4:
+				m_pPlayer->PlayerAttack = 50;
 				break;
 			}
 			break;
@@ -589,7 +1017,7 @@ void CGameFramework::AddItem(const std::string& name, int quantity)
 	}
 
 	// 3. 인벤토리가 가득 찼을 경우
-	OutputDebugStringA("인벤토리가 가득 찼습니다.\n");
+	//OutputDebugStringA("인벤토리가 가득 찼습니다.\n");
 }
 
 
@@ -699,7 +1127,7 @@ ImTextureID CGameFramework::LoadIconTexture(const std::wstring& filename)
 void CGameFramework::CreateIconDescriptorHeap()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-	desc.NumDescriptors = 32; // 예를 들어 아이콘 32개쯤? (원하는 수)
+	desc.NumDescriptors = 33; // 예를 들어 아이콘 32개쯤? (원하는 수)
 	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
@@ -711,6 +1139,7 @@ void CGameFramework::CreateIconDescriptorHeap()
 }
 void CGameFramework::OnDestroy()
 {
+	b_running = false;
 	WaitForGpu();
 	::CloseHandle(m_hFenceEvent);
 
@@ -751,13 +1180,24 @@ void CGameFramework::BuildObjects()
 	m_pResourceManager = std::make_unique<ResourceManager>();
 	m_pResourceManager->Initialize(this);
 
+	//m_imGuiLobbyBackgroundTextureId = LoadIconTexture(L"lobby.png");
 
 	m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
 
 	m_pScene = new CScene(this);
-	if (m_pScene) m_pScene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
 
-	
+	auto& nwManager = NetworkManager::GetInstance();
+	if (m_pScene) {
+#ifdef ONLINE
+			m_pScene->ServerBuildObjects(m_pd3dDevice, m_pd3dCommandList);
+#else
+			m_pScene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
+#endif
+	}
+
+	m_vTestPlayerNames.push_back("Player_Alpha");
+	m_vTestPlayerNames.push_back("Player_Bravo (Ready)");
+	m_vTestPlayerNames.push_back("Player_Charlie");
 
 #ifdef _WITH_TERRAIN_PLAYER
 	CTerrainPlayer *pPlayer = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, m_pScene->m_pTerrain, this);
@@ -770,13 +1210,102 @@ void CGameFramework::BuildObjects()
 	m_pCamera = m_pPlayer->GetCamera();
 	m_pPlayer->SetOwningScene(m_pScene);
 
-	pPlayer->SetOBB();
-	pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+
+	m_pPlayer->SetOBB(0.35f, 0.9f, 0.2f, XMFLOAT3{ 0.f,10.f,0.f });
+
+#ifdef ONLINE
+	NetworkManager& nw = NetworkManager::GetInstance();
+	OBJ_OBB_PACKET p;
+	auto& obb = m_pPlayer->m_localOBB;
+	p.Center.x = obb.Center.x;
+	p.Center.y = obb.Center.y;
+	p.Center.z = obb.Center.z;
+	p.Extents.x = obb.Extents.x;
+	p.Extents.y = obb.Extents.y;
+	p.Extents.z = obb.Extents.z;
+	p.Orientation.x = obb.Orientation.x;
+	p.Orientation.y = obb.Orientation.y;
+	p.Orientation.z = obb.Orientation.z;
+	p.Orientation.w = obb.Orientation.w;
+	p.oid = -1;
+	p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+	p.size = sizeof(OBJ_OBB_PACKET);
+	nw.PushSendQueue(p, p.size);
+#endif
+	XMFLOAT3 position = XMFLOAT3(0.0f, 1.0f, 0.0f);
+	XMFLOAT3 size = XMFLOAT3(0.35f, 0.9f, 0.2f);
+	XMFLOAT4 rotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	m_pPlayer->SetOBB(position, size, rotation);
+	m_pPlayer->InitializeOBBResources(m_pd3dDevice, m_pd3dCommandList);
+
+	//LoadTools();
+
+
+	struct DebugVertex
+	{
+		XMFLOAT3 Pos;
+		XMFLOAT2 TexC;
+	};
+
+	DebugVertex vertices[4] =
+	{
+		// 화면 오른쪽 아래 1/4 크기의 사각형
+		{ XMFLOAT3(0.5f, -0.5f, 0.0f), XMFLOAT2(0.0f, 1.0f) }, // 0: 왼쪽 아래
+		{ XMFLOAT3(0.5f, -0.0f, 0.0f), XMFLOAT2(0.0f, 0.0f) }, // 1: 왼쪽 위
+		{ XMFLOAT3(1.0f, -0.0f, 0.0f), XMFLOAT2(1.0f, 0.0f) }, // 2: 오른쪽 위
+		{ XMFLOAT3(1.0f, -0.5f, 0.0f), XMFLOAT2(1.0f, 1.0f) }  // 3: 오른쪽 아래
+	};
+
+	// 2. 인덱스 데이터 정의 (삼각형 2개)
+	std::uint16_t indices[6] = { 0, 1, 2, 0, 2, 3 };
+
+	const UINT vbByteSize = 4 * sizeof(DebugVertex);
+	const UINT ibByteSize = 6 * sizeof(std::uint16_t);
+
+	// 3. d3dUtil 함수를 사용해 정점/인덱스 버퍼를 GPU에 생성
+	m_pd3dDebugQuadVB = d3dUtil::CreateDefaultBuffer(m_pd3dDevice, m_pd3dCommandList, vertices, vbByteSize, m_pd3dDebugQuadVB_Uploader);
+	m_pd3dDebugQuadIB = d3dUtil::CreateDefaultBuffer(m_pd3dDevice, m_pd3dCommandList, indices, ibByteSize, m_pd3dDebugQuadIB_Uploader);
+
+	// 4. 생성된 버퍼를 가리킬 뷰(View)를 설정
+	m_d3dDebugQuadVBView.BufferLocation = m_pd3dDebugQuadVB->GetGPUVirtualAddress();
+	m_d3dDebugQuadVBView.StrideInBytes = sizeof(DebugVertex);
+	m_d3dDebugQuadVBView.SizeInBytes = vbByteSize;
+
+	m_d3dDebugQuadIBView.BufferLocation = m_pd3dDebugQuadIB->GetGPUVirtualAddress();
+	m_d3dDebugQuadIBView.Format = DXGI_FORMAT_R16_UINT;
+	m_d3dDebugQuadIBView.SizeInBytes = ibByteSize;
+
+	struct SimpleVertex { XMFLOAT3 Pos; XMFLOAT2 Tex; };
+	SimpleVertex pVertices[4] =
+	{
+		{ XMFLOAT3(-1.0f,  1.0f, 0.5f), XMFLOAT2(0.0f, 0.0f) }, // 왼쪽 위
+		{ XMFLOAT3(1.0f,  1.0f, 0.5f), XMFLOAT2(1.0f, 0.0f) }, // 오른쪽 위
+		{ XMFLOAT3(1.0f, -1.0f, 0.5f), XMFLOAT2(1.0f, 1.0f) }, // 오른쪽 아래
+		{ XMFLOAT3(-1.0f, -1.0f, 0.5f), XMFLOAT2(0.0f, 1.0f) }  // 왼쪽 아래
+	};
+	std::uint16_t pIndices[6] = { 0, 1, 2, 0, 2, 3 };
+
+	m_pd3dFullScreenQuadVB = d3dUtil::CreateDefaultBuffer(m_pd3dDevice, m_pd3dCommandList, pVertices, vbByteSize, m_pd3dFullScreenQuadVB_Uploader);
+	m_pd3dFullScreenQuadIB = d3dUtil::CreateDefaultBuffer(m_pd3dDevice, m_pd3dCommandList, pIndices, ibByteSize, m_pd3dFullScreenQuadIB_Uploader);
+
+	m_d3dFullScreenQuadVBView.BufferLocation = m_pd3dFullScreenQuadVB->GetGPUVirtualAddress();
+	m_d3dFullScreenQuadVBView.StrideInBytes = sizeof(SimpleVertex);
+	m_d3dFullScreenQuadVBView.SizeInBytes = vbByteSize;
+
+	m_d3dFullScreenQuadIBView.BufferLocation = m_pd3dFullScreenQuadIB->GetGPUVirtualAddress();
+	m_d3dFullScreenQuadIBView.Format = DXGI_FORMAT_R16_UINT;
+	m_d3dFullScreenQuadIBView.SizeInBytes = ibByteSize;
+
 
 
 	m_pd3dCommandList->Close();
 	ID3D12CommandList *ppd3dCommandLists[] = { m_pd3dCommandList };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+
+	if (m_pScene && m_pPlayer)
+	{
+		m_pPlayer->SetCollisionTargets(m_pScene->m_vGameObjects);
+	}
 
 	WaitForGpuComplete();
 
@@ -797,6 +1326,787 @@ void CGameFramework::ReleaseObjects()
 	if (m_pScene) delete m_pScene;
 }
 
+
+
+void CGameFramework::AddObject(OBJECT_TYPE o_type, ANIMATION_TYPE a_type, FLOAT3 position, FLOAT3 right, FLOAT3 up, FLOAT3 look, int id, int hp)
+{
+	if (m_pScene)
+	{
+		switch (o_type)
+		{
+		case OBJECT_TYPE::OB_TREE:
+		{
+			std::shared_ptr<CGameObject> prefab;
+			int tree_type = rand() % 2;
+			if (tree_type == 0) {
+				prefab = m_pResourceManager->GetPrefab("PineTree");
+			}	
+			else if (tree_type == 1) {
+				prefab = m_pResourceManager->GetPrefab("BirchTree");
+			}
+
+			CGameObject* gameObj = prefab->Clone();
+			
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(0.2f, 1.f, 0.2f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
+		}
+			break;
+		case OBJECT_TYPE::OB_STONE:
+		{
+			std::shared_ptr<CGameObject> prefab = m_pResourceManager->GetPrefab("RockClusterA");
+			CGameObject* gameObj = prefab->Clone();
+			int materialIndexToChange = 0;
+			UINT albedoTextureSlot = 0;
+			const wchar_t* textureFile = L"Model/Textures/RockClusters_AlbedoRoughness.dds";
+			ResourceManager* pResourceManager = GetResourceManager();
+			ChangeAlbedoTexture(gameObj, materialIndexToChange, albedoTextureSlot, textureFile, pResourceManager, m_pd3dUploadCommandList, m_pd3dDevice);
+
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+			}
+		}
+			break;
+		case OBJECT_TYPE::OB_COW:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pCowModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Cow.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pCowModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Cow;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+			gameObj->hp = hp;
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.2f, 1.f, 1.2f, XMFLOAT3{ 0.f, 1.f, -0.5f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Cow ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
+			}
+
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pCowModel) delete(pCowModel);
+		}
+		break;
+		case OBJECT_TYPE::OB_PIG:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pPigModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Pig.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pPigModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Pig;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+			gameObj->hp = hp;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 0.8f, 1.2f, XMFLOAT3{ 0.f,1.f,-1.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Pig ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
+			}
+
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pPigModel) delete(pPigModel);
+		}
+		break;
+		case OBJECT_TYPE::OB_SPIDER:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pSpiderModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Spider.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pSpiderModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Spider;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+			gameObj->hp = hp;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Spider ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
+			}
+
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pSpiderModel) delete(pSpiderModel);
+		}
+		break;
+		case OBJECT_TYPE::OB_TOAD:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pToadModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Toad.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pToadModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Toad;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[7].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+			gameObj->hp = hp;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Toad ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
+			}
+
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pToadModel) delete(pToadModel);
+		}
+		break;
+		case OBJECT_TYPE::OB_WOLF:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pWolfModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Wolf.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pWolfModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Wolf;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[8].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+			gameObj->hp = hp;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Wolf ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
+			}
+
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pWolfModel) delete(pWolfModel);
+		}
+		break;
+		case OBJECT_TYPE::OB_BAT:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pBatModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Bat.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pBatModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Bat;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+			gameObj->hp = hp;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Bat ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
+			}
+
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pBatModel) delete(pBatModel);
+		}
+		break;
+		case OBJECT_TYPE::OB_RAPTOR:
+		{
+			int animate_count = 13;
+			CLoadedModelInfo* pRaptorModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/SK_Raptor.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pRaptorModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Raptor;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+
+			gameObj->SetOwningScene(m_pScene);
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+			gameObj->hp = hp;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Raptor ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
+			}
+
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pRaptorModel) delete(pRaptorModel);
+		}
+		break;
+		case OBJECT_TYPE::OB_GOLEM:
+		{
+			int animate_count = 17;
+			CLoadedModelInfo* pGolemModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/ForestGolem_Rd.bin", this);
+			CGameObject* gameObj = new CMonsterObject(m_pd3dDevice, m_pd3dUploadCommandList, pGolemModel, animate_count, this);
+			gameObj->m_objectType = GameObjectType::Golem;
+			gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+			gameObj->m_anitype = 0;
+			for (int j = 1; j < animate_count; ++j) {
+				gameObj->m_pSkinnedAnimationController->SetTrackAnimationSet(j, j);
+				gameObj->m_pSkinnedAnimationController->SetTrackEnable(j, false);
+			}
+
+			{
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[9].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[10].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[11].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[12].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[13].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[14].SetAnimationType(ANIMATION_TYPE_ONCE);
+				gameObj->m_pSkinnedAnimationController->m_pAnimationTracks[15].SetAnimationType(ANIMATION_TYPE_ONCE);
+			}
+			gameObj->m_pSkinnedAnimationController->SetAnimationSpeed(0.5f);
+			gameObj->SetOwningScene(m_pScene);
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+			gameObj->hp = hp;
+
+			gameObj->m_treecount = m_pScene->tree_obj_count;
+			gameObj->SetTerraindata(m_pScene->m_pTerrain);
+
+
+			auto t_obj = std::make_unique<tree_obj>(m_pScene->tree_obj_count++, gameObj->m_worldOBB.Center);
+			m_pScene->octree.insert(std::move(t_obj));
+
+			gameObj->SetOBB(1.f, 1.f, 1.f, XMFLOAT3{ 0.f,0.f,0.f });
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+			auto it = std::find(gameobj_list.begin(), gameobj_list.end(), gameObj->m_objectType);
+			if (it == gameobj_list.end()) {
+				gameobj_list.push_back(gameObj->m_objectType);
+				NetworkManager& nw = NetworkManager::GetInstance();
+				OBJ_OBB_PACKET p;
+				auto& obb = gameObj->GetBossOBB();
+				p.Center.x = obb.Center.x;
+				p.Center.y = obb.Center.y;
+				p.Center.z = obb.Center.z;
+				p.Extents.x = obb.Extents.x;
+				p.Extents.y = obb.Extents.y;
+				p.Extents.z = obb.Extents.z;
+				p.Orientation.x = obb.Orientation.x;
+				p.Orientation.y = obb.Orientation.y;
+				p.Orientation.z = obb.Orientation.z;
+				p.Orientation.w = obb.Orientation.w;
+				p.oid = id;
+				p.type = static_cast<char>(E_PACKET::E_O_SETOBB);
+				p.size = sizeof(OBJ_OBB_PACKET);
+				nw.PushSendQueue(p, p.size);
+				std::ostringstream oss;
+				oss << "--- Sending OBB Packet ---\n"
+					<< "--- Golem ---\n"
+					<< "  Center:    (" << p.Center.x << ", " << p.Center.y << ", " << p.Center.z << ")\n"
+					<< "  Extents:   (" << p.Extents.x << ", " << p.Extents.y << ", " << p.Extents.z << ")\n"
+					<< "  Orient:    (" << p.Orientation.x << ", " << p.Orientation.y << ", "
+					<< p.Orientation.z << ", " << p.Orientation.w << ")\n"
+					<< "--------------------------\n";
+
+				OutputDebugStringA(oss.str().c_str());
+			}
+
+			if (gameObj->m_pSkinnedAnimationController) gameObj->PropagateAnimController(gameObj->m_pSkinnedAnimationController);
+			m_pScene->m_listGameObjects.emplace_back(gameObj);
+			m_pScene->m_vGameObjects.emplace_back(gameObj);
+			if (pGolemModel) delete(pGolemModel);
+		}
+		break;
+		case OBJECT_TYPE::ST_WOODWALL:
+		{
+			std::shared_ptr<CGameObject> prefab;
+			prefab = m_pResourceManager->GetPrefab("wood_wall");
+
+			CGameObject* gameObj = prefab->Clone();
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, -1.0f, 0.0f));
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+			m_pScene->m_vConstructionObjects.push_back(gameObj);
+		}
+		break;
+		case OBJECT_TYPE::ST_FURNACE:
+		{
+			std::shared_ptr<CGameObject> prefab;
+			prefab = m_pResourceManager->GetPrefab("furnace");
+
+			CGameObject* gameObj = prefab->Clone();
+
+			gameObj->SetLook(XMFLOAT3{ look.x, look.y, look.z });
+			gameObj->SetRight(XMFLOAT3{ right.x, right.y, right.z });
+			gameObj->SetUp(XMFLOAT3{ up.x, up.y, up.z });
+			gameObj->SetPosition(position.x, position.y, position.z);
+			gameObj->m_id = id;
+
+			gameObj->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, 0.0f, 0.0f));
+			gameObj->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+			m_pScene->m_vConstructionObjects.push_back(gameObj);
+
+			for (int i = 4; i < m_pScene->m_nLights; ++i) // 4번부터 화로 조명
+			{
+				// 꺼져있는 조명을 찾으면
+				if (!m_pScene->m_pLights[i].m_bEnable)
+				{
+					m_pScene->m_pLights[i].m_bEnable = true;
+
+					auto& f4x4 = gameObj->m_xmf4x4ToParent;
+					f4x4._42 += 20.0f;
+					m_pScene->m_pLights[i].m_xmf3Position.x = f4x4._41;
+					m_pScene->m_pLights[i].m_xmf3Position.y = f4x4._42;
+					m_pScene->m_pLights[i].m_xmf3Position.z = f4x4._43;
+					break;
+				}
+			}
+		}
+		break;
+		default:
+			break;
+		}
+	}
+	else
+	{
+		//OutputDebugString(L"Error: Scene is not initialized.\n");
+	}
+}
+
 #include <map>
 
 void CGameFramework::ProcessInput()
@@ -805,164 +2115,222 @@ void CGameFramework::ProcessInput()
 	static std::map<UCHAR, bool> keyPressed; // 키별로 눌림 상태를 저장하는 맵
 	static std::map<UCHAR, bool> toggleStates; // 키별로 토글 상태를 저장하는 맵
 	bool bProcessedByScene = false;
-
-	if (GetKeyboardState(pKeysBuffer) && m_pScene) bProcessedByScene = m_pScene->ProcessInput(pKeysBuffer);
-	if (!bProcessedByScene && m_pPlayer)
-	{
-		float cxDelta = 0.0f, cyDelta = 0.0f;
-		POINT ptCursorPos;
-		if (GetCapture() == m_hWnd)
+	if (ShowInventory == false && ShowCraftingUI == false && ShowFurnaceUI==false) {
+		if (GetKeyboardState(pKeysBuffer) && m_pScene) bProcessedByScene = m_pScene->ProcessInput(pKeysBuffer);
+		if (!bProcessedByScene && m_pPlayer)
 		{
-			SetCursor(NULL);
-			GetCursorPos(&ptCursorPos);
-			cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
-			cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
-			SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
-		}
-
-		PlayerInputData inputData;
-
-		inputData.MoveForward = (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0);
-		inputData.MoveBackward = (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0);
-		inputData.WalkLeft = (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0);
-		inputData.WalkRight = (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0);
-		inputData.Jump = (pKeysBuffer[VK_SPACE] & 0xF0);
-		inputData.Attack = (pKeysBuffer['F'] & 0xF0); // 'F' 키를 Attack 으로 매핑 (예시)
-		// inputData.Interact = (pKeysBuffer['E'] & 0xF0); // 'E' 키를 Interact 로 매핑 (필요시)
-		inputData.Run = (pKeysBuffer[VK_SHIFT] & 0xF0); // Shift 키를 Run 으로 매핑
-
-		if (m_pPlayer && m_pPlayer->m_pStateMachine) // 플레이어와 상태머신 유효성 검사
-		{
-			m_pPlayer->m_pStateMachine->HandleInput(inputData);
-		}
-
-		
-		DWORD dwDirection = 0;
-		if (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0) dwDirection |= DIR_FORWARD;
-		if (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
-		if (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0) dwDirection |= DIR_LEFT;
-		if (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
-		if (pKeysBuffer[VK_SPACE] & 0xF0) dwDirection |= DIR_UP;
-		if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
-		else m_pPlayer->keyInput(pKeysBuffer);
-		
-
-		// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
-		UCHAR toggleKeys[] = { 'R','1','2','3' /*, 다른 키들 */};
-		for (UCHAR key : toggleKeys)
-		{
-			if (pKeysBuffer[key] & 0xF0)
+			float cxDelta = 0.0f, cyDelta = 0.0f;
+			POINT ptCursorPos;
+			if (GetCapture() == m_hWnd)
 			{
-				if (!keyPressed[key])
+				SetCursor(NULL);
+				GetCursorPos(&ptCursorPos);
+				cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
+				cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
+				SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
+			}
+
+			PlayerInputData inputData;
+
+			inputData.MoveForward = (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0);
+			inputData.MoveBackward = (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0);
+			inputData.WalkLeft = (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0);
+			inputData.WalkRight = (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0);
+			inputData.Jump = (pKeysBuffer[VK_SPACE] & 0xF0);
+			inputData.Attack = (pKeysBuffer['F'] & 0xF0); // 'F' 키를 Attack 으로 매핑 (예시)
+			// inputData.Interact = (pKeysBuffer['E'] & 0xF0); // 'E' 키를 Interact 로 매핑 (필요시)
+			inputData.Run = (pKeysBuffer[VK_SHIFT] & 0xF0); // Shift 키를 Run 으로 매핑
+
+			if (m_pPlayer && m_pPlayer->m_pStateMachine) // 플레이어와 상태머신 유효성 검사
+			{
+				m_pPlayer->m_pStateMachine->HandleInput(inputData);
+			}
+
+
+			DWORD dwDirection = 0;
+			if (pKeysBuffer[VK_UP] & 0xF0 || pKeysBuffer['W'] & 0xF0) dwDirection |= DIR_FORWARD;
+			if (pKeysBuffer[VK_DOWN] & 0xF0 || pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
+			if (pKeysBuffer[VK_LEFT] & 0xF0 || pKeysBuffer['A'] & 0xF0) dwDirection |= DIR_LEFT;
+			if (pKeysBuffer[VK_RIGHT] & 0xF0 || pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
+			if (pKeysBuffer[VK_SPACE] & 0xF0) dwDirection |= DIR_UP;
+			if (pKeysBuffer[VK_SHIFT] & 0xF0) dwDirection |= DIR_DOWN;
+			else m_pPlayer->keyInput(pKeysBuffer);
+
+			//// 토글 처리할 키들을 배열 또는 다른 컨테이너에 저장
+			//UCHAR toggleKeys[] = { 'R','G','1','2','3','4' /*, 다른 키들 */ };
+			//for (UCHAR key : toggleKeys)
+			//{
+			//	if (pKeysBuffer[key] & 0xF0)
+			//	{
+			//		if (!keyPressed[key])
+			//		{
+			//			toggleStates[key] = !toggleStates[key];
+			//			keyPressed[key] = true;
+			//			// 토글된 상태에 따른 동작 수행
+			//			if (key == 'R')
+			//			{
+			//				obbRender = toggleStates[key];
+			//			}
+			//			if (key == '1')
+			//			{
+			//				m_pPlayer->EquipTool("iron_sword");
+			//			}
+			//			if (key == '2')
+			//			{
+			//				m_pPlayer->EquipTool("wooden_axe");
+			//			}
+			//			if (key == '3')
+			//			{
+			//				m_pPlayer->EquipTool("stone_pickaxe");
+			//			}
+			//			if (key == '4')
+			//			{
+			//				m_pPlayer->EquipTool("wooden_hammer");
+			//			}
+			//			// 다른 키에 대한 처리 추가
+			//		}
+			//	}
+			//	else
+			//	{
+			//		keyPressed[key] = false;
+			//	}
+			//}
+
+			for (int i = 0; i < 5; ++i)
+			{
+				if (pKeysBuffer['1' + i] & 0xF0)
 				{
-					toggleStates[key] = !toggleStates[key];
-					keyPressed[key] = true;
-					// 토글된 상태에 따른 동작 수행
-					if (key == 'R')
+					if (!keyPressed['1' + i])
 					{
-						obbRender = toggleStates[key];
-					}
+						if (m_SelectedHotbarIndex != i)
+						{
+							m_SelectedHotbarIndex = i;
+							InventorySlot& selectedSlot = m_inventorySlots[m_SelectedHotbarIndex];
 
-					if (key == '1')
-					{
-						m_pPlayer->m_pSword->isRender = true;
-						m_pPlayer->m_pAxe->isRender = false;
-						m_pPlayer->weaponType = WeaponType::Sword;
+							if (selectedSlot.IsEmpty())
+							{
+								// 빈 슬롯 선택 시 모든 도구 장착 해제
+								m_pPlayer->UnequipAllTools();
+							}
+							else
+							{
+								// 아이템 이름을 가져와서 EquipTool 함수에 그대로 전달
+								std::string itemName = selectedSlot.item->GetName();
+								m_pPlayer->EquipTool(itemName);
+							}
+						}
+						keyPressed['1' + i] = true;
 					}
-
-					if (key == '2')
-					{
-						m_pPlayer->m_pSword->isRender = false;
-						m_pPlayer->m_pAxe->isRender = true;
-						m_pPlayer->weaponType = WeaponType::Axe;
-					}
-
-					// 다른 키에 대한 처리 추가
+				}
+				else
+				{
+					keyPressed['1' + i] = false;
 				}
 			}
-			else
-			{
-				keyPressed[key] = false;
-			}
-		}
 
-		for (int i = 0; i < 5; ++i)
-		{
-			if (GetAsyncKeyState('1' + i) & 0x8000)
+			// 카메라 모드에 따른 입력 처리 (기존 코드와 동일)
+			if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
 			{
-				m_SelectedHotbarIndex = i;
-				break;
+				// 탑뷰: 마우스 휠로 줌인/줌아웃
+				// 실제로는 마우스 휠 이벤트를 처리하려면 별도의 메시지 처리가 필요할 수 있음
+				// 여기서는 예시로 키 입력으로 대체 (Q: 줌인, E: 줌아웃)
+				if (pKeysBuffer['Q'] & 0xF0) {
+					XMFLOAT3 offset = m_pCamera->GetOffset();
+					offset.y = max(20.0f, offset.y - 10.0f);
+					m_pCamera->SetOffset(offset);
+				}
+				if (pKeysBuffer['E'] & 0xF0) {
+					XMFLOAT3 offset = m_pCamera->GetOffset();
+					offset.y = min(200.0f, offset.y + 10.0f);  // 줌아웃, 최대 높이 200
+					m_pCamera->SetOffset(offset);
+				}
 			}
-		}
-		// 카메라 모드에 따른 입력 처리 (기존 코드와 동일)
-		if (m_pCamera->GetMode() == TOP_VIEW_CAMERA)
-		{
-			// 탑뷰: 마우스 휠로 줌인/줌아웃
-			// 실제로는 마우스 휠 이벤트를 처리하려면 별도의 메시지 처리가 필요할 수 있음
-			// 여기서는 예시로 키 입력으로 대체 (Q: 줌인, E: 줌아웃)
-			if (pKeysBuffer['Q'] & 0xF0) {
-				XMFLOAT3 offset = m_pCamera->GetOffset();
-				offset.y = max(20.0f, offset.y - 10.0f);
-				m_pCamera->SetOffset(offset);
-			}
-			if (pKeysBuffer['E'] & 0xF0) {
-				XMFLOAT3 offset = m_pCamera->GetOffset();
-				offset.y = min(200.0f, offset.y + 10.0f);  // 줌아웃, 최대 높이 200
-				m_pCamera->SetOffset(offset);
-			}
-		}
-		else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA || m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
-		{
-			// 자유 시점: 마우스로 회전
-			if (beforeInput != inputData)
+			else if (m_pCamera->GetMode() == FIRST_PERSON_CAMERA || m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
 			{
-				beforeInput = inputData;
-				auto& nwManager = NetworkManager::GetInstance();
-				INPUT_PACKET p;
-				// 변경
-				p.inputData.Attack = inputData.Attack;
-				p.inputData.Jump = inputData.Jump;
-				p.inputData.MoveBackward = inputData.MoveBackward;
-				p.inputData.MoveForward = inputData.MoveForward;
-				p.inputData.WalkLeft = inputData.WalkLeft;
-				p.inputData.WalkRight = inputData.WalkRight;
-				p.inputData.Run = inputData.Run;
-				p.inputData.Interact = inputData.Interact;
-				p.size = sizeof(INPUT_PACKET);
-				p.type = static_cast<char>(E_PACKET::E_P_INPUT);
-				nwManager.PushSendQueue(p, p.size);
-			}
-
-			if ( (cxDelta != 0.0f) || (cyDelta != 0.0f))
-			{
-				auto& nwManager = NetworkManager::GetInstance();
-
-				if (cxDelta || cyDelta)
+				// 자유 시점: 마우스로 회전
+				if (beforeInput != inputData)
 				{
-					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-						m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-					else
-						m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+					beforeInput = inputData;
+					auto& nwManager = NetworkManager::GetInstance();
+					INPUT_PACKET p;
+					// 변경
+					p.inputData.Attack = inputData.Attack;
+					p.inputData.Jump = inputData.Jump;
+					p.inputData.MoveBackward = inputData.MoveBackward;
+					p.inputData.MoveForward = inputData.MoveForward;
+					p.inputData.WalkLeft = inputData.WalkLeft;
+					p.inputData.WalkRight = inputData.WalkRight;
+					p.inputData.Run = inputData.Run;
+					p.inputData.Interact = inputData.Interact;
+					p.size = sizeof(INPUT_PACKET);
+					p.type = static_cast<char>(E_PACKET::E_P_INPUT);
+					nwManager.PushSendQueue(p, p.size);
+				}
+
+				if ((cxDelta != 0.0f) || (cyDelta != 0.0f))
+				{
+					auto& nwManager = NetworkManager::GetInstance();
+
+					if (cxDelta || cyDelta)
 					{
-						ROTATE_PACKET p;
-						auto& lookv = m_pPlayer->GetLookVector();
-						p.look.x = lookv.x;
-						p.look.y = lookv.y;
-						p.look.z = lookv.z;
-						auto& rightv = m_pPlayer->GetRightVector();
-						p.right.x = rightv.x;
-						p.right.y = rightv.y;
-						p.right.z = rightv.z;
-						auto& upv = m_pPlayer->GetUpVector();
-						p.up.x = upv.x;
-						p.up.y = upv.y;
-						p.up.z = upv.z;
-						p.size = sizeof(ROTATE_PACKET);
-						p.type = static_cast<char>(E_PACKET::E_P_ROTATE);
+						if (m_pPlayer->observe) {
+							float inputPitch = cyDelta; // 마우스 수직 이동으로 카메라 Pitch 제어
+							float inputYaw = cxDelta;   // 마우스 수평 이동으로 카메라 Yaw 제어
+							float inputRoll = 0.0f;     // Roll은 사용하지 않는다고 가정
 
-						nwManager.PushSendQueue(p, p.size);
+							float deltaCamPitch = 0.0f;
+							float deltaCamYaw = 0.0f;
+							float deltaCamRoll = 0.0f; // 필요시 Roll도 추가
+
+							if (inputPitch != 0.0f)
+							{
+								float previousCamPitch = m_pCamera->GetPitch();
+								m_pCamera->GetPitch() += inputPitch;
+								if (m_pCamera->GetPitch() > +89.0f) { m_pCamera->GetPitch() = +89.0f; }
+								if (m_pCamera->GetPitch() < -89.0f) { m_pCamera->GetPitch() = -89.0f; }
+								deltaCamPitch = m_pCamera->GetPitch() - previousCamPitch;
+							}
+							if (inputYaw != 0.0f)
+							{
+								m_pCamera->GetYaw() += inputYaw;
+								if (m_pCamera->GetYaw() > 360.0f) m_pCamera->GetYaw() -= 360.0f;
+								if (m_pCamera->GetYaw() < 0.0f) m_pCamera->GetYaw() += 360.0f;
+								deltaCamYaw = inputYaw;
+							}
+							// inputRoll에 대한 처리도 필요하다면 여기에 추가
+
+							// 수정된 CThirdPersonCamera::Rotate 함수 호출
+							m_pCamera->Rotate(deltaCamPitch, deltaCamYaw, deltaCamRoll);
+						}
+						else{
+							if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+								m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+							else
+								m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+						}
+
+
+						{
+							ROTATE_PACKET p;
+							auto& lookv = m_pPlayer->GetLookVector();
+							p.look.x = lookv.x;
+							p.look.y = lookv.y;
+							p.look.z = lookv.z;
+							auto& rightv = m_pPlayer->GetRightVector();
+							p.right.x = rightv.x;
+							p.right.y = rightv.y;
+							p.right.z = rightv.z;
+							auto& upv = m_pPlayer->GetUpVector();
+							p.up.x = upv.x;
+							p.up.y = upv.y;
+							p.up.z = upv.z;
+							p.size = sizeof(ROTATE_PACKET);
+							p.type = static_cast<char>(E_PACKET::E_P_ROTATE);
+
+							nwManager.PushSendQueue(p, p.size);
+						}
+
 					}
-
 				}
 			}
 		}
@@ -973,9 +2341,16 @@ void CGameFramework::AnimateObjects()
 {
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 
+	
+	if (m_pScene) m_pScene->UpdateLights(fTimeElapsed);
 	if (m_pScene) m_pScene->AnimateObjects(fTimeElapsed);
-
-	m_pPlayer->Animate(fTimeElapsed);
+	if (m_pPlayer) m_pPlayer->Animate(fTimeElapsed);
+	
+	if (m_fPlayerHitEffectAmount > 0.0f)
+	{
+		m_fPlayerHitEffectAmount -= fTimeElapsed * 1.5f; // 1.5는 감쇠 속도
+		if (m_fPlayerHitEffectAmount < 0.0f) m_fPlayerHitEffectAmount = 0.0f;
+	}
 }
 
 void CGameFramework::WaitForGpuComplete()
@@ -1009,17 +2384,20 @@ void CGameFramework::MoveToNextFrame()
 void CGameFramework::FrameAdvance()
 {    
 	if (m_logQueue.size() > 0) {
-		m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
-		while (m_logQueue.size() > 0) {
+		m_pd3dUploadCommandAllocator->Reset();
+		m_pd3dUploadCommandList->Reset(m_pd3dUploadCommandAllocator, NULL);
+		const int MAX_LOOP_SIZE = 1;
+		int loop_count = 0;
+		while (m_logQueue.size() > 0 || loop_count < MAX_LOOP_SIZE) {
 			auto log = m_logQueue.front();
 			m_logQueue.pop();
 			switch (log.packetType)
 			{
 			case E_PACKET::E_P_LOGIN:
 			{
-				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dCommandList, "Model/SK_Hu_M_FullBody.bin", this);
-				int animate_count = 15;
-				m_pScene->PlayerList[log.ID] = std::make_unique<UserObject>(m_pd3dDevice, m_pd3dCommandList, pUserModel, animate_count, this);
+				CLoadedModelInfo* pUserModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, m_pd3dUploadCommandList, "Model/Player.bin", this);
+				int animate_count = 16;
+				m_pScene->PlayerList[log.ID] = std::make_unique<UserObject>(m_pd3dDevice, m_pd3dUploadCommandList, pUserModel, animate_count, this);
 				m_pScene->PlayerList[log.ID]->m_objectType = GameObjectType::Player;
 				m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 				for (int j = 1; j < animate_count; ++j) {
@@ -1027,10 +2405,13 @@ void CGameFramework::FrameAdvance()
 					m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController->SetTrackEnable(j, false);
 				}
 				m_pScene->PlayerList[log.ID]->on_track = 0;
-				m_pScene->PlayerList[log.ID]->SetPosition(XMFLOAT3{ 1500.f,m_pScene->m_pTerrain->GetHeight(1500,1500) ,1500.f });
+				m_pScene->PlayerList[log.ID]->SetPosition(XMFLOAT3{ 8000.f,m_pScene->m_pTerrain->GetHeight(8000.f,8000.f) ,8000.f });
 				m_pScene->PlayerList[log.ID]->SetScale(10.0f, 10.0f, 10.0f);
 				m_pScene->PlayerList[log.ID]->SetTerraindata(m_pScene->m_pTerrain);
 				if (m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController) m_pScene->PlayerList[log.ID]->PropagateAnimController(m_pScene->PlayerList[log.ID]->m_pSkinnedAnimationController);
+
+
+				m_pScene->PlayerList[log.ID]->torchIndex = m_pScene->PlayerList.size() + 1;
 				if (pUserModel) delete(pUserModel);
 			}
 			break;
@@ -1042,15 +2423,42 @@ void CGameFramework::FrameAdvance()
 				}
 			}
 			break;
+			case E_PACKET::E_O_ADD:
+			{
+				std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+
+				auto it = std::find_if(m_pScene->m_vGameObjects.begin(), m_pScene->m_vGameObjects.end(),
+					[log](CGameObject* obj) { return obj && obj->m_id == log.id; });
+
+				auto it2 = std::find_if(m_pScene->m_listGameObjects.begin(), m_pScene->m_listGameObjects.end(),
+					[log](CGameObject* obj) { return obj && obj->m_id == log.id; });
+
+				if (it == m_pScene->m_vGameObjects.end() && it2 == m_pScene->m_listGameObjects.end()) {
+					AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id, log.hp);
+				}
+			}
+				break;
+			case E_PACKET::E_STRUCT_OBJ:
+			{
+				std::lock_guard<std::mutex> lock(m_pScene->m_Mutex);
+				AddObject(log.o_type, log.a_type, log.position, log.right, log.up, log.look, log.id, log.hp);
+			}
+			break;
 			default:
 				break;
 			}
+			loop_count++;
 		}
-		m_pd3dCommandList->Close();
-		ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList };
+
+		m_pd3dUploadCommandList->Close();
+		ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dUploadCommandList };
 		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
 		WaitForGpuComplete();
+
+		for (auto& obj : m_pScene->m_vGameObjects) {
+			if (obj) obj->ReleaseUploadBuffers();
+		}
 
 		for(auto& player : m_pScene->PlayerList)
 		{
@@ -1058,8 +2466,10 @@ void CGameFramework::FrameAdvance()
 		}
 	}
 
-	m_GameTimer.Tick(60.0f);
-
+	m_GameTimer.Tick(120.0f);
+	if (m_eGameState == GameState::InGame || m_eGameState == GameState::Lobby) {
+		m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
+	}
 	ProcessInput();
 	UpdateFurnace(m_GameTimer.GetTimeElapsed());
     AnimateObjects();
@@ -1067,35 +2477,111 @@ void CGameFramework::FrameAdvance()
 	if (m_pConstructionSystem->IsBuildMode()) {
 		m_pConstructionSystem->UpdatePreviewPosition(m_pCamera);
 	}
-	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
+
+
 
 	HRESULT hResult = m_pd3dCommandAllocator->Reset();
 	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
 
-
-	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
-	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
-	d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	d3dResourceBarrier.Transition.pResource = m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex];
-	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	d3dRtvCPUDescriptorHandle.ptr += (m_nSwapChainBufferIndex * ::gnRtvDescriptorIncrementSize);
-
+	D3D12_RESOURCE_BARRIER d3dResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_pd3dOffscreenTexture.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
+    
+    D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = GetDsvCPUDescriptorHandle();
+    m_pd3dCommandList->OMSetRenderTargets(1, &m_d3dOffscreenRtvCPUHandle, TRUE, &d3dDsvCPUDescriptorHandle);
+    
 	float pfClearColor[4] = { 0.0f, 0.125f, 0.3f, 1.0f };
-	m_pd3dCommandList->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, pfClearColor/*Colors::Azure*/, 0, NULL);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	m_pd3dCommandList->ClearRenderTargetView(m_d3dOffscreenRtvCPUHandle, pfClearColor, 0, NULL);
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
-
-	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
 	if (m_pScene) m_pScene->Render(m_pd3dCommandList, m_pCamera);
 
+
+
+	d3dResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = GetCurrentRtvCPUDescriptorHandle();
+	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, NULL);
+
+	CShader* pPostProcessShader = m_pShaderManager->GetShader("PostProcess");
+	m_pScene->SetGraphicsState(m_pd3dCommandList, pPostProcessShader);
+
+	m_pd3dCommandList->SetGraphicsRootDescriptorTable(0, GetOffscreenSrvGPUHandle());
+	m_pd3dCommandList->SetGraphicsRoot32BitConstants(1, 1, &m_fPlayerHitEffectAmount, 0);
+
+	m_pd3dCommandList->IASetVertexBuffers(0, 1, &m_d3dFullScreenQuadVBView);
+	m_pd3dCommandList->IASetIndexBuffer(&m_d3dFullScreenQuadIBView);
+	m_pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_pd3dCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+
+	
+	//{
+	//	if (m_pScene && m_pScene->GetSkyBox()) {
+	//		int textureCount = m_pScene->GetSkyBox()->GetTextureCount();
+	//		//OutputDebugString(std::format(L"[SkyBox] 텍스처 로드 개수: {}\n", textureCount).c_str());
+	//		if (textureCount > 0) {
+	//			m_nCurrentSkybox = (m_nCurrentSkybox + 1) % textureCount;
+	//			m_pScene->GetSkyBox()->SetSkyboxIndex(m_nCurrentSkybox);
+	//		}
+
+	//	}
+	//	lastEventTime = currentTime;
+	//}
+
+	//std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+	/////////////////////////////////////////////////////엔딩 카메라
+	if (m_eGameState == GameState::Ending) 
+	{
+		m_fEndingSequenceTimer += m_GameTimer.GetTimeElapsed();
+
+		if (m_pCamera)
+		{
+			// 1. 현재 카메라 위치를 가져옵니다.
+			XMFLOAT3 currentPos = m_pCamera->GetPosition();
+
+			// 2. 카메라가 올라갈 최대 높이를 설정합니다.
+			const float maxCameraHeight = 4000.0f;
+
+			// 3. 현재 높이가 최대 높이보다 낮을 때만 위로 이동합니다.
+			if (currentPos.y < maxCameraHeight)
+			{
+				float upwardSpeed = 50.0f * m_GameTimer.GetTimeElapsed(); // 상승 속도
+				currentPos.y += upwardSpeed;
+			}
+
+			// 4. 계산된 새 위치를 카메라에 설정합니다.
+			m_pCamera->SetPosition(currentPos);
+
+			// 5. 카메라가 항상 섬의 중심을 바라보도록 뷰 행렬을 새로 생성합니다.
+			m_pCamera->GenerateViewMatrix(currentPos, XMFLOAT3(5000.0f, 0.0f, 5000.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+		}
+	}
+	HitInfo lastHit = m_pPlayer->m_pStateMachine->GetAndClearLastHitInfo();
+	ObjectInfo objectHit = m_pPlayer->m_pStateMachine->GetLastObjectInfo();
+	if (lastHit.hasHit && m_pScene )
+	{
+		XMFLOAT3 pos = m_pPlayer->GetPosition();
+		// [수정] int 값을 CScene::ShardType으로 변환하여 전달합니다.
+		CScene::ShardType typeToSpawn = CScene::ShardType::Wood; // 기본값
+		if (lastHit.shardType == 1) {
+			typeToSpawn = CScene::ShardType::Wood;
+			pos.y += 15.0f;
+			pos.z += 5.0f;
+		}
+		else if (lastHit.shardType == 2) {
+			typeToSpawn = CScene::ShardType::Rock;
+			pos = lastHit.position;
+		}
+
+		// 변환된 타입으로 파편 생성을 요청합니다.
+		m_pScene->SpawnResourceShards(pos, typeToSpawn);
+	}
+	if (objectHit.hasHit && m_pScene)
+	{
+		m_pScene->SpawnBloodEffect(objectHit.position,objectHit.x,objectHit.y,objectHit.z);
+	}
+
+	//m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 #endif	
@@ -1103,132 +2589,146 @@ void CGameFramework::FrameAdvance()
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
+
+	// 도구 위치 잡기용 추가
+	//OnImGuiRender();
+	//UpdateToolTransforms();
+	//--------------------
 	
 	///////////////////////////////////////////////////////////// 아이템 핫바
-	const int HotbarCount = 5;
-	const float SlotSize = 54.0f;
-	const float SlotSpacing = 6.0f;
-	const float ExtraPadding = 18.0f;
-
-	const float TotalWidth = (SlotSize * HotbarCount) + (SlotSpacing * (HotbarCount - 1));
-	const float WindowWidth = TotalWidth + ExtraPadding;
-
+	
 	ImVec2 displaySize = ImGui::GetIO().DisplaySize;
-	ImVec2 hotbarPos = ImVec2(30.0f, displaySize.y - 80.0f);
 
-	ImGui::SetNextWindowPos(hotbarPos);
-	ImGui::SetNextWindowSize(ImVec2(WindowWidth, 65));
-	ImGui::Begin("Hotbar", nullptr,
-		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
-		ImGuiWindowFlags_NoBackground);
+	// --- 1. 핫바 UI (화면 왼쪽 하단) ---
+	const int HotbarCount = 5;
+	const float SlotSize = displaySize.x * 0.03f; // 화면 너비의 3%
+	const float SlotSpacing = displaySize.x * 0.005f;
+	const float WindowWidth = (SlotSize * HotbarCount) + (SlotSpacing * (HotbarCount - 1)) + 20.0f;
+	const float WindowHeight = SlotSize + 20.0f;
 
-	ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+	// 위치를 화면 너비와 높이에 대한 비율로 설정
+	ImVec2 hotbarPos = ImVec2(displaySize.x * 0.02f, displaySize.y * 0.9f);
 
-	for (int i = 0; i < HotbarCount; ++i)
-	{
-		if (i > 0) ImGui::SameLine();
+	if (m_eGameState == GameState::InGame) {
+		ImGui::SetNextWindowPos(hotbarPos);
+		ImGui::SetNextWindowSize(ImVec2(WindowWidth, 65));
+		ImGui::Begin("Hotbar", nullptr,
+			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoBackground);
 
-		ImGui::PushID(i);
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
 
-		if (i == m_SelectedHotbarIndex)
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 1.0f, 0.0f, 0.5f)); // 노란색 반투명
-
-		if (!m_inventorySlots[i].IsEmpty())
+		for (int i = 0; i < HotbarCount; ++i)
 		{
-			// 버튼 먼저 생성 (테두리 유지)
-			ImVec2 pos = ImGui::GetCursorScreenPos();
-			ImGui::Button(" ", ImVec2(SlotSize, SlotSize));
+			if (i > 0) ImGui::SameLine();
 
-			// 버튼 위에 아이콘을 따로 그리기
-			ImTextureID icon = m_inventorySlots[i].item->GetIconHandle();
-			if (icon)
+			ImGui::PushID(i);
+
+			if (i == m_SelectedHotbarIndex)
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 1.0f, 0.0f, 0.5f)); // 노란색 반투명
+
+			if (!m_inventorySlots[i].IsEmpty())
 			{
-				ImGui::GetWindowDrawList()->AddImage(
-					icon,
-					pos,
-					ImVec2(pos.x + SlotSize, pos.y + SlotSize)
-				);
+				// 버튼 먼저 생성 (테두리 유지)
+				ImVec2 pos = ImGui::GetCursorScreenPos();
+				ImGui::Button(" ", ImVec2(SlotSize, SlotSize));
+
+				// 버튼 위에 아이콘을 따로 그리기
+				ImTextureID icon = m_inventorySlots[i].item->GetIconHandle();
+				if (icon)
+				{
+					ImGui::GetWindowDrawList()->AddImage(
+						icon,
+						pos,
+						ImVec2(pos.x + SlotSize, pos.y + SlotSize)
+					);
+				}
 			}
+			else
+			{
+				ImGui::Button(" ", ImVec2(SlotSize, SlotSize)); // 빈 슬롯은 그냥 테두리만
+			}
+			if (i == m_SelectedHotbarIndex)
+				ImGui::PopStyleColor();
+
+			ImGui::PopID();
 		}
-		else
+
+
+		ImGui::PopStyleVar();
+		ImGui::End();
+
+
+
+
+		//////////////////////////////////////////////////플레이어 UI
+
 		{
-			ImGui::Button(" ", ImVec2(SlotSize, SlotSize)); // 빈 슬롯은 그냥 테두리만
-		}
-		if (i == m_SelectedHotbarIndex)
+			const float hudWidth = displaySize.x * 0.18f;
+			const float hudHeight = displaySize.y * 0.15f;
+			const float barWidth = displaySize.x * 0.07f;
+
+			// [추가] hudHeight를 기준으로 ProgressBar의 높이를 계산합니다.
+			const float barHeight = hudHeight * 0.15f; // 예: HUD 창 높이의 15%
+
+			ImVec2 hudPos = ImVec2(displaySize.x - hudWidth - (displaySize.x * 0.02f), displaySize.y - hudHeight - (displaySize.y * 0.01f));
+
+			ImGui::SetNextWindowPos(hudPos);
+			ImGui::SetNextWindowSize(ImVec2(hudWidth, hudHeight));
+			ImGui::Begin("StatusBars", nullptr,
+				ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+				ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+				ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoCollapse);
+
+
+			ImGui::BeginGroup();
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Hp"); // 체력 
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+			ImGui::ProgressBar(
+				(float)m_pPlayer->Playerhp / (float)m_pPlayer->Maxhp,
+				ImVec2(barWidth, barHeight),
+				std::to_string(m_pPlayer->Playerhp).c_str()
+			);
 			ImGui::PopStyleColor();
+			ImGui::EndGroup();
 
-		ImGui::PopID();
+			ImGui::SameLine(0.0f, 50.0f);
+			ImGui::BeginGroup();
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Stamina"); // 스태미너
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.5f, 1.0f, 1.0f));
+			ImGui::ProgressBar(
+				(float)m_pPlayer->Playerstamina / (float)m_pPlayer->Maxstamina,
+				ImVec2(barWidth, barHeight),
+				std::to_string(m_pPlayer->Playerstamina).c_str()
+			);
+			ImGui::PopStyleColor();
+			ImGui::EndGroup();
+
+
+			ImGui::BeginGroup();
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Hunger"); // 허기
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
+			ImGui::ProgressBar(m_pPlayer->PlayerHunger / 100.f, ImVec2(barWidth, barHeight));
+			ImGui::PopStyleColor();
+			ImGui::EndGroup();
+
+			ImGui::SameLine(0.0f, 50.0f);
+
+			ImGui::BeginGroup();
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Thirst"); // 갈증
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 0.2f, 1.0f, 1.0f));
+			ImGui::ProgressBar(m_pPlayer->PlayerThirst / 100.f, ImVec2(barWidth, barHeight));
+			ImGui::PopStyleColor();
+			ImGui::EndGroup();
+
+			ImGui::End();
+		}
 	}
-
-
-	ImGui::PopStyleVar();
-	ImGui::End();
-
-
-
-	//////////////////////////////////////////////////플레이어 UI
-
-	const float hudWidth = 300.0f;
-	const float hudHeight = 100.0f;
-	const float barWidth = 100.0f;
-	const float barHeight = 15.0f;
-
-	ImVec2 hudPos = ImVec2(displaySize.x - hudWidth+10.0f, displaySize.y - hudHeight);
-
-	ImGui::SetNextWindowPos(hudPos);
-	ImGui::SetNextWindowSize(ImVec2(hudWidth, hudHeight));
-	ImGui::Begin("StatusBars", nullptr,
-		ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
-		ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoCollapse);
-
-	
-	ImGui::BeginGroup();
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Hp"); // 체력 
-	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-	ImGui::ProgressBar(
-		(float)m_pPlayer->Playerhp / (float)m_pPlayer->Maxhp,
-		ImVec2(barWidth, barHeight),
-		std::to_string(m_pPlayer->Playerhp).c_str()
-	);
-	ImGui::PopStyleColor();
-	ImGui::EndGroup();
-
-	ImGui::SameLine(0.0f, 50.0f); 
-	ImGui::BeginGroup();
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Stamina"); // 스태미너
-	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.0f, 0.5f, 1.0f, 1.0f));
-	ImGui::ProgressBar(
-		(float)m_pPlayer->Playerstamina / (float)m_pPlayer->Maxstamina,
-		ImVec2(barWidth, barHeight),
-		std::to_string(m_pPlayer->Playerstamina).c_str()
-	);
-	ImGui::PopStyleColor();
-	ImGui::EndGroup();
-
-	
-	ImGui::BeginGroup();
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Hunger"); // 허기
-	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
-	ImGui::ProgressBar(m_pPlayer->PlayerHunger, ImVec2(barWidth, barHeight));
-	ImGui::PopStyleColor();
-	ImGui::EndGroup();
-
-	ImGui::SameLine(0.0f, 50.0f);
-
-	ImGui::BeginGroup();
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Thirst"); // 갈증
-	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.4f, 0.2f, 1.0f, 1.0f));
-	ImGui::ProgressBar(m_pPlayer->PlayerThirst, ImVec2(barWidth, barHeight));
-	ImGui::PopStyleColor();
-	ImGui::EndGroup();
-
-	ImGui::End();
 	//////////////////////////////////////////////////////// 인벤토리
 	if (ShowInventory)
 	{
@@ -1259,35 +2759,23 @@ void CGameFramework::FrameAdvance()
 			for (int i = 0; i < m_inventorySlots.size(); ++i)
 			{
 				ImGui::PushID(i);
-
-				bool isClicked = false;
-
 				ImVec2 pos = ImGui::GetCursorScreenPos();
-				ImGui::Button(" ", ImVec2(slotSize, slotSize)); // 버튼만 깔아줌 (배경 유지용)
+				ImGui::InvisibleButton(std::to_string(i).c_str(), ImVec2(slotSize, slotSize));
 
+				// 2. 슬롯의 배경을 그려줍니다. (선택 사항이지만, 명확성을 위해 추가)
+				ImGui::GetWindowDrawList()->AddRectFilled(pos, ImVec2(pos.x + slotSize, pos.y + slotSize), IM_COL32(50, 50, 50, 255));
+
+				// 3. 아이템이 있다면 그 위에 아이콘과 수량을 덮어 그립니다.
 				if (!m_inventorySlots[i].IsEmpty())
 				{
-					// 아이콘 출력
 					Item* item = m_inventorySlots[i].item.get();
 					ImTextureID icon = item->GetIconHandle();
-					if (icon)
-					{
-						ImGui::GetWindowDrawList()->AddImage(
-							icon,
-							pos,
-							ImVec2(pos.x + slotSize, pos.y + slotSize)
-						);
-					}
 
-					// 수량 텍스트 표시
-					ImVec2 min = pos;
-					ImVec2 max = ImVec2(pos.x + slotSize, pos.y + slotSize);
-					ImVec2 textPos = ImVec2(min.x + 2, max.y - 18);
-					ImGui::GetWindowDrawList()->AddText(
-						textPos,
-						IM_COL32_WHITE,
-						std::to_string(m_inventorySlots[i].quantity).c_str()
-					);
+					ImGui::GetWindowDrawList()->AddImage(icon, pos, ImVec2(pos.x + slotSize, pos.y + slotSize));
+
+					float font_size = ImGui::GetFontSize();
+					ImVec2 textPos = ImVec2(pos.x + 5, pos.y + slotSize - font_size - 5);
+					ImGui::GetWindowDrawList()->AddText(textPos, IM_COL32_WHITE, std::to_string(m_inventorySlots[i].quantity).c_str());
 				}
 
 				// ✅ 선택 테두리 강조
@@ -1330,6 +2818,77 @@ void CGameFramework::FrameAdvance()
 						if (selectedSlotIndex == -1) {
 							selectedSlotIndex = i;
 						}
+						else if (selectedSlotIndex == i) {
+							Item* item = m_inventorySlots[i].item.get();
+							if (!item) return;
+
+							std::string name = item->GetName();
+							if (name == "pork") {
+								m_inventorySlots[i].quantity--;
+								if (m_inventorySlots[i].quantity <= 0) m_inventorySlots[i].item = nullptr;
+								{
+									// 능력치 증가
+									m_pPlayer->Playerhp += 10;
+									if(m_pPlayer->Playerhp > m_pPlayer->Maxhp) m_pPlayer->Playerhp = m_pPlayer->Maxhp;
+									m_pPlayer->Playerstamina += 5;
+									if(m_pPlayer->Playerstamina > m_pPlayer->Maxstamina) m_pPlayer->Playerstamina = m_pPlayer->Maxstamina;
+									m_pPlayer->PlayerHunger += 10;
+									if (m_pPlayer->PlayerHunger > 100) m_pPlayer->PlayerHunger = 100;
+									m_pPlayer->PlayerThirst += 5;
+									if (m_pPlayer->PlayerThirst > 100) m_pPlayer->PlayerThirst = 100;
+
+									auto& nwManager = NetworkManager::GetInstance();
+									CHANGE_STAT_PACKET s_packet;
+									s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+									s_packet.size = sizeof(CHANGE_STAT_PACKET);
+									s_packet.stat = E_STAT::HP;
+									s_packet.value = m_pPlayer->Playerhp;
+									nwManager.PushSendQueue(s_packet, s_packet.size);
+									s_packet.stat = E_STAT::STAMINA;
+									s_packet.value = m_pPlayer->Playerstamina;
+									nwManager.PushSendQueue(s_packet, s_packet.size);
+									s_packet.stat = E_STAT::HUNGER;
+									s_packet.value = m_pPlayer->PlayerHunger;
+									nwManager.PushSendQueue(s_packet, s_packet.size);
+									s_packet.stat = E_STAT::THIRST;
+									s_packet.value = m_pPlayer->PlayerThirst;
+									nwManager.PushSendQueue(s_packet, s_packet.size);
+								}
+							}
+							else if (name == "grill_pork") {
+								m_inventorySlots[i].quantity--;
+								if (m_inventorySlots[i].quantity <= 0) m_inventorySlots[i].item = nullptr;
+								{
+									// 능력치 증가
+									m_pPlayer->Playerhp += 25;
+									if (m_pPlayer->Playerhp > m_pPlayer->Maxhp) m_pPlayer->Playerhp = m_pPlayer->Maxhp;
+									m_pPlayer->Playerstamina += 20;
+									if (m_pPlayer->Playerstamina > m_pPlayer->Maxstamina) m_pPlayer->Playerstamina = m_pPlayer->Maxstamina;
+									m_pPlayer->PlayerHunger += 20;
+									if (m_pPlayer->PlayerHunger > 100) m_pPlayer->PlayerHunger = 100;
+									m_pPlayer->PlayerThirst += 10;
+									if (m_pPlayer->PlayerThirst > 100) m_pPlayer->PlayerThirst = 100;
+
+									auto& nwManager = NetworkManager::GetInstance();
+									CHANGE_STAT_PACKET s_packet;
+									s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+									s_packet.size = sizeof(CHANGE_STAT_PACKET);
+									s_packet.stat = E_STAT::HP;
+									s_packet.value = m_pPlayer->Playerhp;
+									nwManager.PushSendQueue(s_packet, s_packet.size);
+									s_packet.stat = E_STAT::STAMINA;
+									s_packet.value = m_pPlayer->Playerstamina;
+									nwManager.PushSendQueue(s_packet, s_packet.size);
+									s_packet.stat = E_STAT::HUNGER;
+									s_packet.value = m_pPlayer->PlayerHunger;
+									nwManager.PushSendQueue(s_packet, s_packet.size);
+									s_packet.stat = E_STAT::THIRST;
+									s_packet.value = m_pPlayer->PlayerThirst;
+									nwManager.PushSendQueue(s_packet, s_packet.size);
+								}
+							}
+							selectedSlotIndex = -1;
+						}
 						else {
 							std::swap(m_inventorySlots[selectedSlotIndex], m_inventorySlots[i]);
 							selectedSlotIndex = -1;
@@ -1350,13 +2909,26 @@ void CGameFramework::FrameAdvance()
 
 		// 오른쪽: 플레이어 스탯
 		{
+			auto& nwManager = NetworkManager::GetInstance();
 			ImGui::Text("LV: %d", m_pPlayer->PlayerLevel);
 			ImGui::Text("STATUS:");
 
 			ImGui::BulletText("HP: %d / %d", m_pPlayer->Playerhp, m_pPlayer->Maxhp);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
-				if (ImGui::Button("+##hp")) { m_pPlayer->Maxhp += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerhp += 10; }
+				if (ImGui::Button("+##hp")) { 
+					m_pPlayer->Maxhp += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerhp += 10; 
+					CHANGE_STAT_PACKET s_packet;
+					s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+					s_packet.size = sizeof(CHANGE_STAT_PACKET);
+					s_packet.stat = E_STAT::MAX_HP;
+					s_packet.value = m_pPlayer->Maxhp;
+					nwManager.PushSendQueue(s_packet, s_packet.size);
+					s_packet.stat = E_STAT::HP;
+					s_packet.value = m_pPlayer->Playerhp;
+					nwManager.PushSendQueue(s_packet, s_packet.size);
+					m_pPlayer->UpdateTraits();
+				}
 			}
 			else {
 				ImGui::BeginDisabled(); ImGui::Button("+##hp"); ImGui::EndDisabled();
@@ -1365,7 +2937,19 @@ void CGameFramework::FrameAdvance()
 			ImGui::BulletText("STAMINA: %d / %d", m_pPlayer->Playerstamina, m_pPlayer->Maxstamina);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
-				if (ImGui::Button("+##stamina")) { m_pPlayer->Maxstamina += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerstamina += 10; }
+				if (ImGui::Button("+##stamina")) { 
+					m_pPlayer->Maxstamina += 10; m_pPlayer->StatPoint--; m_pPlayer->Playerstamina += 10; 
+					CHANGE_STAT_PACKET s_packet;
+					s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+					s_packet.size = sizeof(CHANGE_STAT_PACKET);
+					s_packet.stat = E_STAT::MAX_STAMINA;
+					s_packet.value = m_pPlayer->Maxstamina;
+					nwManager.PushSendQueue(s_packet, s_packet.size);
+					s_packet.stat = E_STAT::STAMINA;
+					s_packet.value = m_pPlayer->Playerstamina;
+					nwManager.PushSendQueue(s_packet, s_packet.size);
+					m_pPlayer->UpdateTraits();
+				}
 			}
 			else {
 				ImGui::BeginDisabled(); ImGui::Button("+##stamina"); ImGui::EndDisabled();
@@ -1374,7 +2958,7 @@ void CGameFramework::FrameAdvance()
 			ImGui::BulletText("ATK: %d", m_pPlayer->PlayerAttack);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
-				if (ImGui::Button("+##atk")) { m_pPlayer->PlayerAttack += 1; m_pPlayer->StatPoint--; }
+				if (ImGui::Button("+##atk")) { m_pPlayer->PlayerAttack += 1; m_pPlayer->StatPoint--; m_pPlayer->UpdateTraits(); }
 			}
 			else {
 				ImGui::BeginDisabled(); ImGui::Button("+##atk"); ImGui::EndDisabled();
@@ -1383,7 +2967,16 @@ void CGameFramework::FrameAdvance()
 			ImGui::BulletText("SPEED: %.1f", m_pPlayer->PlayerSpeed);
 			ImGui::SameLine();
 			if (m_pPlayer->StatPoint > 0) {
-				if (ImGui::Button("+##speed")) { m_pPlayer->PlayerSpeed += 0.2f; m_pPlayer->StatPoint--; }
+				if (ImGui::Button("+##speed")) { 
+					m_pPlayer->PlayerSpeed += 0.2f; m_pPlayer->StatPoint--; m_pPlayer->PlayerSpeedLevel++;
+					CHANGE_STAT_PACKET s_packet;
+					s_packet.type = static_cast<char>(E_PACKET::E_P_CHANGE_STAT);
+					s_packet.size = sizeof(CHANGE_STAT_PACKET);
+					s_packet.stat = E_STAT::SPEED;
+					s_packet.value = m_pPlayer->PlayerSpeedLevel;
+					nwManager.PushSendQueue(s_packet, s_packet.size);
+					m_pPlayer->UpdateTraits();
+				}
 			}
 			else {
 				ImGui::BeginDisabled(); ImGui::Button("+##speed"); ImGui::EndDisabled();
@@ -1466,58 +3059,174 @@ void CGameFramework::FrameAdvance()
 		ImGui::End();
 	}
 	////////////////////////////////////////////////////////////////////////////////////////////////////// 건축 UI
-	if (BuildMode)
+	if (m_bBuildMode)
 	{
-		ImGui::SetNextWindowPos(ImVec2(100, 100));
-		ImGui::SetNextWindowSize(ImVec2(200, 200));
-		ImGui::Begin("Build Mode", nullptr,
-			ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
+		
+		ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver); 
+		ImGui::SetNextWindowSize(ImVec2(220, 300), ImGuiCond_FirstUseEver); 
+		ImGui::Begin("Build Mode", &m_bBuildMode, ImGuiWindowFlags_NoCollapse);
 
-		static int selected = -1;
-		const char* buildings[] = { "나무 벽", "나무 문", "나무 바닥", "계단" };
-		//static bool bPrevBuildMode = false;
+		ImGui::Text("Buildable Items");
+		ImGui::Separator();
 
-		if (BuildMode && !bPrevBuildMode)
+		
+		struct BuildableItem {
+			const char* displayName;
+			const char* prefabKey;   
+		};
+		static std::vector<BuildableItem> buildableItems = {
+			{ "wood wall", "wood_wall" },
+			 { "furnace",   "furnace" },
+			// { "나무 문", "wood_door" }
+		};
+
+		
+		for (int i = 0; i < buildableItems.size(); i++)
 		{
-			m_pConstructionSystem->EnterBuildMode(); // 상태 전환 시 한 번만 실행
-		}
-		bPrevBuildMode = BuildMode;
-		/*
-		for (int i = 0; i < IM_ARRAYSIZE(buildings); i++)
-		{
-			if (ImGui::Selectable(buildings[i], selected == i))
+			
+			if (ImGui::Selectable(buildableItems[i].displayName, m_nSelectedBuildingIndex == i))
 			{
-				selected = i;
-
-				// 1. 문자열 매핑
-				std::string buildingKey;
-				if (selected == 0) buildingKey = "pine";
-				else if (selected == 1) buildingKey = "door";
-				else if (selected == 2) buildingKey = "floor";
-				else if (selected == 3) buildingKey = "stair";
-
-
-				// 3. 미리보기 재생성
+				// 이전에 선택한 것과 다른 것을 선택했다면
+				if (m_nSelectedBuildingIndex != i) {
+					if (CheckBuildMaterials(buildableItems[i].prefabKey)) {
+						m_nSelectedBuildingIndex = i;
+						m_bIsPreviewVisible = true; // 프리뷰를 보이게 설정
+						// ConstructionSystem에 선택된 프리팹 이름으로 건설 모드 진입을 알림
+						m_pConstructionSystem->EnterBuildMode(buildableItems[i].prefabKey, m_pCamera);
+					}
+				}
+				else { // 이미 선택된 것을 다시 클릭하면 선택 해제
+					m_nSelectedBuildingIndex = -1;
+					m_bIsPreviewVisible = false; // 프리뷰를 숨김
+					m_pConstructionSystem->ExitBuildMode();
+				}
 			}
 		}
-		*/
 
-		if (m_pConstructionSystem->IsBuildMode())
+		ImGui::Separator();
+
+		// --- 설치(R) 및 취소(B) 버튼 ---
+		// 프리뷰가 보일 때만 설치 버튼 활성화
+		if (!m_bIsPreviewVisible) ImGui::BeginDisabled();
+		if (ImGui::Button("Install (R)"))
 		{
-			XMFLOAT3 previewPos = m_pConstructionSystem->GetPreviewPosition(); // ★ getter 함수 필요
-			ImGui::Text("PreviewPos: %.2f, % .2f, % .2f", previewPos.x, previewPos.y, previewPos.z);
+			// 1. ConstructionSystem에 설치를 요청하고 복제할 원본 오브젝트를 받아옵니다.
+			const char* prefabKeyToConsume = buildableItems[m_nSelectedBuildingIndex].prefabKey;
+			ConsumeBuildMaterials(prefabKeyToConsume);
+			CGameObject* pObjectToClone = m_pConstructionSystem->ConfirmPlacement();
+			XMFLOAT3 previewPos = pObjectToClone->GetPosition();
+
+
+			// 2. 받아온 오브젝트가 유효하면 설치 절차를 진행합니다.
+			if (pObjectToClone)
+			{
+				XMFLOAT4X4 previewWorldMatrix = pObjectToClone->m_xmf4x4World;
+				// --- GPU 리소스를 안전하게 생성하는 로직 시작 ---
+				ID3D12CommandAllocator* pUploadAllocator = m_pd3dUploadCommandAllocator;
+				ID3D12GraphicsCommandList* pUploadCmdList = m_pd3dUploadCommandList;
+
+				pUploadAllocator->Reset();
+				pUploadCmdList->Reset(pUploadAllocator, NULL);
+
+				CGameObject* pInstalledObject = pObjectToClone->Clone();
+
+				pInstalledObject->SetOBB(1.0f, 1.0f, 1.0f, XMFLOAT3(0.0f, -1.0f, 0.0f));
+				pInstalledObject->InitializeOBBResources(m_pd3dDevice, m_pd3dUploadCommandList);
+
+				pUploadCmdList->Close();
+				ID3D12CommandList* ppd3dCommandLists[] = { pUploadCmdList };
+				m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+				WaitForGpuComplete();
+
+				if (pInstalledObject) pInstalledObject->ReleaseUploadBuffers();
+				// --- GPU 리소스 생성 로직 끝 ---
+
+				// 3. 성공적으로 생성된 오브젝트를 Scene에 최종 추가합니다.
+				if (pInstalledObject && m_pScene)
+				{
+					pInstalledObject->m_xmf4x4ToParent = previewWorldMatrix;
+					pInstalledObject->m_xmf4x4World = previewWorldMatrix;
+
+					pInstalledObject->SetPosition(previewPos);
+					pInstalledObject->isRender = true;
+					//m_pScene->m_vGameObjects.emplace_back(pInstalledObject);
+					m_pScene->m_vConstructionObjects.emplace_back(pInstalledObject);
+					{
+						auto& nwManager = NetworkManager::GetInstance();
+						STRUCT_OBJ_PACKET s_packet;
+						s_packet.type = static_cast<char>(E_PACKET::E_STRUCT_OBJ);
+						s_packet.size = sizeof(STRUCT_OBJ_PACKET);
+
+						if(m_nSelectedBuildingIndex == 0)
+							s_packet.o_type = OBJECT_TYPE::ST_WOODWALL;
+						else if(m_nSelectedBuildingIndex == 1)
+							s_packet.o_type = OBJECT_TYPE::ST_FURNACE;
+						auto& obb = pInstalledObject->GetOBB();
+						s_packet.Center.x = obb.Center.x;
+						s_packet.Center.y = obb.Center.y;
+						s_packet.Center.z = obb.Center.z;
+						s_packet.Extents.x = obb.Extents.x;
+						s_packet.Extents.y = obb.Extents.y;
+						s_packet.Extents.z = obb.Extents.z;
+						s_packet.Orientation.x = obb.Orientation.x;
+						s_packet.Orientation.y = obb.Orientation.y;
+						s_packet.Orientation.z = obb.Orientation.z;
+						s_packet.Orientation.w = obb.Orientation.w;
+
+						auto& f4x4 = pInstalledObject->m_xmf4x4ToParent;
+						s_packet.right.x = f4x4._11;
+						s_packet.right.y = f4x4._12;
+						s_packet.right.z = f4x4._13;
+						s_packet.up.x = f4x4._21;
+						s_packet.up.y = f4x4._22;
+						s_packet.up.z = f4x4._23;
+						s_packet.look.x = f4x4._31;
+						s_packet.look.y = f4x4._32;
+						s_packet.look.z = f4x4._33;
+						s_packet.position.x = f4x4._41;
+						s_packet.position.y = f4x4._42;
+						s_packet.position.z = f4x4._43;
+
+						nwManager.PushSendQueue(s_packet, s_packet.size);
+					}
+
+					if (m_nSelectedBuildingIndex == 1) {
+						for (int i = 4; i < m_pScene->m_nLights; ++i) // 4번부터 화로 조명
+						{
+							// 꺼져있는 조명을 찾으면
+							if (!m_pScene->m_pLights[i].m_bEnable)
+							{
+								m_pScene->m_pLights[i].m_bEnable = true;
+
+								auto& f4x4 = pInstalledObject->m_xmf4x4ToParent;
+								f4x4._42 += 20.0f;
+								m_pScene->m_pLights[i].m_xmf3Position.x = f4x4._41;
+								m_pScene->m_pLights[i].m_xmf3Position.y = f4x4._42;
+								m_pScene->m_pLights[i].m_xmf3Position.z = f4x4._43;
+								break;
+							}
+						}
+					}
+				}
+			}
+			
 		}
-		if (ImGui::Button("Build End"))
+		if (!m_bIsPreviewVisible) ImGui::EndDisabled();
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Exit (B)"))
 		{
-			BuildMode = false;
-			bPrevBuildMode = BuildMode;
-			m_pConstructionSystem->ExitBuildMode();
+			if (m_pConstructionSystem) m_pConstructionSystem->ExitBuildMode();
+			m_bBuildMode = false; // UI 창을 닫음
+			m_nSelectedBuildingIndex = -1;
+			m_bIsPreviewVisible = false; // 프리뷰를 숨김
 		}
 
 		ImGui::End();
 	}
 
-	/////////////////////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////////////////////////// 화로
 	if (ShowFurnaceUI)
 	{
 		const float slotSize = 72.0f;
@@ -1607,7 +3316,201 @@ void CGameFramework::FrameAdvance()
 		ImGui::End();
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////// 특성 ui
+	if (ShowTraitUI)
+	{
+		ImVec2 windowSize = ImVec2(600, 700);
+		ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+		ImVec2 windowPos = ImVec2(
+			(displaySize.x - windowSize.x) * 0.5f,
+			(displaySize.y - windowSize.y) * 0.5f
+		);
+
+		ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
+		ImGui::SetNextWindowPos(windowPos, ImGuiCond_Always, ImVec2(0, 0));
+
+		ImGui::Begin("Passive Traits", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+
+		if (ImGui::BeginTabBar("StatsTabs"))
+		{
+			int hp = m_pPlayer->Maxhp;
+			int stamina = m_pPlayer->Maxstamina;
+			int atk = m_pPlayer->PlayerAttack;
+			float speed = m_pPlayer->PlayerSpeed;
+
+			if (ImGui::BeginTabItem("Health"))
+			{
+				std::vector<std::tuple<int, const char*, const char*>> hpTraits = {
+					{350, "Extra Health", "Increases base max HP"},
+					{450, "HP-based Damage", "Damage increases by HP"},
+					
+				};
+
+				for (auto& [req, name, effect] : hpTraits)
+				{
+					bool active = hp >= req;
+					ImGui::TextColored(active ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+						"[%s] %s", active ? "ACTIVE" : "LOCKED", name);
+					ImGui::BulletText("Required HP: %d", req);
+					ImGui::BulletText("Effect: %s", effect);
+					ImGui::Separator();
+				}
+				ImGui::EndTabItem();
+			}
+
+			if (ImGui::BeginTabItem("Stamina"))
+			{
+				std::vector<std::tuple<int, const char*, const char*>> staminaTraits = {
+					{200, "Stamina Regenaration Boost", "Stamina Regenaration Boost"},
+					{300, "Lower Stamina Cost", "Reduced stamina usage"},
+					
+				};
+
+				for (auto& [req, name, effect] : staminaTraits)
+				{
+					bool active = stamina >= req;
+					ImGui::TextColored(active ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+						"[%s] %s", active ? "ACTIVE" : "LOCKED", name);
+					ImGui::BulletText("Required Stamina: %d", req);
+					ImGui::BulletText("Effect: %s", effect);
+					ImGui::Separator();
+				}
+				ImGui::EndTabItem();
+			}
+
+			if (ImGui::BeginTabItem("Attack"))
+			{
+				std::vector<std::tuple<int, const char*, const char*>> atkTraits = {
+					{15, "Double Damage", "50% to deal damage"},
+					{25, "Kill Heal", "Heal some HP when killing enemies"},
+					
+				};
+
+				for (auto& [req, name, effect] : atkTraits)
+				{
+					bool active = atk >= req;
+					ImGui::TextColored(active ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+						"[%s] %s", active ? "ACTIVE" : "LOCKED", name);
+					ImGui::BulletText("Required ATK: %d", req);
+					ImGui::BulletText("Effect: %s", effect);
+					ImGui::Separator();
+				}
+				ImGui::EndTabItem();
+			}
+
+			if (ImGui::BeginTabItem("Speed"))
+			{
+				std::vector<std::tuple<int, const char*, const char*>> speedTraits = {
+					{15, "Extra Dash", "Gain an extra dash"},
+					{25, "Slow Resist", "Reduces duration of slowing effects"},
+					
+				};
+
+				for (auto& [req, name, effect] : speedTraits)
+				{
+					bool active = speed >= req;
+					ImGui::TextColored(active ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+						"[%s] %s", active ? "ACTIVE" : "LOCKED", name);
+					ImGui::BulletText("Required Speed: %d", req);
+					ImGui::BulletText("Effect: %s", effect);
+					ImGui::Separator();
+				}
+				ImGui::EndTabItem();
+			}
+
+			ImGui::EndTabBar();
+		}
+
+		ImGui::End();
+	}
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////// 로비화면
+	if (m_eGameState == GameState::Lobby)
+	{
+		// --- 1. 배경 이미지 그리기 ---
+	
+		ImGui::SetNextWindowPos(ImVec2(0, 0));
+		ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+		ImGui::Begin("LobbyBackground", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBackground);
+
+		// BuildObjects에서 로드해 둔 배경 이미지가 있다면 화면 전체에 그립니다.
+		if (m_imGuiLobbyBackgroundTextureId != 0)
+		{
+			ImGui::GetWindowDrawList()->AddImage(m_imGuiLobbyBackgroundTextureId, ImVec2(0, 0), ImGui::GetIO().DisplaySize);
+		}
+		ImGui::End();
+
+		
+		ImVec2 screenSize = ImGui::GetIO().DisplaySize;
+
+		
+
+		// 왼쪽 플레이어 목록
+		ImGui::SetNextWindowPos(ImVec2(screenSize.x * 0.1f, screenSize.y * 0.25f));
+		ImGui::SetNextWindowSize(ImVec2(screenSize.x * 0.2f, screenSize.y * 0.5f));
+		ImGui::Begin("Player List", nullptr, ImGuiWindowFlags_NoTitleBar);
+		ImGui::Text("Player List");
+		ImGui::Separator();
+		// (예시) 실제로는 네트워크에서 받은 플레이어 목록을 여기에 표시합니다.
+		int player_count = 1 + m_pScene->PlayerList.size();
+		for (int i = 0; i < player_count; ++i) {
+			std::string s = "Player" + std::to_string(i + 1);
+			ImGui::Text(s.c_str());
+		}
+		ImGui::End();
+
+		// 오른쪽 버튼들
+		float buttonWidth = 250.0f;
+		float buttonHeight = 50.0f;
+		ImVec2 buttonsPos = ImVec2(screenSize.x * 0.65f, screenSize.y * 0.4f);
+
+		ImGui::SetNextWindowPos(buttonsPos);
+		ImGui::Begin("Buttons", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground);
+
+		if (ImGui::Button("Ready", ImVec2(buttonWidth, buttonHeight)))
+		{
+			// 준비 완료 로직
+		}
+
+		ImGui::Dummy(ImVec2(0.0f, 20.0f)); // 버튼 사이 간격
+
+		if (ImGui::Button("GameStart", ImVec2(buttonWidth, buttonHeight)))
+		{
+			auto& nwManager = NetworkManager::GetInstance();
+			GAME_START_PACKET p;
+			nwManager.PushSendQueue(p, p.size);
+
+			//ChangeGameState(GameState::InGame);
+		}
+		ImGui::End();
+	}
+	else if (m_eGameState == GameState::Ending) {
+		ImGui::SetNextWindowPos(ImVec2(0, 0));
+		ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+		ImGui::Begin("Ending Text", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoInputs);
+
+		// 5초에 걸쳐 서서히 나타나는 "The End" 텍스트
+		float textAlpha = std::min(m_fEndingSequenceTimer / 5.0f, 1.0f);
+
+		ImGuiIO& io = ImGui::GetIO(); // ImGuiIO 참조 가져오기
+
+		// [수정] 텍스트를 그리기 전후로 PushFont/PopFont를 추가합니다.
+		ImGui::PushFont(io.Fonts->Fonts[1]); // 1번 인덱스의 큰 폰트로 변경
+
+		const char* text = "The End";
+		ImVec2 textSize = ImGui::CalcTextSize(text);
+		ImGui::SetCursorPosX(ImGui::GetIO().DisplaySize.x * 0.5f - textSize.x * 0.5f);
+		ImGui::SetCursorPosY(ImGui::GetIO().DisplaySize.y * 0.5f - textSize.y * 0.5f);
+
+		// ImGui::TextColored를 사용해 투명도(Alpha)를 적용합니다.
+		ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, textAlpha), text);
+
+		ImGui::PopFont();
+
+		ImGui::End();
+	}
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////
 	ImGui::Render();
 	ID3D12DescriptorHeap* ppHeaps[] = { m_pd3dSrvDescriptorHeapForImGui };
 	m_pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
@@ -1637,19 +3540,36 @@ void CGameFramework::FrameAdvance()
 	m_pdxgiSwapChain->Present1(1, 0, &dxgiPresentParameters);
 #else
 #ifdef _WITH_SYNCH_SWAPCHAIN
-	m_pdxgiSwapChain->Present(1, 0);
+	HRESULT hr = m_pdxgiSwapChain->Present(1, 0);
 #else
-	m_pdxgiSwapChain->Present(0, 0);
+	HRESULT hr = m_pdxgiSwapChain->Present(0, 0);
 #endif
 #endif
+	if (hr == DXGI_ERROR_DEVICE_REMOVED)
+	{
+		// 장치가 제거된 정확한 원인을 확인합니다.
+		HRESULT reason = m_pd3dDevice->GetDeviceRemovedReason();
+
+		// 디버그 창에 원인을 출력합니다.
+		wchar_t out_str[256];
+		swprintf_s(out_str, L"Device Removed! Reason: 0x%08X\n", reason);
+		OutputDebugString(out_str);
+
+		// 여기서 reason 값을 보고 원인을 분석할 수 있습니다.
+		// 예: DXGI_ERROR_DEVICE_HUNG, DXGI_ERROR_DEVICE_RESET 등
+	}
 
 	MoveToNextFrame();
 
+	for (auto& obj : m_pScene->m_vGameObjects) {
+		if (!obj->is_load) obj->is_load = true;
+	}
 	m_GameTimer.GetFrameRate(m_pszFrameRate + 18, 37);
 	size_t nLength = _tcslen(m_pszFrameRate);
 	XMFLOAT3 xmf3Position = m_pPlayer->GetPosition();
-	//_stprintf_s(m_pszFrameRate + nLength, 70 - nLength, _T("(%4f, %4f, %4f)"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
+	_stprintf_s(m_pszFrameRate + nLength, 70 - nLength, _T("(%4f, %4f, %4f)"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
 	::SetWindowText(m_hWnd, m_pszFrameRate);
+
 }
 void CGameFramework::CreateCbvSrvDescriptorHeap()
 {
@@ -1973,7 +3893,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE CGameFramework::CreateConstantBufferViews(int nConst
 	{
 		// 힙 공간 부족 등의 이유로 할당 실패
 		// 오류 처리 (로그 남기기, 예외 발생 등)
-		OutputDebugString(L"Failed to allocate CBV descriptors.\n");
+		//OutputDebugString(L"Failed to allocate CBV descriptors.\n");
 		return { 0 }; // 실패 시 유효하지 않은 핸들 반환
 	}
 
@@ -2022,13 +3942,12 @@ bool CGameFramework::AllocateCbvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIP
 bool CGameFramework::AllocateSrvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIPTOR_HANDLE& outCpuStartHandle, D3D12_GPU_DESCRIPTOR_HANDLE& outGpuStartHandle) {
 	// --- 로그 추가 ---
 	wchar_t buffer[128];
-	swprintf_s(buffer, L"AllocateSrvDescriptors: Requesting %u slots. Current offset: %u / Total SRV slots: %u\n",
-		nDescriptors, m_nNextSrvOffset, m_nTotalSrvDescriptors);
-	OutputDebugStringW(buffer);
+	//swprintf_s(buffer, L"AllocateSrvDescriptors: Requesting %u slots. Current offset: %u / Total SRV slots: %u\n",nDescriptors, m_nNextSrvOffset, m_nTotalSrvDescriptors);
+	//OutputDebugStringW(buffer);
 	// --- 로그 추가 ---
 
 	if (m_nNextSrvOffset + nDescriptors > m_nTotalSrvDescriptors) {
-		OutputDebugStringW(L"    --> Allocation FAILED: Not enough space in SRV heap!\n"); // 실패 로그
+		//OutputDebugStringW(L"    --> Allocation FAILED: Not enough space in SRV heap!\n"); // 실패 로그
 		return false; // 공간 부족!
 	}
 
@@ -2042,9 +3961,9 @@ bool CGameFramework::AllocateSrvDescriptors(UINT nDescriptors, D3D12_CPU_DESCRIP
 	m_nNextSrvOffset += nDescriptors;
 
 	// --- 성공 로그 추가 ---
-	swprintf_s(buffer, L"    --> Allocation SUCCEEDED. New offset: %u. Start GPU Handle: %p\n",
-		m_nNextSrvOffset, (void*)outGpuStartHandle.ptr);
-	OutputDebugStringW(buffer);
+	//swprintf_s(buffer, L"    --> Allocation SUCCEEDED. New offset: %u. Start GPU Handle: %p\n",
+	//	m_nNextSrvOffset, (void*)outGpuStartHandle.ptr);
+	//OutputDebugStringW(buffer);
 	// --- 성공 로그 추가 ---
 
 	return true;
@@ -2055,7 +3974,7 @@ void CGameFramework::WaitForGpu()
 {
 	// 필수 객체들 유효성 검사
 	if (!m_pd3dCommandQueue || !m_pd3dFence || m_hFenceEvent == INVALID_HANDLE_VALUE) {
-		OutputDebugString(L"Warning: Cannot wait for GPU, essential objects are missing.\n");
+		//OutputDebugString(L"Warning: Cannot wait for GPU, essential objects are missing.\n");
 		return;
 	}
 
@@ -2065,7 +3984,7 @@ void CGameFramework::WaitForGpu()
 
 	HRESULT hr = m_pd3dCommandQueue->Signal(m_pd3dFence, fenceValueToSignal);
 	if (FAILED(hr)) {
-		OutputDebugString(L"!!!!!!!! ERROR: CommandQueue->Signal failed! !!!!!!!!\n");
+		//OutputDebugString(L"!!!!!!!! ERROR: CommandQueue->Signal failed! !!!!!!!!\n");
 		return; // Signal 실패 시 대기 불가
 	}
 
@@ -2075,17 +3994,376 @@ void CGameFramework::WaitForGpu()
 		// 3. 아직 도달하지 못했다면, 이벤트 핸들을 사용하여 대기
 		hr = m_pd3dFence->SetEventOnCompletion(fenceValueToSignal, m_hFenceEvent);
 		if (FAILED(hr)) {
-			OutputDebugString(L"!!!!!!!! ERROR: Fence->SetEventOnCompletion failed! !!!!!!!!\n");
+			//OutputDebugString(L"!!!!!!!! ERROR: Fence->SetEventOnCompletion failed! !!!!!!!!\n");
 			return; // 이벤트 설정 실패 시 대기 불가
 		}
 
 		// 4. 이벤트가 Signal 상태가 될 때까지 무한 대기
-		OutputDebugString(L"Waiting for GPU to finish...\n");
+		//OutputDebugString(L"Waiting for GPU to finish...\n");
 		WaitForSingleObjectEx(m_hFenceEvent, INFINITE, FALSE);
-		OutputDebugString(L"GPU finished.\n");
+		//OutputDebugString(L"GPU finished.\n");
 	}
 	else {
 		// 이미 GPU가 해당 값 이상으로 진행함 (바로 종료 가능)
-		OutputDebugString(L"GPU already finished (Fence value check).\n");
+		//OutputDebugString(L"GPU already finished (Fence value check).\n");
 	}
+}
+
+
+// 그림자
+D3D12_CPU_DESCRIPTOR_HANDLE CGameFramework::GetCurrentRtvCPUDescriptorHandle()
+{
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	d3dRtvCPUDescriptorHandle.ptr += (m_nSwapChainBufferIndex * m_nRtvDescriptorIncrementSize);
+	return d3dRtvCPUDescriptorHandle;
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE CGameFramework::GetDsvCPUDescriptorHandle()
+{
+	return m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+}
+
+void CGameFramework::ChangeGameState(GameState newState)
+{
+	if (m_eGameState == newState) return; // 같은 상태로의 변경은 무시
+
+	m_eGameState = newState;
+	if (m_eGameState == GameState::Ending)
+	{
+		// [추가] 엔딩 상태 진입 시 설정
+		if (m_pPlayer) m_pPlayer->isRender = true; // 플레이어 숨기기
+
+		m_fEndingSequenceTimer = 0.0f; // 엔딩 타이머 초기화
+
+		// 기존 카메라(m_pCamera)를 엔딩 연출용으로 재설정합니다.
+		if (m_pCamera)
+		{
+			// 카메라의 시작 위치를 플레이어의 현재 위치보다 약간 위, 뒤로 설정
+			XMFLOAT3 startPos = m_pPlayer->GetPosition();
+			startPos.y += 50.0f;
+			startPos.z -= 100.0f;
+			m_pCamera->SetPosition(startPos);
+
+			// 카메라가 플레이어가 있던 곳을 바라보도록 설정
+			m_pCamera->SetLookAt(m_pPlayer->GetPosition());
+		}
+		m_pPlayer->SetCameraMove();
+	}
+}
+
+void CGameFramework::CheckAndToggleFurnaceUI()
+{
+	if (!m_pPlayer || !m_pScene) return;
+
+	const float interactionDistance = 20.0f;
+	XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+
+	for (auto& pConstructionObj : m_pScene->m_vConstructionObjects)
+	{
+		// [핵심 수정] 오브젝트의 타입을 직접 비교합니다.
+		if (pConstructionObj && pConstructionObj->m_objectType == GameObjectType::Furnace)
+		{
+			XMFLOAT3 furnacePos = pConstructionObj->GetPosition();
+			float distance = Vector3::Distance(playerPos, furnacePos);
+
+			if (distance <= interactionDistance)
+			{
+				ShowFurnaceUI = !ShowFurnaceUI;
+				return;
+			}
+		}
+	}
+}
+
+void CGameFramework::CheckEscape()
+{
+	if (!m_pPlayer || !m_pScene) return;
+
+	const float interactionDistance = 50.0f;
+	XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+
+	bool hasRuby = false;
+	for (const auto& slot : m_inventorySlots)
+	{
+		if (!slot.IsEmpty() && slot.item->GetName() == "ruby")
+		{
+			hasRuby = true;
+			break; // 루비를 찾았으면 더 이상 확인할 필요가 없습니다.
+		}
+	}
+
+	// [추가] 2. 루비가 없으면 함수를 즉시 종료합니다.
+	if (!hasRuby) return;
+
+	for (auto& pConstructionObj : m_pScene->m_vGameObjects)
+	{
+		// [핵심 수정] 오브젝트의 타입을 직접 비교합니다.
+		if (pConstructionObj && pConstructionObj->m_objectType == GameObjectType::Antenna)
+		{
+			XMFLOAT3 furnacePos = pConstructionObj->GetPosition();
+			float distance = Vector3::Distance(playerPos, furnacePos);
+
+			if (distance <= interactionDistance)
+			{
+				if (m_eGameState != GameState::InGame) break;
+				ChangeGameState(GameState::Ending);
+				{
+					auto& nwManager = NetworkManager::GetInstance();
+					GAME_END_PACKET p;
+					p.type = static_cast<char>(E_PACKET::E_GAME_END);
+					p.size = sizeof(GAME_END_PACKET);
+					nwManager.PushSendQueue(p, p.size);
+				}
+			}
+		}
+	}
+}
+
+
+
+
+
+
+void CGameFramework::LoadTools()
+{
+	//// 플레이어 오브젝트를 찾아야 합니다. 씬에서 플레이어를 찾는 로직이 필요합니다.
+	//// 여기서는 m_pPlayer가 플레이어 오브젝트를 가리킨다고 가정합니다.
+	//CGameObject* pPlayer = m_pScene->m_pPlayer;
+	//if (!pPlayer) return;
+
+	//// 초기값 설정
+	//m_swordTransform.position = { 0.01f, 0.0f, 0.0f };
+	//m_axeTransform.position = { -0.2f, 0.0f, 0.0f };
+	//m_pickaxeTransform.position = { 0.5f, 0.0f, 0.0f };
+	//m_hammerTransform.position = { 0.2f, 0.0f, 0.0f };
+	//m_hammerTransform.rotation = { 45.0f, 0.0f, 0.0f };
+
+	//// 칼 로드 및 부착
+	//m_pSword = m_pPlayer->m_pSword;
+	//m_pAxe = m_pPlayer->m_pAxe;
+	//m_pPickaxe = m_pPlayer->m_pPickaxe;
+	//m_pHammer = m_pPlayer->m_pHammer;
+}
+
+void CGameFramework::OnImGuiRender()
+{
+	// 플레이어가 존재하면, 플레이어의 도구 위치 에디터 UI를 그리도록 호출합니다.
+	if (m_pScene && m_pScene->m_pPlayer)
+	{
+		m_pScene->m_pPlayer->RenderToolEditorImGui();
+	}
+
+	// 모든 도구를 테스트할 수 있는 "Toolbox" 창
+	ImGui::Begin("Toolbox");
+
+	// 안전을 위해 플레이어 포인터가 유효한지 확인합니다.
+	if (m_pScene && m_pScene->m_pPlayer)
+	{
+		// 장착 해제 버튼
+		if (ImGui::Button("Unequip All", ImVec2(-1, 0))) // 너비를 창에 꽉 채움
+		{
+			m_pScene->m_pPlayer->UnequipAllTools();
+		}
+
+		ImGui::Separator(); // 구분선
+
+		// --- Swords ---
+		ImGui::Text("Swords");
+		if (ImGui::Button("Wood##Sword")) { m_pScene->m_pPlayer->EquipTool("wooden_sword"); } ImGui::SameLine();
+		if (ImGui::Button("Stone##Sword")) { m_pScene->m_pPlayer->EquipTool("stone_sword"); } ImGui::SameLine();
+		if (ImGui::Button("Iron##Sword")) { m_pScene->m_pPlayer->EquipTool("iron_sword"); }
+
+		// --- Axes ---
+		ImGui::Text("Axes");
+		if (ImGui::Button("Wood##Axe")) { m_pScene->m_pPlayer->EquipTool("wooden_axe"); } ImGui::SameLine();
+		if (ImGui::Button("Stone##Axe")) { m_pScene->m_pPlayer->EquipTool("stone_axe"); } ImGui::SameLine();
+		if (ImGui::Button("Iron##Axe")) { m_pScene->m_pPlayer->EquipTool("iron_axe"); }
+
+		// --- Pickaxes ---
+		ImGui::Text("Pickaxes");
+		if (ImGui::Button("Wood##Pickaxe")) { m_pScene->m_pPlayer->EquipTool("wooden_pickaxe"); } ImGui::SameLine();
+		if (ImGui::Button("Stone##Pickaxe")) { m_pScene->m_pPlayer->EquipTool("stone_pickaxe"); } ImGui::SameLine();
+		if (ImGui::Button("Iron##Pickaxe")) { m_pScene->m_pPlayer->EquipTool("iron_pickaxe"); }
+
+		// --- Hammers ---
+		ImGui::Text("Hammers");
+		if (ImGui::Button("Wood##Hammer")) { m_pScene->m_pPlayer->EquipTool("wooden_hammer"); } ImGui::SameLine();
+		if (ImGui::Button("Stone##Hammer")) { m_pScene->m_pPlayer->EquipTool("stone_hammer"); } ImGui::SameLine();
+		if (ImGui::Button("Iron##Hammer")) { m_pScene->m_pPlayer->EquipTool("iron_hammer"); }
+	}
+
+	ImGui::End();
+
+	// 전체 UI 스케일 조절 창 (기존과 동일)
+	ImGui::Begin("UI Settings");
+	ImGuiIO& io = ImGui::GetIO();
+	ImGui::DragFloat("UI Scale", &io.FontGlobalScale, 0.05f, 0.5f, 4.0f);
+	ImGui::End();
+}
+void CGameFramework::UpdateToolTransforms()
+{
+	XMMATRIX mtxScale, mtxRotate, mtxTranslate;
+
+	if (m_pSword)
+	{
+		mtxScale = XMMatrixScaling(1.0f, 1.0f, 1.0f); // 필요시 스케일 값도 변수로 조절 가능
+		mtxRotate = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(m_swordTransform.rotation.x),
+			XMConvertToRadians(m_swordTransform.rotation.y),
+			XMConvertToRadians(m_swordTransform.rotation.z)
+		);
+		mtxTranslate = XMMatrixTranslation(
+			m_swordTransform.position.x,
+			m_swordTransform.position.y,
+			m_swordTransform.position.z
+		);
+		XMStoreFloat4x4(&m_pSword->m_xmf4x4ToParent, mtxScale * mtxRotate * mtxTranslate);
+	}
+	if (m_pAxe)
+	{
+		mtxScale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+		mtxRotate = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(m_axeTransform.rotation.x),
+			XMConvertToRadians(m_axeTransform.rotation.y),
+			XMConvertToRadians(m_axeTransform.rotation.z)
+		);
+		mtxTranslate = XMMatrixTranslation(
+			m_axeTransform.position.x,
+			m_axeTransform.position.y,
+			m_axeTransform.position.z
+		);
+		XMStoreFloat4x4(&m_pAxe->m_xmf4x4ToParent, mtxScale * mtxRotate * mtxTranslate);
+	}
+	if (m_pPickaxe)
+	{
+		mtxScale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+		mtxRotate = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(m_pickaxeTransform.rotation.x),
+			XMConvertToRadians(m_pickaxeTransform.rotation.y),
+			XMConvertToRadians(m_pickaxeTransform.rotation.z)
+		);
+		mtxTranslate = XMMatrixTranslation(
+			m_pickaxeTransform.position.x,
+			m_pickaxeTransform.position.y,
+			m_pickaxeTransform.position.z
+		);
+		XMStoreFloat4x4(&m_pPickaxe->m_xmf4x4ToParent, mtxScale * mtxRotate * mtxTranslate);
+	}
+	if (m_pHammer)
+	{
+		mtxScale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+		mtxRotate = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(m_hammerTransform.rotation.x),
+			XMConvertToRadians(m_hammerTransform.rotation.y),
+			XMConvertToRadians(m_hammerTransform.rotation.z)
+		);
+		mtxTranslate = XMMatrixTranslation(
+			m_hammerTransform.position.x,
+			m_hammerTransform.position.y,
+			m_hammerTransform.position.z
+		);
+		XMStoreFloat4x4(&m_pHammer->m_xmf4x4ToParent, mtxScale * mtxRotate * mtxTranslate);
+	}
+}
+void CGameFramework::InitializeBuildRecipes()
+{
+	m_mapBuildRecipes["wood_wall"] = { {"wood", 4} }; // 나무 벽: 나무 4개 필요
+	m_mapBuildRecipes["furnace"] = { {"stone", 10} }; // 화로: 돌 10개 필요
+	// ... 다른 건축물 레시피도 여기에 추가 ...
+}
+
+bool CGameFramework::CheckBuildMaterials(const std::string& buildableName)
+{
+	if (m_mapBuildRecipes.find(buildableName) == m_mapBuildRecipes.end()) return false; // 레시피 없음
+
+	const auto& materials = m_mapBuildRecipes[buildableName];
+	for (const auto& mat : materials)
+	{
+		int playerQuantity = 0;
+		for (const auto& slot : m_inventorySlots)
+		{
+			if (!slot.IsEmpty() && slot.item->GetName() == mat.MaterialName)
+			{
+				playerQuantity += slot.quantity;
+			}
+		}
+		if (playerQuantity < mat.Quantity) return false; // 재료 부족
+	}
+	return true; // 재료 충분
+}
+
+void CGameFramework::ConsumeBuildMaterials(const std::string& buildableName)
+{
+	// 먼저 재료가 충분한지 다시 확인
+	
+
+	const auto& materials = m_mapBuildRecipes[buildableName];
+	for (const auto& mat : materials)
+	{
+		int remaining = mat.Quantity;
+		for (InventorySlot& slot : m_inventorySlots)
+		{
+			if (remaining > 0 && !slot.IsEmpty() && slot.item->GetName() == mat.MaterialName)
+			{
+				if (slot.quantity >= remaining)
+				{
+					slot.quantity -= remaining;
+					remaining = 0;
+				}
+				else
+				{
+					remaining -= slot.quantity;
+					slot.quantity = 0;
+				}
+
+				if (slot.quantity == 0) {
+					slot.item = nullptr; // 아이템이 없으면 슬롯 비우기
+				}
+			}
+		}
+	}
+	
+}
+
+void SoundLoading()
+{
+	auto& soundManager = SoundManager::GetInstance();
+	soundManager.Init();
+	soundManager.LoadSound(L"Sound/bat/death.wav", L"batdeath");
+	soundManager.LoadSound(L"Sound/bat/hurt.wav", L"bathurt");
+
+	soundManager.LoadSound(L"Sound/cow/death.wav", L"cowdeath");
+	soundManager.LoadSound(L"Sound/cow/hurt.wav", L"cowhurt");
+
+	soundManager.LoadSound(L"Sound/pig/death.wav", L"pigdeath");
+	soundManager.LoadSound(L"Sound/pig/hurt.wav", L"pighurt");
+
+	soundManager.LoadSound(L"Sound/Raptor/death.wav", L"Raptordeath");
+	soundManager.LoadSound(L"Sound/Raptor/hurt.wav", L"Raptorhurt");
+
+	soundManager.LoadSound(L"Sound/Spider/death.wav", L"Spiderdeath");
+	soundManager.LoadSound(L"Sound/Spider/hurt.wav", L"Spiderhurt");
+
+	soundManager.LoadSound(L"Sound/Toad/death.wav", L"Toaddeath");
+	soundManager.LoadSound(L"Sound/Toad/hurt.wav", L"Toadhurt");
+
+	soundManager.LoadSound(L"Sound/wolf/death.wav", L"wolfdeath");
+	soundManager.LoadSound(L"Sound/wolf/hurt.wav", L"wolfhurt");
+
+	soundManager.LoadSound(L"Sound/Tree/Falling.wav", L"TreeFalling");
+	soundManager.LoadSound(L"Sound/Stone/Breaking_Stone.wav", L"StoneBreaking_Stone");
+
+	soundManager.LoadSound(L"Sound/Player/axe.wav", L"Playeraxe");
+	soundManager.LoadSound(L"Sound/Player/pickaxe.wav", L"Playerpickaxe");
+	soundManager.LoadSound(L"Sound/Player/sword.wav", L"Playersword");
+	soundManager.LoadSound(L"Sound/Player/hit.wav", L"Playerhit");
+	soundManager.LoadSound(L"Sound/Player/hit_voice.wav", L"Playerhit_voice");
+
+
+	soundManager.LoadSound(L"Sound/Golem/hurt.wav", L"Golemhurt");
+	soundManager.LoadSound(L"Sound/Golem/death.wav", L"Golemdeath");
+	soundManager.LoadSound(L"Sound/Golem/Charging.wav", L"GolemCharging");
+	soundManager.LoadSound(L"Sound/Golem/Special_Attack2.wav", L"GolemSpecial_Attack2");
+	soundManager.LoadSound(L"Sound/Golem/Attack1.wav", L"GolemAttack1");
+	soundManager.LoadSound(L"Sound/Golem/Stamp_land.wav", L"GolemStamp_land");
 }
