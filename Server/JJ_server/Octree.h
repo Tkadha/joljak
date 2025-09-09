@@ -42,13 +42,6 @@ public:
     static Octree GameObjectOctree;
 
 public:
-    XMFLOAT3 minBound, maxBound; 
-    std::vector<std::unique_ptr<tree_obj>> objects; 
-    std::mutex oct_mu;
-    Octree* children[8] = { nullptr }; 
-    int maxObjects = 6; 
-    int maxDepth = 5;   
-
     Octree(const XMFLOAT3& min, const XMFLOAT3& max, int depth = 0)
         : minBound(min), maxBound(max), depth(depth) {
         maxObjects = 300 * (depth + 1);
@@ -59,14 +52,17 @@ public:
     void insert(std::unique_ptr<tree_obj> obj);
     bool remove(long long id);
     void update(long long id, const XMFLOAT3& newpos);
-
     void query(const tree_obj& obj, const XMFLOAT3& distance, std::vector<tree_obj*>& results);
-
     void clear();
-private:
-    int depth; 
-    
-    void subdivide();
 
+private:
+    XMFLOAT3 minBound, maxBound; 
+    std::vector<std::unique_ptr<tree_obj>> objects; 
+    int maxObjects = 6; 
+    int maxDepth = 5;   
+    Octree* children[8] = { nullptr }; 
+    std::mutex oct_mu;
+    int depth;   
+    void subdivide();
     bool intersects(const XMFLOAT3& queryMin, const XMFLOAT3& queryMax) const;
 };
