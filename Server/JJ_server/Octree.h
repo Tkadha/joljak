@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #include <vector>
 #include <mutex>
+#include <memory>
 
 static XMFLOAT3 oct_distance{ 2000,5000,2000 };
 
@@ -47,8 +48,9 @@ public:
         maxObjects = 300 * (depth + 1);
         objects.reserve(maxObjects);
     }
-    ~Octree();
-
+    ~Octree() = default;
+    Octree(const Octree&) = delete;
+    Octree& operator=(const Octree&) = delete;
     void insert(std::unique_ptr<tree_obj> obj);
     bool remove(long long id);
     void update(long long id, const XMFLOAT3& newpos);
@@ -60,7 +62,7 @@ private:
     std::vector<std::unique_ptr<tree_obj>> objects; 
     int maxObjects = 6; 
     int maxDepth = 5;   
-    Octree* children[8] = { nullptr }; 
+    std::unique_ptr<Octree> children[8];
     std::mutex oct_mu;
     int depth;   
     void subdivide();

@@ -4,12 +4,6 @@
 Octree Octree::PlayerOctree = { XMFLOAT3 {0,0,0}, XMFLOAT3{10200,6000,10200} };
 Octree Octree::GameObjectOctree{ XMFLOAT3 {0,0,0}, XMFLOAT3{10200,6000,10200} };
 
-Octree::~Octree() {
-
-    for (auto& child : children)
-        delete child;
-}
-
 void Octree::insert(std::unique_ptr<tree_obj> obj) {
     std::unique_lock<std::mutex> oct_lock(oct_mu);
     if (!obj->isWithin(minBound, maxBound)) return;
@@ -92,10 +86,7 @@ void Octree::clear()
 {
     std::lock_guard<std::mutex> lock(oct_mu);
     for (int i = 0; i < 8; ++i) {
-        if (children[i] != nullptr) {
-            delete children[i];
-            children[i] = nullptr;
-        }
+        children[i].reset();
     }
     objects.clear();
 }
@@ -105,14 +96,14 @@ void Octree::subdivide() {
                 (minBound.y + maxBound.y) / 2,
                 (minBound.z + maxBound.z) / 2 };
 
-    children[0] = new Octree(minBound, center, depth + 1);
-    children[1] = new Octree(XMFLOAT3(center.x, minBound.y, minBound.z), XMFLOAT3(maxBound.x, center.y, center.z), depth + 1);
-    children[2] = new Octree(XMFLOAT3(minBound.x, center.y, minBound.z), XMFLOAT3(center.x, maxBound.y, center.z), depth + 1);
-    children[3] = new Octree(XMFLOAT3(center.x, center.y, minBound.z), XMFLOAT3(maxBound.x, maxBound.y, center.z), depth + 1);
-    children[4] = new Octree(XMFLOAT3(minBound.x, minBound.y, center.z), XMFLOAT3(center.x, center.y, maxBound.z), depth + 1);
-    children[5] = new Octree(XMFLOAT3(center.x, minBound.y, center.z), XMFLOAT3(maxBound.x, center.y, maxBound.z), depth + 1);
-    children[6] = new Octree(XMFLOAT3(minBound.x, center.y, center.z), XMFLOAT3(center.x, maxBound.y, maxBound.z), depth + 1);
-    children[7] = new Octree(center, maxBound, depth + 1);
+    children[0] = std::make_unique<Octree>(minBound, center, depth + 1);
+    children[1] = std::make_unique<Octree>(XMFLOAT3(center.x, minBound.y, minBound.z), XMFLOAT3(maxBound.x, center.y, center.z), depth + 1);
+    children[2] = std::make_unique<Octree>(XMFLOAT3(minBound.x, center.y, minBound.z), XMFLOAT3(center.x, maxBound.y, center.z), depth + 1);
+    children[3] = std::make_unique<Octree>(XMFLOAT3(center.x, center.y, minBound.z), XMFLOAT3(maxBound.x, maxBound.y, center.z), depth + 1);
+    children[4] = std::make_unique<Octree>(XMFLOAT3(minBound.x, minBound.y, center.z), XMFLOAT3(center.x, center.y, maxBound.z), depth + 1);
+    children[5] = std::make_unique<Octree>(XMFLOAT3(center.x, minBound.y, center.z), XMFLOAT3(maxBound.x, center.y, maxBound.z), depth + 1);
+    children[6] = std::make_unique<Octree>(XMFLOAT3(minBound.x, center.y, center.z), XMFLOAT3(center.x, maxBound.y, maxBound.z), depth + 1);
+    children[7] = std::make_unique<Octree>(center, maxBound, depth + 1);
 }
 
 bool Octree::intersects(const XMFLOAT3& queryMin, const XMFLOAT3& queryMax) const {
