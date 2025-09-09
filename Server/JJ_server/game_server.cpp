@@ -36,7 +36,7 @@ using namespace std;
 #define IOCPCOUNT 5
 const unsigned int iocpcount{ std::thread::hardware_concurrency() - 2 };
 
-Iocp iocp(iocpcount); // 본 예제는 스레드를 딱 하나만 쓴다. 따라서 여기도 1이 들어간다.
+Iocp iocp(iocpcount);
 
 recursive_mutex mx_accept;
 

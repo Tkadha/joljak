@@ -5,16 +5,15 @@ Octree Octree::PlayerOctree = { XMFLOAT3 {0,0,0}, XMFLOAT3{10200,6000,10200} };
 Octree Octree::GameObjectOctree{ XMFLOAT3 {0,0,0}, XMFLOAT3{10200,6000,10200} };
 
 void Octree::insert(std::unique_ptr<tree_obj> obj) {
-    std::unique_lock<std::mutex> oct_lock(oct_mu);
     if (!obj->isWithin(minBound, maxBound)) return;
-
-    if (objects.size() < maxObjects || depth >= maxDepth) {
-        objects.push_back(std::move(obj));
-        return;
+    {
+        std::unique_lock<std::mutex> oct_lock(oct_mu);
+        if (objects.size() < maxObjects || depth >= maxDepth) {
+            objects.push_back(std::move(obj));
+            return;
+        }
+        if (children[0] == nullptr) subdivide();
     }
-
-    if (children[0] == nullptr) subdivide();
-    oct_lock.unlock();
     for (auto& child : children) {
         if (obj->isWithin(child->minBound, child->maxBound)) {
             child->insert(std::move(obj));
