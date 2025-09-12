@@ -8,7 +8,8 @@ class FSMManager
 	std::shared_ptr<FSMState<entity_type>> Currentstate;
 	std::shared_ptr<FSMState<entity_type>> Globalstate;
 public:
-	FSMManager(std::shared_ptr<entity_type> owner) : Owner(owner), Currentstate(NULL), Globalstate(NULL) {}
+	FSMManager(std::shared_ptr<entity_type> owner) 
+		: Owner(owner), Currentstate(NULL), Globalstate(NULL) {}
 	virtual ~FSMManager() {}
 
 	FSMManager(const FSMManager&) = delete;

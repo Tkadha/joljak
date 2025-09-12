@@ -59,23 +59,6 @@ void send_callback(DWORD err, DWORD sent_size, LPWSAOVERLAPPED send_over, DWORD 
 	delete reinterpret_cast<OVER_EXP*>(send_over);
 }
 
-
-void NetworkManager::ReconnectToNewServer(const char* n_addr, short n_port)
-{
-	// 기존 소켓 종료
-	closesocket(server_s->m_fd);
-	Sleep(100);
-	// 새로운 소켓 생성 및 연결
-	char save_addr[20];
-	strncpy(save_addr, n_addr, sizeof(save_addr));
-	server_s = make_shared<Socket>(SocketType::Tcp);
-	server_s->Connect(Endpoint(save_addr, n_port));
-	//cout << "Reconnected to " << save_addr << ":" << n_port << endl;
-
-	// 첫 번째 데이터 수신 시작
-	do_recv();
-}
-
 NetworkManager& NetworkManager::GetInstance()
 {
 	static NetworkManager instance;

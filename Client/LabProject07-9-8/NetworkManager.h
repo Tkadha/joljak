@@ -41,7 +41,6 @@ public:
 	void do_send(const char* packet, short size);
 
 	void Process_Packet(char* packet);
-	void ReconnectToNewServer(const char* n_addr, short n_port);
 
 	template<class P>
 	void PushSendQueue(P packet, short size)
